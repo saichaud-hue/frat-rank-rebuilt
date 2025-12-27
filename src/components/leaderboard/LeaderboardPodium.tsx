@@ -3,6 +3,7 @@ import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Link } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
+import { getOverallScore } from '@/utils/scoring';
 import type { Fraternity } from '@/api/base44Client';
 
 interface LeaderboardPodiumProps {
@@ -66,9 +67,9 @@ export default function LeaderboardPodium({ topThree }: LeaderboardPodiumProps) 
             </div>
 
             <div className={`font-bold ${size === 'lg' ? 'text-2xl' : 'text-xl'} text-foreground`}>
-              {(frat.historical_party_score ?? 5.0).toFixed(1)}
+              {getOverallScore(frat).toFixed(1)}
             </div>
-            <p className="text-xs text-muted-foreground">Party Score</p>
+            <p className="text-xs text-muted-foreground">Overall Score</p>
           </div>
         </Card>
       </Link>

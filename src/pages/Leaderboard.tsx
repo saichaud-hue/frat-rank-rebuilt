@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { base44, seedInitialData, type Fraternity, type ReputationRating } from '@/api/base44Client';
 import { clamp } from '@/utils';
+import { getOverallScore, getPartyScore, getReputationScore, sortFraternitiesByOverall } from '@/utils/scoring';
 import LeaderboardHeader from '@/components/leaderboard/LeaderboardHeader';
 import LeaderboardPodium from '@/components/leaderboard/LeaderboardPodium';
 import FraternityCard from '@/components/leaderboard/FraternityCard';
@@ -43,28 +44,32 @@ export default function Leaderboard() {
   };
 
   const sortByFilter = (frats: Fraternity[], f: FilterType): Fraternity[] => {
-    const sorted = [...frats];
     switch (f) {
       case 'overall':
-        return sorted.sort((a, b) => {
-          const scoreA = a.display_score ?? 5;
-          const scoreB = b.display_score ?? 5;
-          if (scoreB !== scoreA) return scoreB - scoreA;
-          return (b.momentum ?? 0) - (a.momentum ?? 0);
-        });
+        return sortFraternitiesByOverall(frats);
       case 'reputation':
-        return sorted.sort((a, b) => (b.reputation_score ?? 5) - (a.reputation_score ?? 5));
+        return [...frats].sort((a, b) => {
+          const repA = getReputationScore(a);
+          const repB = getReputationScore(b);
+          if (repB !== repA) return repB - repA;
+          return (a.chapter ?? '').localeCompare(b.chapter ?? '');
+        });
       case 'party':
-        return sorted.sort((a, b) => (b.historical_party_score ?? 5) - (a.historical_party_score ?? 5));
+        return [...frats].sort((a, b) => {
+          const partyA = getPartyScore(a);
+          const partyB = getPartyScore(b);
+          if (partyB !== partyA) return partyB - partyA;
+          return (a.chapter ?? '').localeCompare(b.chapter ?? '');
+        });
       case 'trending':
-        return sorted.sort((a, b) => {
+        return [...frats].sort((a, b) => {
           const momA = a.momentum ?? 0;
           const momB = b.momentum ?? 0;
           if (momB !== momA) return momB - momA;
-          return (b.display_score ?? 5) - (a.display_score ?? 5);
+          return getOverallScore(b) - getOverallScore(a);
         });
       default:
-        return sorted;
+        return sortFraternitiesByOverall(frats);
     }
   };
 
