@@ -82,10 +82,10 @@ export default function Layout({ children }: LayoutProps) {
         <Sidebar className="hidden md:flex border-r bg-white/80 backdrop-blur-sm">
           <SidebarHeader className="p-4 border-b border-slate-200/50">
             <Link to="/" className="flex items-center gap-2">
-              <div className="w-10 h-10 rounded-xl gradient-primary flex items-center justify-center">
+              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center">
                 <Trophy className="h-5 w-5 text-white" />
               </div>
-              <span className="text-xl font-bold gradient-text">FratRank</span>
+              <span className="text-xl font-bold text-foreground">FratRank</span>
             </Link>
           </SidebarHeader>
 

@@ -56,9 +56,10 @@ export default function FraternityCard({ fraternity, rank, onRate }: FraternityC
               </div>
 
               <div className="text-right">
-                <div className="text-2xl font-bold gradient-text">
-                  {Math.min(fraternity.display_score ?? 5, 10).toFixed(1)}
+                <div className="text-2xl font-bold text-foreground">
+                  {(fraternity.historical_party_score ?? 5.0).toFixed(1)}
                 </div>
+                <p className="text-xs text-muted-foreground">Party Score</p>
                 <TrendIndicator momentum={fraternity.momentum ?? 0} />
               </div>
             </div>
