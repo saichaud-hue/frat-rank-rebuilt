@@ -10,6 +10,7 @@ interface OverallScoreCardProps {
   scores: FraternityScores;
   showConfidence?: boolean;
   showTrending?: boolean;
+  showReputationBreakdown?: boolean;
   showPartyBreakdown?: boolean;
 }
 
@@ -17,11 +18,17 @@ interface OverallScoreCardProps {
  * READ-ONLY display of all fraternity scores.
  * Shows Overall, Reputation (with 3 sub-categories), Party Quality (with 3 sub-categories), Confidence, and Trending.
  * Never includes interactive elements - this is display only.
+ * 
+ * Display modes:
+ * - Overall tab: showReputationBreakdown=true, showPartyBreakdown=true
+ * - Reputation tab: showReputationBreakdown=true, showPartyBreakdown=false
+ * - Parties tab: showReputationBreakdown=false, showPartyBreakdown=true
  */
 export default function OverallScoreCard({ 
   scores, 
   showConfidence = true,
   showTrending = true,
+  showReputationBreakdown = true,
   showPartyBreakdown = true
 }: OverallScoreCardProps) {
   const { 
