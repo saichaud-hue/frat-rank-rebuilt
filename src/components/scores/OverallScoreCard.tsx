@@ -18,11 +18,6 @@ interface OverallScoreCardProps {
  * READ-ONLY display of all fraternity scores.
  * Shows Overall, Reputation (with 3 sub-categories), Party Quality (with 3 sub-categories), Confidence, and Trending.
  * Never includes interactive elements - this is display only.
- * 
- * Display modes:
- * - Overall tab: showReputationBreakdown=true, showPartyBreakdown=true
- * - Reputation tab: showReputationBreakdown=true, showPartyBreakdown=false
- * - Parties tab: showReputationBreakdown=false, showPartyBreakdown=true
  */
 export default function OverallScoreCard({ 
   scores, 
@@ -45,7 +40,6 @@ export default function OverallScoreCard({
       helper: 'Member quality and cohesion',
       icon: Users,
       value: avgBrotherhood,
-      weight: '30%',
       color: 'text-blue-500'
     },
     {
@@ -54,7 +48,6 @@ export default function OverallScoreCard({
       helper: 'Campus perception and overall standing',
       icon: Shield,
       value: avgReputation,
-      weight: '60%',
       color: 'text-primary'
     },
     {
@@ -63,7 +56,6 @@ export default function OverallScoreCard({
       helper: 'Welcoming, respectful, positive presence',
       icon: Heart,
       value: avgCommunity,
-      weight: '10%',
       color: 'text-rose-500'
     },
   ];
@@ -75,7 +67,6 @@ export default function OverallScoreCard({
       helper: 'Energy and atmosphere',
       icon: Zap,
       value: avgVibe,
-      weight: '50%',
       color: 'text-amber-500'
     },
     {
@@ -84,7 +75,6 @@ export default function OverallScoreCard({
       helper: 'DJ, playlist quality',
       icon: Music,
       value: avgMusic,
-      weight: '30%',
       color: 'text-blue-500'
     },
     {
@@ -93,7 +83,6 @@ export default function OverallScoreCard({
       helper: 'Organization and logistics',
       icon: Settings,
       value: avgExecution,
-      weight: '20%',
       color: 'text-green-500'
     },
   ];
@@ -108,9 +97,6 @@ export default function OverallScoreCard({
             <div className="text-4xl font-bold text-foreground">
               {overall.toFixed(1)}
             </div>
-            <p className="text-xs text-muted-foreground mt-1">
-              65% Reputation • 35% Party
-            </p>
           </div>
           {showTrending && (
             <div className="flex items-center gap-2">
@@ -135,14 +121,11 @@ export default function OverallScoreCard({
       {showReputationBreakdown && (
         <div className="space-y-4">
           <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <p className="text-sm font-medium">Reputation Breakdown</p>
-              <Badge variant="outline" className="text-xs">65%</Badge>
-            </div>
+            <p className="text-sm font-medium">Reputation Breakdown</p>
             <span className={`text-sm font-bold ${getScoreColor(repAdj)}`}>{repAdj.toFixed(1)}</span>
           </div>
           
-          {reputationBreakdown.map(({ key, label, helper, icon: Icon, value, weight, color }) => (
+          {reputationBreakdown.map(({ key, label, helper, icon: Icon, value, color }) => (
             <div key={key} className="space-y-2">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
@@ -154,10 +137,7 @@ export default function OverallScoreCard({
                     <p className="text-xs text-muted-foreground">{helper}</p>
                   </div>
                 </div>
-                <div className="text-right">
-                  <p className={`text-lg font-bold ${getScoreColor(value)}`}>{value.toFixed(1)}</p>
-                  <Badge variant="outline" className="text-xs">{weight}</Badge>
-                </div>
+                <p className={`text-lg font-bold ${getScoreColor(value)}`}>{value.toFixed(1)}</p>
               </div>
               <Progress value={value * 10} className="h-2" />
             </div>
@@ -169,14 +149,11 @@ export default function OverallScoreCard({
       {showPartyBreakdown && (
         <div className="space-y-4 pt-2 border-t">
           <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <p className="text-sm font-medium">Party Quality Breakdown</p>
-              <Badge variant="outline" className="text-xs">35%</Badge>
-            </div>
+            <p className="text-sm font-medium">Party Quality Breakdown</p>
             <span className={`text-sm font-bold ${getScoreColor(partyAdj)}`}>{partyAdj.toFixed(1)}</span>
           </div>
           
-          {partyBreakdown.map(({ key, label, helper, icon: Icon, value, weight, color }) => (
+          {partyBreakdown.map(({ key, label, helper, icon: Icon, value, color }) => (
             <div key={key} className="space-y-2">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
@@ -188,10 +165,7 @@ export default function OverallScoreCard({
                     <p className="text-xs text-muted-foreground">{helper}</p>
                   </div>
                 </div>
-                <div className="text-right">
-                  <p className={`text-lg font-bold ${getScoreColor(value)}`}>{value.toFixed(1)}</p>
-                  <Badge variant="outline" className="text-xs">{weight}</Badge>
-                </div>
+                <p className={`text-lg font-bold ${getScoreColor(value)}`}>{value.toFixed(1)}</p>
               </div>
               <Progress value={value * 10} className="h-2" />
             </div>
