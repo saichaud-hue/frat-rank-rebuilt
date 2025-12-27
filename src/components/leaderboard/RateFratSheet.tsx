@@ -71,7 +71,6 @@ export default function RateFratSheet({
       icon: Users,
       value: brotherhood,
       setValue: setBrotherhood,
-      weight: '30%',
       color: 'text-blue-500'
     },
     {
@@ -81,7 +80,6 @@ export default function RateFratSheet({
       icon: Shield,
       value: reputation,
       setValue: setReputation,
-      weight: '60%',
       color: 'text-primary'
     },
     {
@@ -91,7 +89,6 @@ export default function RateFratSheet({
       icon: Heart,
       value: community,
       setValue: setCommunity,
-      weight: '10%',
       color: 'text-rose-500'
     },
   ];
@@ -126,14 +123,11 @@ export default function RateFratSheet({
                 >
                   {combinedScore.toFixed(1)}
                 </div>
-                <p className="text-xs text-muted-foreground">
-                  30% Brotherhood • 60% Reputation • 10% Community
-                </p>
               </div>
 
               {/* Sliders */}
               <div className="space-y-5">
-                {sliders.map(({ key, label, helper, icon: Icon, value, setValue, weight, color }) => (
+                {sliders.map(({ key, label, helper, icon: Icon, value, setValue, color }) => (
                   <div key={key} className="space-y-3">
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-3">
@@ -145,10 +139,7 @@ export default function RateFratSheet({
                           <p className="text-xs text-muted-foreground">{helper}</p>
                         </div>
                       </div>
-                      <div className="text-right">
-                        <p className={`text-lg font-bold ${getScoreColor(value)}`}>{value.toFixed(1)}</p>
-                        <Badge variant="outline" className="text-xs">{weight}</Badge>
-                      </div>
+                      <p className={`text-lg font-bold ${getScoreColor(value)}`}>{value.toFixed(1)}</p>
                     </div>
                     <Slider
                       value={[value]}
