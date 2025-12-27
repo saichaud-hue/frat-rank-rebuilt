@@ -89,7 +89,7 @@ export default function FraternityPage() {
       ? allRatings.reduce((sum, r) => sum + (r.score ?? 5), 0) / allRatings.length
       : 5;
 
-    const baseScore = (0.5 * reputationScore) + (0.5 * (fraternity.historical_party_score ?? 5));
+    const baseScore = (0.7 * reputationScore) + (0.3 * (fraternity.historical_party_score ?? 5));
 
     await base44.entities.Fraternity.update(fraternity.id, {
       reputation_score: clamp(reputationScore, 0, 10),
@@ -159,20 +159,40 @@ export default function FraternityPage() {
           <p className="text-muted-foreground">{fraternity.description}</p>
         )}
 
-        <div className="flex items-center justify-between">
-          <div className="text-center">
-            <div className="text-3xl font-bold gradient-text">
-              {Math.min(fraternity.display_score ?? 5, 10).toFixed(1)}
+        {/* Overall Score Display */}
+        {(() => {
+          const reputation = fraternity.reputation_score ?? 5.0;
+          const partyAvg = fraternity.historical_party_score ?? 5.0;
+          const overallBaseScore = Math.max(0, Math.min(10, 0.7 * reputation + 0.3 * partyAvg));
+          return (
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-xs text-muted-foreground mb-1">Overall Score</p>
+                  <div className="text-4xl font-bold text-foreground">
+                    {overallBaseScore.toFixed(1)}
+                  </div>
+                </div>
+                <div className="flex items-center gap-2">
+                  <TrendIndicator momentum={fraternity.momentum ?? 0} showLabel />
+                  <Badge variant="outline">
+                    {(fraternity.momentum ?? 0) >= 0 ? '+' : ''}{(fraternity.momentum ?? 0).toFixed(2)}
+                  </Badge>
+                </div>
+              </div>
+              {/* Score Progress Bar */}
+              <div className="w-full bg-muted rounded-full h-3 overflow-hidden">
+                <div 
+                  className="h-full bg-primary transition-all duration-500 rounded-full"
+                  style={{ width: `${(overallBaseScore / 10) * 100}%` }}
+                />
+              </div>
+              <p className="text-xs text-muted-foreground text-center">
+                70% Reputation • 30% Party Quality
+              </p>
             </div>
-            <p className="text-xs text-muted-foreground">Overall Score</p>
-          </div>
-          <div className="flex items-center gap-2">
-            <TrendIndicator momentum={fraternity.momentum ?? 0} showLabel />
-            <Badge variant="outline">
-              {(fraternity.momentum ?? 0) >= 0 ? '+' : ''}{(fraternity.momentum ?? 0).toFixed(2)}
-            </Badge>
-          </div>
-        </div>
+          );
+        })()}
 
         <ScoreBreakdown 
           reputationScore={fraternity.reputation_score ?? 5}

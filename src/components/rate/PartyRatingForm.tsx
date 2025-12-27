@@ -114,7 +114,7 @@ export default function PartyRatingForm({ party, fraternity, onClose, onSubmit }
             ? reputationRatings.reduce((sum, r) => sum + (r.score ?? 5), 0) / reputationRatings.length
             : 5;
 
-          const overallScoreBase = (0.5 * reputationScore) + (0.5 * partyBaseScore);
+          const overallScoreBase = (0.7 * reputationScore) + (0.3 * partyBaseScore);
           const prevOverall = currentFrat.display_score ?? overallScoreBase;
           const newOverall = (prevOverall * 0.8) + (performanceScore * 0.2);
           const momentum = performanceScore - overallScoreBase;
