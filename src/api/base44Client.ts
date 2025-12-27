@@ -291,14 +291,32 @@ export async function seedInitialData(): Promise<void> {
     location: 'Durham, NC',
   });
 
-  // Create fraternities
+  // Create fraternities - Full Duke IFC/NPHC list
   const frats = [
+    { name: 'Kappa Alpha Psi', chapter: 'ΚΑΨ', description: 'Achievement in every field of human endeavor', founded_year: 1911 },
     { name: 'Sigma Chi', chapter: 'ΣΧ', description: 'Brotherhood of lifelong friends', founded_year: 1855 },
-    { name: 'Alpha Tau Omega', chapter: 'ΑΤΩ', description: 'Building better men', founded_year: 1865 },
-    { name: 'Kappa Sigma', chapter: 'ΚΣ', description: 'A brotherhood for life', founded_year: 1869 },
-    { name: 'Pi Kappa Alpha', chapter: 'ΠΚΑ', description: 'Once a Pike, always a Pike', founded_year: 1868 },
+    { name: 'Alpha Epsilon Pi', chapter: 'ΑΕΠ', description: 'Developing leadership for the Jewish community', founded_year: 1913 },
     { name: 'Sigma Alpha Epsilon', chapter: 'ΣΑΕ', description: 'True Gentlemen', founded_year: 1856 },
-    { name: 'Beta Theta Pi', chapter: 'ΒΘΠ', description: 'Mutual assistance in the honorable labors', founded_year: 1839 },
+    { name: 'Pi Kappa Phi', chapter: 'ΠΚΦ', description: 'Building better men through service', founded_year: 1904 },
+    { name: 'Omega Psi Phi', chapter: 'ΩΨΦ', description: 'Manhood, scholarship, perseverance, and uplift', founded_year: 1911 },
+    { name: 'Sigma Nu', chapter: 'ΣΝ', description: 'Love, honor, and truth', founded_year: 1869 },
+    { name: 'Pi Kappa Alpha', chapter: 'ΠΚΑ', description: 'Once a Pike, always a Pike', founded_year: 1868 },
+    { name: 'Alpha Tau Omega', chapter: 'ΑΤΩ', description: 'Building better men', founded_year: 1865 },
+    { name: 'Kappa Alpha Order', chapter: 'ΚΑ', description: 'Dieu et les Dames', founded_year: 1865 },
+    { name: 'Lambda Phi Epsilon', chapter: 'ΛΦΕ', description: 'Authentic leaders of the world', founded_year: 1981 },
+    { name: 'Psi Upsilon', chapter: 'ΨΥ', description: 'Union of hearts and hands', founded_year: 1833 },
+    { name: 'Lambda Upsilon Lambda', chapter: 'ΛΥΛ', description: 'Latino unity and academic excellence', founded_year: 1982 },
+    { name: 'Delta Sigma Phi', chapter: 'ΔΣΦ', description: 'Better men, better lives', founded_year: 1899 },
+    { name: 'Chi Psi', chapter: 'ΧΨ', description: 'Gentleman, scholar, jolly good fellow', founded_year: 1841 },
+    { name: 'Alpha Delta Phi', chapter: 'ΑΔΦ', description: 'Mind, heart, character', founded_year: 1832 },
+    { name: 'Sigma Pi', chapter: 'ΣΠ', description: 'Promote fellowship and scholarship', founded_year: 1897 },
+    { name: 'Phi Delta Theta', chapter: 'ΦΔΘ', description: 'Becoming the greatest version of ourselves', founded_year: 1848 },
+    { name: 'Sigma Phi Epsilon', chapter: 'ΣΦΕ', description: 'Building balanced men', founded_year: 1901 },
+    { name: 'Delta Tau Delta', chapter: 'ΔΤΔ', description: 'Committed to lives of excellence', founded_year: 1858 },
+    { name: 'Delta Sigma Iota', chapter: 'ΔΣΙ', description: 'Serving the South Asian community', founded_year: 1998 },
+    { name: 'Phi Beta Sigma', chapter: 'ΦΒΣ', description: 'Culture for service and service for humanity', founded_year: 1914 },
+    { name: 'Alpha Phi Alpha', chapter: 'ΑΦΑ', description: 'First and finest', founded_year: 1906 },
+    { name: 'Delta Kappa Epsilon', chapter: 'ΔΚΕ', description: 'Friends from the heart forever', founded_year: 1844 },
   ];
 
   const createdFrats: Fraternity[] = [];
