@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { base44, seedInitialData, type Fraternity, type ReputationRating } from '@/api/base44Client';
+import { base44, seedInitialData, type Fraternity } from '@/api/base44Client';
 import { clamp } from '@/utils';
 import { getOverallScore, getPartyScore, getReputationScore, sortFraternitiesByOverall } from '@/utils/scoring';
 import LeaderboardHeader from '@/components/leaderboard/LeaderboardHeader';
@@ -15,7 +15,7 @@ export default function Leaderboard() {
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<FilterType>('overall');
   const [selectedFrat, setSelectedFrat] = useState<Fraternity | null>(null);
-  const [existingScore, setExistingScore] = useState<number | undefined>();
+  const [existingScores, setExistingScores] = useState<{ brotherhood: number; reputation: number; community: number } | undefined>();
 
   useEffect(() => {
     initAndLoad();
@@ -90,11 +90,20 @@ export default function Leaderboard() {
       user_id: user.id,
     });
 
-    setExistingScore(existingRatings.length > 0 ? existingRatings[0].score : undefined);
+    if (existingRatings.length > 0) {
+      const rating = existingRatings[0];
+      setExistingScores({
+        brotherhood: rating.brotherhood_score ?? 5,
+        reputation: rating.reputation_score ?? 5,
+        community: rating.community_score ?? 5,
+      });
+    } else {
+      setExistingScores(undefined);
+    }
     setSelectedFrat(fraternity);
   };
 
-  const handleRateSubmit = async (score: number) => {
+  const handleRateSubmit = async (scores: { brotherhood: number; reputation: number; community: number; combined: number }) => {
     if (!selectedFrat) return;
 
     const user = await base44.auth.me();
@@ -106,13 +115,20 @@ export default function Leaderboard() {
       user_id: user.id,
     });
 
+    const ratingData = {
+      brotherhood_score: scores.brotherhood,
+      reputation_score: scores.reputation,
+      community_score: scores.community,
+      combined_score: scores.combined,
+    };
+
     if (existingRatings.length > 0) {
-      await base44.entities.ReputationRating.update(existingRatings[0].id, { score });
+      await base44.entities.ReputationRating.update(existingRatings[0].id, ratingData);
     } else {
       await base44.entities.ReputationRating.create({
         fraternity_id: selectedFrat.id,
         user_id: user.id,
-        score,
+        ...ratingData,
         weight: 1,
         semester: 'Fall 2024',
       });
@@ -124,7 +140,7 @@ export default function Leaderboard() {
     });
 
     const reputationScore = allRatings.length > 0
-      ? allRatings.reduce((sum, r) => sum + (r.score ?? 5), 0) / allRatings.length
+      ? allRatings.reduce((sum, r) => sum + (r.combined_score ?? 5), 0) / allRatings.length
       : 5;
 
     const baseScore = (0.7 * reputationScore) + (0.3 * (selectedFrat.historical_party_score ?? 5));
@@ -184,7 +200,7 @@ export default function Leaderboard() {
         isOpen={!!selectedFrat}
         onClose={() => setSelectedFrat(null)}
         onSubmit={handleRateSubmit}
-        existingScore={existingScore}
+        existingScores={existingScores}
       />
     </div>
   );

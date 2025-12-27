@@ -111,7 +111,7 @@ export default function PartyRatingForm({ party, fraternity, onClose, onSubmit }
           });
           
           const reputationScore = reputationRatings.length > 0
-            ? reputationRatings.reduce((sum, r) => sum + (r.score ?? 5), 0) / reputationRatings.length
+            ? reputationRatings.reduce((sum, r) => sum + (r.combined_score ?? 5), 0) / reputationRatings.length
             : 5;
 
           const overallScoreBase = (0.7 * reputationScore) + (0.3 * partyBaseScore);

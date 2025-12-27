@@ -1,5 +1,15 @@
 import type { Fraternity } from '@/api/base44Client';
 
+// Compute combined reputation from 3 slider values
+export function computeCombinedReputation(
+  brotherhood: number,
+  reputation: number,
+  community: number
+): number {
+  const combined = 0.30 * brotherhood + 0.60 * reputation + 0.10 * community;
+  return Math.max(0, Math.min(10, combined));
+}
+
 export function getReputationScore(frat: Fraternity): number {
   return frat.reputation_score ?? 5.0;
 }
