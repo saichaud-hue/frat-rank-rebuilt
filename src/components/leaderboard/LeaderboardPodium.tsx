@@ -9,13 +9,15 @@ type FilterType = 'overall' | 'reputation' | 'party' | 'trending';
 
 interface LeaderboardPodiumProps {
   topThree: FraternityWithScores[];
+  ranks?: number[];
   filter?: FilterType;
 }
 
-export default function LeaderboardPodium({ topThree, filter = 'overall' }: LeaderboardPodiumProps) {
+export default function LeaderboardPodium({ topThree, ranks = [1, 2, 3], filter = 'overall' }: LeaderboardPodiumProps) {
   if (topThree.length < 3) return null;
 
   const [first, second, third] = topThree;
+  const [rank1, rank2, rank3] = ranks;
 
   const getDisplayScore = (frat: FraternityWithScores): number => {
     const scores = frat.computedScores;
@@ -60,26 +62,32 @@ export default function LeaderboardPodium({ topThree, filter = 'overall' }: Lead
     rank: number; 
     size: 'lg' | 'md' 
   }) => {
-    const Icon = rank === 1 ? Crown : rank === 2 ? Trophy : Medal;
-    const colors = {
-      1: 'from-amber-400 to-yellow-500',
-      2: 'from-slate-300 to-slate-400',
-      3: 'from-amber-600 to-amber-700',
+    // For ties (all same rank), use a neutral styling
+    const isTied = rank === rank1 && rank1 === rank2 && rank2 === rank3;
+    const Icon = isTied ? Medal : (rank === 1 ? Crown : rank === 2 ? Trophy : Medal);
+    
+    const getColor = () => {
+      if (isTied) return 'from-slate-400 to-slate-500';
+      if (rank === 1) return 'from-amber-400 to-yellow-500';
+      if (rank === 2) return 'from-slate-300 to-slate-400';
+      return 'from-amber-600 to-amber-700';
     };
-    const bgColors = {
-      1: 'bg-gradient-to-br from-amber-50 to-yellow-50 border-amber-200/50',
-      2: 'bg-gradient-to-br from-slate-50 to-gray-50 border-slate-200/50',
-      3: 'bg-gradient-to-br from-orange-50 to-amber-50 border-amber-200/50',
+    
+    const getBgColor = () => {
+      if (isTied) return 'bg-gradient-to-br from-slate-50 to-gray-50 border-slate-200/50';
+      if (rank === 1) return 'bg-gradient-to-br from-amber-50 to-yellow-50 border-amber-200/50';
+      if (rank === 2) return 'bg-gradient-to-br from-slate-50 to-gray-50 border-slate-200/50';
+      return 'bg-gradient-to-br from-orange-50 to-amber-50 border-amber-200/50';
     };
 
     return (
       <Link to={createPageUrl(`Fraternity?id=${frat.id}`)}>
         <Card 
-          className={`relative overflow-hidden ${bgColors[rank as 1|2|3]} ${
+          className={`relative overflow-hidden ${getBgColor()} ${
             size === 'lg' ? 'p-4 sm:p-6' : 'p-3 sm:p-4'
           } transition-all hover:scale-[1.02] hover:shadow-lg cursor-pointer`}
         >
-          <div className={`absolute top-2 right-2 p-1.5 rounded-full bg-gradient-to-br ${colors[rank as 1|2|3]}`}>
+          <div className={`absolute top-2 right-2 p-1.5 rounded-full bg-gradient-to-br ${getColor()}`}>
             <Icon className={`${size === 'lg' ? 'h-5 w-5' : 'h-4 w-4'} text-white`} />
           </div>
           
@@ -114,13 +122,13 @@ export default function LeaderboardPodium({ topThree, filter = 'overall' }: Lead
   return (
     <div className="grid grid-cols-3 gap-2 sm:gap-4 items-end">
       <div className="order-1">
-        <PodiumCard frat={second} rank={2} size="md" />
+        <PodiumCard frat={second} rank={rank2} size="md" />
       </div>
       <div className="order-2 transform translate-y-[-8px]">
-        <PodiumCard frat={first} rank={1} size="lg" />
+        <PodiumCard frat={first} rank={rank1} size="lg" />
       </div>
       <div className="order-3">
-        <PodiumCard frat={third} rank={3} size="md" />
+        <PodiumCard frat={third} rank={rank3} size="md" />
       </div>
     </div>
   );

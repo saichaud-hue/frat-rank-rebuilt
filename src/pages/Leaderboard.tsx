@@ -208,8 +208,47 @@ export default function Leaderboard() {
     await loadFraternities();
   };
 
+  // Compute ranks with ties (same score = same rank)
+  const computeRanks = (frats: FraternityWithScores[]): number[] => {
+    if (frats.length === 0) return [];
+    
+    const getScore = (f: FraternityWithScores): number => {
+      const s = f.computedScores;
+      if (!s) return 5;
+      switch (filter) {
+        case 'overall': return s.overall;
+        case 'reputation': return s.repAdj;
+        case 'party': return s.partyAdj;
+        case 'trending': return s.trending;
+        default: return s.overall;
+      }
+    };
+    
+    const ranks: number[] = [];
+    let currentRank = 1;
+    
+    for (let i = 0; i < frats.length; i++) {
+      if (i === 0) {
+        ranks.push(1);
+      } else {
+        const prevScore = getScore(frats[i - 1]);
+        const currScore = getScore(frats[i]);
+        // If scores are equal (within tolerance), assign same rank
+        if (Math.abs(prevScore - currScore) < 0.01) {
+          ranks.push(ranks[i - 1]);
+        } else {
+          ranks.push(i + 1);
+        }
+      }
+    }
+    return ranks;
+  };
+
+  const ranks = computeRanks(fraternities);
   const topThree = fraternities.slice(0, 3);
+  const topThreeRanks = ranks.slice(0, 3);
   const rest = fraternities.slice(3);
+  const restRanks = ranks.slice(3);
 
   if (loading) {
     return (
@@ -235,7 +274,7 @@ export default function Leaderboard() {
       />
 
       {topThree.length >= 3 && (
-        <LeaderboardPodium topThree={topThree} filter={filter} />
+        <LeaderboardPodium topThree={topThree} ranks={topThreeRanks} filter={filter} />
       )}
 
       <div className="space-y-3">
@@ -243,7 +282,7 @@ export default function Leaderboard() {
           <FraternityCard
             key={frat.id}
             fraternity={frat}
-            rank={index + 4}
+            rank={restRanks[index]}
             onRate={handleRate}
             filter={filter}
           />
