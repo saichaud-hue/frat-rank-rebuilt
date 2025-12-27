@@ -122,7 +122,7 @@ export default function Leaderboard() {
       ? allRatings.reduce((sum, r) => sum + (r.score ?? 5), 0) / allRatings.length
       : 5;
 
-    const baseScore = (0.5 * reputationScore) + (0.5 * (selectedFrat.historical_party_score ?? 5));
+    const baseScore = (0.7 * reputationScore) + (0.3 * (selectedFrat.historical_party_score ?? 5));
 
     await base44.entities.Fraternity.update(selectedFrat.id, {
       reputation_score: clamp(reputationScore, 0, 10),

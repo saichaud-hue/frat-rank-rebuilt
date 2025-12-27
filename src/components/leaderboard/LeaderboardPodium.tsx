@@ -65,11 +65,10 @@ export default function LeaderboardPodium({ topThree }: LeaderboardPodiumProps) 
               </Badge>
             </div>
 
-            <div className={`font-bold ${size === 'lg' ? 'text-3xl' : 'text-2xl'}`}>
-              <span className="gradient-text">
-                {Math.min(frat.display_score ?? 5, 10).toFixed(1)}
-              </span>
+            <div className={`font-bold ${size === 'lg' ? 'text-2xl' : 'text-xl'} text-foreground`}>
+              {(frat.historical_party_score ?? 5.0).toFixed(1)}
             </div>
+            <p className="text-xs text-muted-foreground">Party Score</p>
           </div>
         </Card>
       </Link>
