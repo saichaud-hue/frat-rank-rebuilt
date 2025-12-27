@@ -154,8 +154,7 @@ export default function PartyRatingForm({ party, fraternity, onClose, onSubmit }
       color: 'text-amber-500',
       value: vibe, 
       setValue: setVibe,
-      description: 'Energy and atmosphere',
-      weight: '50%'
+      description: 'Energy and atmosphere'
     },
     { 
       key: 'music', 
@@ -164,8 +163,7 @@ export default function PartyRatingForm({ party, fraternity, onClose, onSubmit }
       color: 'text-blue-500',
       value: music, 
       setValue: setMusic,
-      description: 'DJ, playlist quality',
-      weight: '30%'
+      description: 'DJ, playlist quality'
     },
     { 
       key: 'execution', 
@@ -174,8 +172,7 @@ export default function PartyRatingForm({ party, fraternity, onClose, onSubmit }
       color: 'text-green-500',
       value: execution, 
       setValue: setExecution,
-      description: 'Organization and logistics',
-      weight: '20%'
+      description: 'Organization and logistics'
     },
   ];
 
@@ -207,7 +204,7 @@ export default function PartyRatingForm({ party, fraternity, onClose, onSubmit }
 
         {/* Categories */}
         <div className="p-4 space-y-6">
-          {categories.map(({ key, label, icon: Icon, color, value, setValue, description, weight }) => (
+          {categories.map(({ key, label, icon: Icon, color, value, setValue, description }) => (
             <div key={key} className="space-y-3">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
@@ -219,10 +216,7 @@ export default function PartyRatingForm({ party, fraternity, onClose, onSubmit }
                     <p className="text-xs text-muted-foreground">{description}</p>
                   </div>
                 </div>
-                <div className="text-right">
-                  <p className={`text-xl font-bold ${getScoreColor(value)}`}>{value.toFixed(1)}</p>
-                  <Badge variant="outline" className="text-xs">{weight}</Badge>
-                </div>
+                <p className={`text-xl font-bold ${getScoreColor(value)}`}>{value.toFixed(1)}</p>
               </div>
               <Slider
                 value={[value]}
