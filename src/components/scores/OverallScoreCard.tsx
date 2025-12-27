@@ -1,8 +1,7 @@
-import { Users, Shield, Heart } from 'lucide-react';
+import { Users, Shield, Heart, Zap, Music, Settings } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import TrendIndicator from '@/components/leaderboard/TrendIndicator';
-import ScoreDisplay from './ScoreDisplay';
 import ConfidenceBar from './ConfidenceBar';
 import { getScoreColor } from '@/utils';
 import type { FraternityScores } from '@/utils/scoring';
@@ -15,7 +14,7 @@ interface OverallScoreCardProps {
 
 /**
  * READ-ONLY display of all fraternity scores.
- * Shows Overall, Reputation (with 3 sub-categories), Party Quality, Confidence, and Trending.
+ * Shows Overall, Reputation (with 3 sub-categories), Party Quality (with 3 sub-categories), Confidence, and Trending.
  * Never includes interactive elements - this is display only.
  */
 export default function OverallScoreCard({ 
@@ -26,7 +25,8 @@ export default function OverallScoreCard({
   const { 
     overall, repAdj, partyAdj, trending, 
     confidenceOverall, numRepRatings, numPartyRatings,
-    avgBrotherhood, avgReputation, avgCommunity 
+    avgBrotherhood, avgReputation, avgCommunity,
+    avgVibe, avgMusic, avgExecution
   } = scores;
 
   const reputationBreakdown = [
@@ -56,6 +56,36 @@ export default function OverallScoreCard({
       value: avgCommunity,
       weight: '10%',
       color: 'text-rose-500'
+    },
+  ];
+
+  const partyBreakdown = [
+    {
+      key: 'vibe',
+      label: 'Vibe',
+      helper: 'Energy and atmosphere',
+      icon: Zap,
+      value: avgVibe,
+      weight: '50%',
+      color: 'text-amber-500'
+    },
+    {
+      key: 'music',
+      label: 'Music',
+      helper: 'DJ, playlist quality',
+      icon: Music,
+      value: avgMusic,
+      weight: '30%',
+      color: 'text-blue-500'
+    },
+    {
+      key: 'execution',
+      label: 'Execution',
+      helper: 'Organization and logistics',
+      icon: Settings,
+      value: avgExecution,
+      weight: '20%',
+      color: 'text-green-500'
     },
   ];
 
@@ -95,7 +125,10 @@ export default function OverallScoreCard({
       {/* Reputation Breakdown - 3 sub-categories (READ-ONLY) */}
       <div className="space-y-4">
         <div className="flex items-center justify-between">
-          <p className="text-sm font-medium">Reputation Breakdown</p>
+          <div className="flex items-center gap-2">
+            <p className="text-sm font-medium">Reputation Breakdown</p>
+            <Badge variant="outline" className="text-xs">65%</Badge>
+          </div>
           <span className={`text-sm font-bold ${getScoreColor(repAdj)}`}>{repAdj.toFixed(1)}</span>
         </div>
         
@@ -121,13 +154,36 @@ export default function OverallScoreCard({
         ))}
       </div>
 
-      {/* Party Quality */}
-      <div className="pt-2 border-t">
-        <ScoreDisplay 
-          label="Party Quality" 
-          score={partyAdj} 
-          weight="35%"
-        />
+      {/* Party Quality Breakdown - 3 sub-categories (READ-ONLY) */}
+      <div className="space-y-4 pt-2 border-t">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <p className="text-sm font-medium">Party Quality Breakdown</p>
+            <Badge variant="outline" className="text-xs">35%</Badge>
+          </div>
+          <span className={`text-sm font-bold ${getScoreColor(partyAdj)}`}>{partyAdj.toFixed(1)}</span>
+        </div>
+        
+        {partyBreakdown.map(({ key, label, helper, icon: Icon, value, weight, color }) => (
+          <div key={key} className="space-y-2">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className={`w-8 h-8 rounded-full bg-muted flex items-center justify-center ${color}`}>
+                  <Icon className="h-4 w-4" />
+                </div>
+                <div>
+                  <p className="font-medium text-sm">{label}</p>
+                  <p className="text-xs text-muted-foreground">{helper}</p>
+                </div>
+              </div>
+              <div className="text-right">
+                <p className={`text-lg font-bold ${getScoreColor(value)}`}>{value.toFixed(1)}</p>
+                <Badge variant="outline" className="text-xs">{weight}</Badge>
+              </div>
+            </div>
+            <Progress value={value * 10} className="h-2" />
+          </div>
+        ))}
       </div>
 
       {/* Confidence Indicator */}
