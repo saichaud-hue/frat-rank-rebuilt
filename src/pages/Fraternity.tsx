@@ -217,13 +217,14 @@ export default function FraternityPage() {
           <p className="text-muted-foreground">{fraternity.description}</p>
         )}
 
-        {/* READ-ONLY Score Display - Never includes sliders */}
+        {/* READ-ONLY Score Display - Shows both Reputation AND Party breakdowns */}
         {computedScores && (
           <OverallScoreCard 
             scores={computedScores}
             showConfidence={true}
             showTrending={true}
-            showPartyBreakdown={false}
+            showReputationBreakdown={true}
+            showPartyBreakdown={true}
           />
         )}
 
