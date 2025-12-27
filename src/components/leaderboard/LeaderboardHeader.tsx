@@ -17,7 +17,7 @@ export default function LeaderboardHeader({
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold gradient-text">Leaderboard</h1>
+          <h1 className="text-2xl font-bold text-foreground">Leaderboard</h1>
           <div className="flex items-center gap-1.5 text-muted-foreground mt-1">
             <MapPin className="h-3.5 w-3.5" />
             <span className="text-sm">{campusName}</span>
