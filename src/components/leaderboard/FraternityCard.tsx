@@ -4,6 +4,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Link } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
+import { getOverallScore, getPartyScore } from '@/utils/scoring';
 import TrendIndicator from './TrendIndicator';
 import ScoreBreakdown from './ScoreBreakdown';
 import type { Fraternity } from '@/api/base44Client';
@@ -57,9 +58,9 @@ export default function FraternityCard({ fraternity, rank, onRate }: FraternityC
 
               <div className="text-right">
                 <div className="text-2xl font-bold text-foreground">
-                  {(fraternity.historical_party_score ?? 5.0).toFixed(1)}
+                  {getOverallScore(fraternity).toFixed(1)}
                 </div>
-                <p className="text-xs text-muted-foreground">Party Score</p>
+                <p className="text-xs text-muted-foreground">Overall Score</p>
                 <TrendIndicator momentum={fraternity.momentum ?? 0} />
               </div>
             </div>

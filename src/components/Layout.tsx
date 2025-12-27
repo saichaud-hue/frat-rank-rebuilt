@@ -165,10 +165,10 @@ export default function Layout({ children }: LayoutProps) {
           {/* Mobile Header */}
           <header className="md:hidden sticky top-0 z-40 bg-white/80 backdrop-blur-sm border-b border-slate-200/50 px-4 py-3 flex items-center justify-between">
             <Link to="/" className="flex items-center gap-2">
-              <div className="w-8 h-8 rounded-lg gradient-primary flex items-center justify-center">
+              <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center">
                 <Trophy className="h-4 w-4 text-white" />
               </div>
-              <span className="text-lg font-bold gradient-text">FratRank</span>
+              <span className="text-lg font-bold text-foreground">FratRank</span>
             </Link>
             <SidebarTrigger className="md:hidden">
               <Menu className="h-5 w-5" />
