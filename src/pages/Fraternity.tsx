@@ -223,6 +223,7 @@ export default function FraternityPage() {
             scores={computedScores}
             showConfidence={true}
             showTrending={true}
+            showPartyBreakdown={false}
           />
         )}
 
