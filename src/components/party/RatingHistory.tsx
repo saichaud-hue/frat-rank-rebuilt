@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Clock, Sparkles, Music, Wine } from 'lucide-react';
+import { Clock, Zap, Music, Settings } from 'lucide-react';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
@@ -78,8 +78,8 @@ export default function RatingHistory({ partyId }: RatingHistoryProps) {
               <div className="flex-1 min-w-0">
                 <div className="flex items-center justify-between gap-2">
                   <p className="font-medium text-sm">Anonymous Duke Student</p>
-                  <Badge className={`${getScoreBgColor(rating.overall_score ?? 0)} text-white`}>
-                    {(rating.overall_score ?? 0).toFixed(1)}
+                  <Badge className={`${getScoreBgColor(rating.party_quality_score ?? 0)} text-white`}>
+                    {(rating.party_quality_score ?? 0).toFixed(1)}
                   </Badge>
                 </div>
                 
@@ -89,16 +89,16 @@ export default function RatingHistory({ partyId }: RatingHistoryProps) {
 
                 <div className="flex items-center gap-4 mt-2">
                   <div className="flex items-center gap-1 text-xs">
-                    <Sparkles className="h-3.5 w-3.5 text-amber-500" />
-                    <span className="font-medium">{(rating.fun_score ?? 0).toFixed(1)}</span>
+                    <Zap className="h-3.5 w-3.5 text-amber-500" />
+                    <span className="font-medium">{(rating.vibe_score ?? 0).toFixed(1)}</span>
                   </div>
                   <div className="flex items-center gap-1 text-xs">
                     <Music className="h-3.5 w-3.5 text-blue-500" />
                     <span className="font-medium">{(rating.music_score ?? 0).toFixed(1)}</span>
                   </div>
                   <div className="flex items-center gap-1 text-xs">
-                    <Wine className="h-3.5 w-3.5 text-purple-500" />
-                    <span className="font-medium">{(rating.alcohol_score ?? 0).toFixed(1)}</span>
+                    <Settings className="h-3.5 w-3.5 text-green-500" />
+                    <span className="font-medium">{(rating.execution_score ?? 0).toFixed(1)}</span>
                   </div>
                 </div>
               </div>
