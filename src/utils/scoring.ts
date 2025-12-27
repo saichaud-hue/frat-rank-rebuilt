@@ -221,6 +221,10 @@ export interface FraternityScores {
   avgBrotherhood: number;
   avgReputation: number;
   avgCommunity: number;
+  // Individual party sub-scores (averages)
+  avgVibe: number;
+  avgMusic: number;
+  avgExecution: number;
 }
 
 export async function computeFullFraternityScores(
@@ -230,7 +234,7 @@ export async function computeFullFraternityScores(
   campusRepAvg: number,
   campusPartyAvg: number
 ): Promise<FraternityScores> {
-  // Calculate individual sub-score averages
+  // Calculate individual reputation sub-score averages
   const avgBrotherhood = repRatings.length > 0
     ? repRatings.reduce((sum, r) => sum + (r.brotherhood_score ?? 5), 0) / repRatings.length
     : 5.0;
@@ -239,6 +243,18 @@ export async function computeFullFraternityScores(
     : 5.0;
   const avgCommunity = repRatings.length > 0
     ? repRatings.reduce((sum, r) => sum + (r.community_score ?? 5), 0) / repRatings.length
+    : 5.0;
+
+  // Calculate individual party sub-score averages across all party ratings
+  const allPartyRatings = partiesWithRatings.flatMap(pwr => pwr.ratings);
+  const avgVibe = allPartyRatings.length > 0
+    ? allPartyRatings.reduce((sum, r) => sum + (r.vibe_score ?? 5), 0) / allPartyRatings.length
+    : 5.0;
+  const avgMusic = allPartyRatings.length > 0
+    ? allPartyRatings.reduce((sum, r) => sum + (r.music_score ?? 5), 0) / allPartyRatings.length
+    : 5.0;
+  const avgExecution = allPartyRatings.length > 0
+    ? allPartyRatings.reduce((sum, r) => sum + (r.execution_score ?? 5), 0) / allPartyRatings.length
     : 5.0;
 
   // Raw reputation from combined scores
@@ -287,6 +303,9 @@ export async function computeFullFraternityScores(
     avgBrotherhood,
     avgReputation,
     avgCommunity,
+    avgVibe,
+    avgMusic,
+    avgExecution,
   };
 }
 
