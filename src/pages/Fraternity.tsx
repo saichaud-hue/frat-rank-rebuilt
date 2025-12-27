@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useSearchParams, Link } from 'react-router-dom';
 import { ArrowLeft, Calendar, Star, PartyPopper } from 'lucide-react';
-import { base44, type Fraternity, type Party } from '@/api/base44Client';
+import { base44, type Fraternity, type Party, type PartyRating, type ReputationRating } from '@/api/base44Client';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card } from '@/components/ui/card';
@@ -11,7 +11,13 @@ import ScoreBreakdown from '@/components/leaderboard/ScoreBreakdown';
 import PartyCard from '@/components/parties/PartyCard';
 import RateFratSheet from '@/components/leaderboard/RateFratSheet';
 import { createPageUrl, clamp } from '@/utils';
-import { getOverallScore, getReputationScore, getPartyScore, computeCombinedReputation } from '@/utils/scoring';
+import { 
+  computeFullFraternityScores, 
+  computeCampusRepAvg, 
+  computeCampusPartyAvg,
+  type FraternityScores,
+  type PartyWithRatings
+} from '@/utils/scoring';
 
 export default function FraternityPage() {
   const [searchParams] = useSearchParams();
@@ -22,6 +28,7 @@ export default function FraternityPage() {
   const [loading, setLoading] = useState(true);
   const [showRateSheet, setShowRateSheet] = useState(false);
   const [existingScores, setExistingScores] = useState<{ brotherhood: number; reputation: number; community: number } | undefined>();
+  const [computedScores, setComputedScores] = useState<FraternityScores | null>(null);
 
   useEffect(() => {
     if (fratId) loadData();
@@ -29,13 +36,51 @@ export default function FraternityPage() {
 
   const loadData = async () => {
     try {
-      const [fratData, partiesData] = await Promise.all([
+      const [fratData, partiesData, allFrats, allParties, allPartyRatings, repRatings] = await Promise.all([
         base44.entities.Fraternity.get(fratId!),
         base44.entities.Party.filter({ fraternity_id: fratId! }, '-starts_at'),
+        base44.entities.Fraternity.filter({ status: 'active' }),
+        base44.entities.Party.list(),
+        base44.entities.PartyRating.list(),
+        base44.entities.ReputationRating.filter({ fraternity_id: fratId! }),
       ]);
       
       setFraternity(fratData);
       setParties(partiesData);
+
+      // Compute campus averages
+      const campusRepAvg = computeCampusRepAvg(allFrats);
+      const campusPartyAvg = computeCampusPartyAvg(allParties);
+
+      // Get party ratings for this fraternity's parties
+      const fratPartyRatings = allPartyRatings.filter(
+        r => partiesData.some(p => p.id === r.party_id)
+      );
+      
+      const partyRatingsMap = new Map<string, PartyRating[]>();
+      for (const rating of fratPartyRatings) {
+        if (rating.party_id) {
+          const existing = partyRatingsMap.get(rating.party_id) || [];
+          existing.push(rating);
+          partyRatingsMap.set(rating.party_id, existing);
+        }
+      }
+
+      const partiesWithRatings: PartyWithRatings[] = partiesData.map(party => ({
+        party,
+        ratings: partyRatingsMap.get(party.id) || [],
+      }));
+
+      // Compute full scores
+      const scores = await computeFullFraternityScores(
+        fratData,
+        repRatings,
+        partiesWithRatings,
+        campusRepAvg,
+        campusPartyAvg
+      );
+      setComputedScores(scores);
+
     } catch (error) {
       console.error('Failed to load data:', error);
     } finally {
@@ -107,12 +152,8 @@ export default function FraternityPage() {
       ? allRatings.reduce((sum, r) => sum + (r.combined_score ?? 5), 0) / allRatings.length
       : 5;
 
-    const baseScore = (0.7 * reputationScore) + (0.3 * (fraternity.historical_party_score ?? 5));
-
     await base44.entities.Fraternity.update(fraternity.id, {
       reputation_score: clamp(reputationScore, 0, 10),
-      base_score: clamp(baseScore, 0, 10),
-      display_score: clamp(baseScore, 0, 10),
     });
 
     await loadData();
@@ -142,6 +183,11 @@ export default function FraternityPage() {
 
   const upcomingParties = parties.filter(p => p.status === 'upcoming' || p.status === 'active');
   const pastParties = parties.filter(p => p.status === 'completed');
+
+  const overallScore = computedScores?.overall ?? 5;
+  const repScore = computedScores?.repAdj ?? fraternity.reputation_score ?? 5;
+  const partyScore = computedScores?.partyAdj ?? fraternity.historical_party_score ?? 5;
+  const trending = computedScores?.trending ?? fraternity.momentum ?? 0;
 
   return (
     <div className="max-w-2xl mx-auto space-y-6">
@@ -181,15 +227,18 @@ export default function FraternityPage() {
         <div className="space-y-3">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-xs text-muted-foreground mb-1">Reputation</p>
+              <p className="text-xs text-muted-foreground mb-1">Overall Score</p>
               <div className="text-4xl font-bold text-foreground">
-                {getReputationScore(fraternity).toFixed(1)}
+                {overallScore.toFixed(1)}
               </div>
+              <p className="text-xs text-muted-foreground mt-1">
+                65% Reputation • 35% Party
+              </p>
             </div>
             <div className="flex items-center gap-2">
-              <TrendIndicator momentum={fraternity.momentum ?? 0} showLabel />
+              <TrendIndicator momentum={trending} showLabel />
               <Badge variant="outline">
-                {(fraternity.momentum ?? 0) >= 0 ? '+' : ''}{(fraternity.momentum ?? 0).toFixed(2)}
+                {trending >= 0 ? '+' : ''}{trending.toFixed(2)}
               </Badge>
             </div>
           </div>
@@ -197,18 +246,28 @@ export default function FraternityPage() {
           <div className="w-full bg-muted rounded-full h-3 overflow-hidden">
             <div 
               className="h-full bg-primary transition-all duration-500 rounded-full"
-              style={{ width: `${(getReputationScore(fraternity) / 10) * 100}%` }}
+              style={{ width: `${(overallScore / 10) * 100}%` }}
             />
           </div>
-          <p className="text-xs text-muted-foreground text-center">
-            Combined from: 30% Brotherhood • 60% Reputation • 10% Community
-          </p>
         </div>
 
         <ScoreBreakdown 
-          reputationScore={fraternity.reputation_score ?? 5}
-          partyScore={fraternity.historical_party_score ?? 5}
+          reputationScore={repScore}
+          partyScore={partyScore}
         />
+
+        {computedScores && (
+          <div className="text-xs text-muted-foreground bg-muted/50 rounded-lg p-3 space-y-1">
+            <div className="flex justify-between">
+              <span>Reputation ratings:</span>
+              <span className="font-medium">{computedScores.numRepRatings}</span>
+            </div>
+            <div className="flex justify-between">
+              <span>Party ratings:</span>
+              <span className="font-medium">{computedScores.numPartyRatings}</span>
+            </div>
+          </div>
+        )}
 
         <Button onClick={handleRate} className="w-full gradient-primary text-white">
           <Star className="h-4 w-4 mr-2" />

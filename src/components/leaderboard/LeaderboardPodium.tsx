@@ -3,28 +3,63 @@ import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Link } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
-import { getOverallScore } from '@/utils/scoring';
-import type { Fraternity } from '@/api/base44Client';
+import { type FraternityWithScores } from '@/utils/scoring';
+
+type FilterType = 'overall' | 'reputation' | 'party' | 'trending';
 
 interface LeaderboardPodiumProps {
-  topThree: Fraternity[];
+  topThree: FraternityWithScores[];
+  filter?: FilterType;
 }
 
-export default function LeaderboardPodium({ topThree }: LeaderboardPodiumProps) {
+export default function LeaderboardPodium({ topThree, filter = 'overall' }: LeaderboardPodiumProps) {
   if (topThree.length < 3) return null;
 
   const [first, second, third] = topThree;
+
+  const getDisplayScore = (frat: FraternityWithScores): number => {
+    const scores = frat.computedScores;
+    if (!scores) {
+      return frat.reputation_score ?? 5;
+    }
+    switch (filter) {
+      case 'overall':
+        return scores.overall;
+      case 'reputation':
+        return scores.repAdj;
+      case 'party':
+        return scores.partyAdj;
+      case 'trending':
+        return scores.overall;
+      default:
+        return scores.overall;
+    }
+  };
+
+  const getScoreLabel = (): string => {
+    switch (filter) {
+      case 'overall':
+        return 'Overall Score';
+      case 'reputation':
+        return 'Reputation';
+      case 'party':
+        return 'Party Score';
+      case 'trending':
+        return 'Overall Score';
+      default:
+        return 'Overall Score';
+    }
+  };
 
   const PodiumCard = ({ 
     frat, 
     rank, 
     size 
   }: { 
-    frat: Fraternity; 
+    frat: FraternityWithScores; 
     rank: number; 
     size: 'lg' | 'md' 
   }) => {
-    const isFirst = rank === 1;
     const Icon = rank === 1 ? Crown : rank === 2 ? Trophy : Medal;
     const colors = {
       1: 'from-amber-400 to-yellow-500',
@@ -67,9 +102,9 @@ export default function LeaderboardPodium({ topThree }: LeaderboardPodiumProps) 
             </div>
 
             <div className={`font-bold ${size === 'lg' ? 'text-2xl' : 'text-xl'} text-foreground`}>
-              {getOverallScore(frat).toFixed(1)}
+              {getDisplayScore(frat).toFixed(1)}
             </div>
-            <p className="text-xs text-muted-foreground">Overall Score</p>
+            <p className="text-xs text-muted-foreground">{getScoreLabel()}</p>
           </div>
         </Card>
       </Link>
