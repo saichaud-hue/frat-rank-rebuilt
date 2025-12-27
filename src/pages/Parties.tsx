@@ -34,7 +34,7 @@ export default function Parties() {
 
   const loadParties = async () => {
     try {
-      const data = await base44.entities.Party.list('-starts_at');
+      const data = await base44.entities.Party.list('starts_at');
       setParties(data);
     } catch (error) {
       console.error('Failed to load parties:', error);
@@ -123,7 +123,7 @@ export default function Parties() {
       {/* Header */}
       <div className="flex items-center gap-2">
         <PartyPopper className="h-6 w-6 text-primary" />
-        <h1 className="text-2xl font-bold gradient-text">Parties</h1>
+        <h1 className="text-2xl font-bold text-foreground">Parties</h1>
       </div>
 
       {/* Filters */}

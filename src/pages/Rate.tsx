@@ -7,7 +7,7 @@ export default function Rate() {
       {/* Header */}
       <div className="flex items-center gap-2">
         <Star className="h-6 w-6 text-primary" />
-        <h1 className="text-2xl font-bold gradient-text">My Ratings</h1>
+        <h1 className="text-2xl font-bold text-foreground">Rate</h1>
       </div>
 
       {/* Rating History */}
