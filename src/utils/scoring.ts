@@ -217,6 +217,10 @@ export interface FraternityScores {
   confidenceRep: number;
   confidenceParty: number;
   confidenceOverall: number;
+  // Individual reputation sub-scores (averages)
+  avgBrotherhood: number;
+  avgReputation: number;
+  avgCommunity: number;
 }
 
 export async function computeFullFraternityScores(
@@ -226,6 +230,17 @@ export async function computeFullFraternityScores(
   campusRepAvg: number,
   campusPartyAvg: number
 ): Promise<FraternityScores> {
+  // Calculate individual sub-score averages
+  const avgBrotherhood = repRatings.length > 0
+    ? repRatings.reduce((sum, r) => sum + (r.brotherhood_score ?? 5), 0) / repRatings.length
+    : 5.0;
+  const avgReputation = repRatings.length > 0
+    ? repRatings.reduce((sum, r) => sum + (r.reputation_score ?? 5), 0) / repRatings.length
+    : 5.0;
+  const avgCommunity = repRatings.length > 0
+    ? repRatings.reduce((sum, r) => sum + (r.community_score ?? 5), 0) / repRatings.length
+    : 5.0;
+
   // Raw reputation from combined scores
   const rawReputation = repRatings.length > 0
     ? repRatings.reduce((sum, r) => sum + (r.combined_score ?? 5), 0) / repRatings.length
@@ -269,6 +284,9 @@ export async function computeFullFraternityScores(
     confidenceRep,
     confidenceParty,
     confidenceOverall,
+    avgBrotherhood,
+    avgReputation,
+    avgCommunity,
   };
 }
 
