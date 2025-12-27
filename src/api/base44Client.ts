@@ -243,7 +243,10 @@ export interface ReputationRating {
   id: string;
   fraternity_id: string;
   user_id: string;
-  score: number;
+  brotherhood_score: number;
+  reputation_score: number;
+  community_score: number;
+  combined_score: number; // 0.30*brotherhood + 0.60*reputation + 0.10*community
   weight: number;
   semester: string;
   created_date: string;

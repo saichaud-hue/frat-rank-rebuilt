@@ -152,8 +152,8 @@ export default function RatingHistory() {
                     </p>
                   )}
                 </div>
-                <Badge className={`${getScoreBgColor(rating.score ?? 0)} text-white`}>
-                  {(rating.score ?? 0).toFixed(1)}
+                <Badge className={`${getScoreBgColor(rating.combined_score ?? 0)} text-white`}>
+                  {(rating.combined_score ?? 0).toFixed(1)}
                 </Badge>
               </div>
 
