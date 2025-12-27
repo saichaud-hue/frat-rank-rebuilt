@@ -6,8 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
-import TrendIndicator from '@/components/leaderboard/TrendIndicator';
-import ScoreBreakdown from '@/components/leaderboard/ScoreBreakdown';
+import OverallScoreCard from '@/components/scores/OverallScoreCard';
 import PartyCard from '@/components/parties/PartyCard';
 import RateFratSheet from '@/components/leaderboard/RateFratSheet';
 import { createPageUrl, clamp } from '@/utils';
@@ -184,11 +183,6 @@ export default function FraternityPage() {
   const upcomingParties = parties.filter(p => p.status === 'upcoming' || p.status === 'active');
   const pastParties = parties.filter(p => p.status === 'completed');
 
-  const overallScore = computedScores?.overall ?? 5;
-  const repScore = computedScores?.repAdj ?? fraternity.reputation_score ?? 5;
-  const partyScore = computedScores?.partyAdj ?? fraternity.historical_party_score ?? 5;
-  const trending = computedScores?.trending ?? fraternity.momentum ?? 0;
-
   return (
     <div className="max-w-2xl mx-auto space-y-6">
       {/* Back Button */}
@@ -223,79 +217,13 @@ export default function FraternityPage() {
           <p className="text-muted-foreground">{fraternity.description}</p>
         )}
 
-        {/* Overall Score Display */}
-        <div className="space-y-3">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-xs text-muted-foreground mb-1">Overall Score</p>
-              <div className="text-4xl font-bold text-foreground">
-                {overallScore.toFixed(1)}
-              </div>
-              <p className="text-xs text-muted-foreground mt-1">
-                65% Reputation • 35% Party
-              </p>
-            </div>
-            <div className="flex items-center gap-2">
-              <TrendIndicator momentum={trending} showLabel />
-              <Badge variant="outline">
-                {trending >= 0 ? '+' : ''}{trending.toFixed(2)}
-              </Badge>
-            </div>
-          </div>
-          {/* Score Progress Bar */}
-          <div className="w-full bg-muted rounded-full h-3 overflow-hidden">
-            <div 
-              className="h-full bg-primary transition-all duration-500 rounded-full"
-              style={{ width: `${(overallScore / 10) * 100}%` }}
-            />
-          </div>
-        </div>
-
-        <ScoreBreakdown 
-          reputationScore={repScore}
-          partyScore={partyScore}
-        />
-
+        {/* READ-ONLY Score Display - Never includes sliders */}
         {computedScores && (
-          <div className="space-y-3">
-            {/* Confidence Bar */}
-            <div className="bg-muted/50 rounded-lg p-3 space-y-2">
-              <div className="flex items-center justify-between">
-                <span className="text-sm font-medium">Confidence</span>
-                <div className="flex items-center gap-2">
-                  <span className="text-sm font-bold">{Math.round(computedScores.confidenceOverall * 100)}%</span>
-                  <span className={`text-xs px-2 py-0.5 rounded-full ${
-                    computedScores.confidenceOverall >= 0.7 
-                      ? 'bg-green-500/20 text-green-500' 
-                      : computedScores.confidenceOverall >= 0.4 
-                        ? 'bg-yellow-500/20 text-yellow-500' 
-                        : 'bg-red-500/20 text-red-500'
-                  }`}>
-                    {computedScores.confidenceOverall >= 0.7 
-                      ? 'High' 
-                      : computedScores.confidenceOverall >= 0.4 
-                        ? 'Moderate' 
-                        : 'Low data'}
-                  </span>
-                </div>
-              </div>
-              <div className="w-full bg-muted rounded-full h-2 overflow-hidden">
-                <div 
-                  className={`h-full transition-all duration-500 rounded-full ${
-                    computedScores.confidenceOverall >= 0.7 
-                      ? 'bg-green-500' 
-                      : computedScores.confidenceOverall >= 0.4 
-                        ? 'bg-yellow-500' 
-                        : 'bg-red-500'
-                  }`}
-                  style={{ width: `${Math.round(computedScores.confidenceOverall * 100)}%` }}
-                />
-              </div>
-              <p className="text-xs text-muted-foreground">
-                Based on {computedScores.numRepRatings} reputation + {computedScores.numPartyRatings} party ratings
-              </p>
-            </div>
-          </div>
+          <OverallScoreCard 
+            scores={computedScores}
+            showConfidence={true}
+            showTrending={true}
+          />
         )}
 
         <Button onClick={handleRate} className="w-full gradient-primary text-white">
