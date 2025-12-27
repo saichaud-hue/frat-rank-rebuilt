@@ -1,23 +1,24 @@
 import { useState, useEffect } from 'react';
-import { X, Loader2, Sparkles, Music, Wine, Star } from 'lucide-react';
+import { X, Loader2, Zap, Music, Settings, Star } from 'lucide-react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Slider } from '@/components/ui/slider';
 import { Badge } from '@/components/ui/badge';
 import { base44, type Party, type Fraternity, type PartyRating } from '@/api/base44Client';
 import { clamp, getScoreColor } from '@/utils';
+import { computePartyQuality } from '@/utils/scoring';
 
 interface PartyRatingFormProps {
   party: Party;
   fraternity?: Fraternity;
   onClose: () => void;
-  onSubmit: (partyId: string, ratings: { fun: number; music: number; alcohol: number; overall: number }) => void;
+  onSubmit: (partyId: string, ratings: { vibe: number; music: number; execution: number; partyQuality: number }) => void;
 }
 
 export default function PartyRatingForm({ party, fraternity, onClose, onSubmit }: PartyRatingFormProps) {
-  const [fun, setFun] = useState(5);
+  const [vibe, setVibe] = useState(5);
   const [music, setMusic] = useState(5);
-  const [alcohol, setAlcohol] = useState(5);
+  const [execution, setExecution] = useState(5);
   const [submitting, setSubmitting] = useState(false);
   const [hasLoaded, setHasLoaded] = useState(false);
   const [existingRating, setExistingRating] = useState<PartyRating | null>(null);
@@ -42,9 +43,9 @@ export default function PartyRatingForm({ party, fraternity, onClose, onSubmit }
       if (ratings.length > 0) {
         const rating = ratings[0];
         setExistingRating(rating);
-        setFun(rating.fun_score ?? 5);
+        setVibe(rating.vibe_score ?? 5);
         setMusic(rating.music_score ?? 5);
-        setAlcohol(rating.alcohol_score ?? 5);
+        setExecution(rating.execution_score ?? 5);
       }
     } catch (error) {
       console.error('Failed to load existing rating:', error);
@@ -53,7 +54,7 @@ export default function PartyRatingForm({ party, fraternity, onClose, onSubmit }
     }
   };
 
-  const overallScore = fun * 0.66 + music * 0.17 + alcohol * 0.17;
+  const partyQualityScore = computePartyQuality(vibe, music, execution);
 
   const handleSubmit = async () => {
     setSubmitting(true);
@@ -64,10 +65,10 @@ export default function PartyRatingForm({ party, fraternity, onClose, onSubmit }
       const ratingData = {
         party_id: party.id,
         user_id: user.id,
-        fun_score: clamp(fun, 0, 10),
+        vibe_score: clamp(vibe, 0, 10),
         music_score: clamp(music, 0, 10),
-        alcohol_score: clamp(alcohol, 0, 10),
-        overall_score: clamp(overallScore, 0, 10),
+        execution_score: clamp(execution, 0, 10),
+        party_quality_score: clamp(partyQualityScore, 0, 10),
         weight: 1,
       };
 
@@ -81,13 +82,10 @@ export default function PartyRatingForm({ party, fraternity, onClose, onSubmit }
       const allRatings = await base44.entities.PartyRating.filter({ party_id: party.id });
       const totalRatingsCount = allRatings.length;
       
-      const avgFun = allRatings.reduce((sum, r) => sum + (r.fun_score ?? 0), 0) / totalRatingsCount;
-      const avgMusic = allRatings.reduce((sum, r) => sum + (r.music_score ?? 0), 0) / totalRatingsCount;
-      const avgAlcohol = allRatings.reduce((sum, r) => sum + (r.alcohol_score ?? 0), 0) / totalRatingsCount;
-      const performanceScore = avgFun * 0.66 + avgMusic * 0.17 + avgAlcohol * 0.17;
+      const avgQuality = allRatings.reduce((sum, r) => sum + (r.party_quality_score ?? 0), 0) / totalRatingsCount;
 
       await base44.entities.Party.update(party.id, {
-        performance_score: clamp(performanceScore, 0, 10),
+        performance_score: clamp(avgQuality, 0, 10),
         total_ratings: totalRatingsCount,
       });
 
@@ -116,8 +114,8 @@ export default function PartyRatingForm({ party, fraternity, onClose, onSubmit }
 
           const overallScoreBase = (0.7 * reputationScore) + (0.3 * partyBaseScore);
           const prevOverall = currentFrat.display_score ?? overallScoreBase;
-          const newOverall = (prevOverall * 0.8) + (performanceScore * 0.2);
-          const momentum = performanceScore - overallScoreBase;
+          const newOverall = (prevOverall * 0.8) + (avgQuality * 0.2);
+          const momentum = avgQuality - overallScoreBase;
 
           await base44.entities.Fraternity.update(party.fraternity_id, {
             reputation_score: clamp(reputationScore, 0, 10),
@@ -129,7 +127,7 @@ export default function PartyRatingForm({ party, fraternity, onClose, onSubmit }
         }
       }
 
-      onSubmit(party.id, { fun, music, alcohol, overall: overallScore });
+      onSubmit(party.id, { vibe, music, execution, partyQuality: partyQualityScore });
     } catch (error) {
       console.error('Failed to submit rating:', error);
     } finally {
@@ -150,14 +148,14 @@ export default function PartyRatingForm({ party, fraternity, onClose, onSubmit }
 
   const categories = [
     { 
-      key: 'fun', 
-      label: 'Fun Factor', 
-      icon: Sparkles, 
+      key: 'vibe', 
+      label: 'Vibe', 
+      icon: Zap, 
       color: 'text-amber-500',
-      value: fun, 
-      setValue: setFun,
-      description: 'Overall vibe and energy',
-      weight: '66%'
+      value: vibe, 
+      setValue: setVibe,
+      description: 'Energy and atmosphere',
+      weight: '50%'
     },
     { 
       key: 'music', 
@@ -167,17 +165,17 @@ export default function PartyRatingForm({ party, fraternity, onClose, onSubmit }
       value: music, 
       setValue: setMusic,
       description: 'DJ, playlist quality',
-      weight: '17%'
+      weight: '30%'
     },
     { 
-      key: 'alcohol', 
-      label: 'Drinks', 
-      icon: Wine, 
-      color: 'text-purple-500',
-      value: alcohol, 
-      setValue: setAlcohol,
-      description: 'Drink selection and availability',
-      weight: '17%'
+      key: 'execution', 
+      label: 'Execution', 
+      icon: Settings, 
+      color: 'text-green-500',
+      value: execution, 
+      setValue: setExecution,
+      description: 'Organization and logistics',
+      weight: '20%'
     },
   ];
 
@@ -199,11 +197,11 @@ export default function PartyRatingForm({ party, fraternity, onClose, onSubmit }
           </Button>
         </div>
 
-        {/* Overall Score */}
+        {/* Party Quality Score */}
         <div className="p-6 text-center border-b">
-          <p className="text-sm text-muted-foreground mb-2">Overall Score</p>
-          <div className={`text-5xl font-bold ${getScoreColor(overallScore)}`}>
-            {overallScore.toFixed(1)}
+          <p className="text-sm text-muted-foreground mb-2">Party Quality</p>
+          <div className={`text-5xl font-bold ${getScoreColor(partyQualityScore)}`}>
+            {partyQualityScore.toFixed(1)}
           </div>
         </div>
 

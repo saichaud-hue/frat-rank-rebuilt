@@ -1,8 +1,8 @@
-import { Calendar, Clock, MapPin, Camera, Music, Wine, Sparkles, Radio } from 'lucide-react';
+import { Calendar, Clock, MapPin, Camera, Music, Zap, Settings, Radio } from 'lucide-react';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Link } from 'react-router-dom';
-import { createPageUrl } from '@/utils';
+import { createPageUrl, getScoreColor } from '@/utils';
 import { format } from 'date-fns';
 import type { Party } from '@/api/base44Client';
 
@@ -15,6 +15,7 @@ interface PartyCardProps {
 export default function PartyCard({ party, fraternityName, isLive = false }: PartyCardProps) {
   const startDate = new Date(party.starts_at);
   const isCompleted = party.status === 'completed';
+  const partyQuality = party.performance_score ?? 0;
 
   return (
     <Link to={createPageUrl(`Party?id=${party.id}`)}>
@@ -77,19 +78,11 @@ export default function PartyCard({ party, fraternityName, isLive = false }: Par
             )}
 
             {isCompleted && party.total_ratings > 0 && (
-              <div className="flex items-center gap-3 pt-1">
-                <span className="flex items-center gap-1 text-xs">
-                  <Sparkles className="h-3.5 w-3.5 text-amber-500" />
-                  <span className="font-medium">9.2</span>
+              <div className="flex items-center gap-2 pt-1">
+                <span className={`text-lg font-bold ${getScoreColor(partyQuality)}`}>
+                  {partyQuality.toFixed(1)}
                 </span>
-                <span className="flex items-center gap-1 text-xs">
-                  <Music className="h-3.5 w-3.5 text-blue-500" />
-                  <span className="font-medium">8.5</span>
-                </span>
-                <span className="flex items-center gap-1 text-xs">
-                  <Wine className="h-3.5 w-3.5 text-purple-500" />
-                  <span className="font-medium">7.8</span>
-                </span>
+                <span className="text-xs text-muted-foreground">Party Quality</span>
               </div>
             )}
 

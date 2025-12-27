@@ -104,7 +104,10 @@ export default function Parties() {
   const filteredParties = filterParties(parties);
   const liveParties = filteredParties.filter(p => isLive(p));
   const upcomingParties = filteredParties.filter(p => !isLive(p) && p.status === 'upcoming');
-  const completedParties = filteredParties.filter(p => p.status === 'completed');
+  // Sort completed parties by Party Quality (performance_score) descending
+  const completedParties = filteredParties
+    .filter(p => p.status === 'completed')
+    .sort((a, b) => (b.performance_score ?? 0) - (a.performance_score ?? 0));
 
   if (loading) {
     return (

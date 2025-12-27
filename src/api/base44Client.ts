@@ -219,10 +219,10 @@ export interface PartyRating {
   id: string;
   party_id: string;
   user_id: string;
+  vibe_score: number;
   music_score: number;
-  alcohol_score: number;
-  fun_score: number;
-  overall_score: number;
+  execution_score: number;
+  party_quality_score: number;
   weight: number;
   created_date: string;
 }

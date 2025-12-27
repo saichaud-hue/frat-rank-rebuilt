@@ -1,4 +1,4 @@
-import type { Fraternity } from '@/api/base44Client';
+import type { Fraternity, Party } from '@/api/base44Client';
 
 // Compute combined reputation from 3 slider values
 export function computeCombinedReputation(
@@ -8,6 +8,20 @@ export function computeCombinedReputation(
 ): number {
   const combined = 0.30 * brotherhood + 0.60 * reputation + 0.10 * community;
   return Math.max(0, Math.min(10, combined));
+}
+
+// Compute party quality from 3 slider values: Vibe 50%, Music 30%, Execution 20%
+export function computePartyQuality(
+  vibe: number,
+  music: number,
+  execution: number
+): number {
+  const quality = 0.50 * vibe + 0.30 * music + 0.20 * execution;
+  return Math.max(0, Math.min(10, quality));
+}
+
+export function getPartyQualityScore(party: Party): number {
+  return party.performance_score ?? 5.0;
 }
 
 export function getReputationScore(frat: Fraternity): number {
@@ -36,5 +50,13 @@ export function sortFraternitiesByOverall(frats: Fraternity[]): Fraternity[] {
     if (partyB !== partyA) return partyB - partyA;
     
     return (a.chapter ?? '').localeCompare(b.chapter ?? '');
+  });
+}
+
+export function sortPartiesByQuality(parties: Party[]): Party[] {
+  return [...parties].sort((a, b) => {
+    const qualityA = getPartyQualityScore(a);
+    const qualityB = getPartyQualityScore(b);
+    return qualityB - qualityA;
   });
 }
