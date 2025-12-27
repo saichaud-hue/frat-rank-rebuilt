@@ -257,14 +257,43 @@ export default function FraternityPage() {
         />
 
         {computedScores && (
-          <div className="text-xs text-muted-foreground bg-muted/50 rounded-lg p-3 space-y-1">
-            <div className="flex justify-between">
-              <span>Reputation ratings:</span>
-              <span className="font-medium">{computedScores.numRepRatings}</span>
-            </div>
-            <div className="flex justify-between">
-              <span>Party ratings:</span>
-              <span className="font-medium">{computedScores.numPartyRatings}</span>
+          <div className="space-y-3">
+            {/* Confidence Bar */}
+            <div className="bg-muted/50 rounded-lg p-3 space-y-2">
+              <div className="flex items-center justify-between">
+                <span className="text-sm font-medium">Confidence</span>
+                <div className="flex items-center gap-2">
+                  <span className="text-sm font-bold">{Math.round(computedScores.confidenceOverall * 100)}%</span>
+                  <span className={`text-xs px-2 py-0.5 rounded-full ${
+                    computedScores.confidenceOverall >= 0.7 
+                      ? 'bg-green-500/20 text-green-500' 
+                      : computedScores.confidenceOverall >= 0.4 
+                        ? 'bg-yellow-500/20 text-yellow-500' 
+                        : 'bg-red-500/20 text-red-500'
+                  }`}>
+                    {computedScores.confidenceOverall >= 0.7 
+                      ? 'High' 
+                      : computedScores.confidenceOverall >= 0.4 
+                        ? 'Moderate' 
+                        : 'Low data'}
+                  </span>
+                </div>
+              </div>
+              <div className="w-full bg-muted rounded-full h-2 overflow-hidden">
+                <div 
+                  className={`h-full transition-all duration-500 rounded-full ${
+                    computedScores.confidenceOverall >= 0.7 
+                      ? 'bg-green-500' 
+                      : computedScores.confidenceOverall >= 0.4 
+                        ? 'bg-yellow-500' 
+                        : 'bg-red-500'
+                  }`}
+                  style={{ width: `${Math.round(computedScores.confidenceOverall * 100)}%` }}
+                />
+              </div>
+              <p className="text-xs text-muted-foreground">
+                Based on {computedScores.numRepRatings} reputation + {computedScores.numPartyRatings} party ratings
+              </p>
             </div>
           </div>
         )}

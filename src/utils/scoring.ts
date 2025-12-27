@@ -214,6 +214,9 @@ export interface FraternityScores {
   trending: number;
   numRepRatings: number;
   numPartyRatings: number;
+  confidenceRep: number;
+  confidenceParty: number;
+  confidenceOverall: number;
 }
 
 export async function computeFullFraternityScores(
@@ -239,6 +242,11 @@ export async function computeFullFraternityScores(
     0
   );
   
+  // Confidence values
+  const confidenceRep = 1 - Math.exp(-numRepRatings / 25);
+  const confidenceParty = 1 - Math.exp(-numPartyRatings / 40);
+  const confidenceOverall = 0.65 * confidenceRep + 0.35 * confidenceParty;
+  
   // Apply confidence stabilization
   const repAdj = computeAdjustedReputation(rawReputation, numRepRatings, campusRepAvg);
   const partyAdj = computeAdjustedPartyIndex(partyIndex, numPartyRatings, campusPartyAvg);
@@ -258,6 +266,9 @@ export async function computeFullFraternityScores(
     trending,
     numRepRatings,
     numPartyRatings,
+    confidenceRep,
+    confidenceParty,
+    confidenceOverall,
   };
 }
 
