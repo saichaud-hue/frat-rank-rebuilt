@@ -4,25 +4,64 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Link } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
-import { getOverallScore, getPartyScore } from '@/utils/scoring';
+import { type FraternityWithScores } from '@/utils/scoring';
 import TrendIndicator from './TrendIndicator';
 import ScoreBreakdown from './ScoreBreakdown';
-import type { Fraternity } from '@/api/base44Client';
+
+type FilterType = 'overall' | 'reputation' | 'party' | 'trending';
 
 interface FraternityCardProps {
-  fraternity: Fraternity;
+  fraternity: FraternityWithScores;
   rank: number;
-  onRate: (fraternity: Fraternity) => void;
+  onRate: (fraternity: FraternityWithScores) => void;
+  filter?: FilterType;
 }
 
-export default function FraternityCard({ fraternity, rank, onRate }: FraternityCardProps) {
+export default function FraternityCard({ fraternity, rank, onRate, filter = 'overall' }: FraternityCardProps) {
   const RankIcon = rank === 1 ? Crown : rank <= 3 ? Trophy : null;
+  const scores = fraternity.computedScores;
+  
+  // Get the score to display based on current filter
+  const getDisplayScore = (): number => {
+    if (!scores) {
+      return fraternity.reputation_score ?? 5;
+    }
+    switch (filter) {
+      case 'overall':
+        return scores.overall;
+      case 'reputation':
+        return scores.repAdj;
+      case 'party':
+        return scores.partyAdj;
+      case 'trending':
+        return scores.overall; // Show overall, but sort by trending
+      default:
+        return scores.overall;
+    }
+  };
+
+  const getScoreLabel = (): string => {
+    switch (filter) {
+      case 'overall':
+        return 'Overall Score';
+      case 'reputation':
+        return 'Reputation';
+      case 'party':
+        return 'Party Score';
+      case 'trending':
+        return 'Overall Score';
+      default:
+        return 'Overall Score';
+    }
+  };
   
   const handleRateClick = (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
     onRate(fraternity);
   };
+
+  const trending = scores?.trending ?? (fraternity.momentum ?? 0);
 
   return (
     <Link to={createPageUrl(`Fraternity?id=${fraternity.id}`)}>
@@ -58,10 +97,10 @@ export default function FraternityCard({ fraternity, rank, onRate }: FraternityC
 
               <div className="text-right">
                 <div className="text-2xl font-bold text-foreground">
-                  {getOverallScore(fraternity).toFixed(1)}
+                  {getDisplayScore().toFixed(1)}
                 </div>
-                <p className="text-xs text-muted-foreground">Overall Score</p>
-                <TrendIndicator momentum={fraternity.momentum ?? 0} />
+                <p className="text-xs text-muted-foreground">{getScoreLabel()}</p>
+                <TrendIndicator momentum={trending} />
               </div>
             </div>
 
@@ -72,20 +111,20 @@ export default function FraternityCard({ fraternity, rank, onRate }: FraternityC
             )}
 
             <ScoreBreakdown 
-              reputationScore={fraternity.reputation_score ?? 5} 
-              partyScore={fraternity.historical_party_score ?? 5} 
+              reputationScore={scores?.repAdj ?? fraternity.reputation_score ?? 5} 
+              partyScore={scores?.partyAdj ?? fraternity.historical_party_score ?? 5} 
             />
 
             <div className="flex items-center justify-between pt-2">
               <Badge 
                 variant="outline" 
                 className={`${
-                  (fraternity.momentum ?? 0) > 0.5 ? 'text-emerald-600 border-emerald-200 bg-emerald-50' :
-                  (fraternity.momentum ?? 0) < -0.5 ? 'text-red-500 border-red-200 bg-red-50' :
+                  trending > 0.5 ? 'text-emerald-600 border-emerald-200 bg-emerald-50' :
+                  trending < -0.5 ? 'text-red-500 border-red-200 bg-red-50' :
                   'text-muted-foreground'
                 }`}
               >
-                {(fraternity.momentum ?? 0) >= 0 ? '+' : ''}{(fraternity.momentum ?? 0).toFixed(2)} momentum
+                {trending >= 0 ? '+' : ''}{trending.toFixed(2)} trending
               </Badge>
               
               <Button 

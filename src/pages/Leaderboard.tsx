@@ -1,17 +1,28 @@
 import { useState, useEffect } from 'react';
-import { base44, seedInitialData, type Fraternity } from '@/api/base44Client';
-import { clamp } from '@/utils';
-import { getOverallScore, getPartyScore, getReputationScore, sortFraternitiesByOverall } from '@/utils/scoring';
+import { base44, seedInitialData, type Fraternity, type Party, type PartyRating, type ReputationRating } from '@/api/base44Client';
+import { 
+  computeFullFraternityScores, 
+  computeCampusRepAvg, 
+  computeCampusPartyAvg,
+  sortFraternitiesByOverall,
+  sortFraternitiesByReputation,
+  sortFraternitiesByParty,
+  sortFraternitiesByTrending,
+  type FraternityWithScores,
+  type FraternityScores,
+  type PartyWithRatings
+} from '@/utils/scoring';
 import LeaderboardHeader from '@/components/leaderboard/LeaderboardHeader';
 import LeaderboardPodium from '@/components/leaderboard/LeaderboardPodium';
 import FraternityCard from '@/components/leaderboard/FraternityCard';
 import RateFratSheet from '@/components/leaderboard/RateFratSheet';
 import { Skeleton } from '@/components/ui/skeleton';
+import { clamp } from '@/utils';
 
 type FilterType = 'overall' | 'reputation' | 'party' | 'trending';
 
 export default function Leaderboard() {
-  const [fraternities, setFraternities] = useState<Fraternity[]>([]);
+  const [fraternities, setFraternities] = useState<FraternityWithScores[]>([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<FilterType>('overall');
   const [selectedFrat, setSelectedFrat] = useState<Fraternity | null>(null);
@@ -34,8 +45,72 @@ export default function Leaderboard() {
 
   const loadFraternities = async () => {
     try {
-      const data = await base44.entities.Fraternity.filter({ status: 'active' });
-      setFraternities(sortByFilter(data, filter));
+      // Load all data needed for scoring
+      const [fratsData, partiesData, allPartyRatings, allRepRatings] = await Promise.all([
+        base44.entities.Fraternity.filter({ status: 'active' }),
+        base44.entities.Party.list(),
+        base44.entities.PartyRating.list(),
+        base44.entities.ReputationRating.list(),
+      ]);
+
+      // Compute campus averages
+      const campusRepAvg = computeCampusRepAvg(fratsData);
+      const campusPartyAvg = computeCampusPartyAvg(partiesData);
+
+      // Group parties and ratings by fraternity
+      const partiesByFrat = new Map<string, Party[]>();
+      for (const party of partiesData) {
+        if (party.fraternity_id) {
+          const existing = partiesByFrat.get(party.fraternity_id) || [];
+          existing.push(party);
+          partiesByFrat.set(party.fraternity_id, existing);
+        }
+      }
+
+      const partyRatingsMap = new Map<string, PartyRating[]>();
+      for (const rating of allPartyRatings) {
+        if (rating.party_id) {
+          const existing = partyRatingsMap.get(rating.party_id) || [];
+          existing.push(rating);
+          partyRatingsMap.set(rating.party_id, existing);
+        }
+      }
+
+      const repRatingsByFrat = new Map<string, ReputationRating[]>();
+      for (const rating of allRepRatings) {
+        if (rating.fraternity_id) {
+          const existing = repRatingsByFrat.get(rating.fraternity_id) || [];
+          existing.push(rating);
+          repRatingsByFrat.set(rating.fraternity_id, existing);
+        }
+      }
+
+      // Compute full scores for each fraternity
+      const fratsWithScores: FraternityWithScores[] = await Promise.all(
+        fratsData.map(async (frat) => {
+          const fratParties = partiesByFrat.get(frat.id) || [];
+          const partiesWithRatings: PartyWithRatings[] = fratParties.map(party => ({
+            party,
+            ratings: partyRatingsMap.get(party.id) || [],
+          }));
+          const repRatings = repRatingsByFrat.get(frat.id) || [];
+
+          const scores = await computeFullFraternityScores(
+            frat,
+            repRatings,
+            partiesWithRatings,
+            campusRepAvg,
+            campusPartyAvg
+          );
+
+          return {
+            ...frat,
+            computedScores: scores,
+          };
+        })
+      );
+
+      setFraternities(sortByFilter(fratsWithScores, filter));
     } catch (error) {
       console.error('Failed to load fraternities:', error);
     } finally {
@@ -43,31 +118,16 @@ export default function Leaderboard() {
     }
   };
 
-  const sortByFilter = (frats: Fraternity[], f: FilterType): Fraternity[] => {
+  const sortByFilter = (frats: FraternityWithScores[], f: FilterType): FraternityWithScores[] => {
     switch (f) {
       case 'overall':
         return sortFraternitiesByOverall(frats);
       case 'reputation':
-        return [...frats].sort((a, b) => {
-          const repA = getReputationScore(a);
-          const repB = getReputationScore(b);
-          if (repB !== repA) return repB - repA;
-          return (a.chapter ?? '').localeCompare(b.chapter ?? '');
-        });
+        return sortFraternitiesByReputation(frats);
       case 'party':
-        return [...frats].sort((a, b) => {
-          const partyA = getPartyScore(a);
-          const partyB = getPartyScore(b);
-          if (partyB !== partyA) return partyB - partyA;
-          return (a.chapter ?? '').localeCompare(b.chapter ?? '');
-        });
+        return sortFraternitiesByParty(frats);
       case 'trending':
-        return [...frats].sort((a, b) => {
-          const momA = a.momentum ?? 0;
-          const momB = b.momentum ?? 0;
-          if (momB !== momA) return momB - momA;
-          return getOverallScore(b) - getOverallScore(a);
-        });
+        return sortFraternitiesByTrending(frats);
       default:
         return sortFraternitiesByOverall(frats);
     }
@@ -84,7 +144,6 @@ export default function Leaderboard() {
       return;
     }
 
-    // Check for existing rating
     const existingRatings = await base44.entities.ReputationRating.filter({
       fraternity_id: fraternity.id,
       user_id: user.id,
@@ -109,7 +168,6 @@ export default function Leaderboard() {
     const user = await base44.auth.me();
     if (!user) return;
 
-    // Check for existing rating
     const existingRatings = await base44.entities.ReputationRating.filter({
       fraternity_id: selectedFrat.id,
       user_id: user.id,
@@ -143,12 +201,8 @@ export default function Leaderboard() {
       ? allRatings.reduce((sum, r) => sum + (r.combined_score ?? 5), 0) / allRatings.length
       : 5;
 
-    const baseScore = (0.7 * reputationScore) + (0.3 * (selectedFrat.historical_party_score ?? 5));
-
     await base44.entities.Fraternity.update(selectedFrat.id, {
       reputation_score: clamp(reputationScore, 0, 10),
-      base_score: clamp(baseScore, 0, 10),
-      display_score: clamp(baseScore, 0, 10),
     });
 
     await loadFraternities();
@@ -181,7 +235,7 @@ export default function Leaderboard() {
       />
 
       {topThree.length >= 3 && (
-        <LeaderboardPodium topThree={topThree} />
+        <LeaderboardPodium topThree={topThree} filter={filter} />
       )}
 
       <div className="space-y-3">
@@ -191,6 +245,7 @@ export default function Leaderboard() {
             fraternity={frat}
             rank={index + 4}
             onRate={handleRate}
+            filter={filter}
           />
         ))}
       </div>
