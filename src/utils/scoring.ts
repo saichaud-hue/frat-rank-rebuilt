@@ -61,6 +61,10 @@ export interface ActivityData {
  * 
  * B_campus = Σ(PartyQuality_p * w_p) / Σ(w_p)
  * Fallback: 5.5 if no rated parties
+ *//**
+ * Computes the campus-wide baseline party score.
+ * Uses weighted average of party quality.
+ * Fallback = 5.5 if no rated parties exist.
  */
 export function computeCampusBaseline(
   allPartiesWithRatings: PartyWithRatings[]
@@ -68,27 +72,78 @@ export function computeCampusBaseline(
   let weightedSum = 0;
   let totalWeight = 0;
 
-  for (const { party, ratings } of allPartiesWithRatings) {
+  for (const { ratings } of allPartiesWithRatings) {
     const n_p = ratings.length;
     if (n_p === 0) continue;
 
-    // Raw party quality Q_p
-    const avgVibe = ratings.reduce((sum, r) => sum + (r.vibe_score ?? 5), 0) / n_p;
-    const avgMusic = ratings.reduce((sum, r) => sum + (r.music_score ?? 5), 0) / n_p;
-    const avgExecution = ratings.reduce((sum, r) => sum + (r.execution_score ?? 5), 0) / n_p;
-    const Q_p = 0.50 * avgVibe + 0.30 * avgMusic + 0.20 * avgExecution;
+    const avgVibe =
+      ratings.reduce((sum, r) => sum + (r.vibe_score ?? 5), 0) / n_p;
+    const avgMusic =
+      ratings.reduce((sum, r) => sum + (r.music_score ?? 5), 0) / n_p;
+    const avgExecution =
+      ratings.reduce((sum, r) => sum + (r.execution_score ?? 5), 0) / n_p;
 
-    // Participation weight
+    const Q_p = 0.5 * avgVibe + 0.3 * avgMusic + 0.2 * avgExecution;
     const w_p = Math.log(1 + n_p);
 
     weightedSum += Q_p * w_p;
     totalWeight += w_p;
   }
 
-  if (totalWeight === 0) return 5.5; // Fallback
+  if (totalWeight === 0) return 5.5;
+
   return Math.max(0, Math.min(10, weightedSum / totalWeight));
 }
 
+/**
+ * Cached campus baseline to prevent global jumps when a single party is rated.
+ */
+export function getCachedCampusBaseline(
+  allPartiesWithRatings: PartyWithRatings[],
+  options?: { cacheKey?: string; ttlHours?: number; fallback?: number }
+): number {
+  const cacheKey = options?.cacheKey ?? "fratrank_campusBaseline_v1";
+  const ttlHours = options?.ttlHours ?? 24;
+  const fallback = options?.fallback ?? 5.5;
+
+  // SSR safety
+  if (typeof window === "undefined") {
+    return allPartiesWithRatings.length
+      ? computeCampusBaseline(allPartiesWithRatings)
+      : fallback;
+  }
+
+  try {
+    const raw = window.localStorage.getItem(cacheKey);
+    if (raw) {
+      const parsed = JSON.parse(raw) as { value: number; computedAt: string };
+      const ageMs = Date.now() - new Date(parsed.computedAt).getTime();
+      const ttlMs = ttlHours * 60 * 60 * 1000;
+
+      if (Number.isFinite(parsed.value) && ageMs >= 0 && ageMs < ttlMs) {
+        return parsed.value;
+      }
+    }
+  } catch {
+    // ignore cache read errors
+  }
+
+  const value =
+    allPartiesWithRatings.length > 0
+      ? computeCampusBaseline(allPartiesWithRatings)
+      : fallback;
+
+  try {
+    window.localStorage.setItem(
+      cacheKey,
+      JSON.stringify({ value, computedAt: new Date().toISOString() })
+    );
+  } catch {
+    // ignore cache write errors
+  }
+
+  return value;
+}
 // ============================================
 // ELEMENT 1: INDIVIDUAL PARTY SCORE
 // ============================================
