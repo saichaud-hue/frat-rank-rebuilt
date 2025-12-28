@@ -5,7 +5,7 @@ import PartyCard from '@/components/parties/PartyCard';
 import PartyFilters from '@/components/parties/PartyFilters';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Badge } from '@/components/ui/badge';
-
+import { subDays, addDays, startOfDay, endOfDay } from 'date-fns';
 interface Filters {
   fraternity: string;
   theme: string;
@@ -75,24 +75,29 @@ export default function Parties() {
         return false;
       }
 
-      // Timeframe filter
+      // Timeframe filter - rolling window around today (includes past + future)
       if (filters.timeframe !== 'all') {
         const partyDate = new Date(party.starts_at);
         const now = new Date();
-        const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-        const weekFromNow = new Date(today.getTime() + 7 * 24 * 60 * 60 * 1000);
-        const monthEnd = new Date(now.getFullYear(), now.getMonth() + 1, 0);
 
         switch (filters.timeframe) {
           case 'today':
-            const tomorrow = new Date(today.getTime() + 24 * 60 * 60 * 1000);
-            if (partyDate < today || partyDate >= tomorrow) return false;
+            // Today = within current local day
+            const dayStart = startOfDay(now);
+            const dayEnd = endOfDay(now);
+            if (partyDate < dayStart || partyDate > dayEnd) return false;
             break;
           case 'week':
-            if (partyDate < today || partyDate > weekFromNow) return false;
+            // Week = ±7 days from now
+            const weekStart = subDays(now, 7);
+            const weekEnd = addDays(now, 7);
+            if (partyDate < weekStart || partyDate > weekEnd) return false;
             break;
           case 'month':
-            if (partyDate < today || partyDate > monthEnd) return false;
+            // Month = ±30 days from now
+            const monthStart = subDays(now, 30);
+            const monthEnd = addDays(now, 30);
+            if (partyDate < monthStart || partyDate > monthEnd) return false;
             break;
         }
       }
