@@ -47,7 +47,7 @@ export default function FraternityCard({ fraternity, rank, onRate, filter = 'ove
       case 'reputation':
         return 'Reputation';
       case 'party':
-        return 'Party Score';
+        return 'Frat Party Score';
       case 'trending':
         return 'Activity';
       default:
@@ -101,6 +101,9 @@ export default function FraternityCard({ fraternity, rank, onRate, filter = 'ove
                   {filter === 'trending' ? Math.round(getDisplayScore()) : getDisplayScore().toFixed(1)}
                 </div>
                 <p className="text-xs text-muted-foreground">{getScoreLabel()}</p>
+                {filter === 'party' && (
+                  <p className="text-[10px] text-muted-foreground/70 mt-0.5">Weighted avg of all parties</p>
+                )}
                 {filter !== 'trending' && <TrendIndicator momentum={trending} />}
               </div>
             </div>
