@@ -145,29 +145,68 @@ export function getCachedCampusBaseline(
   return value;
 }
 // ============================================
-// ELEMENT 1: INDIVIDUAL PARTY SCORE
+// RAW PARTY QUALITY (FOR DISPLAY - Element 1)
+// ============================================
+
+/**
+ * Compute raw party quality Q_p (for display purposes - NOT for ranking)
+ * Q_p = 0.5*avgVibe + 0.3*avgMusic + 0.2*avgExecution
+ * Returns null if no ratings
+ */
+export function computeRawPartyQuality(partyRatings: PartyRating[]): number | null {
+  const n_p = partyRatings.length;
+  if (n_p === 0) return null;
+
+  const avgVibe = partyRatings.reduce((sum, r) => sum + (r.vibe_score ?? 5), 0) / n_p;
+  const avgMusic = partyRatings.reduce((sum, r) => sum + (r.music_score ?? 5), 0) / n_p;
+  const avgExecution = partyRatings.reduce((sum, r) => sum + (r.execution_score ?? 5), 0) / n_p;
+
+  return 0.5 * avgVibe + 0.3 * avgMusic + 0.2 * avgExecution;
+}
+
+/**
+ * Get confidence level based on rating count (for display)
+ */
+export function getPartyConfidenceLevel(ratingCount: number): {
+  level: 'none' | 'low' | 'medium' | 'high';
+  label: string;
+  percentage: number;
+} {
+  if (ratingCount === 0) return { level: 'none', label: 'No ratings yet', percentage: 0 };
+  if (ratingCount <= 2) return { level: 'low', label: `${ratingCount} rating${ratingCount > 1 ? 's' : ''} - Low confidence`, percentage: 25 };
+  if (ratingCount <= 10) return { level: 'medium', label: `${ratingCount} ratings - Medium confidence`, percentage: 60 };
+  return { level: 'high', label: `${ratingCount} ratings - High confidence`, percentage: 100 };
+}
+
+/**
+ * Compute stabilized party score S_p (for ranking/Element 2 input)
+ * S_p = c(n_p) * Q_p + (1 - c(n_p)) * B_f
+ * where c(n) = n / (n + k)
+ */
+export function computeStabilizedPartyScore(
+  partyRatings: PartyRating[],
+  fraternityBaseline: number,
+  k: number = 10
+): number {
+  const n_p = partyRatings.length;
+  if (n_p === 0) return fraternityBaseline;
+
+  const Q_p = computeRawPartyQuality(partyRatings)!;
+  const c_n = n_p / (n_p + k);
+  
+  return c_n * Q_p + (1 - c_n) * fraternityBaseline;
+}
+
+// ============================================
+// INDIVIDUAL PARTY SCORE (LEGACY - for internal use)
 // ============================================
 
 /**
  * Element 1: Compute individual party score (PartyScore_p)
  * 
- * Step 1: Raw party quality
- *   Q_p = 0.50*avgVibe + 0.30*avgMusic + 0.20*avgExecution
- * 
- * Step 2: Party rating confidence (k=10)
- *   c_p = 1 - exp(-n_p / 10)
- * 
- * Step 3: Fraternity stability confidence (h=2)
- *   s_f = 1 - exp(-m_f / 2)
- *   where m_f = number of parties hosted by fraternity this semester
- * 
- * Step 4: Determine baseline B_f
- *   If frat has prior rated parties: B_f = avg of prior PartyScore values
- *   Else: B_f = B_campus (or 5.5 fallback)
- * 
- * Step 5: Blended score
- *   blend = c_p * s_f
- *   PartyScore_p = blend * Q_p + (1 - blend) * B_f
+ * NOTE: This is the LEGACY blended score formula.
+ * For display, use computeRawPartyQuality() instead.
+ * For ranking, use computeStabilizedPartyScore() instead.
  */
 export function computeIndividualPartyScore(
   partyRatings: PartyRating[],
@@ -312,20 +351,22 @@ export function computeSemesterPartyScore(
   // Compute individual party scores first using fraternity baseline
   const fratBaseline = computeFraternityBaseline(partiesWithRatings, campusBaseline);
   
-  // Step 1 & 2: Weighted average of PartyScore_p values (only from rated parties)
+  const k = 10; // Confidence constant for S_p stabilization
+
+  // Step 1 & 2: Weighted average of STABILIZED S_p values (only from rated parties)
   let weightedSum = 0;
   let totalWeight = 0;
 
   for (const { party, ratings } of ratedParties) {
     const n_p = ratings.length;
 
-    // Compute this party's Element 1 score
-    const partyScore_p = computeIndividualPartyScore(ratings, m_f, fratBaseline);
+    // Use STABILIZED party score (not raw Q_p, not old blended formula)
+    const S_p = computeStabilizedPartyScore(ratings, fratBaseline, k);
 
     // Participation weight
     const w_p = Math.log(1 + n_p);
 
-    weightedSum += partyScore_p * w_p;
+    weightedSum += S_p * w_p;
     totalWeight += w_p;
   }
 

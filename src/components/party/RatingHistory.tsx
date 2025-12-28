@@ -39,7 +39,7 @@ export default function RatingHistory({ partyId, refreshKey = 0 }: RatingHistory
       <Card className="glass p-4 space-y-4">
         <h3 className="font-semibold flex items-center gap-2">
           <Clock className="h-5 w-5" />
-          Recent Ratings
+          Individual Ratings
         </h3>
         {[1, 2, 3].map((i) => (
           <div key={i} className="flex items-center gap-3">
@@ -59,7 +59,7 @@ export default function RatingHistory({ partyId, refreshKey = 0 }: RatingHistory
     <Card className="glass p-4 space-y-4">
       <h3 className="font-semibold flex items-center gap-2">
         <Clock className="h-5 w-5 text-primary" />
-        Recent Ratings ({ratings.length})
+        Individual Ratings ({ratings.length})
       </h3>
 
       {ratings.length === 0 ? (

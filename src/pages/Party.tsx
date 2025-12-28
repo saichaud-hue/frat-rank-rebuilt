@@ -1,17 +1,19 @@
 import { useState, useEffect } from 'react';
 import { useSearchParams, Link } from 'react-router-dom';
 import { ArrowLeft, Calendar, Clock, MapPin, Users, Star, Radio } from 'lucide-react';
-import { base44, type Party, type Fraternity } from '@/api/base44Client';
+import { base44, type Party, type Fraternity, type PartyRating } from '@/api/base44Client';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Progress } from '@/components/ui/progress';
 import PhotoBulletin from '@/components/photos/PhotoBulletin';
 import RatingHistory from '@/components/party/RatingHistory';
 import CommentSection from '@/components/comments/CommentSection';
 import PartyRatingForm from '@/components/rate/PartyRatingForm';
-import { createPageUrl } from '@/utils';
+import { createPageUrl, getScoreBgColor } from '@/utils';
 import { format } from 'date-fns';
+import { computeRawPartyQuality, getPartyConfidenceLevel } from '@/utils/scoring';
 
 export default function PartyPage() {
   const [searchParams] = useSearchParams();
@@ -22,10 +24,30 @@ export default function PartyPage() {
   const [loading, setLoading] = useState(true);
   const [showRatingForm, setShowRatingForm] = useState(false);
   const [ratingsRefreshKey, setRatingsRefreshKey] = useState(0);
+  const [partyRatings, setPartyRatings] = useState<PartyRating[]>([]);
 
   useEffect(() => {
-    if (partyId) loadParty();
+    if (partyId) {
+      loadParty();
+      loadPartyRatings();
+    }
   }, [partyId]);
+
+  // Reload ratings when refreshKey changes
+  useEffect(() => {
+    if (partyId && ratingsRefreshKey > 0) {
+      loadPartyRatings();
+    }
+  }, [ratingsRefreshKey]);
+
+  const loadPartyRatings = async () => {
+    try {
+      const ratings = await base44.entities.PartyRating.filter({ party_id: partyId! });
+      setPartyRatings(ratings);
+    } catch (error) {
+      console.error('Failed to load party ratings:', error);
+    }
+  };
 
   const loadParty = async () => {
     try {
@@ -163,6 +185,28 @@ export default function PartyPage() {
             </Badge>
           )}
 
+          {/* Party Quality Display - shows raw aggregate with confidence */}
+          {(() => {
+            const partyQuality = computeRawPartyQuality(partyRatings);
+            const confidence = getPartyConfidenceLevel(partyRatings.length);
+            
+            if (partyQuality === null) return null;
+            
+            return (
+              <div className="bg-muted/50 rounded-lg p-3 space-y-2">
+                <div className="flex items-center justify-between">
+                  <span className="text-sm font-medium">Party Quality</span>
+                  <Badge className={`${getScoreBgColor(partyQuality)} text-white text-lg px-3`}>
+                    {partyQuality.toFixed(1)}
+                  </Badge>
+                </div>
+                <div className="space-y-1">
+                  <Progress value={confidence.percentage} className="h-1.5" />
+                  <p className="text-xs text-muted-foreground">{confidence.label}</p>
+                </div>
+              </div>
+            );
+          })()}
 
           {canRate() ? (
             <Button 
