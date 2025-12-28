@@ -84,7 +84,7 @@ export default function PartyCard({ party, fraternityName, isLive = false, overa
                 <span className={`text-lg font-bold ${getScoreColor(displayScore)}`}>
                   {displayScore.toFixed(1)}
                 </span>
-                <span className="text-xs text-muted-foreground">Party Quality</span>
+                <span className="text-xs text-muted-foreground">Overall Party Quality</span>
               </div>
             )}
 
