@@ -41,7 +41,7 @@ export function getPartyScore(frat: Fraternity): number {
 }
 
 // ============================================
-// PARTY INDEX CALCULATION (Step A)
+// PARTY SCORING FORMULA (Canonical)
 // ============================================
 
 export interface PartyWithRatings {
@@ -50,10 +50,51 @@ export interface PartyWithRatings {
 }
 
 /**
- * Compute PartyIndex for a fraternity using recency + participation weighting
- * weight_p = ln(1 + n_p) * exp(-d_p / 30)
+ * Compute the average Party Quality for a single party from its ratings.
+ * PartyQuality = 0.50 × Vibe + 0.30 × Music + 0.20 × Execution
  */
-export function computePartyIndex(
+export function computeSinglePartyQuality(ratings: PartyRating[]): number {
+  if (ratings.length === 0) return 5.0;
+  
+  const sum = ratings.reduce((acc, r) => {
+    const quality = 0.50 * (r.vibe_score ?? 5) + 0.30 * (r.music_score ?? 5) + 0.20 * (r.execution_score ?? 5);
+    return acc + quality;
+  }, 0);
+  
+  return sum / ratings.length;
+}
+
+/**
+ * Compute the Party Weight for a single party.
+ * PartyWeight = ln(1 + numRatings) × exp(-daysSinceParty / 30)
+ */
+export function computePartyWeight(
+  party: Party,
+  numRatings: number,
+  referenceDate: Date = new Date()
+): number {
+  const partyDate = new Date(party.starts_at);
+  const daysSince = Math.max(0, (referenceDate.getTime() - partyDate.getTime()) / (1000 * 60 * 60 * 24));
+  
+  const participationWeight = Math.log(1 + numRatings);
+  const timeDecay = Math.exp(-daysSince / 30);
+  
+  return participationWeight * timeDecay;
+}
+
+/**
+ * Compute Fraternity Party Quality Score (aggregate across all parties)
+ * 
+ * Formula:
+ * PartyQualityScore = Σ(PartyQuality × PartyWeight) / Σ(PartyWeight)
+ * 
+ * Where:
+ * - PartyQuality = 0.50 × Vibe + 0.30 × Music + 0.20 × Execution
+ * - PartyWeight = ln(1 + numRatings) × exp(-daysSince / 30)
+ * 
+ * This is the CANONICAL function for fraternity-level party scoring.
+ */
+export function computeFraternityPartyScore(
   partiesWithRatings: PartyWithRatings[],
   referenceDate: Date = new Date()
 ): number {
@@ -65,22 +106,26 @@ export function computePartyIndex(
   for (const { party, ratings } of partiesWithRatings) {
     if (ratings.length === 0) continue;
 
-    const n_p = ratings.length;
-    const partyDate = new Date(party.starts_at);
-    const d_p = Math.max(0, (referenceDate.getTime() - partyDate.getTime()) / (1000 * 60 * 60 * 24));
+    const partyQuality = computeSinglePartyQuality(ratings);
+    const partyWeight = computePartyWeight(party, ratings.length, referenceDate);
     
-    // weight_p = ln(1 + n_p) * exp(-d_p / 30)
-    const weight_p = Math.log(1 + n_p) * Math.exp(-d_p / 30);
-    
-    // Average party quality score for this party
-    const avgQuality = ratings.reduce((sum, r) => sum + (r.party_quality_score ?? 5), 0) / n_p;
-    
-    weightedSum += avgQuality * weight_p;
-    totalWeight += weight_p;
+    weightedSum += partyQuality * partyWeight;
+    totalWeight += partyWeight;
   }
 
   if (totalWeight === 0) return 5.0;
   return Math.max(0, Math.min(10, weightedSum / totalWeight));
+}
+
+/**
+ * Legacy alias for backward compatibility
+ * @deprecated Use computeFraternityPartyScore instead
+ */
+export function computePartyIndex(
+  partiesWithRatings: PartyWithRatings[],
+  referenceDate: Date = new Date()
+): number {
+  return computeFraternityPartyScore(partiesWithRatings, referenceDate);
 }
 
 /**
@@ -99,7 +144,7 @@ export function computePartyIndexInWindow(
   });
 
   if (filtered.length === 0) return 5.0;
-  return computePartyIndex(filtered, referenceDate);
+  return computeFraternityPartyScore(filtered, referenceDate);
 }
 
 // ============================================
@@ -166,12 +211,6 @@ export interface ActivityData {
 
 /**
  * Compute trending score based on recent activity
- * Counts all activity in the last 7 days:
- * - Reputation ratings
- * - Party ratings  
- * - Parties created
- * - Party comments
- * - Fraternity comments
  */
 export function computeActivityTrending(
   activityData: ActivityData,
@@ -179,35 +218,26 @@ export function computeActivityTrending(
 ): number {
   const sevenDaysAgo = new Date(referenceDate.getTime() - 7 * 24 * 60 * 60 * 1000);
   
-  // Count reputation ratings in last 7 days
   const recentRepRatings = activityData.repRatings.filter(r => 
     new Date(r.created_date) >= sevenDaysAgo
   ).length;
   
-  // Count party ratings in last 7 days
   const recentPartyRatings = activityData.partyRatings.filter(r => 
     new Date(r.created_date) >= sevenDaysAgo
   ).length;
   
-  // Count parties in last 7 days
   const recentParties = activityData.parties.filter(p => 
     new Date(p.starts_at) >= sevenDaysAgo
   ).length;
   
-  // Count party comments in last 7 days
   const recentPartyComments = activityData.partyComments.filter(c => 
     new Date(c.created_date) >= sevenDaysAgo
   ).length;
   
-  // Count fraternity comments in last 7 days
   const recentFratComments = activityData.fratComments.filter(c => 
     new Date(c.created_date) >= sevenDaysAgo
   ).length;
   
-  // Total activity score (weighted)
-  // Parties: 3 points each (big events)
-  // Ratings: 2 points each (engagement)
-  // Comments: 1 point each (discussion)
   const activityScore = 
     (recentParties * 3) + 
     (recentRepRatings * 2) + 
@@ -220,7 +250,6 @@ export function computeActivityTrending(
 
 /**
  * Legacy trending calculation for backward compatibility
- * Trending_f = PartyIndex_7days - PartyIndex_60days
  */
 export function computeTrending(
   partiesWithRatings: PartyWithRatings[],
@@ -229,7 +258,6 @@ export function computeTrending(
   const index7 = computePartyIndexInWindow(partiesWithRatings, 7, referenceDate);
   const index60 = computePartyIndexInWindow(partiesWithRatings, 60, referenceDate);
   
-  // Count ratings in last 7 days for confidence weighting
   const sevenDaysAgo = new Date(referenceDate.getTime() - 7 * 24 * 60 * 60 * 1000);
   let recentRatings = 0;
   for (const { party, ratings } of partiesWithRatings) {
@@ -239,7 +267,6 @@ export function computeTrending(
     }
   }
   
-  // Confidence weight: more ratings = more confident in trending
   const confidenceWeight = 1 - Math.exp(-recentRatings / 10);
   const rawTrending = index7 - index60;
   
@@ -256,21 +283,15 @@ export function computeCampusRepAvg(fraternities: Fraternity[]): number {
   return sum / fraternities.length;
 }
 
-export function computeCampusPartyAvg(parties: Party[]): number {
-  // Deprecated for scoring baselines: Party.performance_score may be user/feature-updated.
-  // Kept for backward compatibility, but prefer computeCampusPartyAvgFromRatings.
-  if (parties.length === 0) return 5.0;
-  const sum = parties.reduce((acc, p) => acc + (p.performance_score ?? 5), 0);
-  return sum / parties.length;
-}
-
 /**
  * Stable campus party baseline derived from ALL PartyRating records.
- * This avoids pollution from any cached Party score fields.
  */
 export function computeCampusPartyAvgFromRatings(allPartyRatings: PartyRating[]): number {
   if (allPartyRatings.length === 0) return 5.0;
-  const sum = allPartyRatings.reduce((acc, r) => acc + (r.party_quality_score ?? 5), 0);
+  const sum = allPartyRatings.reduce((acc, r) => {
+    const quality = 0.50 * (r.vibe_score ?? 5) + 0.30 * (r.music_score ?? 5) + 0.20 * (r.execution_score ?? 5);
+    return acc + quality;
+  }, 0);
   return sum / allPartyRatings.length;
 }
 
@@ -279,62 +300,24 @@ export function computeCampusPartyAvgFromRatings(allPartyRatings: PartyRating[])
 // ============================================
 
 /**
- * Compute the fraternity-scoped baseline for party quality.
- * This baseline is ONLY influenced by ratings within this fraternity's parties.
- * 
- * @param partiesWithRatings - All parties with their ratings for a single fraternity
- * @returns Baseline score (average of party_quality_score, or 5.0 if no ratings)
- */
-export function computeFraternityPartyBaseline(
-  partiesWithRatings: PartyWithRatings[],
-  excludePartyId?: string
-): number {
-  // Collect all party ratings for this fraternity (optionally excluding a single party)
-  const allRatings: PartyRating[] = [];
-  for (const { party, ratings } of partiesWithRatings) {
-    if (excludePartyId && party.id === excludePartyId) continue;
-    allRatings.push(...ratings);
-  }
-  
-  if (allRatings.length === 0) {
-    return 5.0; // Neutral default when no baseline ratings exist
-  }
-  
-  // Simple average of party quality scores for this fraternity
-  const sum = allRatings.reduce((acc, r) => acc + (r.party_quality_score ?? 5), 0);
-  return sum / allRatings.length;
-}
-
-/**
- * Compute the confidence-adjusted overall party quality for a single party.
+ * Compute the overall party quality for a single party.
  * This is the CANONICAL function - use this everywhere party quality is displayed.
  * 
- * Formula: cP = 1 - exp(-n/40), then adjustedQuality = cP * avgQuality + (1-cP) * fratBaseline
- * Uses the SAME confidence denominator (/40) as computeAdjustedPartyIndex for consistency.
+ * Formula: Average of (0.50 × Vibe + 0.30 × Music + 0.20 × Execution) across all ratings
  * 
- * IMPORTANT: Uses fraternity-scoped baseline, NOT campus-wide average.
- * This ensures rating one fraternity's party doesn't affect other fraternities' scores.
+ * No confidence adjustment needed because the fraternity-level aggregate uses
+ * participation weighting: ln(1 + numRatings). A party with 1 rating has 
+ * weight ln(2) ≈ 0.69, while a party with 10 ratings has weight ln(11) ≈ 2.40.
  * 
  * @param ratings - All ratings for this party
- * @param fratBaseline - Fraternity-specific baseline (from computeFraternityPartyBaseline)
- * @returns Confidence-adjusted overall party quality score
+ * @returns Average party quality score (1-10), or undefined if no ratings
  */
-export function computePartyOverallQuality(
-  ratings: PartyRating[],
-  fratBaseline: number
-): number {
+export function computePartyOverallQuality(ratings: PartyRating[]): number | undefined {
   if (ratings.length === 0) {
-    return fratBaseline;
+    return undefined;
   }
   
-  // Average party quality from all ratings for this party
-  const avgQuality = ratings.reduce((sum, r) => sum + (r.party_quality_score ?? 5), 0) / ratings.length;
-  
-  // Apply confidence adjustment: cP = 1 - exp(-n/40) - SAME denominator as fraternity-level party index
-  const confidence = 1 - Math.exp(-ratings.length / 40);
-  const adjustedQuality = confidence * avgQuality + (1 - confidence) * fratBaseline;
-  
-  return Math.max(0, Math.min(10, adjustedQuality));
+  return computeSinglePartyQuality(ratings);
 }
 
 // ============================================
@@ -348,17 +331,15 @@ export interface FraternityScores {
   partyAdj: number;
   overall: number;
   trending: number;
-  activityTrending: number; // New activity-based trending
+  activityTrending: number;
   numRepRatings: number;
   numPartyRatings: number;
   confidenceRep: number;
   confidenceParty: number;
   confidenceOverall: number;
-  // Individual reputation sub-scores (averages)
   avgBrotherhood: number;
   avgReputation: number;
   avgCommunity: number;
-  // Individual party sub-scores (averages)
   avgVibe: number;
   avgMusic: number;
   avgExecution: number;
@@ -402,8 +383,8 @@ export async function computeFullFraternityScores(
   
   const numRepRatings = repRatings.length;
   
-  // Party index with recency weighting
-  const partyIndex = computePartyIndex(partiesWithRatings);
+  // Party score using new formula with participation + time decay weights
+  const partyIndex = computeFraternityPartyScore(partiesWithRatings);
   
   // Total party ratings count
   const numPartyRatings = partiesWithRatings.reduce(
@@ -423,10 +404,8 @@ export async function computeFullFraternityScores(
   // Final overall
   const overall = computeFinalOverall(repAdj, partyAdj);
   
-  // Trending (legacy)
+  // Trending
   const trending = computeTrending(partiesWithRatings);
-  
-  // Activity-based trending (new)
   const activityTrending = activityData 
     ? computeActivityTrending(activityData)
     : 0;
@@ -458,7 +437,6 @@ export async function computeFullFraternityScores(
 // ============================================
 
 export function getOverallScore(frat: Fraternity): number {
-  // Legacy: use stored scores if available
   const reputation = getReputationScore(frat);
   const party = getPartyScore(frat);
   const overall = 0.65 * reputation + 0.35 * party;
@@ -502,21 +480,17 @@ export function sortFraternitiesByParty(frats: FraternityWithScores[]): Fraterni
 
 export function sortFraternitiesByTrending(frats: FraternityWithScores[]): FraternityWithScores[] {
   return [...frats].sort((a, b) => {
-    // Use activity-based trending for sorting
     const trendA = a.computedScores?.activityTrending ?? 0;
     const trendB = b.computedScores?.activityTrending ?? 0;
     if (trendB !== trendA) return trendB - trendA;
-    // Tiebreaker: overall score
-    const overallA = a.computedScores?.overall ?? getOverallScore(a);
-    const overallB = b.computedScores?.overall ?? getOverallScore(b);
-    return overallB - overallA;
+    return (a.chapter ?? '').localeCompare(b.chapter ?? '');
   });
 }
 
 export function sortPartiesByQuality(parties: Party[]): Party[] {
   return [...parties].sort((a, b) => {
-    const qualityA = getPartyQualityScore(a);
-    const qualityB = getPartyQualityScore(b);
+    const qualityA = a.performance_score ?? 5;
+    const qualityB = b.performance_score ?? 5;
     return qualityB - qualityA;
   });
 }

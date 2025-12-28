@@ -6,7 +6,7 @@ import PartyFilters from '@/components/parties/PartyFilters';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Badge } from '@/components/ui/badge';
 import { subDays, addDays, startOfDay, endOfDay } from 'date-fns';
-import { computePartyOverallQuality, computeFraternityPartyBaseline, type PartyWithRatings } from '@/utils/scoring';
+import { computePartyOverallQuality, type PartyWithRatings } from '@/utils/scoring';
 interface Filters {
   fraternity: string;
   theme: string;
@@ -65,26 +65,15 @@ export default function Parties() {
         partiesByFrat.set(fratId, existing);
       }
 
-      // Compute per-party overall quality using fraternity-scoped baselines
+      // Compute per-party overall quality using the new simplified formula
+      // Just average of ratings - fraternity-level weighting handles sample size via ln(1 + n)
       const perPartyScores = new Map<string, number>();
       for (const [, partiesWithRatings] of partiesByFrat) {
-        // Apply to each party in this fraternity.
-        // Baseline is computed per-party, excluding that party's own ratings.
         for (const { party, ratings } of partiesWithRatings) {
-          const perPartyBaseline = computeFraternityPartyBaseline(partiesWithRatings, party.id);
-          const overall = computePartyOverallQuality(ratings, perPartyBaseline);
-
-          // TEMP DEBUG (remove after verification)
-          if (import.meta.env.DEV && party.title === 'Margaritaville') {
-            const avgQuality = ratings.length
-              ? ratings.reduce((s, r) => s + (r.party_quality_score ?? 5), 0) / ratings.length
-              : perPartyBaseline;
-            const confidence = 1 - Math.exp(-ratings.length / 40);
-            const adjusted = confidence * avgQuality + (1 - confidence) * perPartyBaseline;
-            console.log('[debug Margaritaville overall][Parties]', { n: ratings.length, avgQuality, baseline: perPartyBaseline, confidence, adjusted });
+          const overall = computePartyOverallQuality(ratings);
+          if (overall !== undefined) {
+            perPartyScores.set(party.id, overall);
           }
-
-          perPartyScores.set(party.id, overall);
         }
       }
       setPartyScores(perPartyScores);

@@ -16,11 +16,9 @@ import { createPageUrl, clamp, getScoreColor } from '@/utils';
 import { 
   computeFullFraternityScores, 
   computeCampusRepAvg, 
-  computeCampusPartyAvg,
   computeCampusPartyAvgFromRatings,
   computeCombinedReputation,
   computePartyOverallQuality,
-  computeFraternityPartyBaseline,
   type FraternityScores,
   type PartyWithRatings,
   type ActivityData
@@ -89,27 +87,15 @@ export default function FraternityPage() {
         ratings: partyRatingsMap.get(party.id) || [],
       }));
 
-      // Compute fraternity-scoped baseline (only affected by this frat's ratings)
-      const fratBaseline = computeFraternityPartyBaseline(partiesWithRatings);
-
       // Compute per-party overall quality scores using the canonical utility function
-      // Baseline is computed per-party, excluding that party's own ratings, so n=1 doesn't collapse to the user's rating.
+      // New formula: just average of ratings, no baseline adjustment needed.
+      // Fraternity-level weighting handles sample size naturally via ln(1 + n).
       const perPartyScores = new Map<string, number>();
       for (const { party, ratings } of partiesWithRatings) {
-        const perPartyBaseline = computeFraternityPartyBaseline(partiesWithRatings, party.id);
-        const overall = computePartyOverallQuality(ratings, perPartyBaseline);
-
-        // TEMP DEBUG (remove after verification)
-        if (import.meta.env.DEV && party.title === 'Margaritaville') {
-          const avgQuality = ratings.length
-            ? ratings.reduce((s, r) => s + (r.party_quality_score ?? 5), 0) / ratings.length
-            : perPartyBaseline;
-          const confidence = 1 - Math.exp(-ratings.length / 40);
-          const adjusted = confidence * avgQuality + (1 - confidence) * perPartyBaseline;
-          console.log('[debug Margaritaville overall]', { n: ratings.length, avgQuality, baseline: perPartyBaseline, confidence, adjusted });
+        const overall = computePartyOverallQuality(ratings);
+        if (overall !== undefined) {
+          perPartyScores.set(party.id, overall);
         }
-
-        perPartyScores.set(party.id, overall);
       }
       setPartyScores(perPartyScores);
 
