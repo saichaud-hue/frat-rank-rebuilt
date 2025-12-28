@@ -19,6 +19,7 @@ import FraternityCard from '@/components/leaderboard/FraternityCard';
 import RateFratSheet from '@/components/leaderboard/RateFratSheet';
 import { Skeleton } from '@/components/ui/skeleton';
 import { clamp } from '@/utils';
+import { getCachedCampusBaseline } from "@/utils/scoring";
 
 type FilterType = 'overall' | 'reputation' | 'party' | 'trending';
 
@@ -139,6 +140,8 @@ export default function Leaderboard() {
             fratComments: fratCommentsByFrat.get(frat.id) || [],
           };
 
+          const campusBaseline = getCachedCampusBaseline(allPartiesWithRatings);
+
           const scores = await computeFullFraternityScores(
             frat,
             repRatings,
@@ -146,7 +149,7 @@ export default function Leaderboard() {
             campusRepAvg,
             campusPartyAvg,
             activityData,
-            allPartiesWithRatings // Pass for campus baseline
+            campusBaseline
           );
 
           return {
