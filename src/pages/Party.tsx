@@ -14,7 +14,6 @@ import PartyRatingForm from '@/components/rate/PartyRatingForm';
 import { createPageUrl, getScoreBgColor } from '@/utils';
 import { format } from 'date-fns';
 import { computeRawPartyQuality, getPartyConfidenceLevel } from '@/utils/scoring';
-import partyPlaceholder from '@/assets/party-placeholder.jpg';
 
 export default function PartyPage() {
   const [searchParams] = useSearchParams();
@@ -125,19 +124,21 @@ export default function PartyPage() {
 
       {/* Party Header */}
       <Card className="glass overflow-hidden">
-        <div className="aspect-video relative">
-          <img 
-            src={party.display_photo_url || partyPlaceholder} 
-            alt={party.title}
-            className="w-full h-full object-cover"
-          />
-          {isLive() && (
-            <Badge className="absolute top-4 left-4 bg-red-500 text-white animate-pulse-subtle">
-              <Radio className="h-3 w-3 mr-1" />
-              LIVE NOW
-            </Badge>
-          )}
-        </div>
+        {party.display_photo_url && (
+          <div className="aspect-video relative">
+            <img 
+              src={party.display_photo_url} 
+              alt={party.title}
+              className="w-full h-full object-cover"
+            />
+            {isLive() && (
+              <Badge className="absolute top-4 left-4 bg-red-500 text-white animate-pulse-subtle">
+                <Radio className="h-3 w-3 mr-1" />
+                LIVE NOW
+              </Badge>
+            )}
+          </div>
+        )}
         
         <div className="p-4 space-y-4">
           <div className="flex items-start justify-between">

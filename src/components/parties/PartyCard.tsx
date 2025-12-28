@@ -1,4 +1,4 @@
-import { Calendar, Clock, MapPin, Radio } from 'lucide-react';
+import { Calendar, Clock, MapPin, Camera, Radio } from 'lucide-react';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Link } from 'react-router-dom';
@@ -6,7 +6,6 @@ import { createPageUrl, getScoreColor } from '@/utils';
 import { format } from 'date-fns';
 import type { Party } from '@/api/base44Client';
 import { getPartyConfidenceLevel } from '@/utils/scoring';
-import partyPlaceholder from '@/assets/party-placeholder.jpg';
 
 interface PartyCardProps {
   party: Party;
@@ -40,12 +39,16 @@ export default function PartyCard({
       <Card className="glass overflow-hidden hover:shadow-lg transition-all hover:scale-[1.01] cursor-pointer">
         <div className="flex">
           {/* Image */}
-          <div className="w-24 sm:w-32 flex-shrink-0">
-            <img 
-              src={party.display_photo_url || partyPlaceholder} 
-              alt={party.title}
-              className="w-full h-full object-cover"
-            />
+          <div className="w-24 sm:w-32 flex-shrink-0 bg-gradient-to-br from-indigo-100 to-purple-100 flex items-center justify-center">
+            {party.display_photo_url ? (
+              <img 
+                src={party.display_photo_url} 
+                alt={party.title}
+                className="w-full h-full object-cover"
+              />
+            ) : (
+              <Camera className="h-8 w-8 text-muted-foreground/50" />
+            )}
           </div>
 
           {/* Content */}
