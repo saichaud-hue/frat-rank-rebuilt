@@ -43,20 +43,22 @@ export default function PartyPage() {
     }
   };
 
-  const isLive = () => {
-    if (!party) return false;
-    if (party.status === 'active') return true;
+  // Determine party status based on current time, not stored status
+  const getPartyStatus = (): 'live' | 'upcoming' | 'completed' => {
+    if (!party) return 'upcoming';
     const now = new Date();
     const start = new Date(party.starts_at);
     const end = party.ends_at ? new Date(party.ends_at) : new Date(start.getTime() + 5 * 60 * 60 * 1000);
-    return now >= start && now <= end;
+    
+    if (now >= start && now <= end) return 'live';
+    if (now < start) return 'upcoming';
+    return 'completed';
   };
 
-  // Rule 1: Can only rate past parties (completed status)
-  const canRate = () => {
-    if (!party) return false;
-    return party.status === 'completed';
-  };
+  const isLive = () => getPartyStatus() === 'live';
+  
+  // Can only rate past parties (completed based on time)
+  const canRate = () => getPartyStatus() === 'completed';
 
   const handleRatingSubmit = () => {
     setShowRatingForm(false);
@@ -129,8 +131,8 @@ export default function PartyPage() {
                 </Link>
               )}
             </div>
-            <Badge variant={party.status === 'completed' ? 'secondary' : 'outline'}>
-              {party.status}
+            <Badge variant={getPartyStatus() === 'completed' ? 'secondary' : 'outline'}>
+              {getPartyStatus()}
             </Badge>
           </div>
 
