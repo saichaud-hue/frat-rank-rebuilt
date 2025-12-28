@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { base44, seedInitialData, type Fraternity, type Party, type PartyRating, type ReputationRating } from '@/api/base44Client';
+import { base44, seedInitialData, type Fraternity, type Party, type PartyRating, type ReputationRating, type PartyComment, type FraternityComment } from '@/api/base44Client';
 import { 
   computeFullFraternityScores, 
   computeCampusRepAvg, 
@@ -10,7 +10,8 @@ import {
   sortFraternitiesByTrending,
   type FraternityWithScores,
   type FraternityScores,
-  type PartyWithRatings
+  type PartyWithRatings,
+  type ActivityData
 } from '@/utils/scoring';
 import LeaderboardHeader from '@/components/leaderboard/LeaderboardHeader';
 import LeaderboardPodium from '@/components/leaderboard/LeaderboardPodium';
@@ -45,12 +46,14 @@ export default function Leaderboard() {
 
   const loadFraternities = async () => {
     try {
-      // Load all data needed for scoring
-      const [fratsData, partiesData, allPartyRatings, allRepRatings] = await Promise.all([
+      // Load all data needed for scoring including comments for activity trending
+      const [fratsData, partiesData, allPartyRatings, allRepRatings, allPartyComments, allFratComments] = await Promise.all([
         base44.entities.Fraternity.filter({ status: 'active' }),
         base44.entities.Party.list(),
         base44.entities.PartyRating.list(),
         base44.entities.ReputationRating.list(),
+        base44.entities.PartyComment.list(),
+        base44.entities.FraternityComment.list(),
       ]);
 
       // Compute campus averages
@@ -85,6 +88,26 @@ export default function Leaderboard() {
         }
       }
 
+      // Group comments by party
+      const partyCommentsByParty = new Map<string, PartyComment[]>();
+      for (const comment of allPartyComments) {
+        if (comment.party_id) {
+          const existing = partyCommentsByParty.get(comment.party_id) || [];
+          existing.push(comment);
+          partyCommentsByParty.set(comment.party_id, existing);
+        }
+      }
+
+      // Group fraternity comments by fraternity
+      const fratCommentsByFrat = new Map<string, FraternityComment[]>();
+      for (const comment of allFratComments) {
+        if (comment.fraternity_id) {
+          const existing = fratCommentsByFrat.get(comment.fraternity_id) || [];
+          existing.push(comment);
+          fratCommentsByFrat.set(comment.fraternity_id, existing);
+        }
+      }
+
       // Compute full scores for each fraternity
       const fratsWithScores: FraternityWithScores[] = await Promise.all(
         fratsData.map(async (frat) => {
@@ -94,13 +117,29 @@ export default function Leaderboard() {
             ratings: partyRatingsMap.get(party.id) || [],
           }));
           const repRatings = repRatingsByFrat.get(frat.id) || [];
+          
+          // Get all party ratings for this frat's parties
+          const fratPartyRatings = fratParties.flatMap(p => partyRatingsMap.get(p.id) || []);
+          
+          // Get all party comments for this frat's parties
+          const fratPartyComments = fratParties.flatMap(p => partyCommentsByParty.get(p.id) || []);
+          
+          // Build activity data for trending calculation
+          const activityData: ActivityData = {
+            repRatings,
+            partyRatings: fratPartyRatings,
+            parties: fratParties,
+            partyComments: fratPartyComments,
+            fratComments: fratCommentsByFrat.get(frat.id) || [],
+          };
 
           const scores = await computeFullFraternityScores(
             frat,
             repRatings,
             partiesWithRatings,
             campusRepAvg,
-            campusPartyAvg
+            campusPartyAvg,
+            activityData
           );
 
           return {
