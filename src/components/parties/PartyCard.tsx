@@ -1,10 +1,11 @@
-import { Calendar, Clock, MapPin, Camera, Music, Zap, Settings, Radio } from 'lucide-react';
+import { Calendar, Clock, MapPin, Camera, Radio } from 'lucide-react';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Link } from 'react-router-dom';
 import { createPageUrl, getScoreColor } from '@/utils';
 import { format } from 'date-fns';
 import type { Party } from '@/api/base44Client';
+import { getPartyConfidenceLevel } from '@/utils/scoring';
 
 interface PartyCardProps {
   party: Party;
@@ -93,37 +94,43 @@ export default function PartyCard({
               </Badge>
             )}
 
-            {isCompleted && (
-              <div className="flex flex-col gap-0.5 pt-1">
-                <div className="flex items-center gap-2">
+            {isCompleted && (() => {
+              const confidence = getPartyConfidenceLevel(actualRatingCount);
+              return (
+                <div className="flex flex-col gap-0.5 pt-1">
                   {hasScore ? (
-                    <>
-                      <span className={`text-lg font-bold ${getScoreColor(overallPartyQuality)}`}>
-                        {overallPartyQuality.toFixed(1)}
-                      </span>
-                      <span className="text-xs text-muted-foreground">Overall Party Quality</span>
-                    </>
+                    <div className="flex flex-col gap-0.5">
+                      <div className="flex items-center gap-2">
+                        <span className={`text-lg font-bold ${getScoreColor(overallPartyQuality)}`}>
+                          {overallPartyQuality.toFixed(1)}
+                        </span>
+                        <span className="text-xs text-muted-foreground">Party Quality</span>
+                      </div>
+                      <p className={`text-xs ${
+                        confidence.level === 'low' ? 'text-amber-600' : 
+                        confidence.level === 'medium' ? 'text-blue-600' : 
+                        'text-muted-foreground'
+                      }`}>
+                        {confidence.label}
+                      </p>
+                    </div>
                   ) : (
                     <Badge variant="outline" className="text-xs text-muted-foreground">
                       No ratings yet
                     </Badge>
                   )}
+
+                  {userPartyQuality !== undefined && (
+                    <div className="flex items-center gap-2">
+                      <span className={`text-sm font-semibold ${getScoreColor(userPartyQuality)}`}>
+                        {userPartyQuality.toFixed(1)}
+                      </span>
+                      <span className="text-xs text-muted-foreground">Your Score</span>
+                    </div>
+                  )}
                 </div>
-
-                {userPartyQuality !== undefined && (
-                  <div className="flex items-center gap-2">
-                    <span className={`text-sm font-semibold ${getScoreColor(userPartyQuality)}`}>
-                      {userPartyQuality.toFixed(1)}
-                    </span>
-                    <span className="text-xs text-muted-foreground">Your Score</span>
-                  </div>
-                )}
-              </div>
-            )}
-
-            <p className="text-xs text-muted-foreground">
-              {actualRatingCount} {actualRatingCount === 1 ? 'rating' : 'ratings'}
-            </p>
+              );
+            })()}
           </div>
         </div>
       </Card>
