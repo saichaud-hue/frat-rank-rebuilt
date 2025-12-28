@@ -261,13 +261,13 @@ export default function Leaderboard() {
   const computeRanks = (frats: FraternityWithScores[]): number[] => {
     if (frats.length === 0) return [];
     
-    const getScore = (f: FraternityWithScores): number => {
+    const getScore = (f: FraternityWithScores): number | null => {
       const s = f.computedScores;
       if (!s) return 5;
       switch (filter) {
         case 'overall': return s.overall;
         case 'reputation': return s.repAdj;
-        case 'party': return s.semesterPartyScore; // Element 2: Semester Party Score
+        case 'party': return s.hasPartyScoreData ? s.semesterPartyScore : null; // null if no data
         case 'trending': return s.trending;
         default: return s.overall;
       }
@@ -277,13 +277,20 @@ export default function Leaderboard() {
     let currentRank = 1;
     
     for (let i = 0; i < frats.length; i++) {
+      const currScore = getScore(frats[i]);
+      
       if (i === 0) {
         ranks.push(1);
       } else {
         const prevScore = getScore(frats[i - 1]);
-        const currScore = getScore(frats[i]);
-        // If scores are equal (within tolerance), assign same rank
-        if (Math.abs(prevScore - currScore) < 0.01) {
+        // If both have null scores (no data), assign same rank
+        if (currScore === null && prevScore === null) {
+          ranks.push(ranks[i - 1]);
+        } else if (currScore === null || prevScore === null) {
+          // One has data, one doesn't - different ranks
+          ranks.push(i + 1);
+        } else if (Math.abs(prevScore - currScore) < 0.01) {
+          // If scores are equal (within tolerance), assign same rank
           ranks.push(ranks[i - 1]);
         } else {
           ranks.push(i + 1);
