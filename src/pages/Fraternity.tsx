@@ -289,9 +289,11 @@ export default function FraternityPage() {
     return score !== undefined && p.total_ratings > 0;
   });
 
-  // For header "Overall Party Quality": ALWAYS use fraternity-level partyAdj (formula D)
-  // This is the confidence-adjusted fraternity party score, not per-party score
-  const headerPartyQuality = computedScores?.partyAdj ?? 5;
+  // For header "Overall Party Quality": Use Element 2 (semesterPartyScore) when available
+  // Falls back to partyAdj for display if no rated parties (hasPartyScoreData === false)
+  const headerPartyQuality = computedScores?.hasPartyScoreData 
+    ? computedScores.semesterPartyScore 
+    : null;
 
   // Calculate user's combined scores if they have rated
   const userFratScore = userRating 
@@ -372,9 +374,13 @@ export default function FraternityPage() {
             </div>
             <div className="bg-muted/50 rounded-lg p-4 text-center">
               <p className="text-xs text-muted-foreground mb-1">Overall Party Quality</p>
-              <p className={`text-2xl font-bold ${getScoreColor(headerPartyQuality)}`}>
-                {headerPartyQuality.toFixed(1)}
-              </p>
+              {headerPartyQuality !== null ? (
+                <p className={`text-2xl font-bold ${getScoreColor(headerPartyQuality)}`}>
+                  {headerPartyQuality.toFixed(1)}
+                </p>
+              ) : (
+                <p className="text-2xl font-bold text-muted-foreground">—</p>
+              )}
             </div>
           </div>
         </Card>
