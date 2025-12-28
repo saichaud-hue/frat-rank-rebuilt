@@ -300,24 +300,65 @@ export function computeCampusPartyAvgFromRatings(allPartyRatings: PartyRating[])
 // ============================================
 
 /**
- * Compute the overall party quality for a single party.
- * This is the CANONICAL function - use this everywhere party quality is displayed.
+ * Compute the fraternity-scoped baseline for party quality.
+ * This baseline is ONLY influenced by ratings within this fraternity's parties.
  * 
- * Formula: Average of (0.50 × Vibe + 0.30 × Music + 0.20 × Execution) across all ratings
- * 
- * No confidence adjustment needed because the fraternity-level aggregate uses
- * participation weighting: ln(1 + numRatings). A party with 1 rating has 
- * weight ln(2) ≈ 0.69, while a party with 10 ratings has weight ln(11) ≈ 2.40.
- * 
- * @param ratings - All ratings for this party
- * @returns Average party quality score (1-10), or undefined if no ratings
+ * @param partiesWithRatings - All parties with their ratings for a single fraternity
+ * @param excludePartyId - Optional party to exclude (to prevent a party from influencing its own baseline)
+ * @returns Baseline score (average of party quality, or 5.0 if no ratings)
  */
-export function computePartyOverallQuality(ratings: PartyRating[]): number | undefined {
-  if (ratings.length === 0) {
-    return undefined;
+export function computeFraternityPartyBaseline(
+  partiesWithRatings: PartyWithRatings[],
+  excludePartyId?: string
+): number {
+  // Collect all party ratings for this fraternity (optionally excluding a single party)
+  const allRatings: PartyRating[] = [];
+  for (const { party, ratings } of partiesWithRatings) {
+    if (excludePartyId && party.id === excludePartyId) continue;
+    allRatings.push(...ratings);
   }
   
-  return computeSinglePartyQuality(ratings);
+  if (allRatings.length === 0) {
+    return 5.0; // Neutral default when no baseline ratings exist
+  }
+  
+  // Compute average using the canonical formula
+  return computeSinglePartyQuality(allRatings);
+}
+
+/**
+ * Compute the confidence-adjusted overall party quality for a single party.
+ * This is the CANONICAL function - use this everywhere party quality is displayed.
+ * 
+ * Formula: cP = 1 - exp(-n/10), then adjustedQuality = cP * avgQuality + (1-cP) * fratBaseline
+ * Uses denominator /10 so that n=1 gives ~9.5% confidence, n=5 gives ~39%, n=10 gives ~63%.
+ * 
+ * IMPORTANT: Uses fraternity-scoped baseline (excluding this party's own ratings).
+ * This ensures rating one fraternity's party doesn't affect other fraternities' scores.
+ * 
+ * @param ratings - All ratings for this party
+ * @param fratBaseline - Fraternity-specific baseline (from computeFraternityPartyBaseline with excludePartyId)
+ * @returns Confidence-adjusted overall party quality score
+ */
+export function computePartyOverallQuality(
+  ratings: PartyRating[],
+  fratBaseline: number
+): number {
+  if (ratings.length === 0) {
+    return fratBaseline;
+  }
+  
+  // Average party quality from all ratings for this party
+  const avgQuality = computeSinglePartyQuality(ratings);
+  
+  // Apply confidence adjustment: cP = 1 - exp(-n/10)
+  // n=1: confidence ~0.095, so ~90.5% weight on baseline
+  // n=5: confidence ~0.393, so ~60.7% weight on baseline
+  // n=10: confidence ~0.632, so ~36.8% weight on baseline
+  const confidence = 1 - Math.exp(-ratings.length / 10);
+  const adjustedQuality = confidence * avgQuality + (1 - confidence) * fratBaseline;
+  
+  return Math.max(0, Math.min(10, adjustedQuality));
 }
 
 // ============================================
