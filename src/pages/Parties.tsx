@@ -6,7 +6,7 @@ import PartyFilters from '@/components/parties/PartyFilters';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Badge } from '@/components/ui/badge';
 import { subDays, addDays, startOfDay, endOfDay } from 'date-fns';
-import { computePartyOverallQuality, computeFraternityPartyBaseline, type PartyWithRatings } from '@/utils/scoring';
+import { computePartyOverallQuality, type PartyWithRatings } from '@/utils/scoring';
 interface Filters {
   fraternity: string;
   theme: string;
@@ -65,30 +65,14 @@ export default function Parties() {
         partiesByFrat.set(fratId, existing);
       }
 
-      // Compute per-party overall quality using confidence-adjusted formula.
-      // Baseline is computed per-party, EXCLUDING that party's own ratings.
+      // Compute per-party overall quality using the new simplified formula
+      // Just average of ratings - fraternity-level weighting handles sample size via ln(1 + n)
       const perPartyScores = new Map<string, number>();
       for (const [, partiesWithRatings] of partiesByFrat) {
         for (const { party, ratings } of partiesWithRatings) {
-          // Exclude this party's ratings from the baseline calculation
-          const perPartyBaseline = computeFraternityPartyBaseline(partiesWithRatings, party.id);
-          const overall = computePartyOverallQuality(ratings, perPartyBaseline);
-          perPartyScores.set(party.id, overall);
-
-          // DEV DEBUG: Log Margaritaville calculations
-          if (import.meta.env.DEV && party.title === 'Margaritaville') {
-            const avgQuality = ratings.length > 0
-              ? ratings.reduce((s, r) => s + (0.5 * (r.vibe_score ?? 5) + 0.3 * (r.music_score ?? 5) + 0.2 * (r.execution_score ?? 5)), 0) / ratings.length
-              : 5;
-            const confidence = 1 - Math.exp(-ratings.length / 10);
-            console.log('[DEBUG Parties.tsx - Margaritaville]', {
-              n: ratings.length,
-              avgQuality: avgQuality.toFixed(2),
-              baseline: perPartyBaseline.toFixed(2),
-              confidence: confidence.toFixed(3),
-              adjustedOverall: overall.toFixed(2),
-              note: ratings.length === 1 ? 'With n=1, ~90% weight on baseline, so overall should be close to baseline' : ''
-            });
+          const overall = computePartyOverallQuality(ratings);
+          if (overall !== undefined) {
+            perPartyScores.set(party.id, overall);
           }
         }
       }
