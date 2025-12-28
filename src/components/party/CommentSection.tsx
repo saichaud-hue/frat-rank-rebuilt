@@ -1,25 +1,36 @@
 import { useState, useEffect } from 'react';
-import { MessageSquare, ThumbsUp, Reply, Send, Smile, Meh, Frown } from 'lucide-react';
+import { MessageSquare, ThumbsUp, Reply, Send, Smile, Meh, Frown, X } from 'lucide-react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Skeleton } from '@/components/ui/skeleton';
-import { base44, type PartyComment, type Party } from '@/api/base44Client';
+import { base44, type PartyComment } from '@/api/base44Client';
 import { formatTimeAgo } from '@/utils';
 
 interface CommentSectionProps {
   partyId: string;
 }
 
+interface ReplyingTo {
+  commentId: string;
+  authorName: string;
+  snippet?: string;
+}
+
+// Strip any @<uuid> patterns from text (cleanup for legacy data)
+const sanitizeCommentText = (text: string): string => {
+  // Remove @<uuid> patterns (UUID format: 8-4-4-4-12 hex chars)
+  return text.replace(/@[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\s*/gi, '').trim();
+};
+
 export default function CommentSection({ partyId }: CommentSectionProps) {
   const [comments, setComments] = useState<PartyComment[]>([]);
   const [loading, setLoading] = useState(true);
   const [newComment, setNewComment] = useState('');
   const [submitting, setSubmitting] = useState(false);
-  const [replyingTo, setReplyingTo] = useState<string | null>(null);
-  const [replyText, setReplyText] = useState('');
+  const [replyingTo, setReplyingTo] = useState<ReplyingTo | null>(null);
 
   useEffect(() => {
     loadComments();
@@ -29,7 +40,7 @@ export default function CommentSection({ partyId }: CommentSectionProps) {
     try {
       const data = await base44.entities.PartyComment.filter(
         { party_id: partyId },
-        '-created_date'
+        'created_date'
       );
       setComments(data);
     } catch (error) {
@@ -40,7 +51,6 @@ export default function CommentSection({ partyId }: CommentSectionProps) {
   };
 
   const analyzeSentiment = (text: string): number => {
-    // Simple sentiment analysis simulation
     const positiveWords = ['great', 'awesome', 'amazing', 'love', 'best', 'fun', 'good', 'excellent', 'fantastic'];
     const negativeWords = ['bad', 'terrible', 'worst', 'hate', 'boring', 'awful', 'poor', 'disappointing'];
     
@@ -71,6 +81,7 @@ export default function CommentSection({ partyId }: CommentSectionProps) {
         party_id: partyId,
         user_id: user.id,
         text: newComment.trim(),
+        parent_comment_id: replyingTo?.commentId || null,
         sentiment_score: sentimentScore,
         toxicity_label: 'safe',
         upvotes: 0,
@@ -95,6 +106,7 @@ export default function CommentSection({ partyId }: CommentSectionProps) {
       }
 
       setNewComment('');
+      setReplyingTo(null);
       await loadComments();
     } catch (error) {
       console.error('Failed to submit comment:', error);
@@ -113,29 +125,17 @@ export default function CommentSection({ partyId }: CommentSectionProps) {
     await loadComments();
   };
 
-  const handleReply = async (parentId: string) => {
-    if (!replyText.trim()) return;
+  const handleStartReply = (comment: PartyComment) => {
+    const snippet = sanitizeCommentText(comment.text ?? '').slice(0, 50);
+    setReplyingTo({
+      commentId: comment.id,
+      authorName: 'Anonymous Duke Student',
+      snippet: snippet.length < (comment.text?.length ?? 0) ? `${snippet}...` : snippet,
+    });
+  };
 
-    try {
-      const user = await base44.auth.me();
-      if (!user) return;
-
-      await base44.entities.PartyComment.create({
-        party_id: partyId,
-        user_id: user.id,
-        text: `@${parentId} ${replyText.trim()}`,
-        sentiment_score: 0,
-        toxicity_label: 'safe',
-        upvotes: 0,
-        moderated: false,
-      });
-
-      setReplyingTo(null);
-      setReplyText('');
-      await loadComments();
-    } catch (error) {
-      console.error('Failed to submit reply:', error);
-    }
+  const handleCancelReply = () => {
+    setReplyingTo(null);
   };
 
   const getSentimentBadge = (score: number) => {
@@ -160,6 +160,70 @@ export default function CommentSection({ partyId }: CommentSectionProps) {
         <Meh className="h-3 w-3 mr-1" />
         Neutral
       </Badge>
+    );
+  };
+
+  // Group comments: top-level and replies
+  const topLevelComments = comments.filter(c => !c.parent_comment_id);
+  const repliesByParent = comments.reduce((acc, c) => {
+    if (c.parent_comment_id) {
+      if (!acc[c.parent_comment_id]) acc[c.parent_comment_id] = [];
+      acc[c.parent_comment_id].push(c);
+    }
+    return acc;
+  }, {} as Record<string, PartyComment[]>);
+
+  const renderComment = (comment: PartyComment, isReply = false) => {
+    const replies = repliesByParent[comment.id] || [];
+    const displayText = sanitizeCommentText(comment.text ?? '');
+
+    return (
+      <div key={comment.id} className={`space-y-2 ${isReply ? 'ml-8 border-l-2 border-muted pl-4' : ''}`}>
+        <div className="p-3 rounded-lg bg-muted/30">
+          <div className="flex items-start justify-between">
+            <div className="flex items-center gap-2">
+              <Avatar className="h-8 w-8">
+                <AvatarFallback className="bg-gradient-to-br from-indigo-500 to-purple-500 text-white text-xs">
+                  DS
+                </AvatarFallback>
+              </Avatar>
+              <div>
+                <p className="text-sm font-medium">Anonymous Duke Student</p>
+                <p className="text-xs text-muted-foreground">
+                  {formatTimeAgo(comment.created_date)}
+                </p>
+              </div>
+            </div>
+            {getSentimentBadge(comment.sentiment_score ?? 0)}
+          </div>
+
+          <p className="text-sm mt-2">{displayText}</p>
+
+          <div className="flex items-center gap-4 mt-2">
+            <Button 
+              variant="ghost" 
+              size="sm"
+              onClick={() => handleUpvote(comment.id)}
+              className="h-8 text-xs"
+            >
+              <ThumbsUp className="h-3.5 w-3.5 mr-1" />
+              {comment.upvotes ?? 0}
+            </Button>
+            <Button 
+              variant="ghost" 
+              size="sm"
+              onClick={() => handleStartReply(comment)}
+              className="h-8 text-xs"
+            >
+              <Reply className="h-3.5 w-3.5 mr-1" />
+              Reply
+            </Button>
+          </div>
+        </div>
+
+        {/* Render replies */}
+        {replies.map(reply => renderComment(reply, true))}
+      </div>
     );
   };
 
@@ -192,8 +256,32 @@ export default function CommentSection({ partyId }: CommentSectionProps) {
 
       {/* New Comment Input */}
       <div className="space-y-2">
+        {/* Replying To Indicator */}
+        {replyingTo && (
+          <div className="flex items-center justify-between bg-muted/50 rounded-lg px-3 py-2 text-sm">
+            <div className="flex items-center gap-2">
+              <Reply className="h-4 w-4 text-muted-foreground" />
+              <span className="text-muted-foreground">Replying to</span>
+              <span className="font-medium">{replyingTo.authorName}</span>
+              {replyingTo.snippet && (
+                <span className="text-muted-foreground truncate max-w-[200px]">
+                  "{replyingTo.snippet}"
+                </span>
+              )}
+            </div>
+            <Button 
+              variant="ghost" 
+              size="sm" 
+              onClick={handleCancelReply}
+              className="h-6 w-6 p-0"
+            >
+              <X className="h-4 w-4" />
+            </Button>
+          </div>
+        )}
+        
         <Textarea
-          placeholder="Share your experience..."
+          placeholder={replyingTo ? 'Write your reply...' : 'Share your experience...'}
           value={newComment}
           onChange={(e) => setNewComment(e.target.value)}
           className="resize-none"
@@ -205,79 +293,18 @@ export default function CommentSection({ partyId }: CommentSectionProps) {
           className="gradient-primary text-white"
         >
           <Send className="h-4 w-4 mr-2" />
-          {submitting ? 'Posting...' : 'Post Comment'}
+          {submitting ? 'Posting...' : replyingTo ? 'Post Reply' : 'Post Comment'}
         </Button>
       </div>
 
-      {/* Comments List */}
+      {/* Comments List - Threaded */}
       <div className="space-y-4">
-        {comments.length === 0 ? (
+        {topLevelComments.length === 0 ? (
           <p className="text-center text-muted-foreground py-8">
             No comments yet. Be the first to share your experience!
           </p>
         ) : (
-          comments.map((comment) => (
-            <div key={comment.id} className="space-y-2 p-3 rounded-lg bg-muted/30">
-              <div className="flex items-start justify-between">
-                <div className="flex items-center gap-2">
-                  <Avatar className="h-8 w-8">
-                    <AvatarFallback className="bg-gradient-to-br from-indigo-500 to-purple-500 text-white text-xs">
-                      DS
-                    </AvatarFallback>
-                  </Avatar>
-                  <div>
-                    <p className="text-sm font-medium">Anonymous Duke Student</p>
-                    <p className="text-xs text-muted-foreground">
-                      {formatTimeAgo(comment.created_date)}
-                    </p>
-                  </div>
-                </div>
-                {getSentimentBadge(comment.sentiment_score ?? 0)}
-              </div>
-
-              <p className="text-sm">{comment.text}</p>
-
-              <div className="flex items-center gap-4">
-                <Button 
-                  variant="ghost" 
-                  size="sm"
-                  onClick={() => handleUpvote(comment.id)}
-                  className="h-8 text-xs"
-                >
-                  <ThumbsUp className="h-3.5 w-3.5 mr-1" />
-                  {comment.upvotes ?? 0}
-                </Button>
-                <Button 
-                  variant="ghost" 
-                  size="sm"
-                  onClick={() => setReplyingTo(replyingTo === comment.id ? null : comment.id)}
-                  className="h-8 text-xs"
-                >
-                  <Reply className="h-3.5 w-3.5 mr-1" />
-                  Reply
-                </Button>
-              </div>
-
-              {replyingTo === comment.id && (
-                <div className="flex gap-2 mt-2">
-                  <Textarea
-                    placeholder="Write a reply..."
-                    value={replyText}
-                    onChange={(e) => setReplyText(e.target.value)}
-                    className="resize-none text-sm"
-                    rows={2}
-                  />
-                  <Button 
-                    size="sm"
-                    onClick={() => handleReply(comment.id)}
-                    disabled={!replyText.trim()}
-                  >
-                    <Send className="h-4 w-4" />
-                  </Button>
-                </div>
-              )}
-            </div>
-          ))
+          topLevelComments.map((comment) => renderComment(comment))
         )}
       </div>
     </Card>
