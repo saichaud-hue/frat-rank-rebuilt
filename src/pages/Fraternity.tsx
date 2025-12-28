@@ -18,6 +18,7 @@ import {
   computeCampusRepAvg, 
   computeCampusPartyAvg,
   computeCombinedReputation,
+  computePartyOverallQuality,
   type FraternityScores,
   type PartyWithRatings,
   type ActivityData
@@ -86,19 +87,10 @@ export default function FraternityPage() {
         ratings: partyRatingsMap.get(party.id) || [],
       }));
 
-      // Compute per-party overall quality scores (confidence-adjusted)
+      // Compute per-party overall quality scores using the canonical utility function
       const perPartyScores = new Map<string, number>();
       for (const { party, ratings } of partiesWithRatings) {
-        if (ratings.length > 0) {
-          // Average party quality from all ratings for this party
-          const avgQuality = ratings.reduce((sum, r) => sum + (r.party_quality_score ?? 5), 0) / ratings.length;
-          // Apply confidence adjustment: cP = 1 - exp(-n/10) for per-party
-          const confidence = 1 - Math.exp(-ratings.length / 10);
-          const adjustedQuality = confidence * avgQuality + (1 - confidence) * campusPartyAvg;
-          perPartyScores.set(party.id, adjustedQuality);
-        } else {
-          perPartyScores.set(party.id, campusPartyAvg);
-        }
+        perPartyScores.set(party.id, computePartyOverallQuality(ratings, campusPartyAvg));
       }
       setPartyScores(perPartyScores);
 
