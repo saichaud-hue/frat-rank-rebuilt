@@ -357,9 +357,18 @@ export default function FraternityPage() {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-xs text-muted-foreground mb-1">Overall Score</p>
-                <div className="text-4xl font-bold text-foreground">
-                  {computedScores.overall.toFixed(1)}
-                </div>
+                {computedScores.hasOverallData && computedScores.overall !== null ? (
+                  <div className="text-4xl font-bold text-foreground">
+                    {computedScores.overall.toFixed(1)}
+                  </div>
+                ) : (
+                  <div className="text-4xl font-bold text-muted-foreground">—</div>
+                )}
+                {!computedScores.hasOverallData && (
+                  <Badge variant="outline" className="text-[10px] mt-1 text-muted-foreground">
+                    Needs more ratings
+                  </Badge>
+                )}
               </div>
               <div className="flex items-center gap-2">
                 <TrendIndicator momentum={computedScores.trending} showLabel />
@@ -373,7 +382,7 @@ export default function FraternityPage() {
             <div className="w-full bg-muted rounded-full h-3 overflow-hidden">
               <div 
                 className="h-full bg-primary transition-all duration-500 rounded-full"
-                style={{ width: `${(computedScores.overall / 10) * 100}%` }}
+                style={{ width: `${((computedScores.overall ?? 0) / 10) * 100}%` }}
               />
             </div>
           </div>
