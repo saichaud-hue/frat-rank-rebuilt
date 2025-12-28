@@ -10,6 +10,7 @@ interface PartyCardProps {
   party: Party;
   fraternityName: string;
   isLive?: boolean;
+  computedStatus?: 'live' | 'upcoming' | 'completed'; // Time-based status from parent
   overallPartyQuality?: number; // Canonical overall confidence-adjusted
   userPartyQuality?: number; // Optional personal score (only render when explicitly passed)
 }
@@ -18,13 +19,15 @@ export default function PartyCard({
   party,
   fraternityName,
   isLive = false,
+  computedStatus,
   overallPartyQuality,
   userPartyQuality,
 }: PartyCardProps) {
   const startDate = new Date(party.starts_at);
-  const isCompleted = party.status === 'completed';
-  // Only show overallPartyQuality if provided - NO fallback to user score or performance_score
-  const hasScore = overallPartyQuality !== undefined;
+  // Use computedStatus if provided, otherwise fall back to stored status
+  const isCompleted = computedStatus === 'completed' || party.status === 'completed';
+  // Always show score for completed parties (will show baseline 5.0 if no ratings)
+  const hasScore = isCompleted && overallPartyQuality !== undefined;
 
   return (
     <Link to={createPageUrl(`Party?id=${party.id}`)}>
@@ -59,7 +62,7 @@ export default function PartyCard({
                     <Radio className="h-3 w-3" />
                     LIVE
                   </span>
-                ) : party.status === 'completed' ? 'Completed' : 'Upcoming'}
+                ) : isCompleted ? 'Completed' : 'Upcoming'}
               </Badge>
             </div>
 
