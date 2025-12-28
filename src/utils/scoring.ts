@@ -666,15 +666,10 @@ export async function computeFullFraternityScores(
   const confidenceParty = 1 - Math.exp(-numPartyRatings / 40);
   const confidenceOverall = 0.65 * confidenceRep + 0.35 * confidenceParty;
   
-  // Compute campus baseline for Element 2
-  const campusBaseline = allPartiesWithRatings 
-    ? computeCampusBaseline(allPartiesWithRatings)
-    : 5.5;
-  
   // Element 2: Semester Party Score (for Parties leaderboard)
   const { semesterPartyScore, semesterPartyAvg, hostingBonus } = computeSemesterPartyScore(
     partiesWithRatings,
-    campusBaseline
+    baseline
   );
   
   // Formula D: PartyAdj (used for Overall score - keep legacy behavior)
