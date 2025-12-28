@@ -96,7 +96,7 @@ export default function FraternityPage() {
       }));
       
       // Compute campus baseline B_campus
-      const campusBaseline = computeCampusBaseline(allPartiesWithRatings);
+      const campusBaseline = getCachedCampusBaseline(allPartiesWithRatings);
       
       // Compute fraternity baseline B_f
       const m_f = partiesData.length; // Fraternity host count
