@@ -21,6 +21,7 @@ export default function PartyPage() {
   const [fraternity, setFraternity] = useState<Fraternity | null>(null);
   const [loading, setLoading] = useState(true);
   const [showRatingForm, setShowRatingForm] = useState(false);
+  const [ratingsRefreshKey, setRatingsRefreshKey] = useState(0);
 
   useEffect(() => {
     if (partyId) loadParty();
@@ -54,6 +55,7 @@ export default function PartyPage() {
   const handleRatingSubmit = () => {
     setShowRatingForm(false);
     loadParty();
+    setRatingsRefreshKey((k) => k + 1);
   };
 
   if (loading) {
@@ -176,7 +178,7 @@ export default function PartyPage() {
       <PhotoBulletin partyId={party.id} />
 
       {/* Ratings */}
-      <RatingHistory partyId={party.id} />
+      <RatingHistory partyId={party.id} refreshKey={ratingsRefreshKey} />
 
       {/* Comments */}
       <CommentSection entityId={party.id} entityType="party" />
