@@ -270,7 +270,8 @@ export function computeCampusPartyAvg(parties: Party[]): number {
  * Compute the confidence-adjusted overall party quality for a single party.
  * This is the CANONICAL function - use this everywhere party quality is displayed.
  * 
- * Formula: cP = 1 - exp(-n/10), then adjustedQuality = cP * avgQuality + (1-cP) * campusAvg
+ * Formula: cP = 1 - exp(-n/40), then adjustedQuality = cP * avgQuality + (1-cP) * campusAvg
+ * Uses the SAME confidence denominator (/40) as computeAdjustedPartyIndex for consistency.
  * 
  * @param ratings - All ratings for this party
  * @param campusPartyAvg - Campus-wide average party score (for confidence blending)
@@ -287,8 +288,8 @@ export function computePartyOverallQuality(
   // Average party quality from all ratings for this party
   const avgQuality = ratings.reduce((sum, r) => sum + (r.party_quality_score ?? 5), 0) / ratings.length;
   
-  // Apply confidence adjustment: cP = 1 - exp(-n/10) for per-party
-  const confidence = 1 - Math.exp(-ratings.length / 10);
+  // Apply confidence adjustment: cP = 1 - exp(-n/40) - SAME denominator as fraternity-level party index
+  const confidence = 1 - Math.exp(-ratings.length / 40);
   const adjustedQuality = confidence * avgQuality + (1 - confidence) * campusPartyAvg;
   
   return Math.max(0, Math.min(10, adjustedQuality));
