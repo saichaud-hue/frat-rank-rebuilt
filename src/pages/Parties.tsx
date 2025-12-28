@@ -6,7 +6,7 @@ import PartyFilters from '@/components/parties/PartyFilters';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Badge } from '@/components/ui/badge';
 import { subDays, addDays, startOfDay, endOfDay } from 'date-fns';
-import { computePartyOverallQuality, type PartyWithRatings } from '@/utils/scoring';
+import { computePartyQuality, type PartyWithRatings } from '@/utils/scoring';
 interface Filters {
   fraternity: string;
   theme: string;
@@ -65,18 +65,20 @@ export default function Parties() {
         partiesByFrat.set(fratId, existing);
       }
 
-      // Compute per-party overall quality using Formula G
-      // Each party uses fraternity baseline EXCLUDING that party's ratings
+      // Compute per-party raw average quality (avg_p) - no confidence adjustment
+      // This matches what the leaderboard shows for individual party scores
       const perPartyScores = new Map<string, number>();
       for (const [fratId, fratPartiesWithRatings] of partiesByFrat) {
-        // Get all ratings for this fraternity
-        const allFratRatings = fratPartiesWithRatings.flatMap(pwr => pwr.ratings);
-        
         for (const { party, ratings } of fratPartiesWithRatings) {
-          // Get frat ratings EXCLUDING this party
-          const fratRatingsExcludingParty = allFratRatings.filter(r => r.party_id !== party.id);
-          const overall = computePartyOverallQuality(ratings, fratRatingsExcludingParty);
-          perPartyScores.set(party.id, overall);
+          if (ratings.length === 0) {
+            // No ratings - don't show a score
+            continue;
+          }
+          // avg_p: simple average of party_quality_score
+          const avg_p = ratings.reduce((sum, r) => sum + (r.party_quality_score ?? computePartyQuality(
+            r.vibe_score ?? 5, r.music_score ?? 5, r.execution_score ?? 5
+          )), 0) / ratings.length;
+          perPartyScores.set(party.id, avg_p);
         }
       }
       setPartyScores(perPartyScores);
