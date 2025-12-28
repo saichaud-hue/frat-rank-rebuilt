@@ -335,6 +335,79 @@ function computePartyIndexInWindow(
 }
 
 // ============================================
+// H) FRATERNITY PARTY SCORE (for Parties Leaderboard)
+// ============================================
+
+/**
+ * Formula H: Fraternity-level PartyScore for Parties leaderboard
+ * 
+ * For each party p owned by fraternity f:
+ *   PartyOverall_p = computePartyOverallQuality() (the ~5.1 value shown on party cards)
+ *   n_p = number of ratings for party p
+ *   d_p = days since party date
+ *   weight_p = ln(1 + n_p) * exp(-d_p / 30)
+ * 
+ * PartyScore_f = Σ(PartyOverall_p * weight_p) / Σ(weight_p)
+ * If Σ(weight_p) = 0 (no rated parties), PartyScore_f = 5.0
+ * 
+ * This uses ONLY the fraternity's own parties, never campus-wide averages.
+ */
+export function computeFraternityPartyScore(
+  partiesWithRatings: PartyWithRatings[],
+  referenceDate: Date = new Date()
+): number {
+  if (partiesWithRatings.length === 0) return 5.0;
+
+  // Collect all ratings for this fraternity (for baseline calculation)
+  const allFratRatings = partiesWithRatings.flatMap(pwr => pwr.ratings);
+
+  let weightedSum = 0;
+  let totalWeight = 0;
+
+  for (const { party, ratings } of partiesWithRatings) {
+    const n_p = ratings.length;
+    if (n_p === 0) continue;
+
+    // Get ratings for other parties in this fraternity (for baseline)
+    const otherRatings = allFratRatings.filter(r => r.party_id !== party.id);
+
+    // PartyOverall_p using Formula G (the ~5.1 value)
+    const partyOverall_p = computePartyOverallQuality(ratings, otherRatings);
+
+    // d_p: days since party
+    const partyDate = new Date(party.starts_at);
+    const d_p = Math.max(0, (referenceDate.getTime() - partyDate.getTime()) / (1000 * 60 * 60 * 24));
+
+    // weight_p: participation * time decay
+    const weight_p = Math.log(1 + n_p) * Math.exp(-d_p / 30);
+
+    weightedSum += partyOverall_p * weight_p;
+    totalWeight += weight_p;
+
+    // DEV debug logging
+    if (import.meta.env.DEV) {
+      console.log('[DEBUG H] Party contribution:', {
+        partyTitle: party.title,
+        n_p,
+        partyOverall_p: partyOverall_p.toFixed(2),
+        d_p: d_p.toFixed(1),
+        weight_p: weight_p.toFixed(4),
+      });
+    }
+  }
+
+  if (totalWeight === 0) return 5.0;
+  
+  const partyScore = weightedSum / totalWeight;
+  
+  if (import.meta.env.DEV) {
+    console.log('[DEBUG H] Final PartyScore_f:', partyScore.toFixed(2));
+  }
+
+  return Math.max(0, Math.min(10, partyScore));
+}
+
+// ============================================
 // FULL SCORE COMPUTATION FOR A FRATERNITY
 // ============================================
 
@@ -343,6 +416,7 @@ export interface FraternityScores {
   repAdj: number;
   partyIndex: number;
   partyAdj: number;
+  partyScore: number; // Weighted aggregate of per-party PartyOverall values for Parties leaderboard
   overall: number;
   trending: number;
   activityTrending: number;
@@ -411,8 +485,11 @@ export async function computeFullFraternityScores(
   const confidenceParty = 1 - Math.exp(-numPartyRatings / 40);
   const confidenceOverall = 0.65 * confidenceRep + 0.35 * confidenceParty;
   
-  // Formula D: PartyAdj
+  // Formula D: PartyAdj (used for Overall score)
   const partyAdj = computePartyAdj(partyIndex, numPartyRatings, campusPartyAvg);
+  
+  // Formula H: PartyScore (used for Parties leaderboard - weighted avg of PartyOverall values)
+  const partyScore = computeFraternityPartyScore(partiesWithRatings);
   
   // Formula E: RepAdj
   const repAdj = computeRepAdj(rawReputation, numRepRatings, campusRepAvg);
@@ -448,6 +525,7 @@ export async function computeFullFraternityScores(
     repAdj,
     partyIndex,
     partyAdj,
+    partyScore,
     overall,
     trending,
     activityTrending,
@@ -493,8 +571,9 @@ export function sortFraternitiesByReputation(frats: FraternityWithScores[]): Fra
 
 export function sortFraternitiesByParty(frats: FraternityWithScores[]): FraternityWithScores[] {
   return [...frats].sort((a, b) => {
-    const partyA = a.computedScores?.partyAdj ?? 5;
-    const partyB = b.computedScores?.partyAdj ?? 5;
+    // Use partyScore (Formula H) for Parties leaderboard, not partyAdj
+    const partyA = a.computedScores?.partyScore ?? 5;
+    const partyB = b.computedScores?.partyScore ?? 5;
     if (partyB !== partyA) return partyB - partyA;
     return (a.chapter ?? '').localeCompare(b.chapter ?? '');
   });

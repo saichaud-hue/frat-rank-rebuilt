@@ -30,7 +30,7 @@ export default function LeaderboardPodium({ topThree, ranks = [1, 2, 3], filter 
       case 'reputation':
         return scores.repAdj;
       case 'party':
-        return scores.partyAdj;
+        return scores.partyScore; // Formula H: weighted avg of party-level PartyOverall values
       case 'trending':
         return scores.overall;
       default:
