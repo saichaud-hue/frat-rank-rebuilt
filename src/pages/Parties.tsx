@@ -72,14 +72,10 @@ export default function Parties() {
       // Compute per-party overall quality using Formula G
       // Each party uses fraternity baseline EXCLUDING that party's ratings
       const perPartyScores = new Map<string, number>();
+      // Each party now uses fixed 5.0 baseline (independent scoring)
       for (const [fratId, fratPartiesWithRatings] of partiesByFrat) {
-        // Get all ratings for this fraternity
-        const allFratRatings = fratPartiesWithRatings.flatMap(pwr => pwr.ratings);
-        
         for (const { party, ratings } of fratPartiesWithRatings) {
-          // Get frat ratings EXCLUDING this party
-          const fratRatingsExcludingParty = allFratRatings.filter(r => r.party_id !== party.id);
-          const overall = computePartyOverallQuality(ratings, fratRatingsExcludingParty);
+          const overall = computePartyOverallQuality(ratings);
           perPartyScores.set(party.id, overall);
         }
       }

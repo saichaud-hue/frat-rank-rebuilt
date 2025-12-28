@@ -194,44 +194,30 @@ export function computeOverall(repAdj: number, partyAdj: number): number {
 /**
  * Formula G: Per-party "Overall Party Quality" for display on PartyCard
  * 
- * For each party p in frat f:
+ * For each party p:
  *   avg_p = average party_quality_score for party p
  *   n_p = number of ratings for party p
- *   baseline_f_excluding_p = average party_quality_score across frat f EXCLUDING party p
- *     If no remaining rows, baseline = 5.0
+ *   baseline = 5.0 (fixed neutral baseline for independent scoring)
  *   c_p = 1 - exp(-n_p / 40)
- *   PartyOverall_p = c_p * avg_p + (1 - c_p) * baseline_f_excluding_p
+ *   PartyOverall_p = c_p * avg_p + (1 - c_p) * baseline
  * 
- * IMPORTANT: Never uses campus-wide averages, only fraternity-scoped.
+ * IMPORTANT: Each party's score is now INDEPENDENT - no cross-party influence.
  */
 export function computePartyOverallQuality(
-  partyRatings: PartyRating[],
-  fratRatingsExcludingParty: PartyRating[]
+  partyRatings: PartyRating[]
 ): number {
   const n_p = partyRatings.length;
+  const baseline = 5.0; // Fixed neutral baseline
   
-  // If no ratings, return fraternity baseline or 5.0
+  // If no ratings, return baseline
   if (n_p === 0) {
-    if (fratRatingsExcludingParty.length === 0) return 5.0;
-    return fratRatingsExcludingParty.reduce((sum, r) => sum + (r.party_quality_score ?? computePartyQuality(
-      r.vibe_score ?? 5, r.music_score ?? 5, r.execution_score ?? 5
-    )), 0) / fratRatingsExcludingParty.length;
+    return baseline;
   }
 
   // avg_p: average party_quality_score for this party
   const avg_p = partyRatings.reduce((sum, r) => sum + (r.party_quality_score ?? computePartyQuality(
     r.vibe_score ?? 5, r.music_score ?? 5, r.execution_score ?? 5
   )), 0) / n_p;
-
-  // baseline_f_excluding_p
-  let baseline: number;
-  if (fratRatingsExcludingParty.length === 0) {
-    baseline = 5.0;
-  } else {
-    baseline = fratRatingsExcludingParty.reduce((sum, r) => sum + (r.party_quality_score ?? computePartyQuality(
-      r.vibe_score ?? 5, r.music_score ?? 5, r.execution_score ?? 5
-    )), 0) / fratRatingsExcludingParty.length;
-  }
 
   // c_p: party confidence
   const c_p = 1 - Math.exp(-n_p / 40);
@@ -244,7 +230,7 @@ export function computePartyOverallQuality(
     console.log('[DEBUG G] PartyOverall:', {
       n_p,
       avg_p: avg_p.toFixed(2),
-      baseline: baseline.toFixed(2),
+      baseline,
       c_p: c_p.toFixed(4),
       partyOverall: partyOverall.toFixed(2),
     });
@@ -368,11 +354,8 @@ export function computeFraternityPartyScore(
     const n_p = ratings.length;
     if (n_p === 0) continue;
 
-    // Get ratings for other parties in this fraternity (for baseline)
-    const otherRatings = allFratRatings.filter(r => r.party_id !== party.id);
-
-    // PartyOverall_p using Formula G (the ~5.1 value)
-    const partyOverall_p = computePartyOverallQuality(ratings, otherRatings);
+    // PartyOverall_p using Formula G (fixed 5.0 baseline)
+    const partyOverall_p = computePartyOverallQuality(ratings);
 
     // d_p: days since party
     const partyDate = new Date(party.starts_at);
