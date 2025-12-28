@@ -6,7 +6,7 @@ import PartyFilters from '@/components/parties/PartyFilters';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Badge } from '@/components/ui/badge';
 import { subDays, addDays, startOfDay, endOfDay } from 'date-fns';
-import { computeCampusPartyAvg, computePartyOverallQuality } from '@/utils/scoring';
+import { computePartyOverallQuality, computeFraternityPartyBaseline, type PartyWithRatings } from '@/utils/scoring';
 interface Filters {
   fraternity: string;
   theme: string;
@@ -45,9 +45,6 @@ export default function Parties() {
       setParties(partiesData);
       setFraternities(fraternityData);
 
-      // Compute campus average for confidence adjustment
-      const campusPartyAvg = computeCampusPartyAvg(partiesData);
-
       // Group ratings by party
       const partyRatingsMap = new Map<string, PartyRating[]>();
       for (const rating of allPartyRatings) {
@@ -58,11 +55,26 @@ export default function Parties() {
         }
       }
 
-      // Compute per-party overall quality using the canonical utility function
-      const perPartyScores = new Map<string, number>();
+      // Group parties by fraternity for fraternity-scoped baselines
+      const partiesByFrat = new Map<string, PartyWithRatings[]>();
       for (const party of partiesData) {
+        const fratId = party.fraternity_id;
         const ratings = partyRatingsMap.get(party.id) || [];
-        perPartyScores.set(party.id, computePartyOverallQuality(ratings, campusPartyAvg));
+        const existing = partiesByFrat.get(fratId) || [];
+        existing.push({ party, ratings });
+        partiesByFrat.set(fratId, existing);
+      }
+
+      // Compute per-party overall quality using fraternity-scoped baselines
+      const perPartyScores = new Map<string, number>();
+      for (const [fratId, partiesWithRatings] of partiesByFrat) {
+        // Compute baseline for this fraternity only
+        const fratBaseline = computeFraternityPartyBaseline(partiesWithRatings);
+        
+        // Apply to each party in this fraternity
+        for (const { party, ratings } of partiesWithRatings) {
+          perPartyScores.set(party.id, computePartyOverallQuality(ratings, fratBaseline));
+        }
       }
       setPartyScores(perPartyScores);
     } catch (error) {

@@ -267,22 +267,48 @@ export function computeCampusPartyAvg(parties: Party[]): number {
 // ============================================
 
 /**
+ * Compute the fraternity-scoped baseline for party quality.
+ * This baseline is ONLY influenced by ratings within this fraternity's parties.
+ * 
+ * @param partiesWithRatings - All parties with their ratings for a single fraternity
+ * @returns Baseline score (average of party_quality_score, or 5.0 if no ratings)
+ */
+export function computeFraternityPartyBaseline(partiesWithRatings: PartyWithRatings[]): number {
+  // Collect all party ratings for this fraternity
+  const allRatings: PartyRating[] = [];
+  for (const { ratings } of partiesWithRatings) {
+    allRatings.push(...ratings);
+  }
+  
+  if (allRatings.length === 0) {
+    return 5.0; // Neutral default when no ratings exist
+  }
+  
+  // Simple average of all party quality scores for this fraternity
+  const sum = allRatings.reduce((acc, r) => acc + (r.party_quality_score ?? 5), 0);
+  return sum / allRatings.length;
+}
+
+/**
  * Compute the confidence-adjusted overall party quality for a single party.
  * This is the CANONICAL function - use this everywhere party quality is displayed.
  * 
- * Formula: cP = 1 - exp(-n/40), then adjustedQuality = cP * avgQuality + (1-cP) * campusAvg
+ * Formula: cP = 1 - exp(-n/40), then adjustedQuality = cP * avgQuality + (1-cP) * fratBaseline
  * Uses the SAME confidence denominator (/40) as computeAdjustedPartyIndex for consistency.
  * 
+ * IMPORTANT: Uses fraternity-scoped baseline, NOT campus-wide average.
+ * This ensures rating one fraternity's party doesn't affect other fraternities' scores.
+ * 
  * @param ratings - All ratings for this party
- * @param campusPartyAvg - Campus-wide average party score (for confidence blending)
+ * @param fratBaseline - Fraternity-specific baseline (from computeFraternityPartyBaseline)
  * @returns Confidence-adjusted overall party quality score
  */
 export function computePartyOverallQuality(
   ratings: PartyRating[],
-  campusPartyAvg: number
+  fratBaseline: number
 ): number {
   if (ratings.length === 0) {
-    return campusPartyAvg;
+    return fratBaseline;
   }
   
   // Average party quality from all ratings for this party
@@ -290,7 +316,7 @@ export function computePartyOverallQuality(
   
   // Apply confidence adjustment: cP = 1 - exp(-n/40) - SAME denominator as fraternity-level party index
   const confidence = 1 - Math.exp(-ratings.length / 40);
-  const adjustedQuality = confidence * avgQuality + (1 - confidence) * campusPartyAvg;
+  const adjustedQuality = confidence * avgQuality + (1 - confidence) * fratBaseline;
   
   return Math.max(0, Math.min(10, adjustedQuality));
 }
