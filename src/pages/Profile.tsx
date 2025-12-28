@@ -86,7 +86,7 @@ export default function Profile() {
       {/* Header */}
       <div className="flex items-center gap-2">
         <User className="h-6 w-6 text-primary" />
-        <h1 className="text-2xl font-bold gradient-text">Profile</h1>
+        <h1 className="text-2xl font-bold text-foreground">Profile</h1>
       </div>
 
       {/* Profile Card */}
