@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useSearchParams, Link } from 'react-router-dom';
-import { ArrowLeft, Calendar, Star, PartyPopper, Users, Shield, Heart } from 'lucide-react';
-import { base44, type Fraternity, type Party, type PartyRating, type ReputationRating, type PartyComment, type FraternityComment } from '@/api/base44Client';
+import { ArrowLeft, Calendar, Star, PartyPopper, Users, Shield, Heart, Music } from 'lucide-react';
+import { base44, type Fraternity as FraternityType, type Party, type PartyRating, type ReputationRating, type PartyComment, type FraternityComment } from '@/api/base44Client';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card } from '@/components/ui/card';
@@ -23,17 +23,25 @@ import {
   type ActivityData
 } from '@/utils/scoring';
 
+// Per-party computed scores (overall party quality for each party)
+interface PartyScoreData {
+  partyId: string;
+  overallQuality: number; // Confidence-adjusted overall party quality for this specific party
+}
+
 export default function FraternityPage() {
   const [searchParams] = useSearchParams();
   const fratId = searchParams.get('id');
   
-  const [fraternity, setFraternity] = useState<Fraternity | null>(null);
+  const [fraternity, setFraternity] = useState<FraternityType | null>(null);
   const [parties, setParties] = useState<Party[]>([]);
   const [loading, setLoading] = useState(true);
   const [showRateSheet, setShowRateSheet] = useState(false);
   const [existingScores, setExistingScores] = useState<{ brotherhood: number; reputation: number; community: number } | undefined>();
   const [computedScores, setComputedScores] = useState<FraternityScores | null>(null);
   const [userRating, setUserRating] = useState<{ brotherhood: number; reputation: number; community: number } | null>(null);
+  const [userPartyRatings, setUserPartyRatings] = useState<PartyRating[]>([]);
+  const [partyScores, setPartyScores] = useState<Map<string, number>>(new Map());
 
   useEffect(() => {
     if (fratId) loadData();
@@ -78,6 +86,22 @@ export default function FraternityPage() {
         ratings: partyRatingsMap.get(party.id) || [],
       }));
 
+      // Compute per-party overall quality scores (confidence-adjusted)
+      const perPartyScores = new Map<string, number>();
+      for (const { party, ratings } of partiesWithRatings) {
+        if (ratings.length > 0) {
+          // Average party quality from all ratings for this party
+          const avgQuality = ratings.reduce((sum, r) => sum + (r.party_quality_score ?? 5), 0) / ratings.length;
+          // Apply confidence adjustment: cP = 1 - exp(-n/10) for per-party
+          const confidence = 1 - Math.exp(-ratings.length / 10);
+          const adjustedQuality = confidence * avgQuality + (1 - confidence) * campusPartyAvg;
+          perPartyScores.set(party.id, adjustedQuality);
+        } else {
+          perPartyScores.set(party.id, campusPartyAvg);
+        }
+      }
+      setPartyScores(perPartyScores);
+
       // Get party comments for this fraternity's parties
       const fratPartyComments = partyComments.filter(
         c => partiesData.some(p => p.id === c.party_id)
@@ -110,12 +134,13 @@ export default function FraternityPage() {
     }
   };
 
-  // Load user's own rating
-  const loadUserRating = async () => {
+  // Load user's own frat rating and party ratings
+  const loadUserRatings = async () => {
     try {
       const user = await base44.auth.me();
       if (!user || !fratId) return;
       
+      // Load user's frat rating
       const existingRatings = await base44.entities.ReputationRating.filter({
         fraternity_id: fratId,
         user_id: user.id,
@@ -131,13 +156,27 @@ export default function FraternityPage() {
       } else {
         setUserRating(null);
       }
+
+      // Load user's party ratings for this fraternity's parties
+      const allUserPartyRatings = await base44.entities.PartyRating.filter({
+        user_id: user.id,
+      });
+      
+      // Get this frat's party IDs
+      const fratParties = await base44.entities.Party.filter({ fraternity_id: fratId });
+      const fratPartyIds = new Set(fratParties.map(p => p.id));
+      
+      // Filter to only ratings for this frat's parties
+      const userFratPartyRatings = allUserPartyRatings.filter(r => fratPartyIds.has(r.party_id));
+      setUserPartyRatings(userFratPartyRatings);
+      
     } catch (error) {
-      console.error('Failed to load user rating:', error);
+      console.error('Failed to load user ratings:', error);
     }
   };
 
   useEffect(() => {
-    loadUserRating();
+    loadUserRatings();
   }, [fratId]);
 
   const handleRate = async () => {
@@ -199,7 +238,7 @@ export default function FraternityPage() {
     });
 
     await loadData();
-    await loadUserRating();
+    await loadUserRatings();
   };
 
   if (loading) {
@@ -316,7 +355,13 @@ export default function FraternityPage() {
 
       {/* B) YOUR RATINGS Section */}
       <Card className="glass p-6 space-y-6">
-        <h2 className="font-semibold text-lg">Your Ratings</h2>
+        <div className="flex items-center justify-between">
+          <h2 className="font-semibold text-lg">Your Ratings</h2>
+          <Button onClick={handleRate} size="sm" className="gradient-primary text-white">
+            <Star className="h-4 w-4 mr-2" />
+            {userRating ? 'Update' : 'Rate'} {fraternity.name} Frat Rating
+          </Button>
+        </div>
 
         {/* Frat Rating (Your Score) */}
         <div className="space-y-4">
@@ -362,21 +407,44 @@ export default function FraternityPage() {
 
         <div className="border-t pt-4" />
 
-        {/* Party Quality (Your Score) - placeholder since party quality is per-party, not per-frat */}
-        <div className="space-y-2">
-          <div className="flex items-center justify-between">
-            <p className="text-sm font-medium">Party Quality</p>
-            <span className="text-sm text-muted-foreground italic">Rate individual parties</span>
+        {/* Your Party Ratings Section */}
+        <div className="space-y-4">
+          <div className="flex items-center gap-2">
+            <Music className="h-5 w-5 text-primary" />
+            <p className="text-sm font-medium">Your Party Ratings</p>
           </div>
           <p className="text-xs text-muted-foreground">
-            Party ratings are submitted per event. Visit past parties below to rate them.
+            Parties you've rated for this fraternity (your personal scores).
           </p>
+          
+          {userPartyRatings.length > 0 ? (
+            <div className="space-y-2">
+              {userPartyRatings.map((rating) => {
+                const party = parties.find(p => p.id === rating.party_id);
+                if (!party) return null;
+                return (
+                  <Link key={rating.id} to={createPageUrl(`Party?id=${party.id}`)}>
+                    <div className="flex items-center justify-between p-3 bg-muted/50 rounded-lg hover:bg-muted transition-colors">
+                      <div>
+                        <p className="font-medium text-sm">{party.title}</p>
+                        <p className="text-xs text-muted-foreground">
+                          {new Date(party.starts_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                        </p>
+                      </div>
+                      <span className={`text-lg font-bold ${getScoreColor(rating.party_quality_score)}`}>
+                        {rating.party_quality_score.toFixed(1)}
+                      </span>
+                    </div>
+                  </Link>
+                );
+              })}
+            </div>
+          ) : (
+            <p className="text-sm text-muted-foreground italic">
+              You haven't rated any {fraternity.name} parties yet. Rate a party from the Parties tab.
+            </p>
+          )}
         </div>
-
-        <Button onClick={handleRate} className="w-full gradient-primary text-white">
-          <Star className="h-4 w-4 mr-2" />
-          {userRating ? 'Update Your Rating' : 'Rate'} {fraternity.name}
-        </Button>
       </Card>
 
       {/* C) CONFIDENCE - Below user ratings */}
@@ -407,7 +475,7 @@ export default function FraternityPage() {
         </section>
       )}
 
-      {/* D) Past Parties - Show overall party quality (confidence-adjusted) */}
+      {/* D) Past Parties - Show per-party overall quality (confidence-adjusted) */}
       {pastParties.length > 0 && (
         <section className="space-y-3">
           <h2 className="font-semibold text-muted-foreground">Past Parties</h2>
@@ -416,7 +484,7 @@ export default function FraternityPage() {
               key={party.id}
               party={party}
               fraternityName={fraternity.name}
-              overallPartyQuality={computedScores?.partyAdj}
+              overallPartyQuality={partyScores.get(party.id)}
             />
           ))}
         </section>
