@@ -284,6 +284,31 @@ export default function FraternityPage() {
     ? computedScores.semesterPartyScore 
     : null;
 
+  // DEBUG: Log displayed value vs computed scores
+  if (import.meta.env.DEV && computedScores && fraternity) {
+    console.log('═══════════════════════════════════════════════════════════');
+    console.log(`[FRAT PROFILE PAGE] ${fraternity.name} - Display Values`);
+    console.log('═══════════════════════════════════════════════════════════');
+    console.log('Computed Scores (from computeFullFraternityScores):');
+    console.log(`  hasPartyScoreData: ${computedScores.hasPartyScoreData}`);
+    console.log(`  semesterPartyScore (Element 2): ${computedScores.semesterPartyScore?.toFixed(4) ?? 'null'}`);
+    console.log(`  semesterPartyAvg: ${computedScores.semesterPartyAvg?.toFixed(4) ?? 'null'}`);
+    console.log(`  hostingBonus: ${computedScores.hostingBonus.toFixed(4)}`);
+    console.log(`  partyAdj (legacy): ${computedScores.partyAdj.toFixed(4)}`);
+    console.log(`  partyIndex (legacy): ${computedScores.partyIndex.toFixed(4)}`);
+    console.log('───────────────────────────────────────────────────────────');
+    console.log('UI Display:');
+    console.log(`  "Overall Party Quality" displays: ${headerPartyQuality?.toFixed(4) ?? '— (null)'}`);
+    console.log(`  Source: ${computedScores.hasPartyScoreData ? 'semesterPartyScore (Element 2)' : 'null (no data)'}`);
+    console.log('───────────────────────────────────────────────────────────');
+    console.log('Raw Q_p values in partyScores Map (for party cards only):');
+    partyScores.forEach((score, partyId) => {
+      const party = parties.find(p => p.id === partyId);
+      console.log(`  "${party?.title ?? partyId}": Q_p = ${score.toFixed(4)}`);
+    });
+    console.log('═══════════════════════════════════════════════════════════');
+  }
+
   // Calculate user's combined scores if they have rated
   const userFratScore = userRating 
     ? computeCombinedReputation(userRating.brotherhood, userRating.reputation, userRating.community)

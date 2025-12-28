@@ -71,10 +71,15 @@ export function computeCampusBaseline(
 ): number {
   let weightedSum = 0;
   let totalWeight = 0;
+  let totalRatings = 0;
+  let ratedPartyCount = 0;
 
-  for (const { ratings } of allPartiesWithRatings) {
+  for (const { party, ratings } of allPartiesWithRatings) {
     const n_p = ratings.length;
     if (n_p === 0) continue;
+
+    ratedPartyCount++;
+    totalRatings += n_p;
 
     const avgVibe =
       ratings.reduce((sum, r) => sum + (r.vibe_score ?? 5), 0) / n_p;
@@ -90,9 +95,27 @@ export function computeCampusBaseline(
     totalWeight += w_p;
   }
 
-  if (totalWeight === 0) return 5.5;
+  if (totalWeight === 0) {
+    if (import.meta.env.DEV) {
+      console.log('[CAMPUS BASELINE] No rated parties - using fallback 5.5');
+    }
+    return 5.5;
+  }
 
-  return Math.max(0, Math.min(10, weightedSum / totalWeight));
+  const baseline = Math.max(0, Math.min(10, weightedSum / totalWeight));
+
+  if (import.meta.env.DEV) {
+    console.log('═══════════════════════════════════════════════════════════');
+    console.log('[CAMPUS BASELINE] B_campus Computation');
+    console.log('═══════════════════════════════════════════════════════════');
+    console.log(`  Total parties in system: ${allPartiesWithRatings.length}`);
+    console.log(`  Parties with ratings: ${ratedPartyCount}`);
+    console.log(`  Total ratings across all parties: ${totalRatings}`);
+    console.log(`  B_campus (weighted avg): ${baseline.toFixed(4)}`);
+    console.log('═══════════════════════════════════════════════════════════');
+  }
+
+  return baseline;
 }
 
 /**
@@ -269,12 +292,17 @@ export function computeFraternityBaseline(
   const ratedParties = priorPartiesWithRatings.filter(pwr => pwr.ratings.length > 0);
   
   if (ratedParties.length === 0) {
+    if (import.meta.env.DEV) {
+      console.log('[FRAT BASELINE] No rated parties - falling back to B_campus:', campusBaseline.toFixed(4));
+    }
     return campusBaseline;
   }
 
   // Compute weighted average of raw party qualities
   let weightedSum = 0;
   let totalWeight = 0;
+
+  const partyDetails: Array<{ title: string; n_p: number; Q_p: number; w_p: number }> = [];
 
   for (const { party, ratings } of ratedParties) {
     const n_p = ratings.length;
@@ -286,10 +314,28 @@ export function computeFraternityBaseline(
     const w_p = Math.log(1 + n_p);
     weightedSum += Q_p * w_p;
     totalWeight += w_p;
+
+    partyDetails.push({ title: party.title, n_p, Q_p, w_p });
   }
 
   if (totalWeight === 0) return campusBaseline;
-  return Math.max(0, Math.min(10, weightedSum / totalWeight));
+  
+  const baseline = Math.max(0, Math.min(10, weightedSum / totalWeight));
+
+  if (import.meta.env.DEV) {
+    console.log('───────────────────────────────────────────────────────────');
+    console.log('[FRAT BASELINE] B_f Computation');
+    console.log('───────────────────────────────────────────────────────────');
+    console.log(`  Rated parties used for B_f: ${ratedParties.length}`);
+    for (const p of partyDetails) {
+      console.log(`    "${p.title}": n_p=${p.n_p}, Q_p=${p.Q_p.toFixed(4)}, w_p=${p.w_p.toFixed(4)}`);
+    }
+    console.log(`  B_f (weighted avg of prior Q_p): ${baseline.toFixed(4)}`);
+    console.log(`  B_campus (fallback if no data): ${campusBaseline.toFixed(4)}`);
+    console.log('───────────────────────────────────────────────────────────');
+  }
+
+  return baseline;
 }
 
 // ============================================
