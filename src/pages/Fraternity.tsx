@@ -18,9 +18,8 @@ import {
   computeCampusRepAvg, 
   computeCampusPartyAvg,
   computeCombinedReputation,
-  computePartyOverallQuality,
+  computeRawPartyQuality,
   computeCampusBaseline,
-  computeFraternityBaseline,
   type FraternityScores,
   type PartyWithRatings,
   type ActivityData
@@ -95,25 +94,15 @@ export default function FraternityPage() {
         ratings: allPartyRatings.filter(r => r.party_id === party.id),
       }));
       
-      // Compute campus baseline B_campus
+      // Compute campus baseline B_campus for full scores computation
       const campusBaseline = computeCampusBaseline(allPartiesWithRatings);
-      
-      // Compute fraternity baseline B_f
-      const m_f = partiesData.length; // Fraternity host count
-      const fratBaseline = computeFraternityBaseline(partiesWithRatings, campusBaseline);
 
-      // Compute per-party overall quality scores using Element 1
+      // Compute per-party RAW quality Q_p for display (no baseline blending)
       const perPartyScores = new Map<string, number>();
       for (const { party, ratings } of partiesWithRatings) {
-        const overall = computePartyOverallQuality(ratings, m_f, fratBaseline);
-        perPartyScores.set(party.id, overall);
-        
-        // DEV debug log for specific parties
-        if (import.meta.env.DEV && (party.title?.toLowerCase().includes('margaritaville') || party.title?.toLowerCase().includes('neon'))) {
-          console.log(`[DEBUG Element 1] Party: ${party.title}`, {
-            n_p: ratings.length,
-            overall: overall.toFixed(2),
-          });
+        const rawQuality = computeRawPartyQuality(ratings);
+        if (rawQuality !== null) {
+          perPartyScores.set(party.id, rawQuality);
         }
       }
       setPartyScores(perPartyScores);

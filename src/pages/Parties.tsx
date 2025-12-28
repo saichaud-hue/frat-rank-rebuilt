@@ -6,7 +6,7 @@ import PartyFilters from '@/components/parties/PartyFilters';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Badge } from '@/components/ui/badge';
 import { subDays, addDays, startOfDay, endOfDay } from 'date-fns';
-import { computePartyOverallQuality, computeCampusBaseline, computeFraternityBaseline, type PartyWithRatings } from '@/utils/scoring';
+import { computeRawPartyQuality } from '@/utils/scoring';
 interface Filters {
   fraternity: string;
   theme: string;
@@ -59,34 +59,13 @@ export default function Parties() {
       }
       setPartyRatingCounts(ratingCountsMap);
 
-      // Build all parties with ratings for campus baseline
-      const allPartiesWithRatings: PartyWithRatings[] = partiesData.map(party => ({
-        party,
-        ratings: partyRatingsMap.get(party.id) || [],
-      }));
-      
-      // Compute campus baseline B_campus
-      const campusBaseline = computeCampusBaseline(allPartiesWithRatings);
-      
-      // Group parties by fraternity for fraternity-scoped baselines
-      const partiesByFrat = new Map<string, PartyWithRatings[]>();
-      for (const party of partiesData) {
-        const fratId = party.fraternity_id;
-        const ratings = partyRatingsMap.get(party.id) || [];
-        const existing = partiesByFrat.get(fratId) || [];
-        existing.push({ party, ratings });
-        partiesByFrat.set(fratId, existing);
-      }
-
-      // Compute per-party overall quality using Element 1
+      // Compute per-party RAW quality Q_p for display (no baseline blending)
       const perPartyScores = new Map<string, number>();
-      for (const [fratId, fratPartiesWithRatings] of partiesByFrat) {
-        const m_f = fratPartiesWithRatings.length; // Fraternity host count
-        const fratBaseline = computeFraternityBaseline(fratPartiesWithRatings, campusBaseline);
-        
-        for (const { party, ratings } of fratPartiesWithRatings) {
-          const overall = computePartyOverallQuality(ratings, m_f, fratBaseline);
-          perPartyScores.set(party.id, overall);
+      for (const party of partiesData) {
+        const ratings = partyRatingsMap.get(party.id) || [];
+        const rawQuality = computeRawPartyQuality(ratings);
+        if (rawQuality !== null) {
+          perPartyScores.set(party.id, rawQuality);
         }
       }
       setPartyScores(perPartyScores);
