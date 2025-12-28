@@ -32,7 +32,7 @@ export default function FraternityCard({ fraternity, rank, onRate, filter = 'ove
       case 'reputation':
         return scores.repAdj;
       case 'party':
-        return scores.partyScore; // Formula H: weighted avg of party-level PartyOverall values
+        return scores.partyAdj; // Confidence-stabilized party score
       case 'trending':
         return scores.activityTrending; // Show activity score for trending
       default:

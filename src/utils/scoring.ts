@@ -416,7 +416,7 @@ export interface FraternityScores {
   repAdj: number;
   partyIndex: number;
   partyAdj: number;
-  partyScore: number; // Weighted aggregate of per-party PartyOverall values for Parties leaderboard
+  partyScore: number; // Legacy: weighted aggregate of per-party PartyOverall values (not used for leaderboard)
   overall: number;
   trending: number;
   activityTrending: number;
@@ -571,9 +571,9 @@ export function sortFraternitiesByReputation(frats: FraternityWithScores[]): Fra
 
 export function sortFraternitiesByParty(frats: FraternityWithScores[]): FraternityWithScores[] {
   return [...frats].sort((a, b) => {
-    // Use partyScore (Formula H) for Parties leaderboard, not partyAdj
-    const partyA = a.computedScores?.partyScore ?? 5;
-    const partyB = b.computedScores?.partyScore ?? 5;
+    // Use partyAdj (confidence-stabilized) for Parties leaderboard
+    const partyA = a.computedScores?.partyAdj ?? 5;
+    const partyB = b.computedScores?.partyAdj ?? 5;
     if (partyB !== partyA) return partyB - partyA;
     return (a.chapter ?? '').localeCompare(b.chapter ?? '');
   });
