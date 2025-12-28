@@ -196,6 +196,7 @@ export default function Parties() {
               party={party}
               fraternityName={getFraternityName(party.fraternity_id)}
               isLive
+              computedStatus="live"
               overallPartyQuality={partyScores.get(party.id)}
             />
           ))}
@@ -211,6 +212,7 @@ export default function Parties() {
               key={party.id}
               party={party}
               fraternityName={getFraternityName(party.fraternity_id)}
+              computedStatus="upcoming"
               overallPartyQuality={partyScores.get(party.id)}
             />
           ))}
@@ -226,6 +228,7 @@ export default function Parties() {
               key={party.id}
               party={party}
               fraternityName={getFraternityName(party.fraternity_id)}
+              computedStatus="completed"
               overallPartyQuality={partyScores.get(party.id)}
             />
           ))}
