@@ -155,14 +155,6 @@ export default function PartyPage() {
             </Badge>
           )}
 
-          {party.performance_score > 0 && (
-            <div className="flex items-center gap-2">
-              <span className="text-sm text-muted-foreground">Performance:</span>
-              <span className="text-2xl font-bold gradient-text">
-                {party.performance_score.toFixed(1)}
-              </span>
-            </div>
-          )}
 
           <Button 
             onClick={() => setShowRatingForm(true)}
