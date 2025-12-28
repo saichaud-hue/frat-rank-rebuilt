@@ -10,12 +10,14 @@ interface PartyCardProps {
   party: Party;
   fraternityName: string;
   isLive?: boolean;
+  overallPartyQuality?: number; // Confidence-adjusted overall party quality from fraternity
 }
 
-export default function PartyCard({ party, fraternityName, isLive = false }: PartyCardProps) {
+export default function PartyCard({ party, fraternityName, isLive = false, overallPartyQuality }: PartyCardProps) {
   const startDate = new Date(party.starts_at);
   const isCompleted = party.status === 'completed';
-  const partyQuality = party.performance_score ?? 0;
+  // Use overallPartyQuality (confidence-adjusted) if provided, otherwise fall back to party's own score
+  const displayScore = overallPartyQuality ?? party.performance_score ?? 0;
 
   return (
     <Link to={createPageUrl(`Party?id=${party.id}`)}>
@@ -77,10 +79,10 @@ export default function PartyCard({ party, fraternityName, isLive = false }: Par
               </Badge>
             )}
 
-            {isCompleted && party.total_ratings > 0 && (
+            {isCompleted && (party.total_ratings > 0 || overallPartyQuality !== undefined) && (
               <div className="flex items-center gap-2 pt-1">
-                <span className={`text-lg font-bold ${getScoreColor(partyQuality)}`}>
-                  {partyQuality.toFixed(1)}
+                <span className={`text-lg font-bold ${getScoreColor(displayScore)}`}>
+                  {displayScore.toFixed(1)}
                 </span>
                 <span className="text-xs text-muted-foreground">Party Quality</span>
               </div>
