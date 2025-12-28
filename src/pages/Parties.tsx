@@ -90,12 +90,20 @@ export default function Parties() {
     return frat ? frat.name : 'Unknown';
   };
 
-  const isLive = (party: Party) => {
-    if (party.status === 'active') return true;
+  // Determine party status based on current time, not stored status
+  const getPartyStatus = (party: Party): 'live' | 'upcoming' | 'completed' => {
     const now = new Date();
     const start = new Date(party.starts_at);
+    // Default party duration: 5 hours if no end time specified
     const end = party.ends_at ? new Date(party.ends_at) : new Date(start.getTime() + 5 * 60 * 60 * 1000);
-    return now >= start && now <= end;
+    
+    if (now >= start && now <= end) {
+      return 'live';
+    } else if (now < start) {
+      return 'upcoming';
+    } else {
+      return 'completed';
+    }
   };
 
   const filterParties = (partiesList: Party[]) => {
@@ -142,11 +150,11 @@ export default function Parties() {
   };
 
   const filteredParties = filterParties(parties);
-  const liveParties = filteredParties.filter(p => isLive(p));
-  const upcomingParties = filteredParties.filter(p => !isLive(p) && p.status === 'upcoming');
+  const liveParties = filteredParties.filter(p => getPartyStatus(p) === 'live');
+  const upcomingParties = filteredParties.filter(p => getPartyStatus(p) === 'upcoming');
   // Sort completed parties by Overall Party Quality (confidence-adjusted) descending
   const completedParties = filteredParties
-    .filter(p => p.status === 'completed')
+    .filter(p => getPartyStatus(p) === 'completed')
     .sort((a, b) => (partyScores.get(b.id) ?? 0) - (partyScores.get(a.id) ?? 0));
 
   if (loading) {
