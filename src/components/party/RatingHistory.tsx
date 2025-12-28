@@ -9,15 +9,16 @@ import { formatTimeAgo, getScoreBgColor } from '@/utils';
 
 interface RatingHistoryProps {
   partyId: string;
+  refreshKey?: number;
 }
 
-export default function RatingHistory({ partyId }: RatingHistoryProps) {
+export default function RatingHistory({ partyId, refreshKey = 0 }: RatingHistoryProps) {
   const [ratings, setRatings] = useState<PartyRating[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     loadRatings();
-  }, [partyId]);
+  }, [partyId, refreshKey]);
 
   const loadRatings = async () => {
     try {
