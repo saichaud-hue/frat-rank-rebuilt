@@ -88,19 +88,16 @@ export default function FraternityPage() {
       }));
 
       // Compute per-party overall quality scores using Formula G
-      // Each party uses fraternity baseline EXCLUDING that party's ratings
+      // Each party now uses fixed 5.0 baseline (independent scoring)
       const perPartyScores = new Map<string, number>();
       for (const { party, ratings } of partiesWithRatings) {
-        // Get all frat ratings EXCLUDING this party
-        const fratRatingsExcludingParty = fratPartyRatings.filter(r => r.party_id !== party.id);
-        const overall = computePartyOverallQuality(ratings, fratRatingsExcludingParty);
+        const overall = computePartyOverallQuality(ratings);
         perPartyScores.set(party.id, overall);
         
-        // DEV debug log for specific parties (Formula K)
+        // DEV debug log for specific parties (Formula G)
         if (import.meta.env.DEV && (party.title?.toLowerCase().includes('margaritaville') || party.title?.toLowerCase().includes('neon'))) {
           console.log(`[DEBUG G] Party: ${party.title}`, {
             n_p: ratings.length,
-            fratRatingsExcluding: fratRatingsExcludingParty.length,
             overall: overall.toFixed(2),
           });
         }
