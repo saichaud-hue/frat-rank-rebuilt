@@ -16,8 +16,8 @@ interface PartyCardProps {
 export default function PartyCard({ party, fraternityName, isLive = false, overallPartyQuality }: PartyCardProps) {
   const startDate = new Date(party.starts_at);
   const isCompleted = party.status === 'completed';
-  // Use overallPartyQuality (confidence-adjusted) if provided, otherwise fall back to party's own score
-  const displayScore = overallPartyQuality ?? party.performance_score ?? 0;
+  // Only show overallPartyQuality if provided - NO fallback to user score or performance_score
+  const hasScore = overallPartyQuality !== undefined;
 
   return (
     <Link to={createPageUrl(`Party?id=${party.id}`)}>
@@ -79,12 +79,18 @@ export default function PartyCard({ party, fraternityName, isLive = false, overa
               </Badge>
             )}
 
-            {isCompleted && (party.total_ratings > 0 || overallPartyQuality !== undefined) && (
+            {isCompleted && (
               <div className="flex items-center gap-2 pt-1">
-                <span className={`text-lg font-bold ${getScoreColor(displayScore)}`}>
-                  {displayScore.toFixed(1)}
-                </span>
-                <span className="text-xs text-muted-foreground">Overall Party Quality</span>
+                {hasScore ? (
+                  <>
+                    <span className={`text-lg font-bold ${getScoreColor(overallPartyQuality)}`}>
+                      {overallPartyQuality.toFixed(1)}
+                    </span>
+                    <span className="text-xs text-muted-foreground">Overall Party Quality</span>
+                  </>
+                ) : (
+                  <span className="text-sm text-muted-foreground">—</span>
+                )}
               </div>
             )}
 

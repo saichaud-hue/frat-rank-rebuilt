@@ -257,6 +257,22 @@ export default function FraternityPage() {
 
   const upcomingParties = parties.filter(p => p.status === 'upcoming' || p.status === 'active');
   const pastParties = parties.filter(p => p.status === 'completed');
+  
+  // Find completed parties that have ratings (at least one rating)
+  const ratedPastParties = pastParties.filter(p => {
+    const score = partyScores.get(p.id);
+    return score !== undefined && p.total_ratings > 0;
+  });
+
+  // For header "Overall Party Quality": if exactly 1 rated party, use that party's canonical score
+  // Otherwise use the fraternity-level partyAdj
+  const headerPartyQuality = (() => {
+    if (ratedPastParties.length === 1 && computedScores) {
+      // Single rated party scenario: use the party's canonical overall quality
+      return partyScores.get(ratedPastParties[0].id) ?? computedScores.partyAdj;
+    }
+    return computedScores?.partyAdj ?? 5;
+  })();
 
   // Calculate user's combined scores if they have rated
   const userFratScore = userRating 
@@ -337,8 +353,8 @@ export default function FraternityPage() {
             </div>
             <div className="bg-muted/50 rounded-lg p-4 text-center">
               <p className="text-xs text-muted-foreground mb-1">Overall Party Quality</p>
-              <p className={`text-2xl font-bold ${getScoreColor(computedScores.partyAdj)}`}>
-                {computedScores.partyAdj.toFixed(1)}
+              <p className={`text-2xl font-bold ${getScoreColor(headerPartyQuality)}`}>
+                {headerPartyQuality.toFixed(1)}
               </p>
             </div>
           </div>
