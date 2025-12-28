@@ -259,6 +259,7 @@ export interface FraternityComment {
   sentiment_score: number;
   toxicity_label: 'safe' | 'toxic' | 'flagged';
   upvotes: number;
+  downvotes?: number;
   moderated: boolean;
   created_date: string;
 }

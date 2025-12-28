@@ -1,12 +1,12 @@
-import { useState, useEffect } from 'react';
-import { MessageSquare, ThumbsUp, Reply, Send, Smile, Meh, Frown, X } from 'lucide-react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import { MessageSquare, ThumbsUp, ThumbsDown, Reply, Send, Smile, Meh, Frown, X } from 'lucide-react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Skeleton } from '@/components/ui/skeleton';
-import { base44, type PartyComment, type FraternityComment } from '@/api/base44Client';
+import { base44, type PartyComment, type FraternityComment, type PartyCommentVote } from '@/api/base44Client';
 import { formatTimeAgo } from '@/utils';
 
 type Comment = PartyComment | FraternityComment;
@@ -22,9 +22,14 @@ interface ReplyingTo {
   snippet?: string;
 }
 
-// Strip any @<uuid> patterns from text (cleanup for legacy data)
 const sanitizeCommentText = (text: string): string => {
   return text.replace(/@[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\s*/gi, '').trim();
+};
+
+const getLegacyParentId = (text?: string | null): string | null => {
+  if (!text) return null;
+  const m = text.match(/^@([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})\b/i);
+  return m?.[1] ?? null;
 };
 
 export default function CommentSection({ entityId, entityType }: CommentSectionProps) {
@@ -34,58 +39,102 @@ export default function CommentSection({ entityId, entityType }: CommentSectionP
   const [submitting, setSubmitting] = useState(false);
   const [replyingTo, setReplyingTo] = useState<ReplyingTo | null>(null);
 
-  const entityClient = entityType === 'party' 
-    ? base44.entities.PartyComment 
+  // Party-only voting state
+  const [myVotesByCommentId, setMyVotesByCommentId] = useState<Record<string, 1 | -1>>({});
+
+  const entityClient = entityType === 'party'
+    ? base44.entities.PartyComment
     : base44.entities.FraternityComment;
 
   const filterKey = entityType === 'party' ? 'party_id' : 'fraternity_id';
 
-  useEffect(() => {
-    loadComments();
-  }, [entityId]);
+  const computeScore = useCallback((c: any) => (c?.upvotes ?? 0) - (c?.downvotes ?? 0), []);
 
-  const loadComments = async () => {
+  const sortByScoreThenNewest = useCallback((list: Comment[]) => {
+    return [...list].sort((a, b) => {
+      const scoreA = computeScore(a);
+      const scoreB = computeScore(b);
+      if (scoreB !== scoreA) return scoreB - scoreA;
+      return new Date(b.created_date).getTime() - new Date(a.created_date).getTime();
+    });
+  }, [computeScore]);
+
+  const loadComments = useCallback(async () => {
     try {
-      const data = await entityClient.filter(
-        { [filterKey]: entityId },
-        'created_date'
-      );
-      setComments(data as Comment[]);
+      const data = await entityClient.filter({ [filterKey]: entityId });
+
+      // Ensure party comments have downvotes field populated in-memory
+      const normalized = (data as Comment[]).map((c) => {
+        if (entityType !== 'party') return c;
+        return {
+          ...c,
+          upvotes: (c as any).upvotes ?? 0,
+          downvotes: (c as any).downvotes ?? 0,
+        } as any;
+      });
+
+      setComments(sortByScoreThenNewest(normalized));
     } catch (error) {
       console.error('Failed to load comments:', error);
     } finally {
       setLoading(false);
     }
-  };
+  }, [entityClient, entityId, filterKey, entityType, sortByScoreThenNewest]);
+
+  const loadMyVotes = useCallback(async () => {
+    if (entityType !== 'party') return;
+    try {
+      const user = await base44.auth.me();
+      if (!user) return;
+
+      const votes = await base44.entities.PartyCommentVote.filter({
+        party_id: entityId,
+        user_id: user.id,
+      });
+
+      const map: Record<string, 1 | -1> = {};
+      (votes as PartyCommentVote[]).forEach((v) => {
+        map[v.comment_id] = v.value;
+      });
+      setMyVotesByCommentId(map);
+    } catch (error) {
+      console.error('Failed to load comment votes:', error);
+    }
+  }, [entityId, entityType]);
+
+  useEffect(() => {
+    loadComments();
+    loadMyVotes();
+  }, [loadComments, loadMyVotes]);
 
   const analyzeSentiment = (text: string): number => {
     const positiveWords = ['great', 'awesome', 'amazing', 'love', 'best', 'fun', 'good', 'excellent', 'fantastic'];
     const negativeWords = ['bad', 'terrible', 'worst', 'hate', 'boring', 'awful', 'poor', 'disappointing'];
-    
+
     const lowerText = text.toLowerCase();
     let score = 0;
-    
-    positiveWords.forEach(word => {
+
+    positiveWords.forEach((word) => {
       if (lowerText.includes(word)) score += 0.3;
     });
-    negativeWords.forEach(word => {
+    negativeWords.forEach((word) => {
       if (lowerText.includes(word)) score -= 0.3;
     });
-    
+
     return Math.max(-1, Math.min(1, score));
   };
 
   const handleSubmitComment = async () => {
     if (!newComment.trim()) return;
-    
+
     setSubmitting(true);
     try {
       const user = await base44.auth.me();
       if (!user) return;
 
       const sentimentScore = analyzeSentiment(newComment);
-      
-      await entityClient.create({
+
+      const basePayload: any = {
         [filterKey]: entityId,
         user_id: user.id,
         text: newComment.trim(),
@@ -94,9 +143,13 @@ export default function CommentSection({ entityId, entityType }: CommentSectionP
         toxicity_label: 'safe',
         upvotes: 0,
         moderated: false,
-      } as any);
+      };
 
-      // Update user points
+      // Party comments need downvotes too
+      if (entityType === 'party') basePayload.downvotes = 0;
+
+      await entityClient.create(basePayload);
+
       await base44.auth.updateMe({ points: (user.points || 0) + 2 });
 
       setNewComment('');
@@ -109,12 +162,63 @@ export default function CommentSection({ entityId, entityType }: CommentSectionP
     }
   };
 
-  const handleUpvote = async (commentId: string) => {
-    const comment = comments.find(c => c.id === commentId);
+  // Party-only: recompute counts from vote records
+  const recalculatePartyCommentCounts = useCallback(async (commentId: string) => {
+    const votes = await base44.entities.PartyCommentVote.filter({ comment_id: commentId });
+    const upvotes = (votes as PartyCommentVote[]).filter((v) => v.value === 1).length;
+    const downvotes = (votes as PartyCommentVote[]).filter((v) => v.value === -1).length;
+    await base44.entities.PartyComment.update(commentId, { upvotes, downvotes });
+    return { upvotes, downvotes };
+  }, []);
+
+  const handleVote = useCallback(async (commentId: string, value: 1 | -1) => {
+    if (entityType !== 'party') return;
+
+    try {
+      const me = await base44.auth.me();
+      if (!me) return;
+
+      const existing = await base44.entities.PartyCommentVote.filter({ comment_id: commentId, user_id: me.id });
+      const existingVote = (existing as PartyCommentVote[])[0];
+
+      if (!existingVote) {
+        await base44.entities.PartyCommentVote.create({
+          comment_id: commentId,
+          party_id: entityId,
+          user_id: me.id,
+          value,
+        });
+        setMyVotesByCommentId((prev) => ({ ...prev, [commentId]: value }));
+      } else if (existingVote.value === value) {
+        await base44.entities.PartyCommentVote.delete(existingVote.id);
+        setMyVotesByCommentId((prev) => {
+          const next = { ...prev };
+          delete next[commentId];
+          return next;
+        });
+      } else {
+        await base44.entities.PartyCommentVote.update(existingVote.id, { value });
+        setMyVotesByCommentId((prev) => ({ ...prev, [commentId]: value }));
+      }
+
+      // Update counts deterministically from votes table
+      await recalculatePartyCommentCounts(commentId);
+
+      // Refresh list + vote map so UI never diverges
+      await loadComments();
+      await loadMyVotes();
+    } catch (error) {
+      console.error('Failed to vote:', error);
+    }
+  }, [entityId, entityType, loadComments, loadMyVotes, recalculatePartyCommentCounts]);
+
+  // Fraternity-only fallback (keeps existing behavior; party uses handleVote)
+  const handleUpvoteLegacy = async (commentId: string) => {
+    const comment = comments.find((c) => c.id === commentId);
     if (!comment) return;
 
     await entityClient.update(commentId, {
-      upvotes: (comment.upvotes ?? 0) + 1,
+      upvotes: ((comment as any).upvotes ?? 0) + 1,
     });
     await loadComments();
   };
@@ -157,19 +261,44 @@ export default function CommentSection({ entityId, entityType }: CommentSectionP
     );
   };
 
-  // Group comments: top-level and replies
-  const topLevelComments = comments.filter(c => !c.parent_comment_id);
-  const repliesByParent = comments.reduce((acc, c) => {
-    if (c.parent_comment_id) {
-      if (!acc[c.parent_comment_id]) acc[c.parent_comment_id] = [];
-      acc[c.parent_comment_id].push(c);
-    }
+  const repliesByParent = useMemo(() => {
+    const acc: Record<string, Comment[]> = {};
+
+    comments.forEach((c) => {
+      const explicitParent = (c as any).parent_comment_id ?? null;
+      const legacyParent = !explicitParent ? getLegacyParentId(c.text) : null;
+      const parentId = explicitParent || legacyParent;
+      if (!parentId) return;
+      if (!acc[parentId]) acc[parentId] = [];
+      acc[parentId].push(c);
+    });
+
+    Object.keys(acc).forEach((parentId) => {
+      acc[parentId] = sortByScoreThenNewest(acc[parentId]);
+    });
+
     return acc;
-  }, {} as Record<string, Comment[]>);
+  }, [comments, sortByScoreThenNewest]);
+
+  const topLevelComments = useMemo(() => {
+    return sortByScoreThenNewest(
+      comments.filter((c) => {
+        const explicitParent = (c as any).parent_comment_id ?? null;
+        const legacyParent = !explicitParent ? getLegacyParentId(c.text) : null;
+        return !explicitParent && !legacyParent;
+      })
+    );
+  }, [comments, sortByScoreThenNewest]);
 
   const renderComment = (comment: Comment, isReply = false) => {
     const replies = repliesByParent[comment.id] || [];
     const displayText = sanitizeCommentText(comment.text ?? '');
+
+    const upvotes = (comment as any).upvotes ?? 0;
+    const downvotes = (comment as any).downvotes ?? 0;
+    const netScore = upvotes - downvotes;
+
+    const myVote = myVotesByCommentId[comment.id];
 
     return (
       <div key={comment.id} className={`space-y-2 ${isReply ? 'ml-8 border-l-2 border-muted pl-4' : ''}`}>
@@ -183,28 +312,57 @@ export default function CommentSection({ entityId, entityType }: CommentSectionP
               </Avatar>
               <div>
                 <p className="text-sm font-medium">Anonymous Duke Student</p>
-                <p className="text-xs text-muted-foreground">
-                  {formatTimeAgo(comment.created_date)}
-                </p>
+                <p className="text-xs text-muted-foreground">{formatTimeAgo(comment.created_date)}</p>
               </div>
             </div>
-            {getSentimentBadge(comment.sentiment_score ?? 0)}
+            <div className="flex items-center gap-2">
+              {entityType === 'party' && netScore !== 0 && (
+                <Badge variant={netScore > 0 ? 'default' : 'destructive'} className="text-xs">
+                  {netScore > 0 ? '+' : ''}{netScore}
+                </Badge>
+              )}
+              {getSentimentBadge((comment as any).sentiment_score ?? 0)}
+            </div>
           </div>
 
           <p className="text-sm mt-2">{displayText}</p>
 
-          <div className="flex items-center gap-4 mt-2">
-            <Button 
-              variant="ghost" 
-              size="sm"
-              onClick={() => handleUpvote(comment.id)}
-              className="h-8 text-xs"
-            >
-              <ThumbsUp className="h-3.5 w-3.5 mr-1" />
-              {comment.upvotes ?? 0}
-            </Button>
-            <Button 
-              variant="ghost" 
+          <div className="flex items-center gap-2 mt-2">
+            {entityType === 'party' ? (
+              <>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => handleVote(comment.id, 1)}
+                  className={`h-8 text-xs ${myVote === 1 ? 'text-emerald-600 bg-emerald-50' : ''}`}
+                >
+                  <ThumbsUp className="h-3.5 w-3.5 mr-1" />
+                  {upvotes}
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => handleVote(comment.id, -1)}
+                  className={`h-8 text-xs ${myVote === -1 ? 'text-red-500 bg-red-50' : ''}`}
+                >
+                  <ThumbsDown className="h-3.5 w-3.5 mr-1" />
+                  {downvotes}
+                </Button>
+              </>
+            ) : (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => handleUpvoteLegacy(comment.id)}
+                className="h-8 text-xs"
+              >
+                <ThumbsUp className="h-3.5 w-3.5 mr-1" />
+                {upvotes}
+              </Button>
+            )}
+
+            <Button
+              variant="ghost"
               size="sm"
               onClick={() => handleStartReply(comment)}
               className="h-8 text-xs"
@@ -215,8 +373,7 @@ export default function CommentSection({ entityId, entityType }: CommentSectionP
           </div>
         </div>
 
-        {/* Render replies */}
-        {replies.map(reply => renderComment(reply, true))}
+        {replies.map((reply) => renderComment(reply, true))}
       </div>
     );
   };
@@ -248,9 +405,7 @@ export default function CommentSection({ entityId, entityType }: CommentSectionP
         <h3 className="font-semibold">Comments ({comments.length})</h3>
       </div>
 
-      {/* New Comment Input */}
       <div className="space-y-2">
-        {/* Replying To Indicator */}
         {replyingTo && (
           <div className="flex items-center justify-between bg-muted/50 rounded-lg px-3 py-2 text-sm">
             <div className="flex items-center gap-2">
@@ -258,22 +413,15 @@ export default function CommentSection({ entityId, entityType }: CommentSectionP
               <span className="text-muted-foreground">Replying to</span>
               <span className="font-medium">{replyingTo.authorName}</span>
               {replyingTo.snippet && (
-                <span className="text-muted-foreground truncate max-w-[200px]">
-                  "{replyingTo.snippet}"
-                </span>
+                <span className="text-muted-foreground truncate max-w-[200px]">"{replyingTo.snippet}"</span>
               )}
             </div>
-            <Button 
-              variant="ghost" 
-              size="sm" 
-              onClick={handleCancelReply}
-              className="h-6 w-6 p-0"
-            >
+            <Button variant="ghost" size="sm" onClick={handleCancelReply} className="h-6 w-6 p-0">
               <X className="h-4 w-4" />
             </Button>
           </div>
         )}
-        
+
         <Textarea
           placeholder={replyingTo ? 'Write your reply...' : 'Share your thoughts...'}
           value={newComment}
@@ -281,22 +429,15 @@ export default function CommentSection({ entityId, entityType }: CommentSectionP
           className="resize-none"
           rows={3}
         />
-        <Button 
-          onClick={handleSubmitComment}
-          disabled={!newComment.trim() || submitting}
-          className="gradient-primary text-white"
-        >
+        <Button onClick={handleSubmitComment} disabled={!newComment.trim() || submitting} className="gradient-primary text-white">
           <Send className="h-4 w-4 mr-2" />
           {submitting ? 'Posting...' : replyingTo ? 'Post Reply' : 'Post Comment'}
         </Button>
       </div>
 
-      {/* Comments List - Threaded */}
       <div className="space-y-4">
         {topLevelComments.length === 0 ? (
-          <p className="text-center text-muted-foreground py-8">
-            No comments yet. Be the first to share your thoughts!
-          </p>
+          <p className="text-center text-muted-foreground py-8">No comments yet. Be the first to share your thoughts!</p>
         ) : (
           topLevelComments.map((comment) => renderComment(comment))
         )}
