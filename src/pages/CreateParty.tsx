@@ -65,7 +65,7 @@ export default function CreateParty() {
       {/* Header */}
       <div className="flex items-center gap-2">
         <Plus className="h-6 w-6 text-primary" />
-        <h1 className="text-2xl font-bold gradient-text">Create Party</h1>
+        <h1 className="text-2xl font-bold text-foreground">Party Proposal</h1>
       </div>
 
       <Card className="glass p-6">
