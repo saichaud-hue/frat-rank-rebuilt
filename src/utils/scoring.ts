@@ -423,13 +423,16 @@ export function computeSemesterPartyScore(
   const t = 2.0;      // Hosting bonus saturation rate
   const k = 10;       // Confidence constant for S_p stabilization
 
+  const MIN_PARTY_RATINGS_FOR_PARTY_SCORE = 5;
+  
   // Filter to only parties with at least 1 rating (hasData is about RATED parties)
   const ratedParties = partiesWithRatings.filter(pwr => pwr.ratings.length > 0);
+  const totalPartyRatings = ratedParties.reduce((sum, pwr) => sum + pwr.ratings.length, 0);
   
-  // NO DATA: If no rated parties, return null state
-  if (ratedParties.length === 0) {
+  // NO DATA: If no rated parties OR insufficient total ratings
+  if (ratedParties.length === 0 || totalPartyRatings < MIN_PARTY_RATINGS_FOR_PARTY_SCORE) {
     if (import.meta.env.DEV) {
-      console.log('[Element 2] No Data: 0 rated parties');
+      console.log(`[Element 2] No Data: ${ratedParties.length} rated parties, ${totalPartyRatings} total ratings (need ${MIN_PARTY_RATINGS_FOR_PARTY_SCORE})`);
     }
     return { score: null, hasData: false, avg: null, hostBonus: 1 };
   }

@@ -136,7 +136,7 @@ export default function LeaderboardPodium({ topThree, ranks = [1, 2, 3], filter 
             <p className="text-xs text-muted-foreground">{getScoreLabel()}</p>
             {needsMoreRatings(frat) && (
               <Badge variant="outline" className="text-[9px] mt-1 text-muted-foreground">
-                {filter === 'party' ? 'No ratings yet' : 'Needs more ratings'}
+                Needs more ratings
               </Badge>
             )}
             {filter === 'party' && hasPartyData(frat) && (
