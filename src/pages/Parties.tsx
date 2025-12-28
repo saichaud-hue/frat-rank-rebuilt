@@ -65,15 +65,18 @@ export default function Parties() {
         partiesByFrat.set(fratId, existing);
       }
 
-      // Compute per-party overall quality using the new simplified formula
-      // Just average of ratings - fraternity-level weighting handles sample size via ln(1 + n)
+      // Compute per-party overall quality using Formula G
+      // Each party uses fraternity baseline EXCLUDING that party's ratings
       const perPartyScores = new Map<string, number>();
-      for (const [, partiesWithRatings] of partiesByFrat) {
-        for (const { party, ratings } of partiesWithRatings) {
-          const overall = computePartyOverallQuality(ratings);
-          if (overall !== undefined) {
-            perPartyScores.set(party.id, overall);
-          }
+      for (const [fratId, fratPartiesWithRatings] of partiesByFrat) {
+        // Get all ratings for this fraternity
+        const allFratRatings = fratPartiesWithRatings.flatMap(pwr => pwr.ratings);
+        
+        for (const { party, ratings } of fratPartiesWithRatings) {
+          // Get frat ratings EXCLUDING this party
+          const fratRatingsExcludingParty = allFratRatings.filter(r => r.party_id !== party.id);
+          const overall = computePartyOverallQuality(ratings, fratRatingsExcludingParty);
+          perPartyScores.set(party.id, overall);
         }
       }
       setPartyScores(perPartyScores);

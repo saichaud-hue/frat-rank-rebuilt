@@ -52,6 +52,12 @@ export default function PartyPage() {
     return now >= start && now <= end;
   };
 
+  // Rule 1: Can only rate past parties (completed status)
+  const canRate = () => {
+    if (!party) return false;
+    return party.status === 'completed';
+  };
+
   const handleRatingSubmit = () => {
     setShowRatingForm(false);
     loadParty();
@@ -156,13 +162,19 @@ export default function PartyPage() {
           )}
 
 
-          <Button 
-            onClick={() => setShowRatingForm(true)}
-            className="w-full gradient-primary text-white"
-          >
-            <Star className="h-4 w-4 mr-2" />
-            Rate This Party
-          </Button>
+          {canRate() ? (
+            <Button 
+              onClick={() => setShowRatingForm(true)}
+              className="w-full gradient-primary text-white"
+            >
+              <Star className="h-4 w-4 mr-2" />
+              Rate This Party
+            </Button>
+          ) : (
+            <div className="text-sm text-muted-foreground text-center py-2 border border-dashed rounded-lg">
+              {isLive() ? 'Rating opens after the party ends' : 'Ratings open after the party'}
+            </div>
+          )}
         </div>
       </Card>
 
