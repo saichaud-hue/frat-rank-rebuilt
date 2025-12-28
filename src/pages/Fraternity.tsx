@@ -19,6 +19,7 @@ import {
   computeCampusPartyAvgFromRatings,
   computeCombinedReputation,
   computePartyOverallQuality,
+  computeFraternityPartyBaseline,
   type FraternityScores,
   type PartyWithRatings,
   type ActivityData
@@ -87,14 +88,30 @@ export default function FraternityPage() {
         ratings: partyRatingsMap.get(party.id) || [],
       }));
 
-      // Compute per-party overall quality scores using the canonical utility function
-      // New formula: just average of ratings, no baseline adjustment needed.
-      // Fraternity-level weighting handles sample size naturally via ln(1 + n).
+      // Compute per-party overall quality scores using confidence-adjusted formula.
+      // Baseline is computed per-party, EXCLUDING that party's own ratings,
+      // so n=1 doesn't collapse to the user's rating.
       const perPartyScores = new Map<string, number>();
       for (const { party, ratings } of partiesWithRatings) {
-        const overall = computePartyOverallQuality(ratings);
-        if (overall !== undefined) {
-          perPartyScores.set(party.id, overall);
+        // Exclude this party's ratings from the baseline calculation
+        const perPartyBaseline = computeFraternityPartyBaseline(partiesWithRatings, party.id);
+        const overall = computePartyOverallQuality(ratings, perPartyBaseline);
+        perPartyScores.set(party.id, overall);
+
+        // DEV DEBUG: Log Margaritaville calculations
+        if (import.meta.env.DEV && party.title === 'Margaritaville') {
+          const avgQuality = ratings.length > 0
+            ? ratings.reduce((s, r) => s + (0.5 * (r.vibe_score ?? 5) + 0.3 * (r.music_score ?? 5) + 0.2 * (r.execution_score ?? 5)), 0) / ratings.length
+            : 5;
+          const confidence = 1 - Math.exp(-ratings.length / 10);
+          console.log('[DEBUG Fraternity.tsx - Margaritaville]', {
+            n: ratings.length,
+            avgQuality: avgQuality.toFixed(2),
+            baseline: perPartyBaseline.toFixed(2),
+            confidence: confidence.toFixed(3),
+            adjustedOverall: overall.toFixed(2),
+            note: ratings.length === 1 ? 'With n=1, ~90% weight on baseline, so overall should be close to baseline' : ''
+          });
         }
       }
       setPartyScores(perPartyScores);
@@ -269,15 +286,9 @@ export default function FraternityPage() {
     return score !== undefined && p.total_ratings > 0;
   });
 
-  // For header "Overall Party Quality": if exactly 1 rated party, use that party's canonical score
-  // Otherwise use the fraternity-level partyAdj
-  const headerPartyQuality = (() => {
-    if (ratedPastParties.length === 1 && computedScores) {
-      // Single rated party scenario: use the party's canonical overall quality
-      return partyScores.get(ratedPastParties[0].id) ?? computedScores.partyAdj;
-    }
-    return computedScores?.partyAdj ?? 5;
-  })();
+  // For header "Overall Party Quality": ALWAYS use fraternity-level partyAdj
+  // This is the weighted aggregate across ALL parties, never a single party's score
+  const headerPartyQuality = computedScores?.partyAdj ?? 5;
 
   // Calculate user's combined scores if they have rated
   const userFratScore = userRating 
