@@ -6,7 +6,7 @@ import PartyFilters from '@/components/parties/PartyFilters';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Badge } from '@/components/ui/badge';
 import { subDays, addDays, startOfDay, endOfDay } from 'date-fns';
-import { computePartyOverallQuality, type PartyWithRatings } from '@/utils/scoring';
+import { computePartyOverallQuality, computeCampusBaseline, computeFraternityBaseline, type PartyWithRatings } from '@/utils/scoring';
 interface Filters {
   fraternity: string;
   theme: string;
@@ -59,6 +59,15 @@ export default function Parties() {
       }
       setPartyRatingCounts(ratingCountsMap);
 
+      // Build all parties with ratings for campus baseline
+      const allPartiesWithRatings: PartyWithRatings[] = partiesData.map(party => ({
+        party,
+        ratings: partyRatingsMap.get(party.id) || [],
+      }));
+      
+      // Compute campus baseline B_campus
+      const campusBaseline = computeCampusBaseline(allPartiesWithRatings);
+
       // Group parties by fraternity for fraternity-scoped baselines
       const partiesByFrat = new Map<string, PartyWithRatings[]>();
       for (const party of partiesData) {
@@ -69,13 +78,14 @@ export default function Parties() {
         partiesByFrat.set(fratId, existing);
       }
 
-      // Compute per-party overall quality using Formula G
-      // Each party uses fraternity baseline EXCLUDING that party's ratings
+      // Compute per-party overall quality using Element 1
       const perPartyScores = new Map<string, number>();
-      // Each party now uses fixed 5.0 baseline (independent scoring)
       for (const [fratId, fratPartiesWithRatings] of partiesByFrat) {
+        const m_f = fratPartiesWithRatings.length; // Fraternity host count
+        const fratBaseline = computeFraternityBaseline(fratPartiesWithRatings, campusBaseline);
+        
         for (const { party, ratings } of fratPartiesWithRatings) {
-          const overall = computePartyOverallQuality(ratings);
+          const overall = computePartyOverallQuality(ratings, m_f, fratBaseline);
           perPartyScores.set(party.id, overall);
         }
       }

@@ -49,20 +49,275 @@ export interface ActivityData {
 }
 
 // ============================================
-// C) PARTYINDEX FOR A FRATERNITY
+// CAMPUS-WIDE BASELINE (ELEMENT 1 DEPENDENCY)
 // ============================================
 
 /**
- * Formula C: Compute PartyIndex for a fraternity
+ * Compute campus-wide baseline party quality B_campus
  * 
- * For each party p:
- *   n_p = number of PartyRating rows for party p
- *   d_p = days since party (referenceDate - party.starts_at)
- *   avg_p = average of party_quality_score across ratings for party p
- *   w_p = ln(1 + n_p) * exp(-d_p / 30)
+ * For all parties p in current semester with at least 1 rating:
+ *   PartyQuality_p = 0.50*avgVibe + 0.30*avgMusic + 0.20*avgExecution
+ *   w_p = ln(1 + n_p)
  * 
- * PartyIndex_f = Σ(avg_p * w_p) / Σ(w_p)
- * If Σ(w_p) = 0, default PartyIndex_f = 5.0
+ * B_campus = Σ(PartyQuality_p * w_p) / Σ(w_p)
+ * Fallback: 5.5 if no rated parties
+ */
+export function computeCampusBaseline(
+  allPartiesWithRatings: PartyWithRatings[]
+): number {
+  let weightedSum = 0;
+  let totalWeight = 0;
+
+  for (const { party, ratings } of allPartiesWithRatings) {
+    const n_p = ratings.length;
+    if (n_p === 0) continue;
+
+    // Raw party quality Q_p
+    const avgVibe = ratings.reduce((sum, r) => sum + (r.vibe_score ?? 5), 0) / n_p;
+    const avgMusic = ratings.reduce((sum, r) => sum + (r.music_score ?? 5), 0) / n_p;
+    const avgExecution = ratings.reduce((sum, r) => sum + (r.execution_score ?? 5), 0) / n_p;
+    const Q_p = 0.50 * avgVibe + 0.30 * avgMusic + 0.20 * avgExecution;
+
+    // Participation weight
+    const w_p = Math.log(1 + n_p);
+
+    weightedSum += Q_p * w_p;
+    totalWeight += w_p;
+  }
+
+  if (totalWeight === 0) return 5.5; // Fallback
+  return Math.max(0, Math.min(10, weightedSum / totalWeight));
+}
+
+// ============================================
+// ELEMENT 1: INDIVIDUAL PARTY SCORE
+// ============================================
+
+/**
+ * Element 1: Compute individual party score (PartyScore_p)
+ * 
+ * Step 1: Raw party quality
+ *   Q_p = 0.50*avgVibe + 0.30*avgMusic + 0.20*avgExecution
+ * 
+ * Step 2: Party rating confidence (k=10)
+ *   c_p = 1 - exp(-n_p / 10)
+ * 
+ * Step 3: Fraternity stability confidence (h=2)
+ *   s_f = 1 - exp(-m_f / 2)
+ *   where m_f = number of parties hosted by fraternity this semester
+ * 
+ * Step 4: Determine baseline B_f
+ *   If frat has prior rated parties: B_f = avg of prior PartyScore values
+ *   Else: B_f = B_campus (or 5.5 fallback)
+ * 
+ * Step 5: Blended score
+ *   blend = c_p * s_f
+ *   PartyScore_p = blend * Q_p + (1 - blend) * B_f
+ */
+export function computeIndividualPartyScore(
+  partyRatings: PartyRating[],
+  fraternityHostCount: number,
+  fraternityBaseline: number
+): number {
+  const n_p = partyRatings.length;
+  const k = 10; // Party rating confidence constant
+  const h = 2;  // Fraternity stability constant
+
+  // Step 1: Raw party quality Q_p
+  if (n_p === 0) {
+    return fraternityBaseline; // No ratings = baseline
+  }
+
+  const avgVibe = partyRatings.reduce((sum, r) => sum + (r.vibe_score ?? 5), 0) / n_p;
+  const avgMusic = partyRatings.reduce((sum, r) => sum + (r.music_score ?? 5), 0) / n_p;
+  const avgExecution = partyRatings.reduce((sum, r) => sum + (r.execution_score ?? 5), 0) / n_p;
+  const Q_p = 0.50 * avgVibe + 0.30 * avgMusic + 0.20 * avgExecution;
+
+  // Step 2: Party rating confidence
+  const c_p = 1 - Math.exp(-n_p / k);
+
+  // Step 3: Fraternity stability confidence
+  const m_f = Math.max(1, fraternityHostCount);
+  const s_f = 1 - Math.exp(-m_f / h);
+
+  // Step 5: Blended score
+  const blend = c_p * s_f;
+  const partyScore = blend * Q_p + (1 - blend) * fraternityBaseline;
+
+  if (import.meta.env.DEV) {
+    console.log('[Element 1] Individual Party Score:', {
+      n_p,
+      Q_p: Q_p.toFixed(2),
+      c_p: c_p.toFixed(4),
+      m_f,
+      s_f: s_f.toFixed(4),
+      blend: blend.toFixed(4),
+      B_f: fraternityBaseline.toFixed(2),
+      partyScore: partyScore.toFixed(2),
+    });
+  }
+
+  return Math.max(0, Math.min(10, partyScore));
+}
+
+/**
+ * Compute fraternity baseline B_f for Element 1
+ * 
+ * If fraternity has at least 1 prior party with ratings:
+ *   B_f = weighted average of prior party scores (participation-weighted)
+ * Else:
+ *   B_f = B_campus (or 5.5 fallback)
+ */
+export function computeFraternityBaseline(
+  priorPartiesWithRatings: PartyWithRatings[],
+  campusBaseline: number
+): number {
+  const ratedParties = priorPartiesWithRatings.filter(pwr => pwr.ratings.length > 0);
+  
+  if (ratedParties.length === 0) {
+    return campusBaseline;
+  }
+
+  // Compute weighted average of raw party qualities
+  let weightedSum = 0;
+  let totalWeight = 0;
+
+  for (const { party, ratings } of ratedParties) {
+    const n_p = ratings.length;
+    const avgVibe = ratings.reduce((sum, r) => sum + (r.vibe_score ?? 5), 0) / n_p;
+    const avgMusic = ratings.reduce((sum, r) => sum + (r.music_score ?? 5), 0) / n_p;
+    const avgExecution = ratings.reduce((sum, r) => sum + (r.execution_score ?? 5), 0) / n_p;
+    const Q_p = 0.50 * avgVibe + 0.30 * avgMusic + 0.20 * avgExecution;
+
+    const w_p = Math.log(1 + n_p);
+    weightedSum += Q_p * w_p;
+    totalWeight += w_p;
+  }
+
+  if (totalWeight === 0) return campusBaseline;
+  return Math.max(0, Math.min(10, weightedSum / totalWeight));
+}
+
+// ============================================
+// ELEMENT 2: SEMESTER FRATERNITY PARTY SCORE
+// ============================================
+
+/**
+ * Element 2: Compute semester fraternity party score (SemesterPartyScore_f)
+ * 
+ * Step 1: Participation weight per party
+ *   w_p = ln(1 + n_p)
+ * 
+ * Step 2: Weighted semester average
+ *   SemesterPartyAvg_f = Σ(PartyScore_p * w_p) / Σ(w_p)
+ *   If no rated parties: SemesterPartyAvg_f = B_campus
+ * 
+ * Step 3: Hosting bonus (diminishing returns, caps ~4-5 parties)
+ *   HostBonus_f = 1 + alpha * (1 - exp(-m_f / t))
+ *   alpha = 0.08 (max +8%)
+ *   t = 2.0
+ * 
+ * Step 4: Final score
+ *   SemesterPartyScore_f = SemesterPartyAvg_f * HostBonus_f
+ */
+export function computeSemesterPartyScore(
+  partiesWithRatings: PartyWithRatings[],
+  campusBaseline: number
+): { semesterPartyScore: number; semesterPartyAvg: number; hostingBonus: number } {
+  const alpha = 0.08; // Max hosting bonus (+8%)
+  const t = 2.0;      // Hosting bonus saturation rate
+
+  const m_f = partiesWithRatings.length; // Number of parties hosted
+
+  // Compute individual party scores first using fraternity baseline
+  const fratBaseline = computeFraternityBaseline(partiesWithRatings, campusBaseline);
+  
+  // Step 1 & 2: Weighted average of PartyScore_p values
+  let weightedSum = 0;
+  let totalWeight = 0;
+
+  for (const { party, ratings } of partiesWithRatings) {
+    const n_p = ratings.length;
+    if (n_p === 0) continue;
+
+    // Compute this party's Element 1 score
+    const partyScore_p = computeIndividualPartyScore(ratings, m_f, fratBaseline);
+
+    // Participation weight
+    const w_p = Math.log(1 + n_p);
+
+    weightedSum += partyScore_p * w_p;
+    totalWeight += w_p;
+  }
+
+  // If no rated parties, use campus baseline
+  const semesterPartyAvg = totalWeight > 0 
+    ? weightedSum / totalWeight 
+    : campusBaseline;
+
+  // Step 3: Hosting bonus
+  const hostingBonus = 1 + alpha * (1 - Math.exp(-m_f / t));
+
+  // Step 4: Final score
+  const semesterPartyScore = semesterPartyAvg * hostingBonus;
+
+  if (import.meta.env.DEV) {
+    console.log('[Element 2] Semester Party Score:', {
+      m_f,
+      semesterPartyAvg: semesterPartyAvg.toFixed(2),
+      hostingBonus: hostingBonus.toFixed(4),
+      semesterPartyScore: semesterPartyScore.toFixed(2),
+    });
+  }
+
+  return {
+    semesterPartyScore: Math.max(0, Math.min(10, semesterPartyScore)),
+    semesterPartyAvg: Math.max(0, Math.min(10, semesterPartyAvg)),
+    hostingBonus,
+  };
+}
+
+// ============================================
+// CAMPUS AVERAGES (for reputation)
+// ============================================
+
+/**
+ * Compute campus-wide party average from ALL PartyRating rows
+ * campusPartyAvg = average of party_quality_score across ALL PartyRating records
+ */
+export function computeCampusPartyAvg(allPartyRatings: PartyRating[]): number {
+  if (allPartyRatings.length === 0) return 5.0;
+  const sum = allPartyRatings.reduce((acc, r) => acc + (r.party_quality_score ?? computePartyQuality(
+    r.vibe_score ?? 5, r.music_score ?? 5, r.execution_score ?? 5
+  )), 0);
+  return sum / allPartyRatings.length;
+}
+
+/**
+ * Compute campus-wide reputation average from all fraternities
+ */
+export function computeCampusRepAvg(fraternities: Fraternity[]): number {
+  if (fraternities.length === 0) return 5.0;
+  const sum = fraternities.reduce((acc, f) => acc + (f.reputation_score ?? 5), 0);
+  return sum / fraternities.length;
+}
+
+/**
+ * Compute campus-wide reputation average from ALL ReputationRating rows
+ */
+export function computeCampusRepAvgFromRatings(allRepRatings: ReputationRating[]): number {
+  if (allRepRatings.length === 0) return 5.0;
+  const sum = allRepRatings.reduce((acc, r) => acc + (r.combined_score ?? 5), 0);
+  return sum / allRepRatings.length;
+}
+
+// ============================================
+// C) PARTYINDEX FOR A FRATERNITY (legacy - now uses Element 2)
+// ============================================
+
+/**
+ * Formula C: Compute PartyIndex for a fraternity (LEGACY - kept for backward compatibility)
+ * Now internally uses Element 2 computation
  */
 export function computePartyIndex(
   partiesWithRatings: PartyWithRatings[],
@@ -95,40 +350,6 @@ export function computePartyIndex(
 
   if (totalWeight === 0) return 5.0;
   return Math.max(0, Math.min(10, weightedSum / totalWeight));
-}
-
-// ============================================
-// CAMPUS AVERAGES
-// ============================================
-
-/**
- * Compute campus-wide party average from ALL PartyRating rows
- * campusPartyAvg = average of party_quality_score across ALL PartyRating records
- */
-export function computeCampusPartyAvg(allPartyRatings: PartyRating[]): number {
-  if (allPartyRatings.length === 0) return 5.0;
-  const sum = allPartyRatings.reduce((acc, r) => acc + (r.party_quality_score ?? computePartyQuality(
-    r.vibe_score ?? 5, r.music_score ?? 5, r.execution_score ?? 5
-  )), 0);
-  return sum / allPartyRatings.length;
-}
-
-/**
- * Compute campus-wide reputation average from all fraternities
- */
-export function computeCampusRepAvg(fraternities: Fraternity[]): number {
-  if (fraternities.length === 0) return 5.0;
-  const sum = fraternities.reduce((acc, f) => acc + (f.reputation_score ?? 5), 0);
-  return sum / fraternities.length;
-}
-
-/**
- * Compute campus-wide reputation average from ALL ReputationRating rows
- */
-export function computeCampusRepAvgFromRatings(allRepRatings: ReputationRating[]): number {
-  if (allRepRatings.length === 0) return 5.0;
-  const sum = allRepRatings.reduce((acc, r) => acc + (r.combined_score ?? 5), 0);
-  return sum / allRepRatings.length;
 }
 
 // ============================================
@@ -188,55 +409,21 @@ export function computeOverall(repAdj: number, partyAdj: number): number {
 }
 
 // ============================================
-// G) PER-PARTY OVERALL QUALITY DISPLAY
+// G) PER-PARTY OVERALL QUALITY DISPLAY (for Party Cards)
 // ============================================
 
 /**
  * Formula G: Per-party "Overall Party Quality" for display on PartyCard
  * 
- * For each party p:
- *   avg_p = average party_quality_score for party p
- *   n_p = number of ratings for party p
- *   baseline = 5.0 (fixed neutral baseline for independent scoring)
- *   c_p = 1 - exp(-n_p / 40)
- *   PartyOverall_p = c_p * avg_p + (1 - c_p) * baseline
- * 
- * IMPORTANT: Each party's score is now INDEPENDENT - no cross-party influence.
+ * This is Element 1 - Individual Party Score
+ * Uses fraternity baseline and campus baseline for stabilization
  */
 export function computePartyOverallQuality(
-  partyRatings: PartyRating[]
+  partyRatings: PartyRating[],
+  fraternityHostCount: number = 1,
+  fraternityBaseline: number = 5.5
 ): number {
-  const n_p = partyRatings.length;
-  const baseline = 5.0; // Fixed neutral baseline
-  
-  // If no ratings, return baseline
-  if (n_p === 0) {
-    return baseline;
-  }
-
-  // avg_p: average party_quality_score for this party
-  const avg_p = partyRatings.reduce((sum, r) => sum + (r.party_quality_score ?? computePartyQuality(
-    r.vibe_score ?? 5, r.music_score ?? 5, r.execution_score ?? 5
-  )), 0) / n_p;
-
-  // c_p: party confidence
-  const c_p = 1 - Math.exp(-n_p / 40);
-
-  // PartyOverall_p
-  const partyOverall = c_p * avg_p + (1 - c_p) * baseline;
-
-  // DEV debug logging
-  if (import.meta.env.DEV) {
-    console.log('[DEBUG G] PartyOverall:', {
-      n_p,
-      avg_p: avg_p.toFixed(2),
-      baseline,
-      c_p: c_p.toFixed(4),
-      partyOverall: partyOverall.toFixed(2),
-    });
-  }
-
-  return Math.max(0, Math.min(10, partyOverall));
+  return computeIndividualPartyScore(partyRatings, fraternityHostCount, fraternityBaseline);
 }
 
 // ============================================
@@ -327,67 +514,17 @@ function computePartyIndexInWindow(
 /**
  * Formula H: Fraternity-level PartyScore for Parties leaderboard
  * 
- * For each party p owned by fraternity f:
- *   PartyOverall_p = computePartyOverallQuality() (the ~5.1 value shown on party cards)
- *   n_p = number of ratings for party p
- *   d_p = days since party date
- *   weight_p = ln(1 + n_p) * exp(-d_p / 30)
- * 
- * PartyScore_f = Σ(PartyOverall_p * weight_p) / Σ(weight_p)
- * If Σ(weight_p) = 0 (no rated parties), PartyScore_f = 5.0
- * 
- * This uses ONLY the fraternity's own parties, never campus-wide averages.
+ * This now uses Element 2: Semester Party Score
+ * - Weighted average of Element 1 (individual party scores)
+ * - Plus hosting bonus (capped at ~8%)
  */
 export function computeFraternityPartyScore(
   partiesWithRatings: PartyWithRatings[],
+  campusBaseline: number = 5.5,
   referenceDate: Date = new Date()
 ): number {
-  if (partiesWithRatings.length === 0) return 5.0;
-
-  // Collect all ratings for this fraternity (for baseline calculation)
-  const allFratRatings = partiesWithRatings.flatMap(pwr => pwr.ratings);
-
-  let weightedSum = 0;
-  let totalWeight = 0;
-
-  for (const { party, ratings } of partiesWithRatings) {
-    const n_p = ratings.length;
-    if (n_p === 0) continue;
-
-    // PartyOverall_p using Formula G (fixed 5.0 baseline)
-    const partyOverall_p = computePartyOverallQuality(ratings);
-
-    // d_p: days since party
-    const partyDate = new Date(party.starts_at);
-    const d_p = Math.max(0, (referenceDate.getTime() - partyDate.getTime()) / (1000 * 60 * 60 * 24));
-
-    // weight_p: participation * time decay
-    const weight_p = Math.log(1 + n_p) * Math.exp(-d_p / 30);
-
-    weightedSum += partyOverall_p * weight_p;
-    totalWeight += weight_p;
-
-    // DEV debug logging
-    if (import.meta.env.DEV) {
-      console.log('[DEBUG H] Party contribution:', {
-        partyTitle: party.title,
-        n_p,
-        partyOverall_p: partyOverall_p.toFixed(2),
-        d_p: d_p.toFixed(1),
-        weight_p: weight_p.toFixed(4),
-      });
-    }
-  }
-
-  if (totalWeight === 0) return 5.0;
-  
-  const partyScore = weightedSum / totalWeight;
-  
-  if (import.meta.env.DEV) {
-    console.log('[DEBUG H] Final PartyScore_f:', partyScore.toFixed(2));
-  }
-
-  return Math.max(0, Math.min(10, partyScore));
+  const { semesterPartyScore } = computeSemesterPartyScore(partiesWithRatings, campusBaseline);
+  return semesterPartyScore;
 }
 
 // ============================================
@@ -399,7 +536,10 @@ export interface FraternityScores {
   repAdj: number;
   partyIndex: number;
   partyAdj: number;
-  partyScore: number; // Legacy: weighted aggregate of per-party PartyOverall values (not used for leaderboard)
+  partyScore: number; // Now uses Element 2: Semester Party Score
+  semesterPartyScore: number; // Element 2: SemesterPartyScore_f
+  semesterPartyAvg: number;   // Element 2: SemesterPartyAvg_f (before hosting bonus)
+  hostingBonus: number;       // Element 2: HostBonus_f
   overall: number;
   trending: number;
   activityTrending: number;
@@ -425,7 +565,8 @@ export async function computeFullFraternityScores(
   partiesWithRatings: PartyWithRatings[],
   campusRepAvg: number,
   campusPartyAvg: number,
-  activityData?: ActivityData
+  activityData?: ActivityData,
+  allPartiesWithRatings?: PartyWithRatings[] // For campus baseline computation
 ): Promise<FraternityScores> {
   // Calculate individual reputation sub-score averages
   const avgBrotherhood = repRatings.length > 0
@@ -457,7 +598,7 @@ export async function computeFullFraternityScores(
   
   const numRepRatings = repRatings.length;
   
-  // Formula C: PartyIndex
+  // Formula C: PartyIndex (legacy)
   const partyIndex = computePartyIndex(partiesWithRatings);
   
   // Total party ratings count (nP_f)
@@ -468,11 +609,22 @@ export async function computeFullFraternityScores(
   const confidenceParty = 1 - Math.exp(-numPartyRatings / 40);
   const confidenceOverall = 0.65 * confidenceRep + 0.35 * confidenceParty;
   
-  // Formula D: PartyAdj (used for Overall score)
+  // Compute campus baseline for Element 2
+  const campusBaseline = allPartiesWithRatings 
+    ? computeCampusBaseline(allPartiesWithRatings)
+    : 5.5;
+  
+  // Element 2: Semester Party Score (for Parties leaderboard)
+  const { semesterPartyScore, semesterPartyAvg, hostingBonus } = computeSemesterPartyScore(
+    partiesWithRatings,
+    campusBaseline
+  );
+  
+  // Formula D: PartyAdj (used for Overall score - keep legacy behavior)
   const partyAdj = computePartyAdj(partyIndex, numPartyRatings, campusPartyAvg);
   
-  // Formula H: PartyScore (used for Parties leaderboard - weighted avg of PartyOverall values)
-  const partyScore = computeFraternityPartyScore(partiesWithRatings);
+  // partyScore now uses Element 2
+  const partyScore = semesterPartyScore;
   
   // Formula E: RepAdj
   const repAdj = computeRepAdj(rawReputation, numRepRatings, campusRepAvg);
@@ -486,18 +638,17 @@ export async function computeFullFraternityScores(
     ? computeActivityTrending(activityData)
     : 0;
 
-  // DEV debug logging (Formula K)
+  // DEV debug logging
   if (import.meta.env.DEV) {
-    console.log(`[DEBUG D/F] Fraternity: ${fraternity.name}`, {
+    console.log(`[DEBUG] Fraternity: ${fraternity.name}`, {
       nP_f: numPartyRatings,
       partyIndex: partyIndex.toFixed(2),
-      campusPartyAvg: campusPartyAvg.toFixed(2),
-      cP_f: confidenceParty.toFixed(4),
       partyAdj: partyAdj.toFixed(2),
+      semesterPartyScore: semesterPartyScore.toFixed(2),
+      semesterPartyAvg: semesterPartyAvg.toFixed(2),
+      hostingBonus: hostingBonus.toFixed(4),
       nR_f: numRepRatings,
       rawRep: rawReputation.toFixed(2),
-      campusRepAvg: campusRepAvg.toFixed(2),
-      cR_f: confidenceRep.toFixed(4),
       repAdj: repAdj.toFixed(2),
       overall: overall.toFixed(2),
     });
@@ -509,6 +660,9 @@ export async function computeFullFraternityScores(
     partyIndex,
     partyAdj,
     partyScore,
+    semesterPartyScore,
+    semesterPartyAvg,
+    hostingBonus,
     overall,
     trending,
     activityTrending,
@@ -554,9 +708,9 @@ export function sortFraternitiesByReputation(frats: FraternityWithScores[]): Fra
 
 export function sortFraternitiesByParty(frats: FraternityWithScores[]): FraternityWithScores[] {
   return [...frats].sort((a, b) => {
-    // Use partyAdj (confidence-stabilized) for Parties leaderboard
-    const partyA = a.computedScores?.partyAdj ?? 5;
-    const partyB = b.computedScores?.partyAdj ?? 5;
+    // Use Element 2: semesterPartyScore for Parties leaderboard
+    const partyA = a.computedScores?.semesterPartyScore ?? 5;
+    const partyB = b.computedScores?.semesterPartyScore ?? 5;
     if (partyB !== partyA) return partyB - partyA;
     return (a.chapter ?? '').localeCompare(b.chapter ?? '');
   });

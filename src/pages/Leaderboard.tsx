@@ -108,6 +108,12 @@ export default function Leaderboard() {
         }
       }
 
+      // Build all parties with ratings for campus baseline
+      const allPartiesWithRatings: PartyWithRatings[] = partiesData.map(party => ({
+        party,
+        ratings: partyRatingsMap.get(party.id) || [],
+      }));
+
       // Compute full scores for each fraternity
       const fratsWithScores: FraternityWithScores[] = await Promise.all(
         fratsData.map(async (frat) => {
@@ -139,7 +145,8 @@ export default function Leaderboard() {
             partiesWithRatings,
             campusRepAvg,
             campusPartyAvg,
-            activityData
+            activityData,
+            allPartiesWithRatings // Pass for campus baseline
           );
 
           return {
@@ -257,7 +264,7 @@ export default function Leaderboard() {
       switch (filter) {
         case 'overall': return s.overall;
         case 'reputation': return s.repAdj;
-        case 'party': return s.partyAdj;
+        case 'party': return s.semesterPartyScore; // Element 2: Semester Party Score
         case 'trending': return s.trending;
         default: return s.overall;
       }
