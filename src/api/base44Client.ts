@@ -281,6 +281,15 @@ export interface PartyPhoto {
   created_date: string;
 }
 
+export interface PartyPhotoVote {
+  id: string;
+  party_photo_id: string;
+  party_id: string;
+  user_id: string;
+  value: 1 | -1;
+  created_date: string;
+}
+
 export const base44 = {
   auth: new AuthClient(),
   entities: {
@@ -292,6 +301,7 @@ export const base44 = {
     FraternityComment: new EntityClient<FraternityComment>('fraternity_comment'),
     ReputationRating: new EntityClient<ReputationRating>('reputation_rating'),
     PartyPhoto: new EntityClient<PartyPhoto>('party_photo'),
+    PartyPhotoVote: new EntityClient<PartyPhotoVote>('party_photo_vote'),
   },
   integrations: new IntegrationsClient(),
 };
