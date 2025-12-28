@@ -34,7 +34,7 @@ export default function FraternityCard({ fraternity, rank, onRate, filter = 'ove
       case 'party':
         return scores.partyAdj;
       case 'trending':
-        return scores.overall; // Show overall, but sort by trending
+        return scores.activityTrending; // Show activity score for trending
       default:
         return scores.overall;
     }
@@ -49,7 +49,7 @@ export default function FraternityCard({ fraternity, rank, onRate, filter = 'ove
       case 'party':
         return 'Party Score';
       case 'trending':
-        return 'Overall Score';
+        return 'Activity';
       default:
         return 'Overall Score';
     }
@@ -61,6 +61,7 @@ export default function FraternityCard({ fraternity, rank, onRate, filter = 'ove
     onRate(fraternity);
   };
 
+  const activityScore = scores?.activityTrending ?? 0;
   const trending = scores?.trending ?? (fraternity.momentum ?? 0);
 
   return (
@@ -97,10 +98,10 @@ export default function FraternityCard({ fraternity, rank, onRate, filter = 'ove
 
               <div className="text-right">
                 <div className="text-2xl font-bold text-foreground">
-                  {getDisplayScore().toFixed(1)}
+                  {filter === 'trending' ? Math.round(getDisplayScore()) : getDisplayScore().toFixed(1)}
                 </div>
                 <p className="text-xs text-muted-foreground">{getScoreLabel()}</p>
-                <TrendIndicator momentum={trending} />
+                {filter !== 'trending' && <TrendIndicator momentum={trending} />}
               </div>
             </div>
 
@@ -123,16 +124,29 @@ export default function FraternityCard({ fraternity, rank, onRate, filter = 'ove
             />
 
             <div className="flex items-center justify-between pt-2">
-              <Badge 
-                variant="outline" 
-                className={`${
-                  trending > 0.5 ? 'text-emerald-600 border-emerald-200 bg-emerald-50' :
-                  trending < -0.5 ? 'text-red-500 border-red-200 bg-red-50' :
-                  'text-muted-foreground'
-                }`}
-              >
-                {trending >= 0 ? '+' : ''}{trending.toFixed(2)} trending
-              </Badge>
+              {filter === 'trending' ? (
+                <Badge 
+                  variant="outline" 
+                  className={`${
+                    activityScore > 5 ? 'text-emerald-600 border-emerald-200 bg-emerald-50' :
+                    activityScore > 0 ? 'text-blue-500 border-blue-200 bg-blue-50' :
+                    'text-muted-foreground'
+                  }`}
+                >
+                  {activityScore} recent activity
+                </Badge>
+              ) : (
+                <Badge 
+                  variant="outline" 
+                  className={`${
+                    trending > 0.5 ? 'text-emerald-600 border-emerald-200 bg-emerald-50' :
+                    trending < -0.5 ? 'text-red-500 border-red-200 bg-red-50' :
+                    'text-muted-foreground'
+                  }`}
+                >
+                  {trending >= 0 ? '+' : ''}{trending.toFixed(2)} trending
+                </Badge>
+              )}
               
               <Button 
                 size="sm" 

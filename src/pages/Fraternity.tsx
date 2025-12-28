@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useSearchParams, Link } from 'react-router-dom';
 import { ArrowLeft, Calendar, Star, PartyPopper } from 'lucide-react';
-import { base44, type Fraternity, type Party, type PartyRating, type ReputationRating } from '@/api/base44Client';
+import { base44, type Fraternity, type Party, type PartyRating, type ReputationRating, type PartyComment, type FraternityComment } from '@/api/base44Client';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card } from '@/components/ui/card';
@@ -16,7 +16,8 @@ import {
   computeCampusRepAvg, 
   computeCampusPartyAvg,
   type FraternityScores,
-  type PartyWithRatings
+  type PartyWithRatings,
+  type ActivityData
 } from '@/utils/scoring';
 
 export default function FraternityPage() {
@@ -36,13 +37,15 @@ export default function FraternityPage() {
 
   const loadData = async () => {
     try {
-      const [fratData, partiesData, allFrats, allParties, allPartyRatings, repRatings] = await Promise.all([
+      const [fratData, partiesData, allFrats, allParties, allPartyRatings, repRatings, partyComments, fratComments] = await Promise.all([
         base44.entities.Fraternity.get(fratId!),
         base44.entities.Party.filter({ fraternity_id: fratId! }, '-starts_at'),
         base44.entities.Fraternity.filter({ status: 'active' }),
         base44.entities.Party.list(),
         base44.entities.PartyRating.list(),
         base44.entities.ReputationRating.filter({ fraternity_id: fratId! }),
+        base44.entities.PartyComment.list(),
+        base44.entities.FraternityComment.filter({ fraternity_id: fratId! }),
       ]);
       
       setFraternity(fratData);
@@ -71,13 +74,28 @@ export default function FraternityPage() {
         ratings: partyRatingsMap.get(party.id) || [],
       }));
 
+      // Get party comments for this fraternity's parties
+      const fratPartyComments = partyComments.filter(
+        c => partiesData.some(p => p.id === c.party_id)
+      );
+
+      // Build activity data
+      const activityData: ActivityData = {
+        repRatings,
+        partyRatings: fratPartyRatings,
+        parties: partiesData,
+        partyComments: fratPartyComments,
+        fratComments,
+      };
+
       // Compute full scores
       const scores = await computeFullFraternityScores(
         fratData,
         repRatings,
         partiesWithRatings,
         campusRepAvg,
-        campusPartyAvg
+        campusPartyAvg,
+        activityData
       );
       setComputedScores(scores);
 

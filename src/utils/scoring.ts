@@ -1,4 +1,4 @@
-import type { Fraternity, Party, PartyRating, ReputationRating } from '@/api/base44Client';
+import type { Fraternity, Party, PartyRating, ReputationRating, PartyComment, FraternityComment } from '@/api/base44Client';
 
 // ============================================
 // COMPONENT SCORE FORMULAS
@@ -153,13 +153,74 @@ export function computeFinalOverall(
 }
 
 // ============================================
-// TRENDING CALCULATION (Step E)
+// TRENDING CALCULATION (Step E) - Activity-Based
 // ============================================
 
+export interface ActivityData {
+  repRatings: ReputationRating[];
+  partyRatings: PartyRating[];
+  parties: Party[];
+  partyComments: PartyComment[];
+  fratComments: FraternityComment[];
+}
+
 /**
- * Compute trending score
+ * Compute trending score based on recent activity
+ * Counts all activity in the last 7 days:
+ * - Reputation ratings
+ * - Party ratings  
+ * - Parties created
+ * - Party comments
+ * - Fraternity comments
+ */
+export function computeActivityTrending(
+  activityData: ActivityData,
+  referenceDate: Date = new Date()
+): number {
+  const sevenDaysAgo = new Date(referenceDate.getTime() - 7 * 24 * 60 * 60 * 1000);
+  
+  // Count reputation ratings in last 7 days
+  const recentRepRatings = activityData.repRatings.filter(r => 
+    new Date(r.created_date) >= sevenDaysAgo
+  ).length;
+  
+  // Count party ratings in last 7 days
+  const recentPartyRatings = activityData.partyRatings.filter(r => 
+    new Date(r.created_date) >= sevenDaysAgo
+  ).length;
+  
+  // Count parties in last 7 days
+  const recentParties = activityData.parties.filter(p => 
+    new Date(p.starts_at) >= sevenDaysAgo
+  ).length;
+  
+  // Count party comments in last 7 days
+  const recentPartyComments = activityData.partyComments.filter(c => 
+    new Date(c.created_date) >= sevenDaysAgo
+  ).length;
+  
+  // Count fraternity comments in last 7 days
+  const recentFratComments = activityData.fratComments.filter(c => 
+    new Date(c.created_date) >= sevenDaysAgo
+  ).length;
+  
+  // Total activity score (weighted)
+  // Parties: 3 points each (big events)
+  // Ratings: 2 points each (engagement)
+  // Comments: 1 point each (discussion)
+  const activityScore = 
+    (recentParties * 3) + 
+    (recentRepRatings * 2) + 
+    (recentPartyRatings * 2) + 
+    (recentPartyComments * 1) + 
+    (recentFratComments * 1);
+  
+  return activityScore;
+}
+
+/**
+ * Legacy trending calculation for backward compatibility
  * Trending_f = PartyIndex_7days - PartyIndex_60days
- * Confidence-weighted by recent party rating count
  */
 export function computeTrending(
   partiesWithRatings: PartyWithRatings[],
@@ -212,6 +273,7 @@ export interface FraternityScores {
   partyAdj: number;
   overall: number;
   trending: number;
+  activityTrending: number; // New activity-based trending
   numRepRatings: number;
   numPartyRatings: number;
   confidenceRep: number;
@@ -232,7 +294,8 @@ export async function computeFullFraternityScores(
   repRatings: ReputationRating[],
   partiesWithRatings: PartyWithRatings[],
   campusRepAvg: number,
-  campusPartyAvg: number
+  campusPartyAvg: number,
+  activityData?: ActivityData
 ): Promise<FraternityScores> {
   // Calculate individual reputation sub-score averages
   const avgBrotherhood = repRatings.length > 0
@@ -285,8 +348,13 @@ export async function computeFullFraternityScores(
   // Final overall
   const overall = computeFinalOverall(repAdj, partyAdj);
   
-  // Trending
+  // Trending (legacy)
   const trending = computeTrending(partiesWithRatings);
+  
+  // Activity-based trending (new)
+  const activityTrending = activityData 
+    ? computeActivityTrending(activityData)
+    : 0;
   
   return {
     rawReputation,
@@ -295,6 +363,7 @@ export async function computeFullFraternityScores(
     partyAdj,
     overall,
     trending,
+    activityTrending,
     numRepRatings,
     numPartyRatings,
     confidenceRep,
@@ -358,9 +427,11 @@ export function sortFraternitiesByParty(frats: FraternityWithScores[]): Fraterni
 
 export function sortFraternitiesByTrending(frats: FraternityWithScores[]): FraternityWithScores[] {
   return [...frats].sort((a, b) => {
-    const trendA = a.computedScores?.trending ?? (a.momentum ?? 0);
-    const trendB = b.computedScores?.trending ?? (b.momentum ?? 0);
+    // Use activity-based trending for sorting
+    const trendA = a.computedScores?.activityTrending ?? 0;
+    const trendB = b.computedScores?.activityTrending ?? 0;
     if (trendB !== trendA) return trendB - trendA;
+    // Tiebreaker: overall score
     const overallA = a.computedScores?.overall ?? getOverallScore(a);
     const overallB = b.computedScores?.overall ?? getOverallScore(b);
     return overallB - overallA;
