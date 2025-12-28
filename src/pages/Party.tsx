@@ -8,7 +8,7 @@ import { Card } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import PhotoBulletin from '@/components/photos/PhotoBulletin';
 import RatingHistory from '@/components/party/RatingHistory';
-import CommentSection from '@/components/party/CommentSection';
+import CommentSection from '@/components/comments/CommentSection';
 import PartyRatingForm from '@/components/rate/PartyRatingForm';
 import { createPageUrl } from '@/utils';
 import { format } from 'date-fns';
@@ -179,7 +179,7 @@ export default function PartyPage() {
       <RatingHistory partyId={party.id} />
 
       {/* Comments */}
-      <CommentSection partyId={party.id} />
+      <CommentSection entityId={party.id} entityType="party" />
 
       {/* Rating Form Modal */}
       {showRatingForm && (

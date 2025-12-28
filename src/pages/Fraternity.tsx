@@ -9,6 +9,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import OverallScoreCard from '@/components/scores/OverallScoreCard';
 import PartyCard from '@/components/parties/PartyCard';
 import RateFratSheet from '@/components/leaderboard/RateFratSheet';
+import CommentSection from '@/components/comments/CommentSection';
 import { createPageUrl, clamp } from '@/utils';
 import { 
   computeFullFraternityScores, 
@@ -271,6 +272,9 @@ export default function FraternityPage() {
           <p className="text-muted-foreground">No parties scheduled yet</p>
         </Card>
       )}
+
+      {/* Comments Section */}
+      <CommentSection entityId={fraternity.id} entityType="fraternity" />
 
       {/* Rate Sheet */}
       <RateFratSheet
