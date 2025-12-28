@@ -119,19 +119,15 @@ export default function CommentSection({ partyId }: CommentSectionProps) {
       // Update user points
       await base44.auth.updateMe({ points: (user.points || 0) + 2 });
 
-      // Recalculate party scores
+      // Recalculate comment-derived score (kept on Party as unquantifiable_score).
+      // IMPORTANT: Do NOT update Party.performance_score here; party quality must be derived from PartyRating aggregation.
       const allComments = await base44.entities.PartyComment.filter({ party_id: partyId });
       const avgSentiment = allComments.reduce((sum, c) => sum + (c.sentiment_score ?? 0), 0) / allComments.length;
       const unquantifiableScore = Math.max(0, Math.min(10, 5 + avgSentiment * 5));
-      
-      const party = await base44.entities.Party.get(partyId);
-      if (party) {
-        const newPerformanceScore = ((party.quantifiable_score ?? 5) * 0.5) + (unquantifiableScore * 0.5);
-        await base44.entities.Party.update(partyId, {
-          unquantifiable_score: unquantifiableScore,
-          performance_score: newPerformanceScore,
-        });
-      }
+
+      await base44.entities.Party.update(partyId, {
+        unquantifiable_score: unquantifiableScore,
+      });
 
       setNewComment('');
       setReplyingTo(null);

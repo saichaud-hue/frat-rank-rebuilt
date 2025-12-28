@@ -10,10 +10,17 @@ interface PartyCardProps {
   party: Party;
   fraternityName: string;
   isLive?: boolean;
-  overallPartyQuality?: number; // Confidence-adjusted overall party quality from fraternity
+  overallPartyQuality?: number; // Canonical overall confidence-adjusted
+  userPartyQuality?: number; // Optional personal score (only render when explicitly passed)
 }
 
-export default function PartyCard({ party, fraternityName, isLive = false, overallPartyQuality }: PartyCardProps) {
+export default function PartyCard({
+  party,
+  fraternityName,
+  isLive = false,
+  overallPartyQuality,
+  userPartyQuality,
+}: PartyCardProps) {
   const startDate = new Date(party.starts_at);
   const isCompleted = party.status === 'completed';
   // Only show overallPartyQuality if provided - NO fallback to user score or performance_score
@@ -80,16 +87,27 @@ export default function PartyCard({ party, fraternityName, isLive = false, overa
             )}
 
             {isCompleted && (
-              <div className="flex items-center gap-2 pt-1">
-                {hasScore ? (
-                  <>
-                    <span className={`text-lg font-bold ${getScoreColor(overallPartyQuality)}`}>
-                      {overallPartyQuality.toFixed(1)}
+              <div className="flex flex-col gap-0.5 pt-1">
+                <div className="flex items-center gap-2">
+                  {hasScore ? (
+                    <>
+                      <span className={`text-lg font-bold ${getScoreColor(overallPartyQuality)}`}>
+                        {overallPartyQuality.toFixed(1)}
+                      </span>
+                      <span className="text-xs text-muted-foreground">Overall Party Quality</span>
+                    </>
+                  ) : (
+                    <span className="text-sm text-muted-foreground">—</span>
+                  )}
+                </div>
+
+                {userPartyQuality !== undefined && (
+                  <div className="flex items-center gap-2">
+                    <span className={`text-sm font-semibold ${getScoreColor(userPartyQuality)}`}>
+                      {userPartyQuality.toFixed(1)}
                     </span>
-                    <span className="text-xs text-muted-foreground">Overall Party Quality</span>
-                  </>
-                ) : (
-                  <span className="text-sm text-muted-foreground">—</span>
+                    <span className="text-xs text-muted-foreground">Your Score</span>
+                  </div>
                 )}
               </div>
             )}

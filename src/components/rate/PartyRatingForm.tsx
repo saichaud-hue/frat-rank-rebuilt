@@ -78,54 +78,15 @@ export default function PartyRatingForm({ party, fraternity, onClose, onSubmit }
         await base44.entities.PartyRating.create(ratingData);
       }
 
-      // Recalculate party scores
+      // Recalculate party total ratings (keep PartyRating.party_quality_score as raw user score)
       const allRatings = await base44.entities.PartyRating.filter({ party_id: party.id });
       const totalRatingsCount = allRatings.length;
-      
-      const avgQuality = allRatings.reduce((sum, r) => sum + (r.party_quality_score ?? 0), 0) / totalRatingsCount;
 
+      // IMPORTANT: Do NOT write any user-derived or aggregated scores back onto Party.
+      // Party list displays must be derived from PartyRating aggregation only.
       await base44.entities.Party.update(party.id, {
-        performance_score: clamp(avgQuality, 0, 10),
         total_ratings: totalRatingsCount,
       });
-
-      // Update fraternity scores if applicable
-      if (party.fraternity_id) {
-        const fratRecords = await base44.entities.Fraternity.filter({ id: party.fraternity_id });
-        if (fratRecords.length > 0) {
-          const currentFrat = fratRecords[0];
-          
-          const fratParties = await base44.entities.Party.filter({ 
-            fraternity_id: party.fraternity_id,
-            status: 'completed' 
-          });
-          
-          const partyBaseScore = fratParties.length > 0
-            ? fratParties.reduce((sum, p) => sum + (p.performance_score ?? 5), 0) / fratParties.length
-            : 5;
-
-          const reputationRatings = await base44.entities.ReputationRating.filter({
-            fraternity_id: party.fraternity_id
-          });
-          
-          const reputationScore = reputationRatings.length > 0
-            ? reputationRatings.reduce((sum, r) => sum + (r.combined_score ?? 5), 0) / reputationRatings.length
-            : 5;
-
-          const overallScoreBase = (0.7 * reputationScore) + (0.3 * partyBaseScore);
-          const prevOverall = currentFrat.display_score ?? overallScoreBase;
-          const newOverall = (prevOverall * 0.8) + (avgQuality * 0.2);
-          const momentum = avgQuality - overallScoreBase;
-
-          await base44.entities.Fraternity.update(party.fraternity_id, {
-            reputation_score: clamp(reputationScore, 0, 10),
-            historical_party_score: clamp(partyBaseScore, 0, 10),
-            base_score: clamp(overallScoreBase, 0, 10),
-            display_score: clamp(newOverall, 0, 10),
-            momentum: clamp(momentum, -2, 2),
-          });
-        }
-      }
 
       onSubmit(party.id, { vibe, music, execution, partyQuality: partyQualityScore });
     } catch (error) {

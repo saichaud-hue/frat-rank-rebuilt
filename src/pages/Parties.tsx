@@ -67,13 +67,24 @@ export default function Parties() {
 
       // Compute per-party overall quality using fraternity-scoped baselines
       const perPartyScores = new Map<string, number>();
-      for (const [fratId, partiesWithRatings] of partiesByFrat) {
-        // Compute baseline for this fraternity only
-        const fratBaseline = computeFraternityPartyBaseline(partiesWithRatings);
-        
-        // Apply to each party in this fraternity
+      for (const [, partiesWithRatings] of partiesByFrat) {
+        // Apply to each party in this fraternity.
+        // Baseline is computed per-party, excluding that party's own ratings.
         for (const { party, ratings } of partiesWithRatings) {
-          perPartyScores.set(party.id, computePartyOverallQuality(ratings, fratBaseline));
+          const perPartyBaseline = computeFraternityPartyBaseline(partiesWithRatings, party.id);
+          const overall = computePartyOverallQuality(ratings, perPartyBaseline);
+
+          // TEMP DEBUG (remove after verification)
+          if (import.meta.env.DEV && party.title === 'Margaritaville') {
+            const avgQuality = ratings.length
+              ? ratings.reduce((s, r) => s + (r.party_quality_score ?? 5), 0) / ratings.length
+              : perPartyBaseline;
+            const confidence = 1 - Math.exp(-ratings.length / 40);
+            const adjusted = confidence * avgQuality + (1 - confidence) * perPartyBaseline;
+            console.log('[debug Margaritaville overall][Parties]', { n: ratings.length, avgQuality, baseline: perPartyBaseline, confidence, adjusted });
+          }
+
+          perPartyScores.set(party.id, overall);
         }
       }
       setPartyScores(perPartyScores);

@@ -3,7 +3,7 @@ import { base44, seedInitialData, type Fraternity, type Party, type PartyRating,
 import { 
   computeFullFraternityScores, 
   computeCampusRepAvg, 
-  computeCampusPartyAvg,
+  computeCampusPartyAvgFromRatings,
   sortFraternitiesByOverall,
   sortFraternitiesByReputation,
   sortFraternitiesByParty,
@@ -58,7 +58,7 @@ export default function Leaderboard() {
 
       // Compute campus averages
       const campusRepAvg = computeCampusRepAvg(fratsData);
-      const campusPartyAvg = computeCampusPartyAvg(partiesData);
+      const campusPartyAvg = computeCampusPartyAvgFromRatings(allPartyRatings);
 
       // Group parties and ratings by fraternity
       const partiesByFrat = new Map<string, Party[]>();
