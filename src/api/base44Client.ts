@@ -236,7 +236,17 @@ export interface PartyComment {
   sentiment_score: number;
   toxicity_label: 'safe' | 'toxic' | 'flagged';
   upvotes: number;
+  downvotes: number;
   moderated: boolean;
+  created_date: string;
+}
+
+export interface PartyCommentVote {
+  id: string;
+  comment_id: string;
+  party_id: string;
+  user_id: string;
+  value: 1 | -1;
   created_date: string;
 }
 
@@ -298,6 +308,7 @@ export const base44 = {
     Party: new EntityClient<Party>('party'),
     PartyRating: new EntityClient<PartyRating>('party_rating'),
     PartyComment: new EntityClient<PartyComment>('party_comment'),
+    PartyCommentVote: new EntityClient<PartyCommentVote>('party_comment_vote'),
     FraternityComment: new EntityClient<FraternityComment>('fraternity_comment'),
     ReputationRating: new EntityClient<ReputationRating>('reputation_rating'),
     PartyPhoto: new EntityClient<PartyPhoto>('party_photo'),
