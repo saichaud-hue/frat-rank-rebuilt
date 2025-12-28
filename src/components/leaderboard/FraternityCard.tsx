@@ -112,7 +112,14 @@ export default function FraternityCard({ fraternity, rank, onRate, filter = 'ove
 
             <ScoreBreakdown 
               reputationScore={scores?.repAdj ?? fraternity.reputation_score ?? 5} 
-              partyScore={scores?.partyAdj ?? fraternity.historical_party_score ?? 5} 
+              partyScore={scores?.partyAdj ?? fraternity.historical_party_score ?? 5}
+              mode={filter === 'party' ? 'party' : 'reputation'}
+              avgVibe={scores?.avgVibe ?? 5}
+              avgMusic={scores?.avgMusic ?? 5}
+              avgExecution={scores?.avgExecution ?? 5}
+              avgBrotherhood={scores?.avgBrotherhood ?? 5}
+              avgReputation={scores?.avgReputation ?? 5}
+              avgCommunity={scores?.avgCommunity ?? 5}
             />
 
             <div className="flex items-center justify-between pt-2">
