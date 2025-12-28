@@ -16,7 +16,7 @@ import { createPageUrl, clamp, getScoreColor } from '@/utils';
 import { 
   computeFullFraternityScores, 
   computeCampusRepAvg, 
-  computeCampusPartyAvgFromRatings,
+  computeCampusPartyAvg,
   computeCombinedReputation,
   computePartyOverallQuality,
   type FraternityScores,
@@ -66,7 +66,7 @@ export default function FraternityPage() {
 
       // Compute campus averages (stable party baseline derived from ratings, not Party fields)
       const campusRepAvg = computeCampusRepAvg(allFrats);
-      const campusPartyAvg = computeCampusPartyAvgFromRatings(allPartyRatings);
+      const campusPartyAvg = computeCampusPartyAvg(allPartyRatings);
 
       // Get party ratings for this fraternity's parties
       const fratPartyRatings = allPartyRatings.filter(
@@ -87,14 +87,22 @@ export default function FraternityPage() {
         ratings: partyRatingsMap.get(party.id) || [],
       }));
 
-      // Compute per-party overall quality scores using the canonical utility function
-      // New formula: just average of ratings, no baseline adjustment needed.
-      // Fraternity-level weighting handles sample size naturally via ln(1 + n).
+      // Compute per-party overall quality scores using Formula G
+      // Each party uses fraternity baseline EXCLUDING that party's ratings
       const perPartyScores = new Map<string, number>();
       for (const { party, ratings } of partiesWithRatings) {
-        const overall = computePartyOverallQuality(ratings);
-        if (overall !== undefined) {
-          perPartyScores.set(party.id, overall);
+        // Get all frat ratings EXCLUDING this party
+        const fratRatingsExcludingParty = fratPartyRatings.filter(r => r.party_id !== party.id);
+        const overall = computePartyOverallQuality(ratings, fratRatingsExcludingParty);
+        perPartyScores.set(party.id, overall);
+        
+        // DEV debug log for specific parties (Formula K)
+        if (import.meta.env.DEV && (party.title?.toLowerCase().includes('margaritaville') || party.title?.toLowerCase().includes('neon'))) {
+          console.log(`[DEBUG G] Party: ${party.title}`, {
+            n_p: ratings.length,
+            fratRatingsExcluding: fratRatingsExcludingParty.length,
+            overall: overall.toFixed(2),
+          });
         }
       }
       setPartyScores(perPartyScores);
@@ -269,15 +277,9 @@ export default function FraternityPage() {
     return score !== undefined && p.total_ratings > 0;
   });
 
-  // For header "Overall Party Quality": if exactly 1 rated party, use that party's canonical score
-  // Otherwise use the fraternity-level partyAdj
-  const headerPartyQuality = (() => {
-    if (ratedPastParties.length === 1 && computedScores) {
-      // Single rated party scenario: use the party's canonical overall quality
-      return partyScores.get(ratedPastParties[0].id) ?? computedScores.partyAdj;
-    }
-    return computedScores?.partyAdj ?? 5;
-  })();
+  // For header "Overall Party Quality": ALWAYS use fraternity-level partyAdj (formula D)
+  // This is the confidence-adjusted fraternity party score, not per-party score
+  const headerPartyQuality = computedScores?.partyAdj ?? 5;
 
   // Calculate user's combined scores if they have rated
   const userFratScore = userRating 
