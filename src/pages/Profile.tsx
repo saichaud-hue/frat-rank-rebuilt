@@ -22,16 +22,17 @@ export default function Profile() {
       setUser(userData);
 
       if (userData) {
-        const [partyRatings, repRatings, comments] = await Promise.all([
+        const [partyRatings, repRatings, partyComments, fratComments] = await Promise.all([
           base44.entities.PartyRating.filter({ user_id: userData.id }),
           base44.entities.ReputationRating.filter({ user_id: userData.id }),
           base44.entities.PartyComment.filter({ user_id: userData.id }),
+          base44.entities.FraternityComment.filter({ user_id: userData.id }),
         ]);
 
         setStats({
           partyRatings: partyRatings.length,
           repRatings: repRatings.length,
-          comments: comments.length,
+          comments: partyComments.length + fratComments.length,
         });
       }
     } catch (error) {
