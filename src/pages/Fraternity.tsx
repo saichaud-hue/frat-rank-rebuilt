@@ -19,6 +19,7 @@ import {
   computeCampusPartyAvg,
   computeCombinedReputation,
   computePartyOverallQuality,
+  computeFraternityPartyBaseline,
   type FraternityScores,
   type PartyWithRatings,
   type ActivityData
@@ -87,10 +88,13 @@ export default function FraternityPage() {
         ratings: partyRatingsMap.get(party.id) || [],
       }));
 
+      // Compute fraternity-scoped baseline (only affected by this frat's ratings)
+      const fratBaseline = computeFraternityPartyBaseline(partiesWithRatings);
+
       // Compute per-party overall quality scores using the canonical utility function
       const perPartyScores = new Map<string, number>();
       for (const { party, ratings } of partiesWithRatings) {
-        perPartyScores.set(party.id, computePartyOverallQuality(ratings, campusPartyAvg));
+        perPartyScores.set(party.id, computePartyOverallQuality(ratings, fratBaseline));
       }
       setPartyScores(perPartyScores);
 
