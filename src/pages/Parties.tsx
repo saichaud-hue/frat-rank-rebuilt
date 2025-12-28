@@ -17,6 +17,7 @@ export default function Parties() {
   const [parties, setParties] = useState<Party[]>([]);
   const [fraternities, setFraternities] = useState<Fraternity[]>([]);
   const [partyScores, setPartyScores] = useState<Map<string, number>>(new Map());
+  const [partyRatingCounts, setPartyRatingCounts] = useState<Map<string, number>>(new Map());
   const [loading, setLoading] = useState(true);
   const [filters, setFilters] = useState<Filters>({
     fraternity: 'all',
@@ -45,15 +46,18 @@ export default function Parties() {
       setParties(partiesData);
       setFraternities(fraternityData);
 
-      // Group ratings by party
+      // Group ratings by party and track counts
       const partyRatingsMap = new Map<string, PartyRating[]>();
+      const ratingCountsMap = new Map<string, number>();
       for (const rating of allPartyRatings) {
         if (rating.party_id) {
           const existing = partyRatingsMap.get(rating.party_id) || [];
           existing.push(rating);
           partyRatingsMap.set(rating.party_id, existing);
+          ratingCountsMap.set(rating.party_id, existing.length);
         }
       }
+      setPartyRatingCounts(ratingCountsMap);
 
       // Group parties by fraternity for fraternity-scoped baselines
       const partiesByFrat = new Map<string, PartyWithRatings[]>();
@@ -198,6 +202,7 @@ export default function Parties() {
               isLive
               computedStatus="live"
               overallPartyQuality={partyScores.get(party.id)}
+              ratingCount={partyRatingCounts.get(party.id) ?? 0}
             />
           ))}
         </section>
@@ -214,6 +219,7 @@ export default function Parties() {
               fraternityName={getFraternityName(party.fraternity_id)}
               computedStatus="upcoming"
               overallPartyQuality={partyScores.get(party.id)}
+              ratingCount={partyRatingCounts.get(party.id) ?? 0}
             />
           ))}
         </section>
@@ -230,6 +236,7 @@ export default function Parties() {
               fraternityName={getFraternityName(party.fraternity_id)}
               computedStatus="completed"
               overallPartyQuality={partyScores.get(party.id)}
+              ratingCount={partyRatingCounts.get(party.id) ?? 0}
             />
           ))}
         </section>

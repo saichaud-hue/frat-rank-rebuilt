@@ -13,6 +13,7 @@ interface PartyCardProps {
   computedStatus?: 'live' | 'upcoming' | 'completed'; // Time-based status from parent
   overallPartyQuality?: number; // Canonical overall confidence-adjusted
   userPartyQuality?: number; // Optional personal score (only render when explicitly passed)
+  ratingCount?: number; // Number of ratings for this party
 }
 
 export default function PartyCard({
@@ -22,12 +23,15 @@ export default function PartyCard({
   computedStatus,
   overallPartyQuality,
   userPartyQuality,
+  ratingCount,
 }: PartyCardProps) {
   const startDate = new Date(party.starts_at);
   // Use computedStatus if provided, otherwise fall back to stored status
   const isCompleted = computedStatus === 'completed' || party.status === 'completed';
-  // Always show score for completed parties (will show baseline 5.0 if no ratings)
-  const hasScore = isCompleted && overallPartyQuality !== undefined;
+  // Use ratingCount prop if provided, otherwise fall back to party.total_ratings
+  const actualRatingCount = ratingCount ?? party.total_ratings ?? 0;
+  // Only show score if party has at least 1 rating
+  const hasScore = isCompleted && overallPartyQuality !== undefined && actualRatingCount > 0;
 
   return (
     <Link to={createPageUrl(`Party?id=${party.id}`)}>
@@ -100,7 +104,9 @@ export default function PartyCard({
                       <span className="text-xs text-muted-foreground">Overall Party Quality</span>
                     </>
                   ) : (
-                    <span className="text-sm text-muted-foreground">—</span>
+                    <Badge variant="outline" className="text-xs text-muted-foreground">
+                      No ratings yet
+                    </Badge>
                   )}
                 </div>
 
@@ -116,7 +122,7 @@ export default function PartyCard({
             )}
 
             <p className="text-xs text-muted-foreground">
-              {party.total_ratings} {party.total_ratings === 1 ? 'rating' : 'ratings'}
+              {actualRatingCount} {actualRatingCount === 1 ? 'rating' : 'ratings'}
             </p>
           </div>
         </div>
