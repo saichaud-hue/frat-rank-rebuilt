@@ -45,7 +45,7 @@ export default function LeaderboardPodium({ topThree, ranks = [1, 2, 3], filter 
       case 'reputation':
         return 'Reputation';
       case 'party':
-        return 'Party Score';
+        return 'Frat Party Score';
       case 'trending':
         return 'Overall Score';
       default:
@@ -113,6 +113,9 @@ export default function LeaderboardPodium({ topThree, ranks = [1, 2, 3], filter 
               {getDisplayScore(frat).toFixed(1)}
             </div>
             <p className="text-xs text-muted-foreground">{getScoreLabel()}</p>
+            {filter === 'party' && (
+              <p className="text-[9px] text-muted-foreground/70">Weighted avg</p>
+            )}
           </div>
         </Card>
       </Link>
