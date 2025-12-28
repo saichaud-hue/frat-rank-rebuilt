@@ -1,20 +1,28 @@
 import { useState, useEffect } from 'react';
 import { PartyPopper } from 'lucide-react';
-import { base44, seedInitialData, type Party, type Fraternity } from '@/api/base44Client';
+import { base44, seedInitialData, type Party, type Fraternity, type PartyRating } from '@/api/base44Client';
 import PartyCard from '@/components/parties/PartyCard';
 import PartyFilters from '@/components/parties/PartyFilters';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Badge } from '@/components/ui/badge';
 import { subDays, addDays, startOfDay, endOfDay } from 'date-fns';
+import { computePartyQuality, computeAdjustedPartyIndex, computeCampusPartyAvg } from '@/utils/scoring';
+
 interface Filters {
   fraternity: string;
   theme: string;
   timeframe: string;
 }
 
+// Store per-party confidence-adjusted overall quality
+interface PartyScoreData {
+  [partyId: string]: number;
+}
+
 export default function Parties() {
   const [parties, setParties] = useState<Party[]>([]);
   const [fraternities, setFraternities] = useState<Fraternity[]>([]);
+  const [partyScores, setPartyScores] = useState<PartyScoreData>({});
   const [loading, setLoading] = useState(true);
   const [filters, setFilters] = useState<Filters>({
     fraternity: 'all',
@@ -28,26 +36,51 @@ export default function Parties() {
 
   const initAndLoad = async () => {
     await seedInitialData();
-    await Promise.all([loadParties(), loadFraternities()]);
+    const [partiesData, fraternityData] = await Promise.all([
+      base44.entities.Party.list('starts_at'),
+      base44.entities.Fraternity.list()
+    ]);
+    setParties(partiesData);
+    setFraternities(fraternityData);
+    
+    // Compute confidence-adjusted overall party quality for each completed party
+    await computePartyScores(partiesData);
     setLoading(false);
   };
 
-  const loadParties = async () => {
-    try {
-      const data = await base44.entities.Party.list('starts_at');
-      setParties(data);
-    } catch (error) {
-      console.error('Failed to load parties:', error);
+  const computePartyScores = async (partiesData: Party[]) => {
+    const completedParties = partiesData.filter(p => p.status === 'completed');
+    if (completedParties.length === 0) {
+      setPartyScores({});
+      return;
     }
-  };
-
-  const loadFraternities = async () => {
-    try {
-      const data = await base44.entities.Fraternity.list();
-      setFraternities(data);
-    } catch (error) {
-      console.error('Failed to load fraternities:', error);
+    
+    // Get all party ratings
+    const allRatings = await base44.entities.PartyRating.list();
+    
+    // Campus average for confidence adjustment
+    const campusPartyAvg = computeCampusPartyAvg(partiesData);
+    
+    const scores: PartyScoreData = {};
+    
+    for (const party of completedParties) {
+      const partyRatings = allRatings.filter(r => r.party_id === party.id);
+      
+      if (partyRatings.length === 0) {
+        // No ratings - fall back to campus average
+        scores[party.id] = campusPartyAvg;
+        continue;
+      }
+      
+      // Compute raw average party quality from ratings
+      const rawAvg = partyRatings.reduce((sum, r) => sum + (r.party_quality_score ?? 5), 0) / partyRatings.length;
+      
+      // Apply confidence adjustment: cP = 1 - exp(-n / 40)
+      const adjusted = computeAdjustedPartyIndex(rawAvg, partyRatings.length, campusPartyAvg);
+      scores[party.id] = adjusted;
     }
+    
+    setPartyScores(scores);
   };
 
   const getFraternityName = (id: string) => {
@@ -109,10 +142,10 @@ export default function Parties() {
   const filteredParties = filterParties(parties);
   const liveParties = filteredParties.filter(p => isLive(p));
   const upcomingParties = filteredParties.filter(p => !isLive(p) && p.status === 'upcoming');
-  // Sort completed parties by Party Quality (performance_score) descending
+  // Sort completed parties by confidence-adjusted overall party quality descending
   const completedParties = filteredParties
     .filter(p => p.status === 'completed')
-    .sort((a, b) => (b.performance_score ?? 0) - (a.performance_score ?? 0));
+    .sort((a, b) => (partyScores[b.id] ?? 0) - (partyScores[a.id] ?? 0));
 
   if (loading) {
     return (
@@ -181,6 +214,7 @@ export default function Parties() {
               key={party.id}
               party={party}
               fraternityName={getFraternityName(party.fraternity_id)}
+              overallPartyQuality={partyScores[party.id]}
             />
           ))}
         </section>
