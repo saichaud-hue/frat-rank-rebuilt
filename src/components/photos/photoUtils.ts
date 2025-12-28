@@ -13,7 +13,11 @@ export async function recomputePartyCoverPhoto(partyId: string): Promise<void> {
     );
 
     if (photos.length === 0) {
-      return; // Don't change cover if no photos
+      // Clear cover photo if no approved photos remain
+      await base44.entities.Party.update(partyId, {
+        display_photo_url: null,
+      });
+      return;
     }
 
     // Find photo with highest net score (likes - dislikes)
