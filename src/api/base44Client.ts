@@ -231,6 +231,7 @@ export interface PartyComment {
   id: string;
   party_id: string;
   user_id: string;
+  parent_comment_id?: string | null;
   text: string;
   sentiment_score: number;
   toxicity_label: 'safe' | 'toxic' | 'flagged';
