@@ -257,9 +257,21 @@ export function computeCampusRepAvg(fraternities: Fraternity[]): number {
 }
 
 export function computeCampusPartyAvg(parties: Party[]): number {
+  // Deprecated for scoring baselines: Party.performance_score may be user/feature-updated.
+  // Kept for backward compatibility, but prefer computeCampusPartyAvgFromRatings.
   if (parties.length === 0) return 5.0;
   const sum = parties.reduce((acc, p) => acc + (p.performance_score ?? 5), 0);
   return sum / parties.length;
+}
+
+/**
+ * Stable campus party baseline derived from ALL PartyRating records.
+ * This avoids pollution from any cached Party score fields.
+ */
+export function computeCampusPartyAvgFromRatings(allPartyRatings: PartyRating[]): number {
+  if (allPartyRatings.length === 0) return 5.0;
+  const sum = allPartyRatings.reduce((acc, r) => acc + (r.party_quality_score ?? 5), 0);
+  return sum / allPartyRatings.length;
 }
 
 // ============================================
@@ -273,18 +285,22 @@ export function computeCampusPartyAvg(parties: Party[]): number {
  * @param partiesWithRatings - All parties with their ratings for a single fraternity
  * @returns Baseline score (average of party_quality_score, or 5.0 if no ratings)
  */
-export function computeFraternityPartyBaseline(partiesWithRatings: PartyWithRatings[]): number {
-  // Collect all party ratings for this fraternity
+export function computeFraternityPartyBaseline(
+  partiesWithRatings: PartyWithRatings[],
+  excludePartyId?: string
+): number {
+  // Collect all party ratings for this fraternity (optionally excluding a single party)
   const allRatings: PartyRating[] = [];
-  for (const { ratings } of partiesWithRatings) {
+  for (const { party, ratings } of partiesWithRatings) {
+    if (excludePartyId && party.id === excludePartyId) continue;
     allRatings.push(...ratings);
   }
   
   if (allRatings.length === 0) {
-    return 5.0; // Neutral default when no ratings exist
+    return 5.0; // Neutral default when no baseline ratings exist
   }
   
-  // Simple average of all party quality scores for this fraternity
+  // Simple average of party quality scores for this fraternity
   const sum = allRatings.reduce((acc, r) => acc + (r.party_quality_score ?? 5), 0);
   return sum / allRatings.length;
 }
