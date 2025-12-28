@@ -69,6 +69,10 @@ export interface ActivityData {
 export function computeCampusBaseline(
   allPartiesWithRatings: PartyWithRatings[]
 ): number {
+  const NEUTRAL_PRIOR = 5.5;
+  const MIN_RATINGS_THRESHOLD = 30;
+  const MIN_PARTIES_THRESHOLD = 10;
+
   let weightedSum = 0;
   let totalWeight = 0;
   let totalRatings = 0;
@@ -95,11 +99,19 @@ export function computeCampusBaseline(
     totalWeight += w_p;
   }
 
-  if (totalWeight === 0) {
+  // Minimum data threshold: use neutral prior if insufficient data
+  if (totalWeight === 0 || totalRatings < MIN_RATINGS_THRESHOLD || ratedPartyCount < MIN_PARTIES_THRESHOLD) {
     if (import.meta.env.DEV) {
-      console.log('[CAMPUS BASELINE] No rated parties - using fallback 5.5');
+      console.log('═══════════════════════════════════════════════════════════');
+      console.log('[CAMPUS BASELINE] Insufficient data - using neutral prior');
+      console.log('═══════════════════════════════════════════════════════════');
+      console.log(`  Total parties in system: ${allPartiesWithRatings.length}`);
+      console.log(`  Parties with ratings: ${ratedPartyCount} (threshold: ${MIN_PARTIES_THRESHOLD})`);
+      console.log(`  Total ratings: ${totalRatings} (threshold: ${MIN_RATINGS_THRESHOLD})`);
+      console.log(`  B_campus: ${NEUTRAL_PRIOR} (neutral prior)`);
+      console.log('═══════════════════════════════════════════════════════════');
     }
-    return 5.5;
+    return NEUTRAL_PRIOR;
   }
 
   const baseline = Math.max(0, Math.min(10, weightedSum / totalWeight));
@@ -338,6 +350,35 @@ export function computeFraternityBaseline(
   return baseline;
 }
 
+/**
+ * Helper: Compute baseline from a set of parties (for leave-one-out)
+ * Returns weighted average of Q_p values, or 5.5 if no data
+ */
+function computeFraternityBaselineFromParties(
+  partiesWithRatings: PartyWithRatings[]
+): number {
+  const ratedParties = partiesWithRatings.filter(pwr => pwr.ratings.length > 0);
+  if (ratedParties.length === 0) return 5.5;
+
+  let weightedSum = 0;
+  let totalWeight = 0;
+
+  for (const { ratings } of ratedParties) {
+    const n_p = ratings.length;
+    const avgVibe = ratings.reduce((sum, r) => sum + (r.vibe_score ?? 5), 0) / n_p;
+    const avgMusic = ratings.reduce((sum, r) => sum + (r.music_score ?? 5), 0) / n_p;
+    const avgExecution = ratings.reduce((sum, r) => sum + (r.execution_score ?? 5), 0) / n_p;
+    const Q_p = 0.50 * avgVibe + 0.30 * avgMusic + 0.20 * avgExecution;
+
+    const w_p = Math.log(1 + n_p);
+    weightedSum += Q_p * w_p;
+    totalWeight += w_p;
+  }
+
+  if (totalWeight === 0) return 5.5;
+  return Math.max(0, Math.min(10, weightedSum / totalWeight));
+}
+
 // ============================================
 // ELEMENT 2: SEMESTER FRATERNITY PARTY SCORE
 // ============================================
@@ -380,6 +421,7 @@ export function computeSemesterPartyScore(
 ): SemesterPartyScoreResult {
   const alpha = 0.08; // Max hosting bonus (+8%)
   const t = 2.0;      // Hosting bonus saturation rate
+  const k = 10;       // Confidence constant for S_p stabilization
 
   // Filter to only parties with at least 1 rating (hasData is about RATED parties)
   const ratedParties = partiesWithRatings.filter(pwr => pwr.ratings.length > 0);
@@ -394,12 +436,8 @@ export function computeSemesterPartyScore(
 
   const m_f = partiesWithRatings.length; // Number of parties hosted (for hosting bonus)
 
-  // Compute individual party scores first using fraternity baseline
-  const fratBaseline = computeFraternityBaseline(partiesWithRatings, campusBaseline);
-  
-  const k = 10; // Confidence constant for S_p stabilization
-
   // Step 1 & 2: Weighted average of STABILIZED S_p values (only from rated parties)
+  // IMPORTANT: Use leave-one-out baseline to prevent B_f leakage
   let weightedSum = 0;
   let totalWeight = 0;
 
@@ -413,6 +451,7 @@ export function computeSemesterPartyScore(
     c_n: number;
     S_p: number;
     w_p: number;
+    baselineSource: string;
   }> = [];
 
   for (const { party, ratings } of ratedParties) {
@@ -421,11 +460,28 @@ export function computeSemesterPartyScore(
     // Compute raw Q_p for this party
     const Q_p = computeRawPartyQuality(ratings)!;
     
+    // LEAVE-ONE-OUT: Compute B_f from other parties (excluding this one)
+    const otherParties = partiesWithRatings.filter(pwr => pwr.party.id !== party.id);
+    const otherRatedParties = otherParties.filter(pwr => pwr.ratings.length > 0);
+    
+    let B_f: number;
+    let baselineSource: string;
+    
+    if (otherRatedParties.length > 0) {
+      // Compute baseline from other rated parties
+      B_f = computeFraternityBaselineFromParties(otherRatedParties);
+      baselineSource = `other ${otherRatedParties.length} rated parties`;
+    } else {
+      // No other rated parties - use campus baseline (neutral prior)
+      B_f = campusBaseline;
+      baselineSource = 'campus baseline (no other rated parties)';
+    }
+    
     // Confidence factor c(n_p) = n_p / (n_p + k)
     const c_n = n_p / (n_p + k);
 
     // Use STABILIZED party score: S_p = c(n_p) * Q_p + (1 - c(n_p)) * B_f
-    const S_p = c_n * Q_p + (1 - c_n) * fratBaseline;
+    const S_p = c_n * Q_p + (1 - c_n) * B_f;
 
     // Participation weight
     const w_p = Math.log(1 + n_p);
@@ -439,10 +495,11 @@ export function computeSemesterPartyScore(
       partyTitle: party.title,
       n_p,
       Q_p,
-      B_f: fratBaseline,
+      B_f,
       c_n,
       S_p,
       w_p,
+      baselineSource,
     });
   }
 
@@ -461,14 +518,16 @@ export function computeSemesterPartyScore(
     console.log('Inputs:');
     console.log(`  m_f (parties hosted): ${m_f}`);
     console.log(`  Rated parties: ${ratedParties.length}`);
-    console.log(`  B_f (frat baseline): ${fratBaseline.toFixed(4)}`);
+    console.log(`  Campus baseline (neutral prior): ${campusBaseline.toFixed(4)}`);
     console.log(`  k (confidence constant): ${k}`);
     console.log('───────────────────────────────────────────────────────────');
-    console.log('Per-party breakdown (Element 2 uses ALL ratings, NOT user recent):');
+    console.log('Per-party breakdown (LEAVE-ONE-OUT baseline):');
     for (const info of partyDebugInfo) {
       console.log(`  Party: "${info.partyTitle}" (${info.partyId.slice(0, 8)}...)`);
       console.log(`    n_p (rating count): ${info.n_p}`);
       console.log(`    Q_p (raw quality): ${info.Q_p.toFixed(4)}`);
+      console.log(`    B_f source: ${info.baselineSource}`);
+      console.log(`    B_f value: ${info.B_f.toFixed(4)}`);
       console.log(`    c(n_p) = ${info.n_p}/(${info.n_p}+${k}) = ${info.c_n.toFixed(4)}`);
       console.log(`    S_p = ${info.c_n.toFixed(4)}*${info.Q_p.toFixed(2)} + ${(1 - info.c_n).toFixed(4)}*${info.B_f.toFixed(2)} = ${info.S_p.toFixed(4)}`);
       console.log(`    w_p = ln(1+${info.n_p}) = ${info.w_p.toFixed(4)}`);
