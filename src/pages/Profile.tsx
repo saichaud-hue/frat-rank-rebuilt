@@ -1,16 +1,22 @@
 import { useState, useEffect } from 'react';
-import { User, Trophy, PartyPopper, Star, LogIn, Award } from 'lucide-react';
+import { User, Trophy, PartyPopper, Star, LogIn, Award, ChevronDown, ChevronUp } from 'lucide-react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { base44 } from '@/api/base44Client';
+import { format } from 'date-fns';
 
 export default function Profile() {
   const [user, setUser] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [stats, setStats] = useState({ partyRatings: 0, repRatings: 0, comments: 0 });
+  const [partyRatingsData, setPartyRatingsData] = useState<any[]>([]);
+  const [repRatingsData, setRepRatingsData] = useState<any[]>([]);
+  const [commentsData, setCommentsData] = useState<any[]>([]);
+  const [expandedSection, setExpandedSection] = useState<string | null>(null);
 
   useEffect(() => {
     loadProfile();
@@ -22,12 +28,43 @@ export default function Profile() {
       setUser(userData);
 
       if (userData) {
-        const [partyRatings, repRatings, partyComments, fratComments] = await Promise.all([
+        const [partyRatings, repRatings, partyComments, fratComments, parties, fraternities] = await Promise.all([
           base44.entities.PartyRating.filter({ user_id: userData.id }),
           base44.entities.ReputationRating.filter({ user_id: userData.id }),
           base44.entities.PartyComment.filter({ user_id: userData.id }),
           base44.entities.FraternityComment.filter({ user_id: userData.id }),
+          base44.entities.Party.list(),
+          base44.entities.Fraternity.list(),
         ]);
+
+        // Enrich party ratings with party/fraternity names
+        const enrichedPartyRatings = partyRatings.map((r: any) => {
+          const party = parties.find((p: any) => p.id === r.party_id);
+          const frat = party ? fraternities.find((f: any) => f.id === party.fraternity_id) : null;
+          return { ...r, partyName: party?.title || 'Unknown Party', fratName: frat?.name || '' };
+        });
+
+        // Enrich rep ratings with fraternity names
+        const enrichedRepRatings = repRatings.map((r: any) => {
+          const frat = fraternities.find((f: any) => f.id === r.fraternity_id);
+          return { ...r, fratName: frat?.name || 'Unknown Fraternity' };
+        });
+
+        // Enrich comments with entity names
+        const enrichedPartyComments = partyComments.map((c: any) => {
+          const party = parties.find((p: any) => p.id === c.party_id);
+          return { ...c, entityName: party?.title || 'Unknown Party', type: 'party' };
+        });
+        const enrichedFratComments = fratComments.map((c: any) => {
+          const frat = fraternities.find((f: any) => f.id === c.fraternity_id);
+          return { ...c, entityName: frat?.name || 'Unknown Fraternity', type: 'fraternity' };
+        });
+
+        setPartyRatingsData(enrichedPartyRatings);
+        setRepRatingsData(enrichedRepRatings);
+        setCommentsData([...enrichedPartyComments, ...enrichedFratComments].sort((a, b) => 
+          new Date(b.created_date).getTime() - new Date(a.created_date).getTime()
+        ));
 
         setStats({
           partyRatings: partyRatings.length,
@@ -111,23 +148,119 @@ export default function Profile() {
         </div>
       </Card>
 
-      {/* Stats */}
-      <div className="grid grid-cols-3 gap-4">
-        <Card className="glass p-4 text-center">
-          <PartyPopper className="h-6 w-6 mx-auto text-pink-500 mb-2" />
-          <p className="text-2xl font-bold">{stats.partyRatings}</p>
-          <p className="text-xs text-muted-foreground">Party Ratings</p>
-        </Card>
-        <Card className="glass p-4 text-center">
-          <Trophy className="h-6 w-6 mx-auto text-amber-500 mb-2" />
-          <p className="text-2xl font-bold">{stats.repRatings}</p>
-          <p className="text-xs text-muted-foreground">Frat Ratings</p>
-        </Card>
-        <Card className="glass p-4 text-center">
-          <Star className="h-6 w-6 mx-auto text-purple-500 mb-2" />
-          <p className="text-2xl font-bold">{stats.comments}</p>
-          <p className="text-xs text-muted-foreground">Comments</p>
-        </Card>
+      {/* Stats - Expandable */}
+      <div className="space-y-3">
+        {/* Party Ratings */}
+        <Collapsible open={expandedSection === 'partyRatings'} onOpenChange={(open) => setExpandedSection(open ? 'partyRatings' : null)}>
+          <CollapsibleTrigger asChild>
+            <Card className="glass p-4 cursor-pointer hover:bg-muted/50 transition-colors">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <PartyPopper className="h-6 w-6 text-pink-500" />
+                  <div>
+                    <p className="text-2xl font-bold">{stats.partyRatings}</p>
+                    <p className="text-xs text-muted-foreground">Party Ratings</p>
+                  </div>
+                </div>
+                {expandedSection === 'partyRatings' ? <ChevronUp className="h-5 w-5 text-muted-foreground" /> : <ChevronDown className="h-5 w-5 text-muted-foreground" />}
+              </div>
+            </Card>
+          </CollapsibleTrigger>
+          <CollapsibleContent>
+            <Card className="glass mt-2 p-4 space-y-3">
+              {partyRatingsData.length === 0 ? (
+                <p className="text-muted-foreground text-sm text-center py-4">No party ratings yet</p>
+              ) : (
+                partyRatingsData.map((rating) => (
+                  <div key={rating.id} className="flex items-center justify-between py-2 border-b border-border/50 last:border-0">
+                    <div>
+                      <p className="font-medium">{rating.partyName}</p>
+                      <p className="text-xs text-muted-foreground">{rating.fratName} • {format(new Date(rating.created_date), 'MMM d, yyyy')}</p>
+                    </div>
+                    <div className="text-right">
+                      <p className="font-bold text-primary">{((rating.vibe_score + rating.music_score + rating.execution_score + rating.party_quality_score) / 4).toFixed(1)}</p>
+                      <p className="text-xs text-muted-foreground">avg score</p>
+                    </div>
+                  </div>
+                ))
+              )}
+            </Card>
+          </CollapsibleContent>
+        </Collapsible>
+
+        {/* Frat Ratings */}
+        <Collapsible open={expandedSection === 'repRatings'} onOpenChange={(open) => setExpandedSection(open ? 'repRatings' : null)}>
+          <CollapsibleTrigger asChild>
+            <Card className="glass p-4 cursor-pointer hover:bg-muted/50 transition-colors">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <Trophy className="h-6 w-6 text-amber-500" />
+                  <div>
+                    <p className="text-2xl font-bold">{stats.repRatings}</p>
+                    <p className="text-xs text-muted-foreground">Frat Ratings</p>
+                  </div>
+                </div>
+                {expandedSection === 'repRatings' ? <ChevronUp className="h-5 w-5 text-muted-foreground" /> : <ChevronDown className="h-5 w-5 text-muted-foreground" />}
+              </div>
+            </Card>
+          </CollapsibleTrigger>
+          <CollapsibleContent>
+            <Card className="glass mt-2 p-4 space-y-3">
+              {repRatingsData.length === 0 ? (
+                <p className="text-muted-foreground text-sm text-center py-4">No frat ratings yet</p>
+              ) : (
+                repRatingsData.map((rating) => (
+                  <div key={rating.id} className="flex items-center justify-between py-2 border-b border-border/50 last:border-0">
+                    <div>
+                      <p className="font-medium">{rating.fratName}</p>
+                      <p className="text-xs text-muted-foreground">{format(new Date(rating.created_date), 'MMM d, yyyy')}</p>
+                    </div>
+                    <div className="text-right">
+                      <p className="font-bold text-primary">{((rating.vibes_score + rating.safety_score + rating.respect_score + rating.inclusivity_score) / 4).toFixed(1)}</p>
+                      <p className="text-xs text-muted-foreground">avg score</p>
+                    </div>
+                  </div>
+                ))
+              )}
+            </Card>
+          </CollapsibleContent>
+        </Collapsible>
+
+        {/* Comments */}
+        <Collapsible open={expandedSection === 'comments'} onOpenChange={(open) => setExpandedSection(open ? 'comments' : null)}>
+          <CollapsibleTrigger asChild>
+            <Card className="glass p-4 cursor-pointer hover:bg-muted/50 transition-colors">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <Star className="h-6 w-6 text-purple-500" />
+                  <div>
+                    <p className="text-2xl font-bold">{stats.comments}</p>
+                    <p className="text-xs text-muted-foreground">Comments</p>
+                  </div>
+                </div>
+                {expandedSection === 'comments' ? <ChevronUp className="h-5 w-5 text-muted-foreground" /> : <ChevronDown className="h-5 w-5 text-muted-foreground" />}
+              </div>
+            </Card>
+          </CollapsibleTrigger>
+          <CollapsibleContent>
+            <Card className="glass mt-2 p-4 space-y-3">
+              {commentsData.length === 0 ? (
+                <p className="text-muted-foreground text-sm text-center py-4">No comments yet</p>
+              ) : (
+                commentsData.map((comment) => (
+                  <div key={comment.id} className="py-2 border-b border-border/50 last:border-0">
+                    <div className="flex items-center justify-between mb-1">
+                      <p className="text-sm font-medium">{comment.entityName}</p>
+                      <Badge variant="outline" className="text-xs">{comment.type}</Badge>
+                    </div>
+                    <p className="text-sm text-foreground line-clamp-2">{comment.text}</p>
+                    <p className="text-xs text-muted-foreground mt-1">{format(new Date(comment.created_date), 'MMM d, yyyy')}</p>
+                  </div>
+                ))
+              )}
+            </Card>
+          </CollapsibleContent>
+        </Collapsible>
       </div>
 
       {/* Achievements placeholder */}
