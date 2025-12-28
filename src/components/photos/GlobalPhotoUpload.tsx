@@ -34,21 +34,26 @@ export default function GlobalPhotoUpload({ partyId, onClose, onUploadSuccess }:
     for (const file of selectedFiles) {
       if (!file.type.startsWith('image/')) {
         setError('Please select only image files');
+        e.target.value = '';
         return;
       }
       if (file.size > 10 * 1024 * 1024) {
         setError('Each file must be less than 10MB');
+        e.target.value = '';
         return;
       }
     }
 
-    const newFiles = selectedFiles.map(file => ({
+    const newFiles = selectedFiles.map((file) => ({
       file,
       preview: URL.createObjectURL(file),
       caption: '',
     }));
 
-    setFiles(prev => [...prev, ...newFiles]);
+    setFiles((prev) => [...prev, ...newFiles]);
+
+    // Critical: reset the input so selecting the same file(s) later still triggers onChange.
+    e.target.value = '';
   };
 
   const removeFile = (index: number) => {
@@ -61,11 +66,26 @@ export default function GlobalPhotoUpload({ partyId, onClose, onUploadSuccess }:
   };
 
   const updateCaption = (index: number, caption: string) => {
-    setFiles(prev => {
+    setFiles((prev) => {
       const newFiles = [...prev];
       newFiles[index].caption = caption;
       return newFiles;
     });
+  };
+
+  const resetSelection = () => {
+    setFiles((prev) => {
+      prev.forEach((f) => URL.revokeObjectURL(f.preview));
+      return [];
+    });
+    setError(null);
+    setConsentVerified(false);
+    if (fileInputRef.current) fileInputRef.current.value = '';
+  };
+
+  const handleClose = () => {
+    resetSelection();
+    onClose();
   };
 
   const handleUpload = async () => {
@@ -111,7 +131,7 @@ export default function GlobalPhotoUpload({ partyId, onClose, onUploadSuccess }:
       await recomputePartyCoverPhoto(partyId);
 
       onUploadSuccess();
-      onClose();
+      handleClose();
     } catch (err) {
       console.error('Upload failed:', err);
       setError('Failed to upload photos. Please try again.');
@@ -129,7 +149,7 @@ export default function GlobalPhotoUpload({ partyId, onClose, onUploadSuccess }:
             <Upload className="h-5 w-5 text-primary" />
             Upload Photos
           </h2>
-          <Button variant="ghost" size="icon" onClick={onClose}>
+          <Button variant="ghost" size="icon" onClick={handleClose}>
             <X className="h-5 w-5" />
           </Button>
         </div>
@@ -139,7 +159,10 @@ export default function GlobalPhotoUpload({ partyId, onClose, onUploadSuccess }:
           {/* File Input */}
           <div 
             className="border-2 border-dashed border-muted-foreground/25 rounded-xl p-8 text-center cursor-pointer hover:border-primary/50 transition-colors"
-            onClick={() => fileInputRef.current?.click()}
+            onClick={() => {
+              if (fileInputRef.current) fileInputRef.current.value = '';
+              fileInputRef.current?.click();
+            }}
           >
             <Image className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
             <p className="text-muted-foreground">Click to select photos or drag and drop</p>
@@ -208,7 +231,7 @@ export default function GlobalPhotoUpload({ partyId, onClose, onUploadSuccess }:
           </div>
 
           <div className="flex gap-2">
-            <Button variant="outline" onClick={onClose} className="flex-1">
+            <Button variant="outline" onClick={handleClose} className="flex-1">
               Cancel
             </Button>
             <Button 
