@@ -6,10 +6,11 @@ import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Skeleton } from '@/components/ui/skeleton';
-import { base44, type PartyComment, type FraternityComment, type PartyCommentVote } from '@/api/base44Client';
+import { base44, type PartyComment, type FraternityComment, type PartyCommentVote, type FraternityCommentVote } from '@/api/base44Client';
 import { formatTimeAgo } from '@/utils';
 
 type Comment = PartyComment | FraternityComment;
+type CommentVote = PartyCommentVote | FraternityCommentVote;
 
 interface CommentSectionProps {
   entityId: string;
@@ -38,13 +39,15 @@ export default function CommentSection({ entityId, entityType }: CommentSectionP
   const [newComment, setNewComment] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [replyingTo, setReplyingTo] = useState<ReplyingTo | null>(null);
-
-  // Party-only voting state
   const [myVotesByCommentId, setMyVotesByCommentId] = useState<Record<string, 1 | -1>>({});
 
   const entityClient = entityType === 'party'
     ? base44.entities.PartyComment
     : base44.entities.FraternityComment;
+
+  const voteClient = entityType === 'party'
+    ? base44.entities.PartyCommentVote
+    : base44.entities.FraternityCommentVote;
 
   const filterKey = entityType === 'party' ? 'party_id' : 'fraternity_id';
 
@@ -63,15 +66,12 @@ export default function CommentSection({ entityId, entityType }: CommentSectionP
     try {
       const data = await entityClient.filter({ [filterKey]: entityId });
 
-      // Ensure party comments have downvotes field populated in-memory
-      const normalized = (data as Comment[]).map((c) => {
-        if (entityType !== 'party') return c;
-        return {
-          ...c,
-          upvotes: (c as any).upvotes ?? 0,
-          downvotes: (c as any).downvotes ?? 0,
-        } as any;
-      });
+      // Ensure comments have upvotes/downvotes fields populated in-memory
+      const normalized = (data as Comment[]).map((c) => ({
+        ...c,
+        upvotes: (c as any).upvotes ?? 0,
+        downvotes: (c as any).downvotes ?? 0,
+      }));
 
       setComments(sortByScoreThenNewest(normalized));
     } catch (error) {
@@ -79,28 +79,27 @@ export default function CommentSection({ entityId, entityType }: CommentSectionP
     } finally {
       setLoading(false);
     }
-  }, [entityClient, entityId, filterKey, entityType, sortByScoreThenNewest]);
+  }, [entityClient, entityId, filterKey, sortByScoreThenNewest]);
 
   const loadMyVotes = useCallback(async () => {
-    if (entityType !== 'party') return;
     try {
       const user = await base44.auth.me();
       if (!user) return;
 
-      const votes = await base44.entities.PartyCommentVote.filter({
-        party_id: entityId,
+      const votes = await voteClient.filter({
+        [filterKey]: entityId,
         user_id: user.id,
       });
 
       const map: Record<string, 1 | -1> = {};
-      (votes as PartyCommentVote[]).forEach((v) => {
+      (votes as CommentVote[]).forEach((v) => {
         map[v.comment_id] = v.value;
       });
       setMyVotesByCommentId(map);
     } catch (error) {
       console.error('Failed to load comment votes:', error);
     }
-  }, [entityId, entityType]);
+  }, [entityId, filterKey, voteClient]);
 
   useEffect(() => {
     loadComments();
@@ -145,8 +144,8 @@ export default function CommentSection({ entityId, entityType }: CommentSectionP
         moderated: false,
       };
 
-      // Party comments need downvotes too
-      if (entityType === 'party') basePayload.downvotes = 0;
+      // Both entity types now use downvotes
+      basePayload.downvotes = 0;
 
       await entityClient.create(basePayload);
 
@@ -162,47 +161,45 @@ export default function CommentSection({ entityId, entityType }: CommentSectionP
     }
   };
 
-  // Party-only: recompute counts from vote records
-  const recalculatePartyCommentCounts = useCallback(async (commentId: string) => {
-    const votes = await base44.entities.PartyCommentVote.filter({ comment_id: commentId });
-    const upvotes = (votes as PartyCommentVote[]).filter((v) => v.value === 1).length;
-    const downvotes = (votes as PartyCommentVote[]).filter((v) => v.value === -1).length;
-    await base44.entities.PartyComment.update(commentId, { upvotes, downvotes });
+  // Recompute counts from vote records
+  const recalculateCommentCounts = useCallback(async (commentId: string) => {
+    const votes = await voteClient.filter({ comment_id: commentId });
+    const upvotes = (votes as CommentVote[]).filter((v) => v.value === 1).length;
+    const downvotes = (votes as CommentVote[]).filter((v) => v.value === -1).length;
+    await entityClient.update(commentId, { upvotes, downvotes });
     return { upvotes, downvotes };
-  }, []);
+  }, [voteClient, entityClient]);
 
   const handleVote = useCallback(async (commentId: string, value: 1 | -1) => {
-    if (entityType !== 'party') return;
-
     try {
       const me = await base44.auth.me();
       if (!me) return;
 
-      const existing = await base44.entities.PartyCommentVote.filter({ comment_id: commentId, user_id: me.id });
-      const existingVote = (existing as PartyCommentVote[])[0];
+      const existing = await voteClient.filter({ comment_id: commentId, user_id: me.id });
+      const existingVote = (existing as CommentVote[])[0];
 
       if (!existingVote) {
-        await base44.entities.PartyCommentVote.create({
+        await voteClient.create({
           comment_id: commentId,
-          party_id: entityId,
+          [filterKey]: entityId,
           user_id: me.id,
           value,
         });
         setMyVotesByCommentId((prev) => ({ ...prev, [commentId]: value }));
       } else if (existingVote.value === value) {
-        await base44.entities.PartyCommentVote.delete(existingVote.id);
+        await voteClient.delete(existingVote.id);
         setMyVotesByCommentId((prev) => {
           const next = { ...prev };
           delete next[commentId];
           return next;
         });
       } else {
-        await base44.entities.PartyCommentVote.update(existingVote.id, { value });
+        await voteClient.update(existingVote.id, { value });
         setMyVotesByCommentId((prev) => ({ ...prev, [commentId]: value }));
       }
 
       // Update counts deterministically from votes table
-      await recalculatePartyCommentCounts(commentId);
+      await recalculateCommentCounts(commentId);
 
       // Refresh list + vote map so UI never diverges
       await loadComments();
@@ -210,18 +207,7 @@ export default function CommentSection({ entityId, entityType }: CommentSectionP
     } catch (error) {
       console.error('Failed to vote:', error);
     }
-  }, [entityId, entityType, loadComments, loadMyVotes, recalculatePartyCommentCounts]);
-
-  // Fraternity-only fallback (keeps existing behavior; party uses handleVote)
-  const handleUpvoteLegacy = async (commentId: string) => {
-    const comment = comments.find((c) => c.id === commentId);
-    if (!comment) return;
-
-    await entityClient.update(commentId, {
-      upvotes: ((comment as any).upvotes ?? 0) + 1,
-    });
-    await loadComments();
-  };
+  }, [entityId, filterKey, voteClient, loadComments, loadMyVotes, recalculateCommentCounts]);
 
   const handleStartReply = (comment: Comment) => {
     const snippet = sanitizeCommentText(comment.text ?? '').slice(0, 50);
@@ -316,7 +302,7 @@ export default function CommentSection({ entityId, entityType }: CommentSectionP
               </div>
             </div>
             <div className="flex items-center gap-2">
-              {entityType === 'party' && netScore !== 0 && (
+              {netScore !== 0 && (
                 <Badge variant={netScore > 0 ? 'default' : 'destructive'} className="text-xs">
                   {netScore > 0 ? '+' : ''}{netScore}
                 </Badge>
@@ -328,38 +314,24 @@ export default function CommentSection({ entityId, entityType }: CommentSectionP
           <p className="text-sm mt-2">{displayText}</p>
 
           <div className="flex items-center gap-2 mt-2">
-            {entityType === 'party' ? (
-              <>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => handleVote(comment.id, 1)}
-                  className={`h-8 text-xs ${myVote === 1 ? 'text-emerald-600 bg-emerald-50' : ''}`}
-                >
-                  <ThumbsUp className="h-3.5 w-3.5 mr-1" />
-                  {upvotes}
-                </Button>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => handleVote(comment.id, -1)}
-                  className={`h-8 text-xs ${myVote === -1 ? 'text-red-500 bg-red-50' : ''}`}
-                >
-                  <ThumbsDown className="h-3.5 w-3.5 mr-1" />
-                  {downvotes}
-                </Button>
-              </>
-            ) : (
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => handleUpvoteLegacy(comment.id)}
-                className="h-8 text-xs"
-              >
-                <ThumbsUp className="h-3.5 w-3.5 mr-1" />
-                {upvotes}
-              </Button>
-            )}
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => handleVote(comment.id, 1)}
+              className={`h-8 text-xs ${myVote === 1 ? 'text-emerald-600 bg-emerald-50' : ''}`}
+            >
+              <ThumbsUp className="h-3.5 w-3.5 mr-1" />
+              {upvotes}
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => handleVote(comment.id, -1)}
+              className={`h-8 text-xs ${myVote === -1 ? 'text-red-500 bg-red-50' : ''}`}
+            >
+              <ThumbsDown className="h-3.5 w-3.5 mr-1" />
+              {downvotes}
+            </Button>
 
             <Button
               variant="ghost"
