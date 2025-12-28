@@ -1,20 +1,23 @@
 import { useState, useEffect } from 'react';
 import { useSearchParams, Link } from 'react-router-dom';
-import { ArrowLeft, Calendar, Star, PartyPopper } from 'lucide-react';
+import { ArrowLeft, Calendar, Star, PartyPopper, Users, Shield, Heart } from 'lucide-react';
 import { base44, type Fraternity, type Party, type PartyRating, type ReputationRating, type PartyComment, type FraternityComment } from '@/api/base44Client';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
-import OverallScoreCard from '@/components/scores/OverallScoreCard';
+import { Progress } from '@/components/ui/progress';
 import PartyCard from '@/components/parties/PartyCard';
 import RateFratSheet from '@/components/leaderboard/RateFratSheet';
 import CommentSection from '@/components/comments/CommentSection';
-import { createPageUrl, clamp } from '@/utils';
+import TrendIndicator from '@/components/leaderboard/TrendIndicator';
+import ConfidenceBar from '@/components/scores/ConfidenceBar';
+import { createPageUrl, clamp, getScoreColor } from '@/utils';
 import { 
   computeFullFraternityScores, 
   computeCampusRepAvg, 
   computeCampusPartyAvg,
+  computeCombinedReputation,
   type FraternityScores,
   type PartyWithRatings,
   type ActivityData
@@ -30,6 +33,7 @@ export default function FraternityPage() {
   const [showRateSheet, setShowRateSheet] = useState(false);
   const [existingScores, setExistingScores] = useState<{ brotherhood: number; reputation: number; community: number } | undefined>();
   const [computedScores, setComputedScores] = useState<FraternityScores | null>(null);
+  const [userRating, setUserRating] = useState<{ brotherhood: number; reputation: number; community: number } | null>(null);
 
   useEffect(() => {
     if (fratId) loadData();
@@ -106,6 +110,36 @@ export default function FraternityPage() {
     }
   };
 
+  // Load user's own rating
+  const loadUserRating = async () => {
+    try {
+      const user = await base44.auth.me();
+      if (!user || !fratId) return;
+      
+      const existingRatings = await base44.entities.ReputationRating.filter({
+        fraternity_id: fratId,
+        user_id: user.id,
+      });
+
+      if (existingRatings.length > 0) {
+        const rating = existingRatings[0];
+        setUserRating({
+          brotherhood: rating.brotherhood_score ?? 5,
+          reputation: rating.reputation_score ?? 5,
+          community: rating.community_score ?? 5,
+        });
+      } else {
+        setUserRating(null);
+      }
+    } catch (error) {
+      console.error('Failed to load user rating:', error);
+    }
+  };
+
+  useEffect(() => {
+    loadUserRating();
+  }, [fratId]);
+
   const handleRate = async () => {
     const user = await base44.auth.me();
     if (!user) {
@@ -113,18 +147,8 @@ export default function FraternityPage() {
       return;
     }
 
-    const existingRatings = await base44.entities.ReputationRating.filter({
-      fraternity_id: fratId!,
-      user_id: user.id,
-    });
-
-    if (existingRatings.length > 0) {
-      const rating = existingRatings[0];
-      setExistingScores({
-        brotherhood: rating.brotherhood_score ?? 5,
-        reputation: rating.reputation_score ?? 5,
-        community: rating.community_score ?? 5,
-      });
+    if (userRating) {
+      setExistingScores(userRating);
     } else {
       setExistingScores(undefined);
     }
@@ -175,6 +199,7 @@ export default function FraternityPage() {
     });
 
     await loadData();
+    await loadUserRating();
   };
 
   if (loading) {
@@ -201,6 +226,11 @@ export default function FraternityPage() {
 
   const upcomingParties = parties.filter(p => p.status === 'upcoming' || p.status === 'active');
   const pastParties = parties.filter(p => p.status === 'completed');
+
+  // Calculate user's combined scores if they have rated
+  const userFratScore = userRating 
+    ? computeCombinedReputation(userRating.brotherhood, userRating.reputation, userRating.community)
+    : null;
 
   return (
     <div className="max-w-2xl mx-auto space-y-6">
@@ -235,23 +265,130 @@ export default function FraternityPage() {
         {fraternity.description && (
           <p className="text-muted-foreground">{fraternity.description}</p>
         )}
+      </Card>
 
-        {/* READ-ONLY Score Display - Shows both Reputation AND Party breakdowns */}
-        {computedScores && (
-          <OverallScoreCard 
-            scores={computedScores}
-            showConfidence={true}
-            showTrending={true}
-            showReputationBreakdown={true}
-            showPartyBreakdown={true}
-          />
-        )}
+      {/* A) SCORE SUMMARY - Overall scores at top */}
+      {computedScores && (
+        <Card className="glass p-6 space-y-4">
+          {/* Overall Score - Big Display */}
+          <div className="space-y-3">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-xs text-muted-foreground mb-1">Overall Score</p>
+                <div className="text-4xl font-bold text-foreground">
+                  {computedScores.overall.toFixed(1)}
+                </div>
+              </div>
+              <div className="flex items-center gap-2">
+                <TrendIndicator momentum={computedScores.trending} showLabel />
+                <Badge variant="outline">
+                  {computedScores.trending >= 0 ? '+' : ''}{computedScores.trending.toFixed(2)}
+                </Badge>
+              </div>
+            </div>
+            
+            {/* Overall Score Progress Bar */}
+            <div className="w-full bg-muted rounded-full h-3 overflow-hidden">
+              <div 
+                className="h-full bg-primary transition-all duration-500 rounded-full"
+                style={{ width: `${(computedScores.overall / 10) * 100}%` }}
+              />
+            </div>
+          </div>
+
+          {/* Two KPI Cards: Overall Frat Rating + Overall Party Quality */}
+          <div className="grid grid-cols-2 gap-4">
+            <div className="bg-muted/50 rounded-lg p-4 text-center">
+              <p className="text-xs text-muted-foreground mb-1">Overall Frat Rating</p>
+              <p className={`text-2xl font-bold ${getScoreColor(computedScores.repAdj)}`}>
+                {computedScores.repAdj.toFixed(1)}
+              </p>
+            </div>
+            <div className="bg-muted/50 rounded-lg p-4 text-center">
+              <p className="text-xs text-muted-foreground mb-1">Overall Party Quality</p>
+              <p className={`text-2xl font-bold ${getScoreColor(computedScores.partyAdj)}`}>
+                {computedScores.partyAdj.toFixed(1)}
+              </p>
+            </div>
+          </div>
+        </Card>
+      )}
+
+      {/* B) YOUR RATINGS Section */}
+      <Card className="glass p-6 space-y-6">
+        <h2 className="font-semibold text-lg">Your Ratings</h2>
+
+        {/* Frat Rating (Your Score) */}
+        <div className="space-y-4">
+          <div className="flex items-center justify-between">
+            <p className="text-sm font-medium">Frat Rating</p>
+            {userFratScore !== null ? (
+              <span className={`text-lg font-bold ${getScoreColor(userFratScore)}`}>
+                {userFratScore.toFixed(1)}
+              </span>
+            ) : (
+              <span className="text-sm text-muted-foreground italic">Not rated yet</span>
+            )}
+          </div>
+          
+          {userRating ? (
+            <div className="space-y-3">
+              {[
+                { label: 'Brotherhood', helper: 'Member quality and cohesion', icon: Users, value: userRating.brotherhood, color: 'text-blue-500' },
+                { label: 'Reputation', helper: 'Campus perception and overall standing', icon: Shield, value: userRating.reputation, color: 'text-primary' },
+                { label: 'Community', helper: 'Welcoming, respectful, positive presence', icon: Heart, value: userRating.community, color: 'text-rose-500' },
+              ].map(({ label, helper, icon: Icon, value, color }) => (
+                <div key={label} className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <div className={`w-8 h-8 rounded-full bg-muted flex items-center justify-center ${color}`}>
+                        <Icon className="h-4 w-4" />
+                      </div>
+                      <div>
+                        <p className="font-medium text-sm">{label}</p>
+                        <p className="text-xs text-muted-foreground">{helper}</p>
+                      </div>
+                    </div>
+                    <p className={`text-lg font-bold ${getScoreColor(value)}`}>{value.toFixed(1)}</p>
+                  </div>
+                  <Progress value={value * 10} className="h-2" />
+                </div>
+              ))}
+            </div>
+          ) : (
+            <p className="text-sm text-muted-foreground">Rate this fraternity to see your scores here.</p>
+          )}
+        </div>
+
+        <div className="border-t pt-4" />
+
+        {/* Party Quality (Your Score) - placeholder since party quality is per-party, not per-frat */}
+        <div className="space-y-2">
+          <div className="flex items-center justify-between">
+            <p className="text-sm font-medium">Party Quality</p>
+            <span className="text-sm text-muted-foreground italic">Rate individual parties</span>
+          </div>
+          <p className="text-xs text-muted-foreground">
+            Party ratings are submitted per event. Visit past parties below to rate them.
+          </p>
+        </div>
 
         <Button onClick={handleRate} className="w-full gradient-primary text-white">
           <Star className="h-4 w-4 mr-2" />
-          Rate {fraternity.name}
+          {userRating ? 'Update Your Rating' : 'Rate'} {fraternity.name}
         </Button>
       </Card>
+
+      {/* C) CONFIDENCE - Below user ratings */}
+      {computedScores && (
+        <Card className="glass p-6">
+          <ConfidenceBar 
+            confidence={computedScores.confidenceOverall}
+            repRatings={computedScores.numRepRatings}
+            partyRatings={computedScores.numPartyRatings}
+          />
+        </Card>
+      )}
 
       {/* Upcoming Parties */}
       {upcomingParties.length > 0 && (
@@ -270,7 +407,7 @@ export default function FraternityPage() {
         </section>
       )}
 
-      {/* Past Parties */}
+      {/* D) Past Parties - Show overall party quality (confidence-adjusted) */}
       {pastParties.length > 0 && (
         <section className="space-y-3">
           <h2 className="font-semibold text-muted-foreground">Past Parties</h2>
@@ -279,6 +416,7 @@ export default function FraternityPage() {
               key={party.id}
               party={party}
               fraternityName={fraternity.name}
+              overallPartyQuality={computedScores?.partyAdj}
             />
           ))}
         </section>
