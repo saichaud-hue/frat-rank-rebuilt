@@ -257,7 +257,7 @@ export default function Leaderboard() {
       switch (filter) {
         case 'overall': return s.overall;
         case 'reputation': return s.repAdj;
-        case 'party': return s.partyAdj;
+        case 'party': return s.partyScore; // Formula H for Parties leaderboard
         case 'trending': return s.trending;
         default: return s.overall;
       }
