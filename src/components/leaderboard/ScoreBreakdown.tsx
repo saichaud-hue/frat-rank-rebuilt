@@ -2,7 +2,7 @@ import { Progress } from '@/components/ui/progress';
 import { Zap, Music, Settings, Users, Shield, Heart } from 'lucide-react';
 import { getScoreColor } from '@/utils';
 
-type BreakdownMode = 'reputation' | 'party';
+type BreakdownMode = 'overall' | 'reputation' | 'party';
 
 interface ScoreBreakdownProps {
   reputationScore: number;
@@ -21,7 +21,7 @@ interface ScoreBreakdownProps {
 export default function ScoreBreakdown({ 
   reputationScore, 
   partyScore,
-  mode = 'reputation',
+  mode = 'overall',
   avgVibe = 5,
   avgMusic = 5,
   avgExecution = 5,
@@ -56,7 +56,33 @@ export default function ScoreBreakdown({
     );
   }
 
-  // Default: show Reputation/Party Quality summary
+  if (mode === 'reputation') {
+    // Show Brotherhood, Reputation, Community breakdown for reputation mode
+    const reputationBreakdown = [
+      { key: 'brotherhood', label: 'Brotherhood', icon: Users, value: avgBrotherhood, color: 'text-blue-500' },
+      { key: 'reputation', label: 'Reputation', icon: Shield, value: avgReputation, color: 'text-primary' },
+      { key: 'community', label: 'Community', icon: Heart, value: avgCommunity, color: 'text-rose-500' },
+    ];
+
+    return (
+      <div className="space-y-3">
+        {reputationBreakdown.map(({ key, label, icon: Icon, value, color }) => (
+          <div key={key} className="space-y-1.5">
+            <div className="flex items-center justify-between text-sm">
+              <div className="flex items-center gap-2">
+                <Icon className={`h-3.5 w-3.5 ${color}`} />
+                <span className="text-muted-foreground">{label}</span>
+              </div>
+              <span className={`font-semibold ${getScoreColor(value)}`}>{value.toFixed(1)}</span>
+            </div>
+            <Progress value={value * 10} className="h-2" />
+          </div>
+        ))}
+      </div>
+    );
+  }
+
+  // Default (overall/trending): show Reputation/Party Quality summary
   return (
     <div className="space-y-3">
       <div className="space-y-1.5">
