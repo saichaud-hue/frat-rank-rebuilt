@@ -357,17 +357,47 @@ export function computeSemesterPartyScore(
   let weightedSum = 0;
   let totalWeight = 0;
 
+  // Debug: collect per-party details
+  const partyDebugInfo: Array<{
+    partyId: string;
+    partyTitle: string;
+    n_p: number;
+    Q_p: number;
+    B_f: number;
+    c_n: number;
+    S_p: number;
+    w_p: number;
+  }> = [];
+
   for (const { party, ratings } of ratedParties) {
     const n_p = ratings.length;
 
-    // Use STABILIZED party score (not raw Q_p, not old blended formula)
-    const S_p = computeStabilizedPartyScore(ratings, fratBaseline, k);
+    // Compute raw Q_p for this party
+    const Q_p = computeRawPartyQuality(ratings)!;
+    
+    // Confidence factor c(n_p) = n_p / (n_p + k)
+    const c_n = n_p / (n_p + k);
+
+    // Use STABILIZED party score: S_p = c(n_p) * Q_p + (1 - c(n_p)) * B_f
+    const S_p = c_n * Q_p + (1 - c_n) * fratBaseline;
 
     // Participation weight
     const w_p = Math.log(1 + n_p);
 
     weightedSum += S_p * w_p;
     totalWeight += w_p;
+
+    // Collect debug info
+    partyDebugInfo.push({
+      partyId: party.id,
+      partyTitle: party.title,
+      n_p,
+      Q_p,
+      B_f: fratBaseline,
+      c_n,
+      S_p,
+      w_p,
+    });
   }
 
   const avg = weightedSum / totalWeight;
@@ -379,13 +409,30 @@ export function computeSemesterPartyScore(
   const score = avg * hostBonus;
 
   if (import.meta.env.DEV) {
-    console.log('[Element 2] Semester Party Score:', {
-      m_f,
-      ratedParties: ratedParties.length,
-      avg: avg.toFixed(2),
-      hostBonus: hostBonus.toFixed(4),
-      score: score.toFixed(2),
-    });
+    console.log('═══════════════════════════════════════════════════════════');
+    console.log('[Element 2] SEMESTER PARTY SCORE CALCULATION');
+    console.log('═══════════════════════════════════════════════════════════');
+    console.log('Inputs:');
+    console.log(`  m_f (parties hosted): ${m_f}`);
+    console.log(`  Rated parties: ${ratedParties.length}`);
+    console.log(`  B_f (frat baseline): ${fratBaseline.toFixed(4)}`);
+    console.log(`  k (confidence constant): ${k}`);
+    console.log('───────────────────────────────────────────────────────────');
+    console.log('Per-party breakdown (Element 2 uses ALL ratings, NOT user recent):');
+    for (const info of partyDebugInfo) {
+      console.log(`  Party: "${info.partyTitle}" (${info.partyId.slice(0, 8)}...)`);
+      console.log(`    n_p (rating count): ${info.n_p}`);
+      console.log(`    Q_p (raw quality): ${info.Q_p.toFixed(4)}`);
+      console.log(`    c(n_p) = ${info.n_p}/(${info.n_p}+${k}) = ${info.c_n.toFixed(4)}`);
+      console.log(`    S_p = ${info.c_n.toFixed(4)}*${info.Q_p.toFixed(2)} + ${(1 - info.c_n).toFixed(4)}*${info.B_f.toFixed(2)} = ${info.S_p.toFixed(4)}`);
+      console.log(`    w_p = ln(1+${info.n_p}) = ${info.w_p.toFixed(4)}`);
+    }
+    console.log('───────────────────────────────────────────────────────────');
+    console.log('Aggregation:');
+    console.log(`  SemesterPartyAvg = Σ(S_p * w_p) / Σ(w_p) = ${avg.toFixed(4)}`);
+    console.log(`  HostBonus = 1 + 0.08*(1 - exp(-${m_f}/2)) = ${hostBonus.toFixed(4)}`);
+    console.log(`  SemesterPartyScore = ${avg.toFixed(4)} * ${hostBonus.toFixed(4)} = ${score.toFixed(4)}`);
+    console.log('═══════════════════════════════════════════════════════════');
   }
 
   return {
