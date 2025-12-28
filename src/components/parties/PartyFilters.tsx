@@ -65,8 +65,8 @@ export default function PartyFilters({ filters, onFiltersChange, fraternities }:
         <SelectContent>
           <SelectItem value="all">All Time</SelectItem>
           <SelectItem value="today">Today</SelectItem>
-          <SelectItem value="week">This Week</SelectItem>
-          <SelectItem value="month">This Month</SelectItem>
+          <SelectItem value="week">Week</SelectItem>
+          <SelectItem value="month">Month</SelectItem>
         </SelectContent>
       </Select>
     </div>
