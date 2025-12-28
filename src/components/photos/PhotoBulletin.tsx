@@ -1,32 +1,61 @@
 import { useState, useEffect } from 'react';
-import { Image, Plus, Eye, X, Loader2 } from 'lucide-react';
+import { Image, Plus, Eye, X, Loader2, ThumbsUp, ThumbsDown } from 'lucide-react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { base44, type PartyPhoto } from '@/api/base44Client';
+import { base44, type PartyPhoto, type PartyPhotoVote } from '@/api/base44Client';
 import { formatTimeAgo } from '@/utils';
 import GlobalPhotoUpload from './GlobalPhotoUpload';
+import { recomputePartyCoverPhoto, recalculatePhotoVotes } from './photoUtils';
 
 interface PhotoBulletinProps {
   partyId: string;
 }
 
+interface PhotoWithVote extends PartyPhoto {
+  userVote?: 1 | -1 | null;
+}
+
 export default function PhotoBulletin({ partyId }: PhotoBulletinProps) {
-  const [photos, setPhotos] = useState<PartyPhoto[]>([]);
+  const [photos, setPhotos] = useState<PhotoWithVote[]>([]);
   const [loading, setLoading] = useState(true);
   const [showUpload, setShowUpload] = useState(false);
-  const [viewerPhoto, setViewerPhoto] = useState<PartyPhoto | null>(null);
+  const [viewerPhoto, setViewerPhoto] = useState<PhotoWithVote | null>(null);
+  const [votingPhotoId, setVotingPhotoId] = useState<string | null>(null);
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
 
   useEffect(() => {
-    loadPhotos();
+    loadUserAndPhotos();
   }, [partyId]);
 
-  const loadPhotos = async () => {
+  const loadUserAndPhotos = async () => {
+    const user = await base44.auth.me();
+    setCurrentUserId(user?.id || null);
+    await loadPhotos(user?.id);
+  };
+
+  const loadPhotos = async (userId?: string | null) => {
     try {
       const data = await base44.entities.PartyPhoto.filter(
         { party_id: partyId, moderation_status: 'approved' },
         '-created_date'
       );
-      setPhotos(data);
+
+      // Get user's votes for these photos
+      let userVotes: PartyPhotoVote[] = [];
+      if (userId) {
+        userVotes = await base44.entities.PartyPhotoVote.filter({
+          party_id: partyId,
+          user_id: userId,
+        });
+      }
+
+      // Merge user votes into photos
+      const photosWithVotes: PhotoWithVote[] = data.map(photo => ({
+        ...photo,
+        userVote: userVotes.find(v => v.party_photo_id === photo.id)?.value || null,
+      }));
+
+      setPhotos(photosWithVotes);
     } catch (error) {
       console.error('Failed to load photos:', error);
     } finally {
@@ -35,7 +64,59 @@ export default function PhotoBulletin({ partyId }: PhotoBulletinProps) {
   };
 
   const handleUploadSuccess = () => {
-    loadPhotos();
+    loadPhotos(currentUserId);
+  };
+
+  const handleVote = async (photo: PhotoWithVote, voteValue: 1 | -1) => {
+    if (!currentUserId) {
+      return; // User must be logged in
+    }
+
+    setVotingPhotoId(photo.id);
+
+    try {
+      // Find existing vote
+      const existingVotes = await base44.entities.PartyPhotoVote.filter({
+        party_photo_id: photo.id,
+        user_id: currentUserId,
+      });
+      const existingVote = existingVotes[0];
+
+      if (existingVote) {
+        if (existingVote.value === voteValue) {
+          // Toggle off - remove vote
+          await base44.entities.PartyPhotoVote.delete(existingVote.id);
+        } else {
+          // Change vote
+          await base44.entities.PartyPhotoVote.update(existingVote.id, { value: voteValue });
+        }
+      } else {
+        // Create new vote
+        await base44.entities.PartyPhotoVote.create({
+          party_photo_id: photo.id,
+          party_id: partyId,
+          user_id: currentUserId,
+          value: voteValue,
+        });
+      }
+
+      // Recalculate photo votes from database
+      await recalculatePhotoVotes(photo.id);
+
+      // Recompute cover photo
+      await recomputePartyCoverPhoto(partyId);
+
+      // Reload photos to get updated counts
+      await loadPhotos(currentUserId);
+    } catch (error) {
+      console.error('Failed to vote:', error);
+    } finally {
+      setVotingPhotoId(null);
+    }
+  };
+
+  const getNetScore = (photo: PhotoWithVote) => {
+    return (photo.likes || 0) - (photo.dislikes || 0);
   };
 
   return (
@@ -72,20 +153,69 @@ export default function PhotoBulletin({ partyId }: PhotoBulletinProps) {
             </Button>
           </div>
         ) : (
-          <div className="grid grid-cols-3 gap-2">
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
             {photos.map((photo) => (
               <div 
                 key={photo.id}
-                className="relative aspect-square rounded-lg overflow-hidden cursor-pointer group"
-                onClick={() => setViewerPhoto(photo)}
+                className="relative aspect-square rounded-lg overflow-hidden group"
               >
                 <img 
                   src={photo.url} 
                   alt={photo.caption || 'Party photo'}
-                  className="w-full h-full object-cover transition-transform group-hover:scale-105"
+                  className="w-full h-full object-cover cursor-pointer transition-transform group-hover:scale-105"
+                  onClick={() => setViewerPhoto(photo)}
                 />
-                <div className="absolute inset-0 bg-black/0 group-hover:bg-black/30 transition-colors flex items-center justify-center">
-                  <Eye className="h-6 w-6 text-white opacity-0 group-hover:opacity-100 transition-opacity" />
+                
+                {/* Overlay with view icon */}
+                <div 
+                  className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors pointer-events-none"
+                />
+                
+                {/* Vote controls at bottom */}
+                <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 to-transparent p-2">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-1">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className={`h-7 px-2 text-white hover:bg-white/20 ${
+                          photo.userVote === 1 ? 'bg-green-500/40' : ''
+                        }`}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleVote(photo, 1);
+                        }}
+                        disabled={votingPhotoId === photo.id || !currentUserId}
+                      >
+                        <ThumbsUp className={`h-4 w-4 ${photo.userVote === 1 ? 'fill-current' : ''}`} />
+                        <span className="ml-1 text-xs">{photo.likes || 0}</span>
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className={`h-7 px-2 text-white hover:bg-white/20 ${
+                          photo.userVote === -1 ? 'bg-red-500/40' : ''
+                        }`}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleVote(photo, -1);
+                        }}
+                        disabled={votingPhotoId === photo.id || !currentUserId}
+                      >
+                        <ThumbsDown className={`h-4 w-4 ${photo.userVote === -1 ? 'fill-current' : ''}`} />
+                        <span className="ml-1 text-xs">{photo.dislikes || 0}</span>
+                      </Button>
+                    </div>
+                    <span className={`text-xs font-medium px-2 py-0.5 rounded ${
+                      getNetScore(photo) > 0 
+                        ? 'bg-green-500/40 text-green-200' 
+                        : getNetScore(photo) < 0 
+                          ? 'bg-red-500/40 text-red-200' 
+                          : 'bg-white/20 text-white'
+                    }`}>
+                      {getNetScore(photo) > 0 ? '+' : ''}{getNetScore(photo)}
+                    </span>
+                  </div>
                 </div>
               </div>
             ))}
@@ -107,18 +237,58 @@ export default function PhotoBulletin({ partyId }: PhotoBulletinProps) {
           >
             <X className="h-6 w-6" />
           </Button>
-          <img 
-            src={viewerPhoto.url} 
-            alt={viewerPhoto.caption || 'Party photo'}
-            className="max-w-full max-h-full object-contain"
-            onClick={(e) => e.stopPropagation()}
-          />
-          {(viewerPhoto.caption || viewerPhoto.created_date) && (
-            <div className="absolute bottom-4 left-4 right-4 text-center text-white">
-              {viewerPhoto.caption && <p className="font-medium">{viewerPhoto.caption}</p>}
-              <p className="text-sm text-white/70">{formatTimeAgo(viewerPhoto.created_date)}</p>
+          <div className="flex flex-col items-center max-w-full max-h-full">
+            <img 
+              src={viewerPhoto.url} 
+              alt={viewerPhoto.caption || 'Party photo'}
+              className="max-w-full max-h-[70vh] object-contain"
+              onClick={(e) => e.stopPropagation()}
+            />
+            
+            {/* Vote controls in viewer */}
+            <div className="mt-4 flex items-center gap-4" onClick={(e) => e.stopPropagation()}>
+              <Button
+                variant="outline"
+                size="sm"
+                className={`text-white border-white/30 hover:bg-white/20 ${
+                  viewerPhoto.userVote === 1 ? 'bg-green-500/40 border-green-500' : ''
+                }`}
+                onClick={() => handleVote(viewerPhoto, 1)}
+                disabled={votingPhotoId === viewerPhoto.id || !currentUserId}
+              >
+                <ThumbsUp className={`h-4 w-4 mr-2 ${viewerPhoto.userVote === 1 ? 'fill-current' : ''}`} />
+                {viewerPhoto.likes || 0}
+              </Button>
+              <span className={`text-lg font-bold ${
+                getNetScore(viewerPhoto) > 0 
+                  ? 'text-green-400' 
+                  : getNetScore(viewerPhoto) < 0 
+                    ? 'text-red-400' 
+                    : 'text-white'
+              }`}>
+                {getNetScore(viewerPhoto) > 0 ? '+' : ''}{getNetScore(viewerPhoto)}
+              </span>
+              <Button
+                variant="outline"
+                size="sm"
+                className={`text-white border-white/30 hover:bg-white/20 ${
+                  viewerPhoto.userVote === -1 ? 'bg-red-500/40 border-red-500' : ''
+                }`}
+                onClick={() => handleVote(viewerPhoto, -1)}
+                disabled={votingPhotoId === viewerPhoto.id || !currentUserId}
+              >
+                <ThumbsDown className={`h-4 w-4 mr-2 ${viewerPhoto.userVote === -1 ? 'fill-current' : ''}`} />
+                {viewerPhoto.dislikes || 0}
+              </Button>
             </div>
-          )}
+
+            {(viewerPhoto.caption || viewerPhoto.created_date) && (
+              <div className="mt-4 text-center text-white">
+                {viewerPhoto.caption && <p className="font-medium">{viewerPhoto.caption}</p>}
+                <p className="text-sm text-white/70">{formatTimeAgo(viewerPhoto.created_date)}</p>
+              </div>
+            )}
+          </div>
         </div>
       )}
 

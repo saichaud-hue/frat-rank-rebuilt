@@ -6,6 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
 import { base44 } from '@/api/base44Client';
+import { recomputePartyCoverPhoto } from './photoUtils';
 
 interface GlobalPhotoUploadProps {
   partyId: string;
@@ -84,15 +85,13 @@ export default function GlobalPhotoUpload({ partyId, onClose, onUploadSuccess }:
       const user = await base44.auth.me();
       if (!user) {
         setError('Please sign in to upload photos');
+        setUploading(false);
         return;
       }
 
-      let firstPhotoUrl: string | null = null;
-
+      // Upload all files
       for (const { file, caption } of files) {
         const { url } = await base44.integrations.Core.UploadFile({ file });
-        
-        if (!firstPhotoUrl) firstPhotoUrl = url;
 
         await base44.entities.PartyPhoto.create({
           party_id: partyId,
@@ -108,13 +107,8 @@ export default function GlobalPhotoUpload({ partyId, onClose, onUploadSuccess }:
         });
       }
 
-      // Set party display photo if not set
-      const party = await base44.entities.Party.get(partyId);
-      if (party && !party.display_photo_url && firstPhotoUrl) {
-        await base44.entities.Party.update(partyId, {
-          display_photo_url: firstPhotoUrl,
-        });
-      }
+      // Recompute cover photo (picks highest voted or newest)
+      await recomputePartyCoverPhoto(partyId);
 
       onUploadSuccess();
       onClose();
