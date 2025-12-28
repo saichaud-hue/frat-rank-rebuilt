@@ -1,12 +1,12 @@
 import { useState, useEffect } from 'react';
-import { Image, Plus, Eye, X, Loader2, ThumbsUp, ThumbsDown } from 'lucide-react';
+import { Image, Plus, Eye, X, Loader2, ThumbsUp, ThumbsDown, Trash2 } from 'lucide-react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { base44, type PartyPhoto, type PartyPhotoVote } from '@/api/base44Client';
 import { formatTimeAgo } from '@/utils';
 import GlobalPhotoUpload from './GlobalPhotoUpload';
 import { recomputePartyCoverPhoto, recalculatePhotoVotes } from './photoUtils';
-
+import { toast } from '@/hooks/use-toast';
 interface PhotoBulletinProps {
   partyId: string;
 }
@@ -22,6 +22,7 @@ export default function PhotoBulletin({ partyId }: PhotoBulletinProps) {
   const [viewerPhoto, setViewerPhoto] = useState<PhotoWithVote | null>(null);
   const [votingPhotoId, setVotingPhotoId] = useState<string | null>(null);
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
+  const [deletingPhotoId, setDeletingPhotoId] = useState<string | null>(null);
 
   useEffect(() => {
     loadUserAndPhotos();
@@ -119,6 +120,54 @@ export default function PhotoBulletin({ partyId }: PhotoBulletinProps) {
     return (photo.likes || 0) - (photo.dislikes || 0);
   };
 
+  const handleDelete = async (photo: PhotoWithVote) => {
+    if (!currentUserId || photo.user_id !== currentUserId) {
+      return;
+    }
+
+    setDeletingPhotoId(photo.id);
+
+    try {
+      // Delete associated votes first
+      const votes = await base44.entities.PartyPhotoVote.filter({ party_photo_id: photo.id });
+      for (const vote of votes) {
+        await base44.entities.PartyPhotoVote.delete(vote.id);
+      }
+
+      // Delete the photo
+      await base44.entities.PartyPhoto.delete(photo.id);
+
+      // Recompute cover photo
+      await recomputePartyCoverPhoto(partyId);
+
+      // Close viewer if viewing deleted photo
+      if (viewerPhoto?.id === photo.id) {
+        setViewerPhoto(null);
+      }
+
+      toast({
+        title: 'Photo deleted',
+        description: 'Your photo has been removed.',
+      });
+
+      // Reload photos
+      await loadPhotos(currentUserId);
+    } catch (error) {
+      console.error('Failed to delete photo:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to delete photo. Please try again.',
+        variant: 'destructive',
+      });
+    } finally {
+      setDeletingPhotoId(null);
+    }
+  };
+
+  const canDelete = (photo: PhotoWithVote) => {
+    return currentUserId && photo.user_id === currentUserId;
+  };
+
   return (
     <>
       <Card className="glass p-4 space-y-4">
@@ -170,6 +219,26 @@ export default function PhotoBulletin({ partyId }: PhotoBulletinProps) {
                 <div 
                   className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors pointer-events-none"
                 />
+
+                {/* Delete button - only for own photos */}
+                {canDelete(photo) && (
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="absolute top-2 right-2 h-7 w-7 bg-black/50 text-white hover:bg-red-500/80 opacity-0 group-hover:opacity-100 transition-opacity"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleDelete(photo);
+                    }}
+                    disabled={deletingPhotoId === photo.id}
+                  >
+                    {deletingPhotoId === photo.id ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : (
+                      <Trash2 className="h-4 w-4" />
+                    )}
+                  </Button>
+                )}
                 
                 {/* Vote controls at bottom */}
                 <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 to-transparent p-2">
@@ -281,6 +350,24 @@ export default function PhotoBulletin({ partyId }: PhotoBulletinProps) {
                 {viewerPhoto.dislikes || 0}
               </Button>
             </div>
+
+            {/* Delete button in viewer */}
+            {canDelete(viewerPhoto) && (
+              <Button
+                variant="outline"
+                size="sm"
+                className="mt-4 text-red-400 border-red-400/50 hover:bg-red-500/20 hover:text-red-300"
+                onClick={() => handleDelete(viewerPhoto)}
+                disabled={deletingPhotoId === viewerPhoto.id}
+              >
+                {deletingPhotoId === viewerPhoto.id ? (
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                ) : (
+                  <Trash2 className="h-4 w-4 mr-2" />
+                )}
+                Delete Photo
+              </Button>
+            )}
 
             {(viewerPhoto.caption || viewerPhoto.created_date) && (
               <div className="mt-4 text-center text-white">
