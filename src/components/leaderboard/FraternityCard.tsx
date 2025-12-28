@@ -22,7 +22,8 @@ export default function FraternityCard({ fraternity, rank, onRate, filter = 'ove
   const scores = fraternity.computedScores;
   
   // Get the score to display based on current filter
-  const getDisplayScore = (): number => {
+  // Returns null for party filter when hasPartyScoreData is false
+  const getDisplayScore = (): number | null => {
     if (!scores) {
       return fraternity.reputation_score ?? 5;
     }
@@ -32,7 +33,8 @@ export default function FraternityCard({ fraternity, rank, onRate, filter = 'ove
       case 'reputation':
         return scores.repAdj;
       case 'party':
-        return scores.partyAdj; // Confidence-stabilized party score
+        // Return null if no party data (will show "—")
+        return scores.hasPartyScoreData ? scores.semesterPartyScore : null;
       case 'trending':
         return scores.activityTrending; // Show activity score for trending
       default:
@@ -47,13 +49,15 @@ export default function FraternityCard({ fraternity, rank, onRate, filter = 'ove
       case 'reputation':
         return 'Reputation';
       case 'party':
-        return 'Frat Party Score';
+        return 'Semester Party Score';
       case 'trending':
         return 'Activity';
       default:
         return 'Overall Score';
     }
   };
+
+  const hasPartyData = scores?.hasPartyScoreData ?? false;
   
   const handleRateClick = (e: React.MouseEvent) => {
     e.preventDefault();
@@ -98,10 +102,19 @@ export default function FraternityCard({ fraternity, rank, onRate, filter = 'ove
 
               <div className="text-right">
                 <div className="text-2xl font-bold text-foreground">
-                  {filter === 'trending' ? Math.round(getDisplayScore()) : getDisplayScore().toFixed(1)}
+                  {filter === 'party' && !hasPartyData 
+                    ? '—' 
+                    : filter === 'trending' 
+                      ? Math.round(getDisplayScore()!) 
+                      : getDisplayScore()?.toFixed(1) ?? '—'}
                 </div>
                 <p className="text-xs text-muted-foreground">{getScoreLabel()}</p>
-                {filter === 'party' && (
+                {filter === 'party' && !hasPartyData && (
+                  <Badge variant="outline" className="text-[10px] mt-1 text-muted-foreground">
+                    No ratings yet
+                  </Badge>
+                )}
+                {filter === 'party' && hasPartyData && (
                   <p className="text-[10px] text-muted-foreground/70 mt-0.5">Weighted avg of all parties</p>
                 )}
                 {filter !== 'trending' && <TrendIndicator momentum={trending} />}

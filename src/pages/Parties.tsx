@@ -66,7 +66,7 @@ export default function Parties() {
       }));
       
       // Compute campus baseline B_campus
-      const campusBaseline = getCachedCampusBaseline(allPartiesWithRatings);
+      const campusBaseline = computeCampusBaseline(allPartiesWithRatings);
       
       // Group parties by fraternity for fraternity-scoped baselines
       const partiesByFrat = new Map<string, PartyWithRatings[]>();

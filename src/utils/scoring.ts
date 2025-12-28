@@ -258,6 +258,17 @@ export function computeFraternityBaseline(
 // ============================================
 
 /**
+ * Result type for Element 2 computation
+ * hasData = true only when the fraternity has at least one rated party
+ */
+export type SemesterPartyScoreResult = {
+  score: number | null;
+  hasData: boolean;
+  avg: number | null;
+  hostBonus: number;
+};
+
+/**
  * Element 2: Compute semester fraternity party score (SemesterPartyScore_f)
  * 
  * Step 1: Participation weight per party
@@ -265,7 +276,7 @@ export function computeFraternityBaseline(
  * 
  * Step 2: Weighted semester average
  *   SemesterPartyAvg_f = Σ(PartyScore_p * w_p) / Σ(w_p)
- *   If no rated parties: SemesterPartyAvg_f = B_campus
+ *   If no rated parties: return null (NO DATA state)
  * 
  * Step 3: Hosting bonus (diminishing returns, caps ~4-5 parties)
  *   HostBonus_f = 1 + alpha * (1 - exp(-m_f / t))
@@ -274,26 +285,39 @@ export function computeFraternityBaseline(
  * 
  * Step 4: Final score
  *   SemesterPartyScore_f = SemesterPartyAvg_f * HostBonus_f
+ * 
+ * IMPORTANT: If a frat has zero rated parties, we return null for score/avg.
+ * Hosting bonus is NOT applied without ratings data.
  */
 export function computeSemesterPartyScore(
   partiesWithRatings: PartyWithRatings[],
   campusBaseline: number
-): { semesterPartyScore: number; semesterPartyAvg: number; hostingBonus: number } {
+): SemesterPartyScoreResult {
   const alpha = 0.08; // Max hosting bonus (+8%)
   const t = 2.0;      // Hosting bonus saturation rate
 
-  const m_f = partiesWithRatings.length; // Number of parties hosted
+  // Filter to only parties with at least 1 rating (hasData is about RATED parties)
+  const ratedParties = partiesWithRatings.filter(pwr => pwr.ratings.length > 0);
+  
+  // NO DATA: If no rated parties, return null state
+  if (ratedParties.length === 0) {
+    if (import.meta.env.DEV) {
+      console.log('[Element 2] No Data: 0 rated parties');
+    }
+    return { score: null, hasData: false, avg: null, hostBonus: 1 };
+  }
+
+  const m_f = partiesWithRatings.length; // Number of parties hosted (for hosting bonus)
 
   // Compute individual party scores first using fraternity baseline
   const fratBaseline = computeFraternityBaseline(partiesWithRatings, campusBaseline);
   
-  // Step 1 & 2: Weighted average of PartyScore_p values
+  // Step 1 & 2: Weighted average of PartyScore_p values (only from rated parties)
   let weightedSum = 0;
   let totalWeight = 0;
 
-  for (const { party, ratings } of partiesWithRatings) {
+  for (const { party, ratings } of ratedParties) {
     const n_p = ratings.length;
-    if (n_p === 0) continue;
 
     // Compute this party's Element 1 score
     const partyScore_p = computeIndividualPartyScore(ratings, m_f, fratBaseline);
@@ -305,30 +329,29 @@ export function computeSemesterPartyScore(
     totalWeight += w_p;
   }
 
-  // If no rated parties, use campus baseline
-  const semesterPartyAvg = totalWeight > 0 
-    ? weightedSum / totalWeight 
-    : campusBaseline;
+  const avg = weightedSum / totalWeight;
 
   // Step 3: Hosting bonus
-  const hostingBonus = 1 + alpha * (1 - Math.exp(-m_f / t));
+  const hostBonus = 1 + alpha * (1 - Math.exp(-m_f / t));
 
   // Step 4: Final score
-  const semesterPartyScore = semesterPartyAvg * hostingBonus;
+  const score = avg * hostBonus;
 
   if (import.meta.env.DEV) {
     console.log('[Element 2] Semester Party Score:', {
       m_f,
-      semesterPartyAvg: semesterPartyAvg.toFixed(2),
-      hostingBonus: hostingBonus.toFixed(4),
-      semesterPartyScore: semesterPartyScore.toFixed(2),
+      ratedParties: ratedParties.length,
+      avg: avg.toFixed(2),
+      hostBonus: hostBonus.toFixed(4),
+      score: score.toFixed(2),
     });
   }
 
   return {
-    semesterPartyScore: Math.max(0, Math.min(10, semesterPartyScore)),
-    semesterPartyAvg: Math.max(0, Math.min(10, semesterPartyAvg)),
-    hostingBonus,
+    score: Math.max(0, Math.min(10, score)),
+    hasData: true,
+    avg: Math.max(0, Math.min(10, avg)),
+    hostBonus,
   };
 }
 
@@ -577,9 +600,9 @@ export function computeFraternityPartyScore(
   partiesWithRatings: PartyWithRatings[],
   campusBaseline: number = 5.5,
   referenceDate: Date = new Date()
-): number {
-  const { semesterPartyScore } = computeSemesterPartyScore(partiesWithRatings, campusBaseline);
-  return semesterPartyScore;
+): number | null {
+  const { score } = computeSemesterPartyScore(partiesWithRatings, campusBaseline);
+  return score;
 }
 
 // ============================================
@@ -591,10 +614,11 @@ export interface FraternityScores {
   repAdj: number;
   partyIndex: number;
   partyAdj: number;
-  partyScore: number; // Now uses Element 2: Semester Party Score
-  semesterPartyScore: number; // Element 2: SemesterPartyScore_f
-  semesterPartyAvg: number;   // Element 2: SemesterPartyAvg_f (before hosting bonus)
-  hostingBonus: number;       // Element 2: HostBonus_f
+  partyScore: number | null;        // Now uses Element 2: Semester Party Score (null if no data)
+  semesterPartyScore: number | null; // Element 2: SemesterPartyScore_f (null if no rated parties)
+  semesterPartyAvg: number | null;   // Element 2: SemesterPartyAvg_f (null if no rated parties)
+  hostingBonus: number;              // Element 2: HostBonus_f
+  hasPartyScoreData: boolean;        // true only if frat has >= 1 rated party
   overall: number;
   trending: number;
   activityTrending: number;
@@ -667,15 +691,13 @@ export async function computeFullFraternityScores(
   const confidenceOverall = 0.65 * confidenceRep + 0.35 * confidenceParty;
   
   // Element 2: Semester Party Score (for Parties leaderboard)
-  const { semesterPartyScore, semesterPartyAvg, hostingBonus } = computeSemesterPartyScore(
-    partiesWithRatings,
-    baseline
-  );
+  const semesterResult = computeSemesterPartyScore(partiesWithRatings, baseline);
+  const { score: semesterPartyScore, hasData: hasPartyScoreData, avg: semesterPartyAvg, hostBonus: hostingBonus } = semesterResult;
   
   // Formula D: PartyAdj (used for Overall score - keep legacy behavior)
   const partyAdj = computePartyAdj(partyIndex, numPartyRatings, campusPartyAvg);
   
-  // partyScore now uses Element 2
+  // partyScore now uses Element 2 (null if no data)
   const partyScore = semesterPartyScore;
   
   // Formula E: RepAdj
@@ -696,8 +718,9 @@ export async function computeFullFraternityScores(
       nP_f: numPartyRatings,
       partyIndex: partyIndex.toFixed(2),
       partyAdj: partyAdj.toFixed(2),
-      semesterPartyScore: semesterPartyScore.toFixed(2),
-      semesterPartyAvg: semesterPartyAvg.toFixed(2),
+      hasPartyScoreData,
+      semesterPartyScore: semesterPartyScore?.toFixed(2) ?? 'null',
+      semesterPartyAvg: semesterPartyAvg?.toFixed(2) ?? 'null',
       hostingBonus: hostingBonus.toFixed(4),
       nR_f: numRepRatings,
       rawRep: rawReputation.toFixed(2),
@@ -715,6 +738,7 @@ export async function computeFullFraternityScores(
     semesterPartyScore,
     semesterPartyAvg,
     hostingBonus,
+    hasPartyScoreData,
     overall,
     trending,
     activityTrending,
@@ -760,9 +784,18 @@ export function sortFraternitiesByReputation(frats: FraternityWithScores[]): Fra
 
 export function sortFraternitiesByParty(frats: FraternityWithScores[]): FraternityWithScores[] {
   return [...frats].sort((a, b) => {
-    // Use Element 2: semesterPartyScore for Parties leaderboard
-    const partyA = a.computedScores?.semesterPartyScore ?? 5;
-    const partyB = b.computedScores?.semesterPartyScore ?? 5;
+    // Frats with hasPartyScoreData === true go first, sorted by semesterPartyScore desc
+    // Frats with hasPartyScoreData === false go to bottom
+    const aHasData = a.computedScores?.hasPartyScoreData ?? false;
+    const bHasData = b.computedScores?.hasPartyScoreData ?? false;
+    
+    if (aHasData && !bHasData) return -1; // a goes first
+    if (!aHasData && bHasData) return 1;  // b goes first
+    if (!aHasData && !bHasData) return (a.chapter ?? '').localeCompare(b.chapter ?? ''); // both no data
+    
+    // Both have data, sort by semesterPartyScore descending
+    const partyA = a.computedScores?.semesterPartyScore ?? 0;
+    const partyB = b.computedScores?.semesterPartyScore ?? 0;
     if (partyB !== partyA) return partyB - partyA;
     return (a.chapter ?? '').localeCompare(b.chapter ?? '');
   });
