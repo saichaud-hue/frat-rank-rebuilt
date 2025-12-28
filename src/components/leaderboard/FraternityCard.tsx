@@ -125,7 +125,7 @@ export default function FraternityCard({ fraternity, rank, onRate, filter = 'ove
                 )}
                 {filter === 'party' && !hasPartyData && (
                   <Badge variant="outline" className="text-[10px] mt-1 text-muted-foreground">
-                    No ratings yet
+                    Needs more ratings
                   </Badge>
                 )}
                 {filter === 'party' && hasPartyData && (
