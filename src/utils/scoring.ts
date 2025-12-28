@@ -621,8 +621,10 @@ export async function computeFullFraternityScores(
   campusRepAvg: number,
   campusPartyAvg: number,
   activityData?: ActivityData,
-  allPartiesWithRatings?: PartyWithRatings[] // For campus baseline computation
+  campusBaseline?: number
 ): Promise<FraternityScores> {
+
+  const baseline = campusBaseline ?? 5.5;
   // Calculate individual reputation sub-score averages
   const avgBrotherhood = repRatings.length > 0
     ? repRatings.reduce((sum, r) => sum + (r.brotherhood_score ?? 5), 0) / repRatings.length
