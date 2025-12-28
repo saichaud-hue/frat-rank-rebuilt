@@ -265,11 +265,11 @@ export default function Leaderboard() {
       const s = f.computedScores;
       if (!s) return 5;
       switch (filter) {
-        case 'overall': return s.overall;
-        case 'reputation': return s.repAdj;
-        case 'party': return s.hasPartyScoreData ? s.semesterPartyScore : null; // null if no data
+        case 'overall': return s.hasOverallData ? s.overall : null;
+        case 'reputation': return s.hasRepData ? s.repAdj : null;
+        case 'party': return s.hasPartyScoreData ? s.semesterPartyScore : null;
         case 'trending': return s.trending;
-        default: return s.overall;
+        default: return s.hasOverallData ? s.overall : null;
       }
     };
     

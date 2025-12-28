@@ -26,16 +26,16 @@ export default function LeaderboardPodium({ topThree, ranks = [1, 2, 3], filter 
     }
     switch (filter) {
       case 'overall':
-        return scores.overall;
+        return scores.hasOverallData ? scores.overall : null;
       case 'reputation':
-        return scores.repAdj;
+        return scores.hasRepData ? scores.repAdj : null;
       case 'party':
         // Return null if no party data (will show "—")
         return scores.hasPartyScoreData ? scores.semesterPartyScore : null;
       case 'trending':
-        return scores.overall;
+        return scores.hasOverallData ? scores.overall : null;
       default:
-        return scores.overall;
+        return scores.hasOverallData ? scores.overall : null;
     }
   };
 
@@ -56,6 +56,22 @@ export default function LeaderboardPodium({ topThree, ranks = [1, 2, 3], filter 
 
   const hasPartyData = (frat: FraternityWithScores): boolean => {
     return frat.computedScores?.hasPartyScoreData ?? false;
+  };
+
+  const hasOverallData = (frat: FraternityWithScores): boolean => {
+    return frat.computedScores?.hasOverallData ?? false;
+  };
+
+  const hasRepData = (frat: FraternityWithScores): boolean => {
+    return frat.computedScores?.hasRepData ?? false;
+  };
+
+  const needsMoreRatings = (frat: FraternityWithScores): boolean => {
+    if (filter === 'overall') return !hasOverallData(frat);
+    if (filter === 'reputation') return !hasRepData(frat);
+    if (filter === 'party') return !hasPartyData(frat);
+    if (filter === 'trending') return !hasOverallData(frat);
+    return false;
   };
 
   const PodiumCard = ({ 
@@ -115,14 +131,12 @@ export default function LeaderboardPodium({ topThree, ranks = [1, 2, 3], filter 
             </div>
 
             <div className={`font-bold ${size === 'lg' ? 'text-2xl' : 'text-xl'} text-foreground`}>
-              {filter === 'party' && !hasPartyData(frat) 
-                ? '—' 
-                : getDisplayScore(frat)?.toFixed(1) ?? '—'}
+              {getDisplayScore(frat)?.toFixed(1) ?? '—'}
             </div>
             <p className="text-xs text-muted-foreground">{getScoreLabel()}</p>
-            {filter === 'party' && !hasPartyData(frat) && (
+            {needsMoreRatings(frat) && (
               <Badge variant="outline" className="text-[9px] mt-1 text-muted-foreground">
-                No ratings yet
+                {filter === 'party' ? 'No ratings yet' : 'Needs more ratings'}
               </Badge>
             )}
             {filter === 'party' && hasPartyData(frat) && (

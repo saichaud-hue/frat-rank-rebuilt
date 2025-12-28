@@ -22,23 +22,25 @@ export default function FraternityCard({ fraternity, rank, onRate, filter = 'ove
   const scores = fraternity.computedScores;
   
   // Get the score to display based on current filter
-  // Returns null for party filter when hasPartyScoreData is false
+  // Returns null when data is insufficient
   const getDisplayScore = (): number | null => {
     if (!scores) {
       return fraternity.reputation_score ?? 5;
     }
     switch (filter) {
       case 'overall':
-        return scores.overall;
+        // Return null if insufficient data for overall
+        return scores.hasOverallData ? scores.overall : null;
       case 'reputation':
-        return scores.repAdj;
+        // Return null if insufficient rep data
+        return scores.hasRepData ? scores.repAdj : null;
       case 'party':
         // Return null if no party data (will show "—")
         return scores.hasPartyScoreData ? scores.semesterPartyScore : null;
       case 'trending':
         return scores.activityTrending; // Show activity score for trending
       default:
-        return scores.overall;
+        return scores.hasOverallData ? scores.overall : null;
     }
   };
 
@@ -58,6 +60,8 @@ export default function FraternityCard({ fraternity, rank, onRate, filter = 'ove
   };
 
   const hasPartyData = scores?.hasPartyScoreData ?? false;
+  const hasOverallData = scores?.hasOverallData ?? false;
+  const hasRepData = scores?.hasRepData ?? false;
   
   const handleRateClick = (e: React.MouseEvent) => {
     e.preventDefault();
@@ -102,13 +106,23 @@ export default function FraternityCard({ fraternity, rank, onRate, filter = 'ove
 
               <div className="text-right">
                 <div className="text-2xl font-bold text-foreground">
-                  {filter === 'party' && !hasPartyData 
+                  {getDisplayScore() === null 
                     ? '—' 
                     : filter === 'trending' 
                       ? Math.round(getDisplayScore()!) 
-                      : getDisplayScore()?.toFixed(1) ?? '—'}
+                      : getDisplayScore()?.toFixed(1)}
                 </div>
                 <p className="text-xs text-muted-foreground">{getScoreLabel()}</p>
+                {filter === 'overall' && !hasOverallData && (
+                  <Badge variant="outline" className="text-[10px] mt-1 text-muted-foreground">
+                    Needs more ratings
+                  </Badge>
+                )}
+                {filter === 'reputation' && !hasRepData && (
+                  <Badge variant="outline" className="text-[10px] mt-1 text-muted-foreground">
+                    Needs more ratings
+                  </Badge>
+                )}
                 {filter === 'party' && !hasPartyData && (
                   <Badge variant="outline" className="text-[10px] mt-1 text-muted-foreground">
                     No ratings yet

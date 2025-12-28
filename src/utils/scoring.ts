@@ -802,6 +802,11 @@ export function computeFraternityPartyScore(
 // FULL SCORE COMPUTATION FOR A FRATERNITY
 // ============================================
 
+// Minimum thresholds for Overall score computation
+export const MIN_REP_RATINGS_FOR_OVERALL = 3;
+export const MIN_PARTY_RATINGS_FOR_OVERALL = 5;
+export const MIN_RATED_PARTIES_FOR_OVERALL = 2;
+
 export interface FraternityScores {
   rawReputation: number;
   repAdj: number;
@@ -812,11 +817,14 @@ export interface FraternityScores {
   semesterPartyAvg: number | null;   // Element 2: SemesterPartyAvg_f (null if no rated parties)
   hostingBonus: number;              // Element 2: HostBonus_f
   hasPartyScoreData: boolean;        // true only if frat has >= 1 rated party
-  overall: number;
+  hasRepData: boolean;               // true only if numRepRatings >= MIN_REP_RATINGS_FOR_OVERALL
+  hasOverallData: boolean;           // true only if both rep and party thresholds are met
+  overall: number | null;            // null if hasOverallData is false
   trending: number;
   activityTrending: number;
   numRepRatings: number;
   numPartyRatings: number;
+  ratedPartiesCount: number;         // Number of parties with at least 1 rating
   confidenceRep: number;
   confidenceParty: number;
   confidenceOverall: number;
@@ -887,6 +895,9 @@ export async function computeFullFraternityScores(
   const semesterResult = computeSemesterPartyScore(partiesWithRatings, baseline);
   const { score: semesterPartyScore, hasData: hasPartyScoreData, avg: semesterPartyAvg, hostBonus: hostingBonus } = semesterResult;
   
+  // Count rated parties
+  const ratedPartiesCount = partiesWithRatings.filter(pwr => pwr.ratings.length > 0).length;
+  
   // Formula D: PartyAdj (used for Overall score - keep legacy behavior)
   const partyAdj = computePartyAdj(partyIndex, numPartyRatings, campusPartyAvg);
   
@@ -896,8 +907,12 @@ export async function computeFullFraternityScores(
   // Formula E: RepAdj
   const repAdj = computeRepAdj(rawReputation, numRepRatings, campusRepAvg);
   
-  // Formula F: Overall
-  const overall = computeOverall(repAdj, partyAdj);
+  // Determine data sufficiency flags
+  const hasRepData = numRepRatings >= MIN_REP_RATINGS_FOR_OVERALL;
+  const hasOverallData = hasRepData && (numPartyRatings >= MIN_PARTY_RATINGS_FOR_OVERALL || ratedPartiesCount >= MIN_RATED_PARTIES_FOR_OVERALL);
+  
+  // Formula F: Overall (null if insufficient data)
+  const overall = hasOverallData ? computeOverall(repAdj, partyAdj) : null;
   
   // Trending
   const trending = computeTrending(partiesWithRatings);
@@ -909,16 +924,19 @@ export async function computeFullFraternityScores(
   if (import.meta.env.DEV) {
     console.log(`[DEBUG] Fraternity: ${fraternity.name}`, {
       nP_f: numPartyRatings,
+      ratedPartiesCount,
       partyIndex: partyIndex.toFixed(2),
       partyAdj: partyAdj.toFixed(2),
       hasPartyScoreData,
+      hasRepData,
+      hasOverallData,
       semesterPartyScore: semesterPartyScore?.toFixed(2) ?? 'null',
       semesterPartyAvg: semesterPartyAvg?.toFixed(2) ?? 'null',
       hostingBonus: hostingBonus.toFixed(4),
       nR_f: numRepRatings,
       rawRep: rawReputation.toFixed(2),
       repAdj: repAdj.toFixed(2),
-      overall: overall.toFixed(2),
+      overall: overall?.toFixed(2) ?? 'null (insufficient data)',
     });
   }
   
@@ -932,11 +950,14 @@ export async function computeFullFraternityScores(
     semesterPartyAvg,
     hostingBonus,
     hasPartyScoreData,
+    hasRepData,
+    hasOverallData,
     overall,
     trending,
     activityTrending,
     numRepRatings,
     numPartyRatings,
+    ratedPartiesCount,
     confidenceRep,
     confidenceParty,
     confidenceOverall,
@@ -959,8 +980,17 @@ export interface FraternityWithScores extends Fraternity {
 
 export function sortFraternitiesByOverall(frats: FraternityWithScores[]): FraternityWithScores[] {
   return [...frats].sort((a, b) => {
-    const overallA = a.computedScores?.overall ?? 5;
-    const overallB = b.computedScores?.overall ?? 5;
+    const aHasData = a.computedScores?.hasOverallData ?? false;
+    const bHasData = b.computedScores?.hasOverallData ?? false;
+    
+    // Frats with data go first
+    if (aHasData && !bHasData) return -1;
+    if (!aHasData && bHasData) return 1;
+    if (!aHasData && !bHasData) return (a.chapter ?? '').localeCompare(b.chapter ?? '');
+    
+    // Both have data, sort by overall descending
+    const overallA = a.computedScores?.overall ?? 0;
+    const overallB = b.computedScores?.overall ?? 0;
     if (overallB !== overallA) return overallB - overallA;
     return (a.chapter ?? '').localeCompare(b.chapter ?? '');
   });
@@ -968,6 +998,15 @@ export function sortFraternitiesByOverall(frats: FraternityWithScores[]): Frater
 
 export function sortFraternitiesByReputation(frats: FraternityWithScores[]): FraternityWithScores[] {
   return [...frats].sort((a, b) => {
+    const aHasData = a.computedScores?.hasRepData ?? false;
+    const bHasData = b.computedScores?.hasRepData ?? false;
+    
+    // Frats with sufficient rep data go first
+    if (aHasData && !bHasData) return -1;
+    if (!aHasData && bHasData) return 1;
+    if (!aHasData && !bHasData) return (a.chapter ?? '').localeCompare(b.chapter ?? '');
+    
+    // Both have data, sort by repAdj descending
     const repA = a.computedScores?.repAdj ?? 5;
     const repB = b.computedScores?.repAdj ?? 5;
     if (repB !== repA) return repB - repA;
