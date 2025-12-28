@@ -1,12 +1,12 @@
-import { useState, useEffect } from 'react';
-import { MessageSquare, ThumbsUp, Reply, Send, Smile, Meh, Frown, X } from 'lucide-react';
+import { useState, useEffect, useCallback } from 'react';
+import { MessageSquare, ThumbsUp, ThumbsDown, Reply, Send, Smile, Meh, Frown, X } from 'lucide-react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Skeleton } from '@/components/ui/skeleton';
-import { base44, type PartyComment } from '@/api/base44Client';
+import { base44, type PartyComment, type PartyCommentVote } from '@/api/base44Client';
 import { formatTimeAgo } from '@/utils';
 
 interface CommentSectionProps {
@@ -21,34 +21,61 @@ interface ReplyingTo {
 
 // Strip any @<uuid> patterns from text (cleanup for legacy data)
 const sanitizeCommentText = (text: string): string => {
-  // Remove @<uuid> patterns (UUID format: 8-4-4-4-12 hex chars)
   return text.replace(/@[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\s*/gi, '').trim();
 };
 
 export default function CommentSection({ partyId }: CommentSectionProps) {
   const [comments, setComments] = useState<PartyComment[]>([]);
+  const [userVotes, setUserVotes] = useState<Record<string, 1 | -1>>({});
   const [loading, setLoading] = useState(true);
   const [newComment, setNewComment] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [replyingTo, setReplyingTo] = useState<ReplyingTo | null>(null);
 
-  useEffect(() => {
-    loadComments();
-  }, [partyId]);
-
-  const loadComments = async () => {
+  const loadComments = useCallback(async () => {
     try {
-      const data = await base44.entities.PartyComment.filter(
-        { party_id: partyId },
-        'created_date'
-      );
-      setComments(data);
+      const data = await base44.entities.PartyComment.filter({ party_id: partyId });
+      
+      // Sort by score (upvotes - downvotes) desc, then by created_date desc
+      const sorted = data.sort((a, b) => {
+        const scoreA = (a.upvotes || 0) - (a.downvotes || 0);
+        const scoreB = (b.upvotes || 0) - (b.downvotes || 0);
+        if (scoreB !== scoreA) return scoreB - scoreA;
+        return new Date(b.created_date).getTime() - new Date(a.created_date).getTime();
+      });
+      
+      setComments(sorted);
     } catch (error) {
       console.error('Failed to load comments:', error);
     } finally {
       setLoading(false);
     }
-  };
+  }, [partyId]);
+
+  const loadUserVotes = useCallback(async () => {
+    try {
+      const user = await base44.auth.me();
+      if (!user) return;
+
+      const votes = await base44.entities.PartyCommentVote.filter({
+        party_id: partyId,
+        user_id: user.id,
+      });
+
+      const votesMap: Record<string, 1 | -1> = {};
+      votes.forEach((vote) => {
+        votesMap[vote.comment_id] = vote.value;
+      });
+      setUserVotes(votesMap);
+    } catch (error) {
+      console.error('Failed to load user votes:', error);
+    }
+  }, [partyId]);
+
+  useEffect(() => {
+    loadComments();
+    loadUserVotes();
+  }, [loadComments, loadUserVotes]);
 
   const analyzeSentiment = (text: string): number => {
     const positiveWords = ['great', 'awesome', 'amazing', 'love', 'best', 'fun', 'good', 'excellent', 'fantastic'];
@@ -85,6 +112,7 @@ export default function CommentSection({ partyId }: CommentSectionProps) {
         sentiment_score: sentimentScore,
         toxicity_label: 'safe',
         upvotes: 0,
+        downvotes: 0,
         moderated: false,
       });
 
@@ -115,14 +143,54 @@ export default function CommentSection({ partyId }: CommentSectionProps) {
     }
   };
 
-  const handleUpvote = async (commentId: string) => {
-    const comment = comments.find(c => c.id === commentId);
-    if (!comment) return;
+  const recalculateCommentVotes = async (commentId: string) => {
+    const allVotes = await base44.entities.PartyCommentVote.filter({ comment_id: commentId });
+    const upvotes = allVotes.filter(v => v.value === 1).length;
+    const downvotes = allVotes.filter(v => v.value === -1).length;
+    await base44.entities.PartyComment.update(commentId, { upvotes, downvotes });
+  };
 
-    await base44.entities.PartyComment.update(commentId, {
-      upvotes: (comment.upvotes ?? 0) + 1,
-    });
-    await loadComments();
+  const handleVote = async (commentId: string, value: 1 | -1) => {
+    try {
+      const user = await base44.auth.me();
+      if (!user) return;
+
+      // Find existing vote
+      const existingVotes = await base44.entities.PartyCommentVote.filter({
+        comment_id: commentId,
+        user_id: user.id,
+      });
+      const existingVote = existingVotes[0] as PartyCommentVote | undefined;
+
+      if (!existingVote) {
+        // No vote exists - create new vote
+        await base44.entities.PartyCommentVote.create({
+          comment_id: commentId,
+          party_id: partyId,
+          user_id: user.id,
+          value,
+        });
+        setUserVotes(prev => ({ ...prev, [commentId]: value }));
+      } else if (existingVote.value === value) {
+        // Same vote - toggle off (remove)
+        await base44.entities.PartyCommentVote.delete(existingVote.id);
+        setUserVotes(prev => {
+          const updated = { ...prev };
+          delete updated[commentId];
+          return updated;
+        });
+      } else {
+        // Different vote - switch
+        await base44.entities.PartyCommentVote.update(existingVote.id, { value });
+        setUserVotes(prev => ({ ...prev, [commentId]: value }));
+      }
+
+      // Recalculate from votes table
+      await recalculateCommentVotes(commentId);
+      await loadComments();
+    } catch (error) {
+      console.error('Failed to vote:', error);
+    }
   };
 
   const handleStartReply = (comment: PartyComment) => {
@@ -173,9 +241,23 @@ export default function CommentSection({ partyId }: CommentSectionProps) {
     return acc;
   }, {} as Record<string, PartyComment[]>);
 
+  // Sort replies by score desc, then newest
+  Object.keys(repliesByParent).forEach(parentId => {
+    repliesByParent[parentId].sort((a, b) => {
+      const scoreA = (a.upvotes || 0) - (a.downvotes || 0);
+      const scoreB = (b.upvotes || 0) - (b.downvotes || 0);
+      if (scoreB !== scoreA) return scoreB - scoreA;
+      return new Date(b.created_date).getTime() - new Date(a.created_date).getTime();
+    });
+  });
+
   const renderComment = (comment: PartyComment, isReply = false) => {
     const replies = repliesByParent[comment.id] || [];
     const displayText = sanitizeCommentText(comment.text ?? '');
+    const upvotes = comment.upvotes ?? 0;
+    const downvotes = comment.downvotes ?? 0;
+    const netScore = upvotes - downvotes;
+    const userVote = userVotes[comment.id];
 
     return (
       <div key={comment.id} className={`space-y-2 ${isReply ? 'ml-8 border-l-2 border-muted pl-4' : ''}`}>
@@ -194,20 +276,36 @@ export default function CommentSection({ partyId }: CommentSectionProps) {
                 </p>
               </div>
             </div>
-            {getSentimentBadge(comment.sentiment_score ?? 0)}
+            <div className="flex items-center gap-2">
+              {netScore !== 0 && (
+                <Badge variant={netScore > 0 ? 'default' : 'destructive'} className="text-xs">
+                  {netScore > 0 ? '+' : ''}{netScore}
+                </Badge>
+              )}
+              {getSentimentBadge(comment.sentiment_score ?? 0)}
+            </div>
           </div>
 
           <p className="text-sm mt-2">{displayText}</p>
 
-          <div className="flex items-center gap-4 mt-2">
+          <div className="flex items-center gap-2 mt-2">
             <Button 
               variant="ghost" 
               size="sm"
-              onClick={() => handleUpvote(comment.id)}
-              className="h-8 text-xs"
+              onClick={() => handleVote(comment.id, 1)}
+              className={`h-8 text-xs ${userVote === 1 ? 'text-emerald-600 bg-emerald-50' : ''}`}
             >
               <ThumbsUp className="h-3.5 w-3.5 mr-1" />
-              {comment.upvotes ?? 0}
+              {upvotes}
+            </Button>
+            <Button 
+              variant="ghost" 
+              size="sm"
+              onClick={() => handleVote(comment.id, -1)}
+              className={`h-8 text-xs ${userVote === -1 ? 'text-red-500 bg-red-50' : ''}`}
+            >
+              <ThumbsDown className="h-3.5 w-3.5 mr-1" />
+              {downvotes}
             </Button>
             <Button 
               variant="ghost" 
