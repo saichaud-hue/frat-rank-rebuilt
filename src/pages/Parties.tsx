@@ -1,11 +1,12 @@
 import { useState, useEffect } from 'react';
 import { PartyPopper } from 'lucide-react';
-import { base44, seedInitialData, type Party, type Fraternity } from '@/api/base44Client';
+import { base44, seedInitialData, type Party, type Fraternity, type PartyRating } from '@/api/base44Client';
 import PartyCard from '@/components/parties/PartyCard';
 import PartyFilters from '@/components/parties/PartyFilters';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Badge } from '@/components/ui/badge';
 import { subDays, addDays, startOfDay, endOfDay } from 'date-fns';
+import { computeCampusPartyAvg, computePartyOverallQuality } from '@/utils/scoring';
 interface Filters {
   fraternity: string;
   theme: string;
@@ -15,6 +16,7 @@ interface Filters {
 export default function Parties() {
   const [parties, setParties] = useState<Party[]>([]);
   const [fraternities, setFraternities] = useState<Fraternity[]>([]);
+  const [partyScores, setPartyScores] = useState<Map<string, number>>(new Map());
   const [loading, setLoading] = useState(true);
   const [filters, setFilters] = useState<Filters>({
     fraternity: 'all',
@@ -28,25 +30,43 @@ export default function Parties() {
 
   const initAndLoad = async () => {
     await seedInitialData();
-    await Promise.all([loadParties(), loadFraternities()]);
+    await loadData();
     setLoading(false);
   };
 
-  const loadParties = async () => {
+  const loadData = async () => {
     try {
-      const data = await base44.entities.Party.list('starts_at');
-      setParties(data);
-    } catch (error) {
-      console.error('Failed to load parties:', error);
-    }
-  };
+      const [partiesData, fraternityData, allPartyRatings] = await Promise.all([
+        base44.entities.Party.list('starts_at'),
+        base44.entities.Fraternity.list(),
+        base44.entities.PartyRating.list(),
+      ]);
+      
+      setParties(partiesData);
+      setFraternities(fraternityData);
 
-  const loadFraternities = async () => {
-    try {
-      const data = await base44.entities.Fraternity.list();
-      setFraternities(data);
+      // Compute campus average for confidence adjustment
+      const campusPartyAvg = computeCampusPartyAvg(partiesData);
+
+      // Group ratings by party
+      const partyRatingsMap = new Map<string, PartyRating[]>();
+      for (const rating of allPartyRatings) {
+        if (rating.party_id) {
+          const existing = partyRatingsMap.get(rating.party_id) || [];
+          existing.push(rating);
+          partyRatingsMap.set(rating.party_id, existing);
+        }
+      }
+
+      // Compute per-party overall quality using the canonical utility function
+      const perPartyScores = new Map<string, number>();
+      for (const party of partiesData) {
+        const ratings = partyRatingsMap.get(party.id) || [];
+        perPartyScores.set(party.id, computePartyOverallQuality(ratings, campusPartyAvg));
+      }
+      setPartyScores(perPartyScores);
     } catch (error) {
-      console.error('Failed to load fraternities:', error);
+      console.error('Failed to load data:', error);
     }
   };
 
@@ -109,10 +129,10 @@ export default function Parties() {
   const filteredParties = filterParties(parties);
   const liveParties = filteredParties.filter(p => isLive(p));
   const upcomingParties = filteredParties.filter(p => !isLive(p) && p.status === 'upcoming');
-  // Sort completed parties by Party Quality (performance_score) descending
+  // Sort completed parties by Overall Party Quality (confidence-adjusted) descending
   const completedParties = filteredParties
     .filter(p => p.status === 'completed')
-    .sort((a, b) => (b.performance_score ?? 0) - (a.performance_score ?? 0));
+    .sort((a, b) => (partyScores.get(b.id) ?? 0) - (partyScores.get(a.id) ?? 0));
 
   if (loading) {
     return (
@@ -153,6 +173,7 @@ export default function Parties() {
               party={party}
               fraternityName={getFraternityName(party.fraternity_id)}
               isLive
+              overallPartyQuality={partyScores.get(party.id)}
             />
           ))}
         </section>
@@ -167,6 +188,7 @@ export default function Parties() {
               key={party.id}
               party={party}
               fraternityName={getFraternityName(party.fraternity_id)}
+              overallPartyQuality={partyScores.get(party.id)}
             />
           ))}
         </section>
@@ -181,6 +203,7 @@ export default function Parties() {
               key={party.id}
               party={party}
               fraternityName={getFraternityName(party.fraternity_id)}
+              overallPartyQuality={partyScores.get(party.id)}
             />
           ))}
         </section>

@@ -263,6 +263,38 @@ export function computeCampusPartyAvg(parties: Party[]): number {
 }
 
 // ============================================
+// PER-PARTY OVERALL QUALITY (Single Source of Truth)
+// ============================================
+
+/**
+ * Compute the confidence-adjusted overall party quality for a single party.
+ * This is the CANONICAL function - use this everywhere party quality is displayed.
+ * 
+ * Formula: cP = 1 - exp(-n/10), then adjustedQuality = cP * avgQuality + (1-cP) * campusAvg
+ * 
+ * @param ratings - All ratings for this party
+ * @param campusPartyAvg - Campus-wide average party score (for confidence blending)
+ * @returns Confidence-adjusted overall party quality score
+ */
+export function computePartyOverallQuality(
+  ratings: PartyRating[],
+  campusPartyAvg: number
+): number {
+  if (ratings.length === 0) {
+    return campusPartyAvg;
+  }
+  
+  // Average party quality from all ratings for this party
+  const avgQuality = ratings.reduce((sum, r) => sum + (r.party_quality_score ?? 5), 0) / ratings.length;
+  
+  // Apply confidence adjustment: cP = 1 - exp(-n/10) for per-party
+  const confidence = 1 - Math.exp(-ratings.length / 10);
+  const adjustedQuality = confidence * avgQuality + (1 - confidence) * campusPartyAvg;
+  
+  return Math.max(0, Math.min(10, adjustedQuality));
+}
+
+// ============================================
 // FULL SCORE COMPUTATION FOR A FRATERNITY
 // ============================================
 
