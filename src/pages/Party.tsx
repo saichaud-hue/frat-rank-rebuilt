@@ -14,6 +14,7 @@ import PartyRatingForm from '@/components/rate/PartyRatingForm';
 import { createPageUrl, getScoreBgColor } from '@/utils';
 import { format } from 'date-fns';
 import { computeRawPartyQuality, getPartyConfidenceLevel } from '@/utils/scoring';
+import { ensureAuthed } from '@/utils/auth';
 
 export default function PartyPage() {
   const [searchParams] = useSearchParams();
@@ -86,6 +87,12 @@ export default function PartyPage() {
     setShowRatingForm(false);
     loadParty();
     setRatingsRefreshKey((k) => k + 1);
+  };
+
+  const handleRateClick = async () => {
+    const user = await ensureAuthed();
+    if (!user) return;
+    setShowRatingForm(true);
   };
 
   if (loading) {
@@ -210,7 +217,7 @@ export default function PartyPage() {
 
           {canRate() ? (
             <Button 
-              onClick={() => setShowRatingForm(true)}
+              onClick={handleRateClick}
               className="w-full gradient-primary text-white"
             >
               <Star className="h-4 w-4 mr-2" />
