@@ -6,6 +6,7 @@ import { createPageUrl, getScoreColor } from '@/utils';
 import { format } from 'date-fns';
 import type { Party } from '@/api/base44Client';
 import { getPartyConfidenceLevel } from '@/utils/scoring';
+import { cn } from '@/lib/utils';
 
 interface PartyCardProps {
   party: Party;
@@ -88,11 +89,24 @@ export default function PartyCard({
               )}
             </div>
 
-            {party.theme && (
-              <Badge variant="outline" className="capitalize text-xs">
-                {party.theme}
+            <div className="flex items-center gap-1.5 flex-wrap">
+              {party.theme && (
+                <Badge variant="outline" className="capitalize text-xs">
+                  {party.theme}
+                </Badge>
+              )}
+              <Badge 
+                variant="outline" 
+                className={cn(
+                  "text-xs",
+                  party.tags?.includes('invite_only') 
+                    ? "border-amber-500/50 text-amber-600 bg-amber-50 dark:bg-amber-950/30" 
+                    : "border-emerald-500/50 text-emerald-600 bg-emerald-50 dark:bg-emerald-950/30"
+                )}
+              >
+                {party.tags?.includes('invite_only') ? 'Invite Only' : 'Open'}
               </Badge>
-            )}
+            </div>
 
             {isCompleted && (() => {
               const confidence = getPartyConfidenceLevel(actualRatingCount);
