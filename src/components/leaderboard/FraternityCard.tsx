@@ -49,7 +49,7 @@ export default function FraternityCard({ fraternity, rank, onRate, filter = 'ove
       case 'overall':
         return 'Overall Score';
       case 'reputation':
-        return 'Reputation';
+        return 'Overall Frat Rating';
       case 'party':
         return 'Semester Party Score';
       case 'trending':

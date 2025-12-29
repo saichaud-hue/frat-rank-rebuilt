@@ -87,7 +87,7 @@ export default function ScoreBreakdown({
     <div className="space-y-3">
       <div className="space-y-1.5">
         <div className="flex items-center justify-between text-sm">
-          <span className="text-muted-foreground">Reputation</span>
+          <span className="text-muted-foreground">Overall Frat Rating</span>
           <span className="font-semibold">{reputationScore.toFixed(1)}</span>
         </div>
         <Progress value={reputationScore * 10} className="h-2" />
