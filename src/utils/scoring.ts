@@ -1101,6 +1101,9 @@ export interface FraternityScores {
   numRepRatings: number;
   numPartyRatings: number;
   ratedPartiesCount: number;         // Number of parties with at least 1 rating
+  numPartyComments: number;          // Total party comments this semester
+  numFratComments: number;           // Total fraternity comments this semester
+  numPartiesHosted: number;          // Total parties hosted this semester
   confidenceRep: number;
   confidenceParty: number;
   confidenceOverall: number;
@@ -1219,6 +1222,11 @@ export async function computeFullFraternityScores(
     });
   }
   
+  // Count activity for this semester
+  const numPartyComments = activityData?.partyComments?.length ?? 0;
+  const numFratComments = activityData?.fratComments?.length ?? 0;
+  const numPartiesHosted = partiesWithRatings.length;
+  
   return {
     rawReputation,
     repAdj,
@@ -1239,6 +1247,9 @@ export async function computeFullFraternityScores(
     numRepRatings,
     numPartyRatings,
     ratedPartiesCount,
+    numPartyComments,
+    numFratComments,
+    numPartiesHosted,
     confidenceRep,
     confidenceParty,
     confidenceOverall,

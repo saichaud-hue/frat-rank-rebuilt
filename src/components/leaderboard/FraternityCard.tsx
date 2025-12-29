@@ -1,4 +1,4 @@
-import { Crown, Trophy, Star, Calendar } from 'lucide-react';
+import { Crown, Trophy, Star, Calendar, PartyPopper, MessageCircle, ThumbsUp } from 'lucide-react';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -154,7 +154,31 @@ export default function FraternityCard({ fraternity, rank, onRate, filter = 'ove
               </p>
             )}
 
-            <ScoreBreakdown 
+            {/* Activity Counter for Trending Filter */}
+            {filter === 'trending' && (
+              <div className="bg-muted/50 rounded-lg px-3 py-2">
+                <p className="text-xs text-muted-foreground mb-1.5">This semester:</p>
+                <div className="flex items-center gap-4 text-sm">
+                  <div className="flex items-center gap-1.5">
+                    <PartyPopper className="h-4 w-4 text-primary" />
+                    <span className="font-medium">{scores?.numPartiesHosted ?? 0}</span>
+                    <span className="text-muted-foreground text-xs">parties</span>
+                  </div>
+                  <div className="flex items-center gap-1.5">
+                    <ThumbsUp className="h-4 w-4 text-primary" />
+                    <span className="font-medium">{(scores?.numRepRatings ?? 0) + (scores?.numPartyRatings ?? 0)}</span>
+                    <span className="text-muted-foreground text-xs">ratings</span>
+                  </div>
+                  <div className="flex items-center gap-1.5">
+                    <MessageCircle className="h-4 w-4 text-primary" />
+                    <span className="font-medium">{(scores?.numPartyComments ?? 0) + (scores?.numFratComments ?? 0)}</span>
+                    <span className="text-muted-foreground text-xs">comments</span>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            <ScoreBreakdown
               reputationScore={scores?.repAdj ?? fraternity.reputation_score ?? 5} 
               partyScore={scores?.partyAdj ?? fraternity.historical_party_score ?? 5}
               mode={filter === 'party' ? 'party' : filter === 'reputation' ? 'reputation' : 'overall'}
