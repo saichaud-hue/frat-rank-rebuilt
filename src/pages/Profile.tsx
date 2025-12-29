@@ -32,6 +32,9 @@ export default function Profile() {
   // Edit/Delete state for frat ratings
   const [editingFratRating, setEditingFratRating] = useState<EnrichedRepRating | null>(null);
   const [deletingFratRatingId, setDeletingFratRatingId] = useState<string | null>(null);
+  
+  // Delete state for comments
+  const [deletingCommentId, setDeletingCommentId] = useState<string | null>(null);
 
   useEffect(() => {
     loadProfile();
@@ -170,6 +173,21 @@ export default function Profile() {
       console.error('Failed to delete frat rating:', error);
     }
     setDeletingFratRatingId(null);
+  };
+
+  const handleDeleteComment = async (comment: any) => {
+    try {
+      if (comment.type === 'party') {
+        await base44.entities.PartyComment.delete(comment.id);
+      } else {
+        await base44.entities.FraternityComment.delete(comment.id);
+      }
+      setCommentsData(prev => prev.filter(c => c.id !== comment.id));
+      setStats(prev => ({ ...prev, comments: prev.comments - 1 }));
+    } catch (error) {
+      console.error('Failed to delete comment:', error);
+    }
+    setDeletingCommentId(null);
   };
 
   if (loading) {
@@ -480,11 +498,42 @@ export default function Profile() {
               {commentsData.length === 0 ? (
                 <p className="text-muted-foreground text-sm text-center py-4">No comments yet</p>
               ) : (
-                commentsData.map((comment) => (
+              commentsData.map((comment) => (
                   <div key={comment.id} className="py-2 border-b border-border/50 last:border-0">
                     <div className="flex items-center justify-between mb-1">
                       <p className="text-sm font-medium">{comment.entityName}</p>
-                      <Badge variant="outline" className="text-xs">{comment.type}</Badge>
+                      <div className="flex items-center gap-2">
+                        <Badge variant="outline" className="text-xs">{comment.type}</Badge>
+                        <AlertDialog open={deletingCommentId === comment.id} onOpenChange={(open) => setDeletingCommentId(open ? comment.id : null)}>
+                          <AlertDialogTrigger asChild>
+                            <Button 
+                              variant="ghost" 
+                              size="icon" 
+                              className="h-7 w-7 text-destructive hover:text-destructive"
+                              onClick={(e) => e.stopPropagation()}
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </AlertDialogTrigger>
+                          <AlertDialogContent>
+                            <AlertDialogHeader>
+                              <AlertDialogTitle>Delete this comment?</AlertDialogTitle>
+                              <AlertDialogDescription>
+                                This action cannot be undone.
+                              </AlertDialogDescription>
+                            </AlertDialogHeader>
+                            <AlertDialogFooter>
+                              <AlertDialogCancel>Cancel</AlertDialogCancel>
+                              <AlertDialogAction 
+                                onClick={() => handleDeleteComment(comment)}
+                                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                              >
+                                Delete
+                              </AlertDialogAction>
+                            </AlertDialogFooter>
+                          </AlertDialogContent>
+                        </AlertDialog>
+                      </div>
                     </div>
                     <p className="text-sm text-foreground line-clamp-2">{comment.text}</p>
                     <p className="text-xs text-muted-foreground mt-1">{format(new Date(comment.created_date), 'MMM d, yyyy')}</p>
