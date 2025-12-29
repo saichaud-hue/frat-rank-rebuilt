@@ -270,7 +270,7 @@ export default function Leaderboard() {
         case 'overall': return s.hasOverallData ? s.overall : null;
         case 'reputation': return s.hasRepData ? s.repAdj : null;
         case 'party': return s.hasPartyScoreData ? s.semesterPartyScore : null;
-        case 'trending': return s.trending;
+        case 'trending': return s.activityTrending;
         default: return s.hasOverallData ? s.overall : null;
       }
     };
