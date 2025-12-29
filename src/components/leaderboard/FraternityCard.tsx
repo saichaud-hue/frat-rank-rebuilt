@@ -156,23 +156,23 @@ export default function FraternityCard({ fraternity, rank, onRate, filter = 'ove
 
             {/* Activity Counter for Trending Filter */}
             {filter === 'trending' && (
-              <div className="bg-muted/50 rounded-lg px-3 py-2">
-                <p className="text-xs text-muted-foreground mb-1.5">This semester:</p>
-                <div className="flex items-center gap-4 text-sm">
-                  <div className="flex items-center gap-1.5">
-                    <PartyPopper className="h-4 w-4 text-primary" />
-                    <span className="font-medium">{scores?.numPartiesHosted ?? 0}</span>
-                    <span className="text-muted-foreground text-xs">parties</span>
+              <div className="bg-muted/50 rounded-lg px-4 py-3 max-w-[85%]">
+                <p className="text-sm font-medium text-muted-foreground mb-2">This semester:</p>
+                <div className="flex items-center gap-5">
+                  <div className="flex items-center gap-2">
+                    <PartyPopper className="h-5 w-5 text-primary" />
+                    <span className="font-semibold text-base">{scores?.numPartiesHosted ?? 0}</span>
+                    <span className="text-muted-foreground text-sm">parties</span>
                   </div>
-                  <div className="flex items-center gap-1.5">
-                    <ThumbsUp className="h-4 w-4 text-primary" />
-                    <span className="font-medium">{(scores?.numRepRatings ?? 0) + (scores?.numPartyRatings ?? 0)}</span>
-                    <span className="text-muted-foreground text-xs">ratings</span>
+                  <div className="flex items-center gap-2">
+                    <ThumbsUp className="h-5 w-5 text-primary" />
+                    <span className="font-semibold text-base">{(scores?.numRepRatings ?? 0) + (scores?.numPartyRatings ?? 0)}</span>
+                    <span className="text-muted-foreground text-sm">ratings</span>
                   </div>
-                  <div className="flex items-center gap-1.5">
-                    <MessageCircle className="h-4 w-4 text-primary" />
-                    <span className="font-medium">{(scores?.numPartyComments ?? 0) + (scores?.numFratComments ?? 0)}</span>
-                    <span className="text-muted-foreground text-xs">comments</span>
+                  <div className="flex items-center gap-2">
+                    <MessageCircle className="h-5 w-5 text-primary" />
+                    <span className="font-semibold text-base">{(scores?.numPartyComments ?? 0) + (scores?.numFratComments ?? 0)}</span>
+                    <span className="text-muted-foreground text-sm">comments</span>
                   </div>
                 </div>
               </div>
