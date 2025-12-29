@@ -98,12 +98,13 @@ export default function CreateParty() {
 
   const displayTitle = formData.title.trim() || 'Untitled Party';
 
-  const timeOptions = Array.from({ length: 48 }, (_, i) => {
-    const hour = Math.floor(i / 2);
-    const minute = i % 2 === 0 ? '00' : '30';
-    const h = hour.toString().padStart(2, '0');
-    return `${h}:${minute}`;
-  });
+  // Format time for display
+  const formatTimeDisplay = (time: string) => {
+    const [h, m] = time.split(':').map(Number);
+    const period = h >= 12 ? 'PM' : 'AM';
+    const hour = h % 12 || 12;
+    return `${hour}:${m.toString().padStart(2, '0')} ${period}`;
+  };
 
   return (
     <div className="max-w-2xl mx-auto space-y-6">
@@ -166,6 +167,7 @@ export default function CreateParty() {
                       <PopoverTrigger asChild>
                         <Button
                           variant="outline"
+                          type="button"
                           className={cn(
                             "flex-1 justify-start text-left font-normal h-10 rounded-full px-4",
                             !startDate && "text-muted-foreground"
@@ -185,18 +187,12 @@ export default function CreateParty() {
                       </PopoverContent>
                     </Popover>
                     
-                    <Select value={startTime} onValueChange={setStartTime}>
-                      <SelectTrigger className="w-28 h-10 rounded-full">
-                        <SelectValue placeholder="Time" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {timeOptions.map((time) => (
-                          <SelectItem key={time} value={time}>
-                            {format(new Date(`2000-01-01T${time}`), 'h:mm a')}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                    <Input
+                      type="time"
+                      value={startTime}
+                      onChange={(e) => setStartTime(e.target.value)}
+                      className="w-28 h-10 rounded-full text-center"
+                    />
                   </div>
                 </div>
               </div>
@@ -216,6 +212,7 @@ export default function CreateParty() {
                       <PopoverTrigger asChild>
                         <Button
                           variant="outline"
+                          type="button"
                           className={cn(
                             "flex-1 justify-start text-left font-normal h-10 rounded-full px-4",
                             !endDate && "text-muted-foreground"
@@ -235,18 +232,12 @@ export default function CreateParty() {
                       </PopoverContent>
                     </Popover>
                     
-                    <Select value={endTime} onValueChange={setEndTime}>
-                      <SelectTrigger className="w-28 h-10 rounded-full">
-                        <SelectValue placeholder="Time" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {timeOptions.map((time) => (
-                          <SelectItem key={time} value={time}>
-                            {format(new Date(`2000-01-01T${time}`), 'h:mm a')}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                    <Input
+                      type="time"
+                      value={endTime}
+                      onChange={(e) => setEndTime(e.target.value)}
+                      className="w-28 h-10 rounded-full text-center"
+                    />
                   </div>
                 </div>
               </div>
