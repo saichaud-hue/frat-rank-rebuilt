@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useSearchParams, Link } from 'react-router-dom';
-import { ArrowLeft, Calendar, Star, PartyPopper, Users, Shield, Heart, Music, Info } from 'lucide-react';
+import { ArrowLeft, Calendar, Star, PartyPopper, Users, Shield, Heart, Music, Info, ThumbsUp, MessageCircle } from 'lucide-react';
 import { base44, type Fraternity as FraternityType, type Party, type PartyRating, type ReputationRating, type PartyComment, type FraternityComment } from '@/api/base44Client';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -612,6 +612,44 @@ export default function FraternityPage() {
             repRatings={computedScores.numRepRatings}
             partyRatings={computedScores.numPartyRatings}
           />
+        </Card>
+      )}
+
+      {/* SEMESTER ACTIVITY STATS */}
+      {computedScores && (
+        <Card className="glass p-6">
+          <p className="text-sm font-medium text-muted-foreground mb-3">This semester:</p>
+          <div className="flex items-center gap-6">
+            <div className="flex items-center gap-2">
+              <PartyPopper className="h-5 w-5 text-primary" />
+              <span className="font-semibold text-base">
+                {computedScores.numPartiesHosted >= 1000 
+                  ? (computedScores.numPartiesHosted / 1000).toFixed(1).replace(/\.0$/, '') + 'k'
+                  : computedScores.numPartiesHosted}
+              </span>
+              <span className="text-muted-foreground text-sm">parties</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <ThumbsUp className="h-5 w-5 text-primary" />
+              <span className="font-semibold text-base">
+                {(() => {
+                  const total = computedScores.numRepRatings + computedScores.numPartyRatings;
+                  return total >= 1000 ? (total / 1000).toFixed(1).replace(/\.0$/, '') + 'k' : total;
+                })()}
+              </span>
+              <span className="text-muted-foreground text-sm">ratings</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <MessageCircle className="h-5 w-5 text-primary" />
+              <span className="font-semibold text-base">
+                {(() => {
+                  const total = computedScores.numPartyComments + computedScores.numFratComments;
+                  return total >= 1000 ? (total / 1000).toFixed(1).replace(/\.0$/, '') + 'k' : total;
+                })()}
+              </span>
+              <span className="text-muted-foreground text-sm">comments</span>
+            </div>
+          </div>
         </Card>
       )}
 
