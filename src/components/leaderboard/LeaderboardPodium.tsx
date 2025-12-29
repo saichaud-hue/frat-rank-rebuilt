@@ -42,9 +42,9 @@ export default function LeaderboardPodium({ topThree, ranks = [1, 2, 3], filter 
   const getScoreLabel = (): string => {
     switch (filter) {
       case 'overall':
-        return 'Overall Score';
+        return 'Semester Frat Score';
       case 'reputation':
-        return 'Reputation';
+        return 'Semester Frat Score';
       case 'party':
         return 'Semester Party Score';
       case 'trending':
