@@ -228,7 +228,11 @@ export default function Leaderboard() {
     };
 
     if (existingRatings.length > 0) {
-      await base44.entities.ReputationRating.update(existingRatings[0].id, ratingData);
+      // Refresh created_date on updates so edits count as fresh activity for trending
+      await base44.entities.ReputationRating.update(existingRatings[0].id, {
+        ...ratingData,
+        created_date: new Date().toISOString(),
+      });
     } else {
       await base44.entities.ReputationRating.create({
         fraternity_id: selectedFrat.id,
