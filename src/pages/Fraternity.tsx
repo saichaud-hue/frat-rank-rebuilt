@@ -502,7 +502,10 @@ export default function FraternityPage() {
         {/* Frat Rating (Your Score) */}
         <div className="space-y-4">
           <div className="flex items-center justify-between">
-            <p className="text-sm font-medium">Frat Rating</p>
+            <div className="flex items-center gap-2">
+              <Shield className="h-4 w-4 text-primary" />
+              <p className="text-sm font-medium">Frat Rating</p>
+            </div>
             {userFratScore !== null ? (
               <span className={`text-lg font-bold ${getScoreColor(userFratScore)}`}>
                 {userFratScore.toFixed(1)}
