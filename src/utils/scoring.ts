@@ -704,40 +704,297 @@ export function computePartyOverallQuality(
 // TRENDING CALCULATION (Activity-Based)
 // ============================================
 
+// Base point values for each activity type
+const TRENDING_BASE_POINTS = {
+  party: 5,
+  partyRating: 3,
+  fratRating: 3,
+  partyComment: 2,
+  fratComment: 2,
+};
+
+// Anti-spam constants
+const MAX_POINTS_PER_USER_DAY = 20;
+const RATING_DEBOUNCE_MINUTES = 10;
+
+/**
+ * Exponential decay: decay(ageDays) = exp(-ageDays / 7)
+ */
+function exponentialDecay(ageDays: number): number {
+  return Math.exp(-ageDays / 7);
+}
+
+/**
+ * Sentiment multiplier for comments
+ * Positive (>= 0.3): 1.25, Neutral: 1.0, Negative (<= -0.3): 0.75
+ */
+function getSentimentMultiplier(sentimentScore: number | undefined | null): number {
+  if (sentimentScore == null) return 1.0;
+  if (sentimentScore >= 0.3) return 1.25;
+  if (sentimentScore <= -0.3) return 0.75;
+  return 1.0;
+}
+
+/**
+ * Rating magnitude multiplier: m = 0.6 + 0.8 * (score / 10)
+ * Range: 0.6 (score=0) to 1.4 (score=10)
+ */
+function getRatingMagnitudeMultiplier(score: number | undefined | null): number {
+  if (score == null) return 1.0;
+  const clamped = Math.max(0, Math.min(10, score));
+  return 0.6 + 0.8 * (clamped / 10);
+}
+
+/**
+ * Get age in days from a date to reference date
+ */
+function getAgeDays(eventDate: Date | string, referenceDate: Date): number {
+  const event = typeof eventDate === 'string' ? new Date(eventDate) : eventDate;
+  return Math.max(0, (referenceDate.getTime() - event.getTime()) / (1000 * 60 * 60 * 24));
+}
+
+/**
+ * Get date string for anti-spam key
+ */
+function getDateKey(date: Date | string): string {
+  const d = typeof date === 'string' ? new Date(date) : date;
+  return d.toISOString().split('T')[0];
+}
+
+export interface TrendingBreakdown {
+  s7: number;
+  s14: number;
+  s30: number;
+  eventsLast7Days: number;
+  eventsPrev7Days: number;
+  positiveComments: number;
+  negativeComments: number;
+  highRatings: number;
+  lowRatings: number;
+}
+
+export interface TrendingResult {
+  score: number;
+  hypeBonus: number;
+  breakdown: TrendingBreakdown;
+}
+
 export function computeActivityTrending(
   activityData: ActivityData,
   referenceDate: Date = new Date()
-): number {
-  const sevenDaysAgo = new Date(referenceDate.getTime() - 7 * 24 * 60 * 60 * 1000);
+): TrendingResult {
+  let S7 = 0, S14 = 0, S30 = 0;
+  let S7_now_count = 0, S7_prev_count = 0;
   
-  const recentRepRatings = activityData.repRatings.filter(r => 
-    new Date(r.created_date) >= sevenDaysAgo
-  ).length;
+  // Breakdown tracking
+  let positiveComments = 0, negativeComments = 0;
+  let highRatings = 0, lowRatings = 0;
   
-  const recentPartyRatings = activityData.partyRatings.filter(r => 
-    new Date(r.created_date) >= sevenDaysAgo
-  ).length;
+  // Anti-spam: per-user per-day points tracking
+  const userDayPoints = new Map<string, number>();
   
-  const recentParties = activityData.parties.filter(p => 
-    new Date(p.starts_at) >= sevenDaysAgo
-  ).length;
+  // Rating edit debounce tracking (user+entity -> earliest event time)
+  const ratingEditTracker = new Map<string, Date>();
   
-  const recentPartyComments = activityData.partyComments.filter(c => 
-    new Date(c.created_date) >= sevenDaysAgo
-  ).length;
+  /**
+   * Helper to apply points with anti-spam cap
+   * Returns the actual points applied (may be reduced or 0 if capped)
+   */
+  function applyPointsWithCap(
+    points: number,
+    userId: string | undefined | null,
+    fratId: string | undefined | null,
+    eventDate: Date | string
+  ): number {
+    if (!userId || !fratId) return points; // No cap if no user/frat info
+    
+    const dateStr = getDateKey(eventDate);
+    const key = `${userId}_${fratId}_${dateStr}`;
+    const currentPoints = userDayPoints.get(key) ?? 0;
+    
+    const pointsToAdd = Math.min(points, MAX_POINTS_PER_USER_DAY - currentPoints);
+    if (pointsToAdd <= 0) return 0;
+    
+    userDayPoints.set(key, currentPoints + pointsToAdd);
+    return pointsToAdd;
+  }
   
-  const recentFratComments = activityData.fratComments.filter(c => 
-    new Date(c.created_date) >= sevenDaysAgo
-  ).length;
+  /**
+   * Helper to check rating edit debounce
+   * Returns true if this event should be counted, false if it's a duplicate within window
+   */
+  function checkRatingDebounce(
+    userId: string | undefined | null,
+    entityId: string | undefined | null,
+    eventDate: Date | string
+  ): boolean {
+    if (!userId || !entityId) return true;
+    
+    const key = `${userId}_${entityId}`;
+    const event = typeof eventDate === 'string' ? new Date(eventDate) : eventDate;
+    const lastEdit = ratingEditTracker.get(key);
+    
+    if (lastEdit) {
+      const minutesDiff = (event.getTime() - lastEdit.getTime()) / (1000 * 60);
+      if (minutesDiff >= 0 && minutesDiff < RATING_DEBOUNCE_MINUTES) {
+        return false; // Skip duplicate edit within window
+      }
+    }
+    
+    // Track earliest edit time
+    if (!lastEdit || event < lastEdit) {
+      ratingEditTracker.set(key, event);
+    }
+    return true;
+  }
   
-  const activityScore = 
-    (recentParties * 3) + 
-    (recentRepRatings * 2) + 
-    (recentPartyRatings * 2) + 
-    (recentPartyComments * 1) + 
-    (recentFratComments * 1);
+  /**
+   * Helper to add points to appropriate sums based on age
+   */
+  function addToSums(points: number, ageDays: number) {
+    const decayedPoints = points * exponentialDecay(ageDays);
+    
+    if (ageDays <= 7) {
+      S7 += decayedPoints;
+      S7_now_count++;
+    } else if (ageDays <= 14) {
+      S7_prev_count++;
+    }
+    
+    if (ageDays <= 14) {
+      S14 += decayedPoints;
+    }
+    
+    if (ageDays <= 30) {
+      S30 += decayedPoints;
+    }
+  }
   
-  return activityScore;
+  // Process new parties
+  for (const party of activityData.parties) {
+    const ageDays = getAgeDays(party.starts_at, referenceDate);
+    if (ageDays > 30) continue;
+    
+    const basePoints = TRENDING_BASE_POINTS.party;
+    const cappedPoints = applyPointsWithCap(basePoints, party.fraternity_id, party.fraternity_id, party.starts_at);
+    if (cappedPoints > 0) {
+      addToSums(cappedPoints, ageDays);
+    }
+  }
+  
+  // Process party ratings
+  for (const rating of activityData.partyRatings) {
+    const ageDays = getAgeDays(rating.created_date, referenceDate);
+    if (ageDays > 30) continue;
+    
+    // Check debounce for rating edits
+    if (!checkRatingDebounce(rating.user_id, rating.party_id, rating.created_date)) continue;
+    
+    const ratingScore = rating.party_quality_score ?? 5;
+    const magnitudeMultiplier = getRatingMagnitudeMultiplier(ratingScore);
+    const basePoints = TRENDING_BASE_POINTS.partyRating * magnitudeMultiplier;
+    
+    // Track high/low ratings
+    if (ratingScore >= 8) highRatings++;
+    else if (ratingScore < 5) lowRatings++;
+    
+    // Need to get frat ID from party - use party_id as proxy if no direct link
+    const cappedPoints = applyPointsWithCap(basePoints, rating.user_id, rating.party_id, rating.created_date);
+    if (cappedPoints > 0) {
+      addToSums(cappedPoints, ageDays);
+    }
+  }
+  
+  // Process frat ratings
+  for (const rating of activityData.repRatings) {
+    const ageDays = getAgeDays(rating.created_date, referenceDate);
+    if (ageDays > 30) continue;
+    
+    // Check debounce for rating edits
+    if (!checkRatingDebounce(rating.user_id, rating.fraternity_id, rating.created_date)) continue;
+    
+    const ratingScore = rating.combined_score ?? 5;
+    const magnitudeMultiplier = getRatingMagnitudeMultiplier(ratingScore);
+    const basePoints = TRENDING_BASE_POINTS.fratRating * magnitudeMultiplier;
+    
+    // Track high/low ratings
+    if (ratingScore >= 8) highRatings++;
+    else if (ratingScore < 5) lowRatings++;
+    
+    const cappedPoints = applyPointsWithCap(basePoints, rating.user_id, rating.fraternity_id, rating.created_date);
+    if (cappedPoints > 0) {
+      addToSums(cappedPoints, ageDays);
+    }
+  }
+  
+  // Process party comments
+  for (const comment of activityData.partyComments) {
+    const ageDays = getAgeDays(comment.created_date, referenceDate);
+    if (ageDays > 30) continue;
+    
+    const sentimentMultiplier = getSentimentMultiplier(comment.sentiment_score);
+    const basePoints = TRENDING_BASE_POINTS.partyComment * sentimentMultiplier;
+    
+    // Track sentiment breakdown
+    if (comment.sentiment_score != null) {
+      if (comment.sentiment_score >= 0.3) positiveComments++;
+      else if (comment.sentiment_score <= -0.3) negativeComments++;
+    }
+    
+    const cappedPoints = applyPointsWithCap(basePoints, comment.user_id, comment.party_id, comment.created_date);
+    if (cappedPoints > 0) {
+      addToSums(cappedPoints, ageDays);
+    }
+  }
+  
+  // Process frat comments
+  for (const comment of activityData.fratComments) {
+    const ageDays = getAgeDays(comment.created_date, referenceDate);
+    if (ageDays > 30) continue;
+    
+    const sentimentMultiplier = getSentimentMultiplier(comment.sentiment_score);
+    const basePoints = TRENDING_BASE_POINTS.fratComment * sentimentMultiplier;
+    
+    // Track sentiment breakdown
+    if (comment.sentiment_score != null) {
+      if (comment.sentiment_score >= 0.3) positiveComments++;
+      else if (comment.sentiment_score <= -0.3) negativeComments++;
+    }
+    
+    const cappedPoints = applyPointsWithCap(basePoints, comment.user_id, comment.fraternity_id, comment.created_date);
+    if (cappedPoints > 0) {
+      addToSums(cappedPoints, ageDays);
+    }
+  }
+  
+  // Calculate TrendingBase = 1.0*S7 + 0.4*S14 + 0.1*S30
+  const TrendingBase = 1.0 * S7 + 0.4 * S14 + 0.1 * S30;
+  
+  // Calculate HypeBonus (acceleration)
+  // growth = (S7_now - S7_prev) / max(25, S7_now + S7_prev)
+  // HypeBonus = clamp(1 + 0.15*growth, 0.90, 1.25)
+  const denominator = Math.max(25, S7_now_count + S7_prev_count);
+  const growth = (S7_now_count - S7_prev_count) / denominator;
+  const HypeBonus = Math.max(0.90, Math.min(1.25, 1 + 0.15 * growth));
+  
+  // Final Score
+  const TrendingFinal = TrendingBase * HypeBonus;
+  
+  return {
+    score: TrendingFinal,
+    hypeBonus: HypeBonus,
+    breakdown: {
+      s7: S7,
+      s14: S14,
+      s30: S30,
+      eventsLast7Days: S7_now_count,
+      eventsPrev7Days: S7_prev_count,
+      positiveComments,
+      negativeComments,
+      highRatings,
+      lowRatings,
+    },
+  };
 }
 
 /**
@@ -825,6 +1082,8 @@ export interface FraternityScores {
   overall: number | null;            // null if hasOverallData is false
   trending: number;
   activityTrending: number;
+  trendingHypeBonus: number;         // HypeBonus multiplier (0.90 - 1.25)
+  trendingBreakdown: TrendingBreakdown; // Detailed trending breakdown
   numRepRatings: number;
   numPartyRatings: number;
   ratedPartiesCount: number;         // Number of parties with at least 1 rating
@@ -919,9 +1178,12 @@ export async function computeFullFraternityScores(
   
   // Trending
   const trending = computeTrending(partiesWithRatings);
-  const activityTrending = activityData 
+  const trendingResult = activityData 
     ? computeActivityTrending(activityData)
-    : 0;
+    : { score: 0, hypeBonus: 1, breakdown: { s7: 0, s14: 0, s30: 0, eventsLast7Days: 0, eventsPrev7Days: 0, positiveComments: 0, negativeComments: 0, highRatings: 0, lowRatings: 0 } };
+  const activityTrending = trendingResult.score;
+  const trendingHypeBonus = trendingResult.hypeBonus;
+  const trendingBreakdown = trendingResult.breakdown;
 
   // DEV debug logging
   if (import.meta.env.DEV) {
@@ -958,6 +1220,8 @@ export async function computeFullFraternityScores(
     overall,
     trending,
     activityTrending,
+    trendingHypeBonus,
+    trendingBreakdown,
     numRepRatings,
     numPartyRatings,
     ratedPartiesCount,
