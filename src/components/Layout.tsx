@@ -88,10 +88,10 @@ export default function Layout({ children }: LayoutProps) {
 
   return (
     <SidebarProvider>
-      <div className="min-h-screen flex w-full bg-gradient-to-br from-slate-50 to-indigo-50">
+      <div className="min-h-screen flex w-full bg-background">
         {/* Desktop Sidebar */}
-        <Sidebar className="hidden md:flex border-r bg-white/80 backdrop-blur-sm">
-          <SidebarHeader className="p-4 border-b border-slate-200/50">
+        <Sidebar className="hidden md:flex border-r border-border bg-sidebar-background">
+          <SidebarHeader className="p-4 border-b border-border">
             <Link to="/" className="flex items-center gap-2">
               <img src={tausLogo} alt="taus" className="h-10 w-10 rounded-xl object-cover" />
               <span className="text-xl font-bold text-foreground">taus</span>
@@ -136,7 +136,7 @@ export default function Layout({ children }: LayoutProps) {
             </Card>
           </SidebarContent>
 
-          <SidebarFooter className="p-4 border-t border-slate-200/50">
+          <SidebarFooter className="p-4 border-t border-border">
             {loading ? (
               <div className="flex items-center gap-3">
                 <Skeleton className="h-10 w-10 rounded-full" />
@@ -172,7 +172,7 @@ export default function Layout({ children }: LayoutProps) {
 
         <div className="flex-1 flex flex-col min-w-0">
           {/* Mobile Header */}
-          <header className="md:hidden sticky top-0 z-40 bg-white/80 backdrop-blur-sm border-b border-slate-200/50 px-4 py-3 flex items-center justify-between">
+          <header className="md:hidden sticky top-0 z-40 bg-card/95 backdrop-blur-sm border-b border-border px-4 py-3 flex items-center justify-between">
             <Link to="/" className="flex items-center gap-2">
               <img src={tausLogo} alt="taus" className="h-8 w-8 rounded-lg object-cover" />
               <span className="text-lg font-bold text-foreground">taus</span>
@@ -188,7 +188,7 @@ export default function Layout({ children }: LayoutProps) {
           </main>
 
           {/* Mobile Bottom Nav */}
-          <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-white/95 backdrop-blur-sm border-t border-slate-200/50 px-2 py-2 z-40">
+          <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-card/95 backdrop-blur-sm border-t border-border px-2 py-2 z-40">
             <div className="grid grid-cols-3 gap-1">
               {navItems.map((item) => (
                 <Link
