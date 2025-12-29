@@ -248,6 +248,21 @@ export default function FraternityPage() {
     await loadUserRatings();
   };
 
+  // Determine party status based on current time, not stored status
+  const getPartyStatus = (party: typeof parties[0]): 'live' | 'upcoming' | 'completed' => {
+    const now = new Date();
+    const start = new Date(party.starts_at);
+    const end = party.ends_at ? new Date(party.ends_at) : new Date(start.getTime() + 5 * 60 * 60 * 1000);
+    
+    if (now >= start && now <= end) {
+      return 'live';
+    } else if (now < start) {
+      return 'upcoming';
+    } else {
+      return 'completed';
+    }
+  };
+
   if (loading) {
     return (
       <div className="max-w-2xl mx-auto space-y-6">
@@ -270,8 +285,11 @@ export default function FraternityPage() {
     );
   }
 
-  const upcomingParties = parties.filter(p => p.status === 'upcoming' || p.status === 'active');
-  const pastParties = parties.filter(p => p.status === 'completed');
+  const upcomingParties = parties.filter(p => {
+    const status = getPartyStatus(p);
+    return status === 'upcoming' || status === 'live';
+  });
+  const pastParties = parties.filter(p => getPartyStatus(p) === 'completed');
   
   // Find completed parties that have ratings (at least one rating)
   const ratedPastParties = pastParties.filter(p => {
