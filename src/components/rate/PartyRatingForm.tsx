@@ -31,7 +31,7 @@ export default function PartyRatingForm({ party, fraternity, onClose, onSubmit }
     try {
       const user = await base44.auth.me();
       if (!user) {
-        setHasLoaded(true);
+        onClose();
         return;
       }
 

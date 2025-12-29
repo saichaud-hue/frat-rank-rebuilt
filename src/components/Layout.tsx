@@ -48,7 +48,7 @@ export default function Layout({ children }: LayoutProps) {
       const userData = await base44.auth.me();
       setUser(userData);
       
-      if (userData && !localStorage.getItem('fratrank_tutorial_seen')) {
+      if (!localStorage.getItem('fratrank_tutorial_seen')) {
         setShowTutorial(true);
       }
     } catch (error) {
@@ -203,7 +203,7 @@ export default function Layout({ children }: LayoutProps) {
       </div>
 
       {/* Tutorial Overlay */}
-      {showTutorial && user && (
+      {showTutorial && (
         <Tutorial onComplete={handleTutorialComplete} />
       )}
     </SidebarProvider>

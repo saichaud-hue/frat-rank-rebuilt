@@ -20,6 +20,7 @@ import RateFratSheet from '@/components/leaderboard/RateFratSheet';
 import { Skeleton } from '@/components/ui/skeleton';
 import { clamp } from '@/utils';
 import { getCachedCampusBaseline } from "@/utils/scoring";
+import { ensureAuthed } from '@/utils/auth';
 
 type FilterType = 'overall' | 'reputation' | 'party' | 'trending';
 
@@ -187,11 +188,8 @@ export default function Leaderboard() {
   };
 
   const handleRate = async (fraternity: Fraternity) => {
-    const user = await base44.auth.me();
-    if (!user) {
-      base44.auth.redirectToLogin(window.location.href);
-      return;
-    }
+    const user = await ensureAuthed();
+    if (!user) return;
 
     const existingRatings = await base44.entities.ReputationRating.filter({
       fraternity_id: fraternity.id,
