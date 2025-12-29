@@ -8,6 +8,7 @@ interface ScoreBreakdownProps {
   reputationScore: number;
   partyScore: number;
   mode?: BreakdownMode;
+  hasOverallData?: boolean;
   // Party breakdown scores
   avgVibe?: number;
   avgMusic?: number;
@@ -22,6 +23,7 @@ export default function ScoreBreakdown({
   reputationScore, 
   partyScore,
   mode = 'overall',
+  hasOverallData = true,
   avgVibe = 5,
   avgMusic = 5,
   avgExecution = 5,
@@ -83,6 +85,11 @@ export default function ScoreBreakdown({
   }
 
   // Default (overall/trending): show Reputation/Party Quality summary
+  // Only show if we have enough data for an overall score
+  if (!hasOverallData) {
+    return null;
+  }
+
   return (
     <div className="space-y-3">
       <div className="space-y-1.5">
