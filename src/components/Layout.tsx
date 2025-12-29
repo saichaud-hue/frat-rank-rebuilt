@@ -90,11 +90,11 @@ export default function Layout({ children }: LayoutProps) {
     <SidebarProvider>
       <div className="min-h-screen flex w-full bg-gradient-to-br from-slate-50 to-indigo-50">
         {/* Desktop Sidebar */}
-        <Sidebar className="hidden md:flex border-r bg-primary text-primary-foreground">
-          <SidebarHeader className="p-4 border-b border-white/10">
+        <Sidebar className="hidden md:flex border-r bg-white/80 backdrop-blur-sm">
+          <SidebarHeader className="p-4 border-b border-slate-200/50">
             <Link to="/" className="flex items-center gap-2">
               <img src={tausLogo} alt="taus" className="h-10 w-10 rounded-xl object-cover" />
-              <span className="text-xl font-bold text-white">taus</span>
+              <span className="text-xl font-bold text-foreground">taus</span>
             </Link>
           </SidebarHeader>
 
@@ -109,8 +109,8 @@ export default function Layout({ children }: LayoutProps) {
                           to={item.url}
                           className={`flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors ${
                             isActive(item.url)
-                              ? 'bg-white/20 text-white font-medium'
-                              : 'hover:bg-white/10 text-white/70'
+                              ? 'bg-primary/10 text-primary font-medium'
+                              : 'hover:bg-muted/50 text-muted-foreground'
                           }`}
                         >
                           <item.icon className="h-5 w-5" />
@@ -136,13 +136,13 @@ export default function Layout({ children }: LayoutProps) {
             </Card>
           </SidebarContent>
 
-          <SidebarFooter className="p-4 border-t border-white/10">
+          <SidebarFooter className="p-4 border-t border-slate-200/50">
             {loading ? (
               <div className="flex items-center gap-3">
-                <Skeleton className="h-10 w-10 rounded-full bg-white/20" />
+                <Skeleton className="h-10 w-10 rounded-full" />
                 <div className="flex-1">
-                  <Skeleton className="h-4 w-24 mb-1 bg-white/20" />
-                  <Skeleton className="h-3 w-32 bg-white/20" />
+                  <Skeleton className="h-4 w-24 mb-1" />
+                  <Skeleton className="h-3 w-32" />
                 </div>
               </div>
             ) : user ? (
@@ -154,15 +154,15 @@ export default function Layout({ children }: LayoutProps) {
                   </AvatarFallback>
                 </Avatar>
                 <div className="flex-1 min-w-0">
-                  <p className="font-medium truncate text-white">{user.name}</p>
-                  <p className="text-xs text-white/60 truncate">{user.email}</p>
+                  <p className="font-medium truncate">{user.name}</p>
+                  <p className="text-xs text-muted-foreground truncate">{user.email}</p>
                 </div>
-                <Button variant="ghost" size="icon" onClick={handleLogout} className="text-white/70 hover:text-white hover:bg-white/10">
+                <Button variant="ghost" size="icon" onClick={handleLogout}>
                   <LogOut className="h-4 w-4" />
                 </Button>
               </div>
             ) : (
-              <Button onClick={handleLogin} className="w-full bg-white text-primary hover:bg-white/90">
+              <Button onClick={handleLogin} className="w-full gradient-primary text-white">
                 <LogIn className="h-4 w-4 mr-2" />
                 Sign in with Google
               </Button>
