@@ -1,6 +1,6 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Plus, MapPin, Loader2, CalendarDays } from 'lucide-react';
+import { Plus, MapPin, Loader2, CalendarDays, AlertCircle } from 'lucide-react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -57,6 +57,49 @@ export default function CreateParty() {
     }
   }, [endDate, endTime]);
 
+  // Validation logic
+  const { isEndValid, endError, isFormValid } = useMemo(() => {
+    // Build start timestamp
+    let startTimestamp: number | null = null;
+    if (startDate) {
+      const [h, m] = startTime.split(':').map(Number);
+      const dt = new Date(startDate);
+      dt.setHours(h, m, 0, 0);
+      startTimestamp = dt.getTime();
+    }
+
+    // Build end timestamp
+    let endTimestamp: number | null = null;
+    if (endDate) {
+      const [h, m] = endTime.split(':').map(Number);
+      const dt = new Date(endDate);
+      dt.setHours(h, m, 0, 0);
+      endTimestamp = dt.getTime();
+    }
+
+    // Determine end validity and error message
+    let isEndValid = true;
+    let endError = '';
+
+    if (!endDate) {
+      isEndValid = false;
+      endError = 'End date/time is required.';
+    } else if (startTimestamp !== null && endTimestamp !== null && endTimestamp <= startTimestamp) {
+      isEndValid = false;
+      endError = 'Party end date must be after party start date.';
+    }
+
+    // Form is valid if all required fields are present and end is valid
+    const isFormValid = 
+      !!formData.fraternity_id &&
+      !!formData.title.trim() &&
+      !!startDate &&
+      !!endDate &&
+      isEndValid;
+
+    return { isEndValid, endError, isFormValid };
+  }, [formData.fraternity_id, formData.title, startDate, startTime, endDate, endTime]);
+
   const loadFraternities = async () => {
     try {
       const data = await base44.entities.Fraternity.list();
@@ -68,7 +111,7 @@ export default function CreateParty() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!formData.fraternity_id || !formData.title || !formData.starts_at) return;
+    if (!isFormValid) return;
 
     setLoading(true);
     try {
@@ -98,14 +141,6 @@ export default function CreateParty() {
 
   const displayTitle = formData.title.trim() || 'Untitled Party';
 
-  // Format time for display
-  const formatTimeDisplay = (time: string) => {
-    const [h, m] = time.split(':').map(Number);
-    const period = h >= 12 ? 'PM' : 'AM';
-    const hour = h % 12 || 12;
-    return `${hour}:${m.toString().padStart(2, '0')} ${period}`;
-  };
-
   return (
     <div className="max-w-2xl mx-auto space-y-6">
       {/* Dynamic Header */}
@@ -120,7 +155,9 @@ export default function CreateParty() {
         <form onSubmit={handleSubmit} className="space-y-6">
           {/* Fraternity */}
           <div className="space-y-2">
-            <Label htmlFor="fraternity">Fraternity</Label>
+            <Label htmlFor="fraternity">
+              Fraternity<span className="text-destructive ml-0.5">*</span>
+            </Label>
             <Select
               value={formData.fraternity_id}
               onValueChange={(value) => setFormData(prev => ({ ...prev, fraternity_id: value }))}
@@ -140,7 +177,9 @@ export default function CreateParty() {
 
           {/* Party Title - De-emphasized */}
           <div className="space-y-2">
-            <Label htmlFor="title" className="text-muted-foreground text-sm">Party Title</Label>
+            <Label htmlFor="title" className="text-muted-foreground text-sm">
+              Party Title<span className="text-destructive ml-0.5">*</span>
+            </Label>
             <Input
               id="title"
               placeholder="Enter party name..."
@@ -152,7 +191,9 @@ export default function CreateParty() {
 
           {/* Date/Time - Modern Grouped Design */}
           <div className="space-y-4">
-            <Label className="text-sm">Date & Time</Label>
+            <Label className="text-sm">
+              Date & Time<span className="text-destructive ml-0.5">*</span>
+            </Label>
             
             <div className="rounded-xl border border-border/50 bg-card/50 p-4 space-y-4">
               {/* Start */}
@@ -215,7 +256,8 @@ export default function CreateParty() {
                           type="button"
                           className={cn(
                             "flex-1 justify-start text-left font-normal h-10 rounded-full px-4",
-                            !endDate && "text-muted-foreground"
+                            !endDate && "text-muted-foreground",
+                            !isEndValid && endDate && "border-destructive"
                           )}
                         >
                           {endDate ? format(endDate, "EEE, MMM d") : "Select date"}
@@ -236,9 +278,20 @@ export default function CreateParty() {
                       type="time"
                       value={endTime}
                       onChange={(e) => setEndTime(e.target.value)}
-                      className="w-28 h-10 rounded-full text-center"
+                      className={cn(
+                        "w-28 h-10 rounded-full text-center",
+                        !isEndValid && endDate && "border-destructive"
+                      )}
                     />
                   </div>
+                  
+                  {/* Inline error for end date/time */}
+                  {!isEndValid && endError && (
+                    <div className="flex items-center gap-1.5 mt-2 text-destructive">
+                      <AlertCircle className="h-3.5 w-3.5" />
+                      <span className="text-xs">{endError}</span>
+                    </div>
+                  )}
                 </div>
               </div>
             </div>
@@ -304,7 +357,7 @@ export default function CreateParty() {
           {/* Submit */}
           <Button 
             type="submit" 
-            disabled={loading || !formData.fraternity_id || !formData.title || !formData.starts_at}
+            disabled={loading || !isFormValid}
             className="w-full h-12 text-base gradient-primary text-white rounded-xl"
           >
             {loading ? (
