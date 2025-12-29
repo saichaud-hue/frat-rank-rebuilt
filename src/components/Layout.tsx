@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { Trophy, PartyPopper, Star, User, Plus, LogOut, LogIn, Menu } from 'lucide-react';
-import tausLogo from '@/assets/taus-logo.png';
+import tausLogo from '@/assets/taus-logo.jpg';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Skeleton } from '@/components/ui/skeleton';
