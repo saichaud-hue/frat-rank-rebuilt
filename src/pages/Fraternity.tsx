@@ -350,7 +350,7 @@ export default function FraternityPage() {
             {fraternity.chapter.charAt(0)}
           </div>
           <div className="flex-1 min-w-0">
-            <h1 className="text-2xl font-bold">{fraternity.name}</h1>
+            <h1 className="text-2xl font-bold truncate">{fraternity.name}</h1>
             <div className="flex items-center gap-2 mt-1">
               <Badge variant="secondary">{fraternity.chapter}</Badge>
               {fraternity.founded_year && (
@@ -364,7 +364,7 @@ export default function FraternityPage() {
         </div>
 
         {fraternity.description && (
-          <p className="text-muted-foreground">{fraternity.description}</p>
+          <p className="text-muted-foreground line-clamp-3">{fraternity.description}</p>
         )}
       </Card>
 
@@ -619,35 +619,41 @@ export default function FraternityPage() {
       {computedScores && (
         <Card className="glass p-6">
           <p className="text-sm font-medium text-muted-foreground mb-3">This semester:</p>
-          <div className="flex items-center gap-6">
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
             <div className="flex items-center gap-2">
-              <PartyPopper className="h-5 w-5 text-primary" />
-              <span className="font-semibold text-base">
-                {computedScores.numPartiesHosted >= 1000 
-                  ? (computedScores.numPartiesHosted / 1000).toFixed(1).replace(/\.0$/, '') + 'k'
-                  : computedScores.numPartiesHosted}
-              </span>
-              <span className="text-muted-foreground text-sm">parties</span>
+              <PartyPopper className="h-4 w-4 sm:h-5 sm:w-5 text-primary" />
+              <div className="flex flex-col">
+                <span className="font-semibold text-sm sm:text-base">
+                  {computedScores.numPartiesHosted >= 1000 
+                    ? (computedScores.numPartiesHosted / 1000).toFixed(1).replace(/\.0$/, '') + 'k'
+                    : computedScores.numPartiesHosted}
+                </span>
+                <span className="text-muted-foreground text-xs">Parties</span>
+              </div>
             </div>
             <div className="flex items-center gap-2">
-              <ThumbsUp className="h-5 w-5 text-primary" />
-              <span className="font-semibold text-base">
-                {(() => {
-                  const total = computedScores.numRepRatings + computedScores.numPartyRatings;
-                  return total >= 1000 ? (total / 1000).toFixed(1).replace(/\.0$/, '') + 'k' : total;
-                })()}
-              </span>
-              <span className="text-muted-foreground text-sm">ratings</span>
+              <ThumbsUp className="h-4 w-4 sm:h-5 sm:w-5 text-primary" />
+              <div className="flex flex-col">
+                <span className="font-semibold text-sm sm:text-base">
+                  {(() => {
+                    const total = computedScores.numRepRatings + computedScores.numPartyRatings;
+                    return total >= 1000 ? (total / 1000).toFixed(1).replace(/\.0$/, '') + 'k' : total;
+                  })()}
+                </span>
+                <span className="text-muted-foreground text-xs">Ratings</span>
+              </div>
             </div>
-            <div className="flex items-center gap-2">
-              <MessageCircle className="h-5 w-5 text-primary" />
-              <span className="font-semibold text-base">
-                {(() => {
-                  const total = computedScores.numPartyComments + computedScores.numFratComments;
-                  return total >= 1000 ? (total / 1000).toFixed(1).replace(/\.0$/, '') + 'k' : total;
-                })()}
-              </span>
-              <span className="text-muted-foreground text-sm">comments</span>
+            <div className="flex items-center gap-2 col-span-2 sm:col-span-1">
+              <MessageCircle className="h-4 w-4 sm:h-5 sm:w-5 text-primary" />
+              <div className="flex flex-col">
+                <span className="font-semibold text-sm sm:text-base">
+                  {(() => {
+                    const total = computedScores.numPartyComments + computedScores.numFratComments;
+                    return total >= 1000 ? (total / 1000).toFixed(1).replace(/\.0$/, '') + 'k' : total;
+                  })()}
+                </span>
+                <span className="text-muted-foreground text-xs">Comments</span>
+              </div>
             </div>
           </div>
         </Card>

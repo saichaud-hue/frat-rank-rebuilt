@@ -111,7 +111,7 @@ export default function FraternityCard({ fraternity, rank, onRate, filter = 'ove
           <div className="flex-1 min-w-0 space-y-3">
             <div className="flex items-start justify-between">
               <div>
-                <h3 className="font-bold text-lg leading-tight">{fraternity.name}</h3>
+                <h3 className="font-bold text-lg leading-tight truncate">{fraternity.name}</h3>
                 <div className="flex items-center gap-2 mt-1">
                   <Badge variant="secondary" className="text-xs">
                     {fraternity.chapter}
@@ -180,21 +180,27 @@ export default function FraternityCard({ fraternity, rank, onRate, filter = 'ove
               {filter === 'trending' ? (
                 <div className="bg-muted/50 rounded-lg px-4 py-3">
                   <p className="text-sm font-medium text-muted-foreground mb-2">This semester:</p>
-                  <div className="flex items-center gap-5">
+                  <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
                     <div className="flex items-center gap-2">
-                      <PartyPopper className="h-5 w-5 text-primary" />
-                      <span className="font-semibold text-base">{formatCount(scores?.numPartiesHosted ?? 0)}</span>
-                      <span className="text-muted-foreground text-sm">parties</span>
+                      <PartyPopper className="h-4 w-4 sm:h-5 sm:w-5 text-primary" />
+                      <div className="flex flex-col">
+                        <span className="font-semibold text-sm sm:text-base">{formatCount(scores?.numPartiesHosted ?? 0)}</span>
+                        <span className="text-muted-foreground text-xs">Parties</span>
+                      </div>
                     </div>
                     <div className="flex items-center gap-2">
-                      <ThumbsUp className="h-5 w-5 text-primary" />
-                      <span className="font-semibold text-base">{formatCount((scores?.numRepRatings ?? 0) + (scores?.numPartyRatings ?? 0))}</span>
-                      <span className="text-muted-foreground text-sm">ratings</span>
+                      <ThumbsUp className="h-4 w-4 sm:h-5 sm:w-5 text-primary" />
+                      <div className="flex flex-col">
+                        <span className="font-semibold text-sm sm:text-base">{formatCount((scores?.numRepRatings ?? 0) + (scores?.numPartyRatings ?? 0))}</span>
+                        <span className="text-muted-foreground text-xs">Ratings</span>
+                      </div>
                     </div>
-                    <div className="flex items-center gap-2">
-                      <MessageCircle className="h-5 w-5 text-primary" />
-                      <span className="font-semibold text-base">{formatCount((scores?.numPartyComments ?? 0) + (scores?.numFratComments ?? 0))}</span>
-                      <span className="text-muted-foreground text-sm">comments</span>
+                    <div className="flex items-center gap-2 col-span-2 sm:col-span-1">
+                      <MessageCircle className="h-4 w-4 sm:h-5 sm:w-5 text-primary" />
+                      <div className="flex flex-col">
+                        <span className="font-semibold text-sm sm:text-base">{formatCount((scores?.numPartyComments ?? 0) + (scores?.numFratComments ?? 0))}</span>
+                        <span className="text-muted-foreground text-xs">Comments</span>
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -212,8 +218,8 @@ export default function FraternityCard({ fraternity, rank, onRate, filter = 'ove
               )}
               
               <Button 
-                size="sm" 
-                className="gradient-primary text-white"
+                size="default" 
+                className="gradient-primary text-white min-h-[44px]"
                 onClick={handleRateClick}
               >
                 <Star className="h-4 w-4 mr-1" />

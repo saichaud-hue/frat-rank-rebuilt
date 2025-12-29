@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Crown, Trophy, Medal, User, Star } from 'lucide-react';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -94,6 +94,27 @@ export default function LeaderboardPodium({ topThree, ranks = [1, 2, 3], filter 
     return false;
   };
 
+  // Tap-outside dismissal for mobile
+  useEffect(() => {
+    if (!isMobile || !activeCardId) return;
+    
+    const handleClickOutside = (e: MouseEvent) => {
+      const target = e.target as HTMLElement;
+      if (!target.closest(`[data-card-id="${activeCardId}"]`)) {
+        setActiveCardId(null);
+      }
+    };
+    
+    const timeoutId = setTimeout(() => {
+      document.addEventListener('click', handleClickOutside);
+    }, 0);
+    
+    return () => {
+      clearTimeout(timeoutId);
+      document.removeEventListener('click', handleClickOutside);
+    };
+  }, [activeCardId, isMobile]);
+
   const handleCardClick = (fratId: string) => {
     if (isMobile) {
       setActiveCardId(prev => prev === fratId ? null : fratId);
@@ -142,6 +163,7 @@ export default function LeaderboardPodium({ topThree, ranks = [1, 2, 3], filter 
     return (
       <div 
         className="group relative"
+        data-card-id={frat.id}
         onClick={() => handleCardClick(frat.id)}
       >
         <Card 
@@ -197,17 +219,17 @@ export default function LeaderboardPodium({ topThree, ranks = [1, 2, 3], filter 
           }`}
         >
           <Button 
-            size="sm" 
+            size="default" 
             variant="secondary" 
-            className="w-[85%]"
+            className="w-[85%] min-h-[44px]"
             onClick={(e) => handleViewProfile(frat, e)}
           >
             <User className="h-4 w-4 mr-1.5" />
             View Profile
           </Button>
           <Button 
-            size="sm" 
-            className="w-[85%] gradient-primary text-white"
+            size="default" 
+            className="w-[85%] min-h-[44px] gradient-primary text-white"
             onClick={(e) => handleRateClick(frat, e)}
           >
             <Star className="h-4 w-4 mr-1.5" />

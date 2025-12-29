@@ -30,18 +30,21 @@ export default function LeaderboardHeader({
       </div>
 
       <Tabs value={filter} onValueChange={(v) => onFilterChange(v as any)} className="w-full">
-        <TabsList className="grid w-full grid-cols-4 bg-muted/50">
-          <TabsTrigger value="overall" className="text-xs sm:text-sm">
-            Overall
+        <TabsList className="flex w-full bg-muted/50 overflow-x-auto no-scrollbar">
+          <TabsTrigger value="overall" className="flex-1 shrink-0 min-w-fit text-xs sm:text-sm px-3">
+            <span className="sm:hidden">All</span>
+            <span className="hidden sm:inline">Overall</span>
           </TabsTrigger>
-          <TabsTrigger value="reputation" className="text-xs sm:text-sm">
-            Fraternities
+          <TabsTrigger value="reputation" className="flex-1 shrink-0 min-w-fit text-xs sm:text-sm px-3">
+            <span className="sm:hidden">Frats</span>
+            <span className="hidden sm:inline">Fraternities</span>
           </TabsTrigger>
-          <TabsTrigger value="party" className="text-xs sm:text-sm">
+          <TabsTrigger value="party" className="flex-1 shrink-0 min-w-fit text-xs sm:text-sm px-3">
             Parties
           </TabsTrigger>
-          <TabsTrigger value="trending" className="text-xs sm:text-sm">
-            Trending
+          <TabsTrigger value="trending" className="flex-1 shrink-0 min-w-fit text-xs sm:text-sm px-3">
+            <span className="sm:hidden">Hot</span>
+            <span className="hidden sm:inline">Trending</span>
           </TabsTrigger>
         </TabsList>
       </Tabs>

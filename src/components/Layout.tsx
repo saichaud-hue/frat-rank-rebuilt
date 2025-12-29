@@ -183,18 +183,18 @@ export default function Layout({ children }: LayoutProps) {
           </header>
 
           {/* Main Content */}
-          <main className="flex-1 p-4 pb-24 md:pb-4 overflow-y-auto">
+          <main className="flex-1 p-4 pb-32 md:pb-4 overflow-y-auto">
             {children}
           </main>
 
           {/* Mobile Bottom Nav */}
-          <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-white/95 backdrop-blur-sm border-t border-slate-200/50 px-2 py-2 z-40">
+          <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-white/95 backdrop-blur-sm border-t border-slate-200/50 px-2 py-2 pb-safe z-40">
             <div className="grid grid-cols-3 gap-1">
               {navItems.map((item) => (
                 <Link
                   key={item.title}
                   to={item.url}
-                  className={`flex flex-col items-center gap-1 py-2 rounded-lg transition-colors ${
+                  className={`flex flex-col items-center justify-center gap-1 py-3 min-h-[44px] rounded-lg transition-colors ${
                     isActive(item.url)
                       ? 'text-primary bg-primary/10'
                       : 'text-muted-foreground'
