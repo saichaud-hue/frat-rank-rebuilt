@@ -4,7 +4,7 @@ import type { Fraternity } from '@/api/base44Client';
 
 interface PartyFilters {
   fraternity: string;
-  theme: string;
+  type: string;
   timeframe: string;
 }
 
@@ -40,17 +40,16 @@ export default function PartyFilters({ filters, onFiltersChange, fraternities }:
       </Select>
 
       <Select 
-        value={filters.theme} 
-        onValueChange={(value) => onFiltersChange({ ...filters, theme: value })}
+        value={filters.type} 
+        onValueChange={(value) => onFiltersChange({ ...filters, type: value })}
       >
         <SelectTrigger className="w-[120px] h-9 text-sm glass">
-          <SelectValue placeholder="Theme" />
+          <SelectValue placeholder="Type" />
         </SelectTrigger>
         <SelectContent>
-          <SelectItem value="all">All Themes</SelectItem>
-          <SelectItem value="formal">Formal</SelectItem>
-          <SelectItem value="casual">Casual</SelectItem>
+          <SelectItem value="all">All Types</SelectItem>
           <SelectItem value="themed">Themed</SelectItem>
+          <SelectItem value="formal">Formal</SelectItem>
           <SelectItem value="mixer">Mixer</SelectItem>
         </SelectContent>
       </Select>
