@@ -154,30 +154,6 @@ export default function FraternityCard({ fraternity, rank, onRate, filter = 'ove
               </p>
             )}
 
-            {/* Activity Counter for Trending Filter */}
-            {filter === 'trending' && (
-              <div className="bg-muted/50 rounded-lg px-4 py-3 max-w-[85%]">
-                <p className="text-sm font-medium text-muted-foreground mb-2">This semester:</p>
-                <div className="flex items-center gap-5">
-                  <div className="flex items-center gap-2">
-                    <PartyPopper className="h-5 w-5 text-primary" />
-                    <span className="font-semibold text-base">{scores?.numPartiesHosted ?? 0}</span>
-                    <span className="text-muted-foreground text-sm">parties</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <ThumbsUp className="h-5 w-5 text-primary" />
-                    <span className="font-semibold text-base">{(scores?.numRepRatings ?? 0) + (scores?.numPartyRatings ?? 0)}</span>
-                    <span className="text-muted-foreground text-sm">ratings</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <MessageCircle className="h-5 w-5 text-primary" />
-                    <span className="font-semibold text-base">{(scores?.numPartyComments ?? 0) + (scores?.numFratComments ?? 0)}</span>
-                    <span className="text-muted-foreground text-sm">comments</span>
-                  </div>
-                </div>
-              </div>
-            )}
-
             <ScoreBreakdown
               reputationScore={scores?.repAdj ?? fraternity.reputation_score ?? 5} 
               partyScore={scores?.partyAdj ?? fraternity.historical_party_score ?? 5}
@@ -191,8 +167,30 @@ export default function FraternityCard({ fraternity, rank, onRate, filter = 'ove
               avgCommunity={scores?.avgCommunity ?? 5}
             />
 
-            <div className="flex items-center justify-between pt-2">
-              {filter !== 'trending' && (
+            <div className="flex items-end justify-between pt-2">
+              {/* Activity Counter for Trending Filter - Bottom Left */}
+              {filter === 'trending' ? (
+                <div className="bg-muted/50 rounded-lg px-4 py-3">
+                  <p className="text-sm font-medium text-muted-foreground mb-2">This semester:</p>
+                  <div className="flex items-center gap-5">
+                    <div className="flex items-center gap-2">
+                      <PartyPopper className="h-5 w-5 text-primary" />
+                      <span className="font-semibold text-base">{scores?.numPartiesHosted ?? 0}</span>
+                      <span className="text-muted-foreground text-sm">parties</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <ThumbsUp className="h-5 w-5 text-primary" />
+                      <span className="font-semibold text-base">{(scores?.numRepRatings ?? 0) + (scores?.numPartyRatings ?? 0)}</span>
+                      <span className="text-muted-foreground text-sm">ratings</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <MessageCircle className="h-5 w-5 text-primary" />
+                      <span className="font-semibold text-base">{(scores?.numPartyComments ?? 0) + (scores?.numFratComments ?? 0)}</span>
+                      <span className="text-muted-foreground text-sm">comments</span>
+                    </div>
+                  </div>
+                </div>
+              ) : (
                 <Badge 
                   variant="outline" 
                   className={`${
@@ -204,7 +202,6 @@ export default function FraternityCard({ fraternity, rank, onRate, filter = 'ove
                   {trending >= 0 ? '+' : ''}{trending.toFixed(2)} trending
                 </Badge>
               )}
-              {filter === 'trending' && <div />}
               
               <Button 
                 size="sm" 
