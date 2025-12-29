@@ -1,22 +1,28 @@
 import { useState, useEffect } from 'react';
-import { User, Trophy, PartyPopper, Star, LogIn, Award, ChevronDown, ChevronUp } from 'lucide-react';
+import { User, PartyPopper, Star, LogIn, Award, ChevronDown, ChevronUp, Pencil, Trash2, Zap, Music, Settings } from 'lucide-react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
-import { base44 } from '@/api/base44Client';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
+import { base44, type PartyRating, type Party, type Fraternity } from '@/api/base44Client';
 import { format } from 'date-fns';
+import { formatTimeAgo, getScoreBgColor } from '@/utils';
+import PartyRatingForm from '@/components/rate/PartyRatingForm';
+
+type EnrichedPartyRating = PartyRating & { party?: Party; fraternity?: Fraternity };
 
 export default function Profile() {
   const [user, setUser] = useState<any>(null);
   const [loading, setLoading] = useState(true);
-  const [stats, setStats] = useState({ partyRatings: 0, repRatings: 0, comments: 0 });
-  const [partyRatingsData, setPartyRatingsData] = useState<any[]>([]);
-  const [repRatingsData, setRepRatingsData] = useState<any[]>([]);
+  const [stats, setStats] = useState({ partyRatings: 0, comments: 0 });
+  const [partyRatingsData, setPartyRatingsData] = useState<EnrichedPartyRating[]>([]);
   const [commentsData, setCommentsData] = useState<any[]>([]);
   const [expandedSection, setExpandedSection] = useState<string | null>(null);
+  const [editingRating, setEditingRating] = useState<EnrichedPartyRating | null>(null);
+  const [deletingRatingId, setDeletingRatingId] = useState<string | null>(null);
 
   useEffect(() => {
     loadProfile();
@@ -28,26 +34,19 @@ export default function Profile() {
       setUser(userData);
 
       if (userData) {
-        const [partyRatings, repRatings, partyComments, fratComments, parties, fraternities] = await Promise.all([
-          base44.entities.PartyRating.filter({ user_id: userData.id }),
-          base44.entities.ReputationRating.filter({ user_id: userData.id }),
+        const [partyRatings, partyComments, fratComments, parties, fraternities] = await Promise.all([
+          base44.entities.PartyRating.filter({ user_id: userData.id }, '-created_date'),
           base44.entities.PartyComment.filter({ user_id: userData.id }),
           base44.entities.FraternityComment.filter({ user_id: userData.id }),
           base44.entities.Party.list(),
           base44.entities.Fraternity.list(),
         ]);
 
-        // Enrich party ratings with party/fraternity names
+        // Enrich party ratings with party/fraternity data
         const enrichedPartyRatings = partyRatings.map((r: any) => {
           const party = parties.find((p: any) => p.id === r.party_id);
-          const frat = party ? fraternities.find((f: any) => f.id === party.fraternity_id) : null;
-          return { ...r, partyName: party?.title || 'Unknown Party', fratName: frat?.name || '' };
-        });
-
-        // Enrich rep ratings with fraternity names
-        const enrichedRepRatings = repRatings.map((r: any) => {
-          const frat = fraternities.find((f: any) => f.id === r.fraternity_id);
-          return { ...r, fratName: frat?.name || 'Unknown Fraternity' };
+          const fraternity = party ? fraternities.find((f: any) => f.id === party.fraternity_id) : null;
+          return { ...r, party: party ?? undefined, fraternity: fraternity ?? undefined };
         });
 
         // Enrich comments with entity names
@@ -61,14 +60,12 @@ export default function Profile() {
         });
 
         setPartyRatingsData(enrichedPartyRatings);
-        setRepRatingsData(enrichedRepRatings);
         setCommentsData([...enrichedPartyComments, ...enrichedFratComments].sort((a, b) => 
           new Date(b.created_date).getTime() - new Date(a.created_date).getTime()
         ));
 
         setStats({
           partyRatings: partyRatings.length,
-          repRatings: repRatings.length,
           comments: partyComments.length + fratComments.length,
         });
       }
@@ -83,12 +80,27 @@ export default function Profile() {
     base44.auth.redirectToLogin(window.location.href);
   };
 
+  const handleRatingSubmit = () => {
+    setEditingRating(null);
+    loadProfile();
+  };
+
+  const handleDeleteRating = async (ratingId: string) => {
+    try {
+      await base44.entities.PartyRating.delete(ratingId);
+      loadProfile();
+    } catch (error) {
+      console.error('Failed to delete rating:', error);
+    }
+    setDeletingRatingId(null);
+  };
+
   if (loading) {
     return (
       <div className="max-w-2xl mx-auto space-y-6">
         <Skeleton className="h-48 rounded-xl" />
-        <div className="grid grid-cols-3 gap-4">
-          {[1, 2, 3].map((i) => (
+        <div className="grid grid-cols-2 gap-4">
+          {[1, 2].map((i) => (
             <Skeleton key={i} className="h-24 rounded-xl" />
           ))}
         </div>
@@ -169,56 +181,90 @@ export default function Profile() {
           <CollapsibleContent>
             <Card className="glass mt-2 p-4 space-y-3">
               {partyRatingsData.length === 0 ? (
-                <p className="text-muted-foreground text-sm text-center py-4">No party ratings yet</p>
+                <div className="text-center py-8 space-y-2">
+                  <PartyPopper className="h-12 w-12 mx-auto text-muted-foreground/50" />
+                  <p className="text-muted-foreground">You haven't rated any parties yet.</p>
+                </div>
               ) : (
                 partyRatingsData.map((rating) => (
-                  <div key={rating.id} className="flex items-center justify-between py-2 border-b border-border/50 last:border-0">
-                    <div>
-                      <p className="font-medium">{rating.partyName}</p>
-                      <p className="text-xs text-muted-foreground">{rating.fratName} • {format(new Date(rating.created_date), 'MMM d, yyyy')}</p>
+                  <div key={rating.id} className="p-3 rounded-lg bg-muted/30 space-y-2">
+                    <div className="flex items-start justify-between">
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <PartyPopper className="h-4 w-4 text-primary" />
+                          <span className="font-medium">{rating.party?.title || 'Party'}</span>
+                        </div>
+                        {rating.fraternity && (
+                          <p className="text-sm text-muted-foreground">
+                            {rating.fraternity.name} {rating.fraternity.chapter ? `• ${rating.fraternity.chapter}` : ''}
+                          </p>
+                        )}
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Badge className={`${getScoreBgColor(rating.party_quality_score ?? 0)} text-white`}>
+                          {(rating.party_quality_score ?? 0).toFixed(1)}
+                        </Badge>
+                        <Button 
+                          variant="ghost" 
+                          size="icon" 
+                          className="h-8 w-8"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setEditingRating(rating);
+                          }}
+                        >
+                          <Pencil className="h-4 w-4" />
+                        </Button>
+                        <AlertDialog open={deletingRatingId === rating.id} onOpenChange={(open) => setDeletingRatingId(open ? rating.id : null)}>
+                          <AlertDialogTrigger asChild>
+                            <Button 
+                              variant="ghost" 
+                              size="icon" 
+                              className="h-8 w-8 text-destructive hover:text-destructive"
+                              onClick={(e) => e.stopPropagation()}
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </AlertDialogTrigger>
+                          <AlertDialogContent>
+                            <AlertDialogHeader>
+                              <AlertDialogTitle>Delete Rating?</AlertDialogTitle>
+                              <AlertDialogDescription>
+                                Are you sure you want to delete your rating for "{rating.party?.title || 'this party'}"? This action cannot be undone.
+                              </AlertDialogDescription>
+                            </AlertDialogHeader>
+                            <AlertDialogFooter>
+                              <AlertDialogCancel>Cancel</AlertDialogCancel>
+                              <AlertDialogAction 
+                                onClick={() => handleDeleteRating(rating.id)}
+                                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                              >
+                                Delete
+                              </AlertDialogAction>
+                            </AlertDialogFooter>
+                          </AlertDialogContent>
+                        </AlertDialog>
+                      </div>
                     </div>
-                    <div className="text-right">
-                      <p className="font-bold text-primary">{((rating.vibe_score + rating.music_score + rating.execution_score + rating.party_quality_score) / 4).toFixed(1)}</p>
-                      <p className="text-xs text-muted-foreground">avg score</p>
-                    </div>
-                  </div>
-                ))
-              )}
-            </Card>
-          </CollapsibleContent>
-        </Collapsible>
 
-        {/* Frat Ratings */}
-        <Collapsible open={expandedSection === 'repRatings'} onOpenChange={(open) => setExpandedSection(open ? 'repRatings' : null)}>
-          <CollapsibleTrigger asChild>
-            <Card className="glass p-4 cursor-pointer hover:bg-muted/50 transition-colors">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <Trophy className="h-6 w-6 text-amber-500" />
-                  <div>
-                    <p className="text-2xl font-bold">{stats.repRatings}</p>
-                    <p className="text-xs text-muted-foreground">Frat Ratings</p>
-                  </div>
-                </div>
-                {expandedSection === 'repRatings' ? <ChevronUp className="h-5 w-5 text-muted-foreground" /> : <ChevronDown className="h-5 w-5 text-muted-foreground" />}
-              </div>
-            </Card>
-          </CollapsibleTrigger>
-          <CollapsibleContent>
-            <Card className="glass mt-2 p-4 space-y-3">
-              {repRatingsData.length === 0 ? (
-                <p className="text-muted-foreground text-sm text-center py-4">No frat ratings yet</p>
-              ) : (
-                repRatingsData.map((rating) => (
-                  <div key={rating.id} className="flex items-center justify-between py-2 border-b border-border/50 last:border-0">
-                    <div>
-                      <p className="font-medium">{rating.fratName}</p>
-                      <p className="text-xs text-muted-foreground">{format(new Date(rating.created_date), 'MMM d, yyyy')}</p>
+                    <div className="flex items-center gap-4">
+                      <div className="flex items-center gap-1 text-xs">
+                        <Zap className="h-3.5 w-3.5 text-amber-500" />
+                        <span>{(rating.vibe_score ?? 0).toFixed(1)}</span>
+                      </div>
+                      <div className="flex items-center gap-1 text-xs">
+                        <Music className="h-3.5 w-3.5 text-blue-500" />
+                        <span>{(rating.music_score ?? 0).toFixed(1)}</span>
+                      </div>
+                      <div className="flex items-center gap-1 text-xs">
+                        <Settings className="h-3.5 w-3.5 text-green-500" />
+                        <span>{(rating.execution_score ?? 0).toFixed(1)}</span>
+                      </div>
                     </div>
-                    <div className="text-right">
-                      <p className="font-bold text-primary">{((rating.vibes_score + rating.safety_score + rating.respect_score + rating.inclusivity_score) / 4).toFixed(1)}</p>
-                      <p className="text-xs text-muted-foreground">avg score</p>
-                    </div>
+
+                    <p className="text-xs text-muted-foreground">
+                      {formatTimeAgo(rating.created_date)}
+                    </p>
                   </div>
                 ))
               )}
@@ -273,6 +319,16 @@ export default function Profile() {
           <p>Keep rating to unlock achievements!</p>
         </div>
       </Card>
+
+      {/* Party Rating Edit Modal */}
+      {editingRating && editingRating.party && (
+        <PartyRatingForm
+          party={editingRating.party}
+          fraternity={editingRating.fraternity}
+          onClose={() => setEditingRating(null)}
+          onSubmit={handleRatingSubmit}
+        />
+      )}
     </div>
   );
 }
