@@ -33,7 +33,7 @@ export default function LeaderboardPodium({ topThree, ranks = [1, 2, 3], filter 
         // Return null if no party data (will show "—")
         return scores.hasPartyScoreData ? scores.semesterPartyScore : null;
       case 'trending':
-        return scores.hasOverallData ? scores.overall : null;
+        return scores.activityTrending;
       default:
         return scores.hasOverallData ? scores.overall : null;
     }
@@ -48,7 +48,7 @@ export default function LeaderboardPodium({ topThree, ranks = [1, 2, 3], filter 
       case 'party':
         return 'Semester Party Score';
       case 'trending':
-        return 'Overall Score';
+        return 'Activity';
       default:
         return 'Overall Score';
     }
@@ -70,7 +70,7 @@ export default function LeaderboardPodium({ topThree, ranks = [1, 2, 3], filter 
     if (filter === 'overall') return !hasOverallData(frat);
     if (filter === 'reputation') return !hasRepData(frat);
     if (filter === 'party') return !hasPartyData(frat);
-    if (filter === 'trending') return !hasOverallData(frat);
+    if (filter === 'trending') return false;
     return false;
   };
 
@@ -131,7 +131,9 @@ export default function LeaderboardPodium({ topThree, ranks = [1, 2, 3], filter 
             </div>
 
             <div className={`font-bold ${size === 'lg' ? 'text-2xl' : 'text-xl'} text-foreground`}>
-              {getDisplayScore(frat)?.toFixed(1) ?? '—'}
+              {filter === 'trending' 
+                ? Math.round(getDisplayScore(frat) ?? 0)
+                : getDisplayScore(frat)?.toFixed(1) ?? '—'}
             </div>
             <p className="text-xs text-muted-foreground">{getScoreLabel()}</p>
             {needsMoreRatings(frat) && (
