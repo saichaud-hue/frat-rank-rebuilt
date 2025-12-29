@@ -12,9 +12,9 @@ interface TutorialProps {
 const steps = [
   {
     icon: Sparkles,
-    title: 'Welcome to FratRank',
+    title: 'Welcome to taus',
     description: 'The definitive ranking platform for Greek life at your campus.',
-    color: 'from-indigo-500 to-purple-500',
+    color: 'from-primary to-secondary',
   },
   {
     icon: Star,

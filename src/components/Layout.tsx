@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { Trophy, PartyPopper, Star, User, Plus, LogOut, LogIn, Menu } from 'lucide-react';
+import tausLogo from '@/assets/taus-logo.png';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -49,8 +50,8 @@ export default function Layout({ children }: LayoutProps) {
       setUser(userData);
       
       // Show tutorial if: not permanently opted out AND not already shown this session
-      const permanentOptOut = localStorage.getItem('fratrank_tutorial_never_show');
-      const shownThisSession = sessionStorage.getItem('fratrank_tutorial_shown_this_session');
+      const permanentOptOut = localStorage.getItem('taus_tutorial_never_show');
+      const shownThisSession = sessionStorage.getItem('taus_tutorial_shown_this_session');
       
       if (!permanentOptOut && !shownThisSession) {
         setShowTutorial(true);
@@ -74,11 +75,11 @@ export default function Layout({ children }: LayoutProps) {
 
   const handleTutorialComplete = (neverShowAgain: boolean) => {
     // Always mark as shown for this session
-    sessionStorage.setItem('fratrank_tutorial_shown_this_session', 'true');
+    sessionStorage.setItem('taus_tutorial_shown_this_session', 'true');
     
     // If user checked "Don't show again", set permanent opt-out
     if (neverShowAgain) {
-      localStorage.setItem('fratrank_tutorial_never_show', 'true');
+      localStorage.setItem('taus_tutorial_never_show', 'true');
     }
     
     setShowTutorial(false);
@@ -93,10 +94,8 @@ export default function Layout({ children }: LayoutProps) {
         <Sidebar className="hidden md:flex border-r bg-white/80 backdrop-blur-sm">
           <SidebarHeader className="p-4 border-b border-slate-200/50">
             <Link to="/" className="flex items-center gap-2">
-              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center">
-                <Trophy className="h-5 w-5 text-white" />
-              </div>
-              <span className="text-xl font-bold text-foreground">FratRank</span>
+              <img src={tausLogo} alt="taus" className="h-10 w-10 rounded-xl object-cover" />
+              <span className="text-xl font-bold text-foreground">taus</span>
             </Link>
           </SidebarHeader>
 
@@ -176,10 +175,8 @@ export default function Layout({ children }: LayoutProps) {
           {/* Mobile Header */}
           <header className="md:hidden sticky top-0 z-40 bg-white/80 backdrop-blur-sm border-b border-slate-200/50 px-4 py-3 flex items-center justify-between">
             <Link to="/" className="flex items-center gap-2">
-              <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center">
-                <Trophy className="h-4 w-4 text-white" />
-              </div>
-              <span className="text-lg font-bold text-foreground">FratRank</span>
+              <img src={tausLogo} alt="taus" className="h-8 w-8 rounded-lg object-cover" />
+              <span className="text-lg font-bold text-foreground">taus</span>
             </Link>
             <SidebarTrigger className="md:hidden">
               <Menu className="h-5 w-5" />

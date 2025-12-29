@@ -36,7 +36,7 @@
 
     --radius: 0.75rem;
 
-    /* Custom FratRank tokens */
+    /* Custom taus tokens */
     --gradient-primary: linear-gradient(135deg, hsl(337 38% 18%), hsl(267 20% 7%));
     --gradient-secondary: linear-gradient(135deg, hsl(306 18% 11%), hsl(337 38% 18%));
     --gradient-accent: linear-gradient(135deg, hsl(267 20% 7%), hsl(337 38% 25%));
