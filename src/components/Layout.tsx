@@ -124,10 +124,10 @@ export default function Layout({ children }: LayoutProps) {
             </SidebarGroup>
 
             {/* Create Party CTA */}
-            <Card className="mx-2 mt-4 p-4 gradient-primary text-white">
+            <Card className="mx-2 mt-4 p-4 bg-primary text-primary-foreground">
               <h3 className="font-semibold mb-2">Host a Party</h3>
-              <p className="text-sm text-white/80 mb-3">Create an event for your fraternity</p>
-              <Button asChild variant="secondary" className="w-full">
+              <p className="text-sm opacity-80 mb-3">Create an event for your fraternity</p>
+              <Button asChild variant="secondary" className="w-full bg-white/10 hover:bg-white/20 text-white border-0">
                 <Link to={createPageUrl('CreateParty')}>
                   <Plus className="h-4 w-4 mr-2" />
                   Create Party
