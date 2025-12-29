@@ -310,26 +310,6 @@ export interface PartyPhotoVote {
   created_date: string;
 }
 
-export interface PartyPhotoComment {
-  id: string;
-  party_photo_id: string;
-  party_id: string;
-  user_id: string;
-  text: string;
-  upvotes: number;
-  downvotes: number;
-  created_date: string;
-}
-
-export interface PartyPhotoCommentVote {
-  id: string;
-  comment_id: string;
-  party_photo_id: string;
-  user_id: string;
-  value: 1 | -1;
-  created_date: string;
-}
-
 export const base44 = {
   auth: new AuthClient(),
   entities: {
@@ -344,8 +324,6 @@ export const base44 = {
     ReputationRating: new EntityClient<ReputationRating>('reputation_rating'),
     PartyPhoto: new EntityClient<PartyPhoto>('party_photo'),
     PartyPhotoVote: new EntityClient<PartyPhotoVote>('party_photo_vote'),
-    PartyPhotoComment: new EntityClient<PartyPhotoComment>('party_photo_comment'),
-    PartyPhotoCommentVote: new EntityClient<PartyPhotoCommentVote>('party_photo_comment_vote'),
   },
   integrations: new IntegrationsClient(),
 };
