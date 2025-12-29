@@ -393,23 +393,53 @@ export default function FraternityPage() {
             <TooltipProvider>
               <Tooltip>
                 <TooltipTrigger asChild>
-                  <div className="bg-muted/50 rounded-lg p-4 text-center cursor-help relative group">
+                  <div className="bg-muted/50 rounded-lg p-4 cursor-help relative group">
                     <div className="flex items-center justify-center gap-1 mb-1">
                       <p className="text-xs text-muted-foreground">Overall Frat Rating</p>
                       <Info className="h-3 w-3 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
                     </div>
                     {computedScores.hasRepData ? (
                       <>
-                        <p className={`text-2xl font-bold ${getScoreColor(computedScores.repAdj)}`}>
+                        <p className={`text-2xl font-bold text-center ${getScoreColor(computedScores.repAdj)}`}>
                           {computedScores.repAdj.toFixed(1)}
                         </p>
-                        <p className="text-[10px] text-muted-foreground mt-1">
+                        <p className="text-[10px] text-muted-foreground text-center mt-1 mb-3">
                           {computedScores.numRepRatings} {computedScores.numRepRatings === 1 ? 'rating' : 'ratings'}
                         </p>
+                        {/* Score Breakdown */}
+                        <div className="space-y-2 border-t border-border/50 pt-3">
+                          <div className="flex items-center justify-between text-xs">
+                            <div className="flex items-center gap-1.5">
+                              <Users className="h-3 w-3 text-blue-500" />
+                              <span className="text-muted-foreground">Brotherhood</span>
+                            </div>
+                            <span className={`font-semibold ${getScoreColor(computedScores.avgBrotherhood)}`}>
+                              {computedScores.avgBrotherhood.toFixed(1)}
+                            </span>
+                          </div>
+                          <div className="flex items-center justify-between text-xs">
+                            <div className="flex items-center gap-1.5">
+                              <Shield className="h-3 w-3 text-primary" />
+                              <span className="text-muted-foreground">Reputation</span>
+                            </div>
+                            <span className={`font-semibold ${getScoreColor(computedScores.avgReputation)}`}>
+                              {computedScores.avgReputation.toFixed(1)}
+                            </span>
+                          </div>
+                          <div className="flex items-center justify-between text-xs">
+                            <div className="flex items-center gap-1.5">
+                              <Heart className="h-3 w-3 text-rose-500" />
+                              <span className="text-muted-foreground">Community</span>
+                            </div>
+                            <span className={`font-semibold ${getScoreColor(computedScores.avgCommunity)}`}>
+                              {computedScores.avgCommunity.toFixed(1)}
+                            </span>
+                          </div>
+                        </div>
                       </>
                     ) : (
                       <>
-                        <p className="text-2xl font-bold text-muted-foreground">—</p>
+                        <p className="text-2xl font-bold text-muted-foreground text-center">—</p>
                         <Badge variant="outline" className="text-[10px] mt-1 text-muted-foreground">
                           Needs more ratings
                         </Badge>
@@ -418,7 +448,7 @@ export default function FraternityPage() {
                   </div>
                 </TooltipTrigger>
                 <TooltipContent side="bottom" className="max-w-xs">
-                  <p className="text-xs">Average of Brotherhood, Reputation & Community scores from member reviews</p>
+                  <p className="text-xs">30% Brotherhood + 60% Reputation + 10% Community</p>
                 </TooltipContent>
               </Tooltip>
             </TooltipProvider>
