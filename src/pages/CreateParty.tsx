@@ -281,23 +281,23 @@ export default function CreateParty() {
 
             {/* Invite Only Checkbox */}
             <div className="space-y-2">
-              <Label className="opacity-0">Access</Label>
-              <div 
+              <span className="text-sm font-medium opacity-0">Access</span>
+              <Label 
+                htmlFor="invite-only"
                 className={cn(
                   "flex items-center gap-3 h-11 px-4 rounded-md border cursor-pointer transition-all",
                   formData.invite_only 
                     ? "border-primary bg-primary/5" 
                     : "border-border hover:border-muted-foreground/50"
                 )}
-                onClick={() => setFormData(prev => ({ ...prev, invite_only: !prev.invite_only }))}
               >
                 <Checkbox 
+                  id="invite-only"
                   checked={formData.invite_only}
                   onCheckedChange={(checked) => setFormData(prev => ({ ...prev, invite_only: checked === true }))}
-                  className="pointer-events-none"
                 />
                 <span className="text-sm font-medium">Invite only</span>
-              </div>
+              </Label>
             </div>
           </div>
 
