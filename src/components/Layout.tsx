@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { Trophy, PartyPopper, Star, User, Plus, LogOut, LogIn, Menu } from 'lucide-react';
+import { Trophy, PartyPopper, User, Plus, LogOut, LogIn, Menu } from 'lucide-react';
 import tausLogo from '@/assets/taus-logo.jpg';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -30,7 +30,6 @@ interface LayoutProps {
 const navItems = [
   { title: 'Leaderboard', url: '/Leaderboard', icon: Trophy },
   { title: 'Parties', url: '/Parties', icon: PartyPopper },
-  { title: 'Rate', url: '/Rate', icon: Star },
   { title: 'Profile', url: '/Profile', icon: User },
 ];
 
@@ -190,7 +189,7 @@ export default function Layout({ children }: LayoutProps) {
 
           {/* Mobile Bottom Nav */}
           <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-white/95 backdrop-blur-sm border-t border-slate-200/50 px-2 py-2 z-40">
-            <div className="grid grid-cols-4 gap-1">
+            <div className="grid grid-cols-3 gap-1">
               {navItems.map((item) => (
                 <Link
                   key={item.title}

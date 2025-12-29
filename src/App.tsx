@@ -8,7 +8,7 @@ import Leaderboard from "./pages/Leaderboard";
 import Parties from "./pages/Parties";
 import Party from "./pages/Party";
 import Fraternity from "./pages/Fraternity";
-import Rate from "./pages/Rate";
+
 import Profile from "./pages/Profile";
 import CreateParty from "./pages/CreateParty";
 import UserNotRegisteredError from "./components/errors/UserNotRegisteredError";
@@ -28,7 +28,7 @@ const App = () => (
           <Route path="/Parties" element={<Layout><Parties /></Layout>} />
           <Route path="/Party" element={<Layout><Party /></Layout>} />
           <Route path="/Fraternity" element={<Layout><Fraternity /></Layout>} />
-          <Route path="/Rate" element={<Layout><Rate /></Layout>} />
+          <Route path="/Rate" element={<Navigate to="/Profile" replace />} />
           <Route path="/Profile" element={<Layout><Profile /></Layout>} />
           <Route path="/CreateParty" element={<Layout><CreateParty /></Layout>} />
           <Route path="/UserNotRegisteredError" element={<UserNotRegisteredError />} />
