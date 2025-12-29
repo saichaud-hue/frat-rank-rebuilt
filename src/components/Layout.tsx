@@ -48,7 +48,11 @@ export default function Layout({ children }: LayoutProps) {
       const userData = await base44.auth.me();
       setUser(userData);
       
-      if (!localStorage.getItem('fratrank_tutorial_seen')) {
+      // Show tutorial if: not permanently opted out AND not already shown this session
+      const permanentOptOut = localStorage.getItem('fratrank_tutorial_never_show');
+      const shownThisSession = sessionStorage.getItem('fratrank_tutorial_shown_this_session');
+      
+      if (!permanentOptOut && !shownThisSession) {
         setShowTutorial(true);
       }
     } catch (error) {
@@ -68,8 +72,15 @@ export default function Layout({ children }: LayoutProps) {
     window.location.reload();
   };
 
-  const handleTutorialComplete = () => {
-    localStorage.setItem('fratrank_tutorial_seen', 'true');
+  const handleTutorialComplete = (neverShowAgain: boolean) => {
+    // Always mark as shown for this session
+    sessionStorage.setItem('fratrank_tutorial_shown_this_session', 'true');
+    
+    // If user checked "Don't show again", set permanent opt-out
+    if (neverShowAgain) {
+      localStorage.setItem('fratrank_tutorial_never_show', 'true');
+    }
+    
     setShowTutorial(false);
   };
 
