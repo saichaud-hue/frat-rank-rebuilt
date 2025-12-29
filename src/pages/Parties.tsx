@@ -9,7 +9,7 @@ import { subDays, addDays, startOfDay, endOfDay } from 'date-fns';
 import { computeRawPartyQuality } from '@/utils/scoring';
 interface Filters {
   fraternity: string;
-  theme: string;
+  type: string;
   timeframe: string;
 }
 
@@ -21,7 +21,7 @@ export default function Parties() {
   const [loading, setLoading] = useState(true);
   const [filters, setFilters] = useState<Filters>({
     fraternity: 'all',
-    theme: 'all',
+    type: 'all',
     timeframe: 'all',
   });
 
@@ -102,8 +102,8 @@ export default function Parties() {
         return false;
       }
 
-      // Theme filter
-      if (filters.theme !== 'all' && party.theme?.toLowerCase() !== filters.theme.toLowerCase()) {
+      // Type filter
+      if (filters.type !== 'all' && party.theme?.toLowerCase() !== filters.type.toLowerCase()) {
         return false;
       }
 
