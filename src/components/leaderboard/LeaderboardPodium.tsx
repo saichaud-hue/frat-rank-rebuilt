@@ -1,9 +1,12 @@
-import { Crown, Trophy, Medal } from 'lucide-react';
+import { useState } from 'react';
+import { Crown, Trophy, Medal, User, Star } from 'lucide-react';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Link } from 'react-router-dom';
+import { Button } from '@/components/ui/button';
+import { useNavigate } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
 import { type FraternityWithScores } from '@/utils/scoring';
+import { useIsMobile } from '@/hooks/use-mobile';
 
 type FilterType = 'overall' | 'reputation' | 'party' | 'trending';
 
@@ -11,9 +14,14 @@ interface LeaderboardPodiumProps {
   topThree: FraternityWithScores[];
   ranks?: number[];
   filter?: FilterType;
+  onRate: (frat: FraternityWithScores) => void;
 }
 
-export default function LeaderboardPodium({ topThree, ranks = [1, 2, 3], filter = 'overall' }: LeaderboardPodiumProps) {
+export default function LeaderboardPodium({ topThree, ranks = [1, 2, 3], filter = 'overall', onRate }: LeaderboardPodiumProps) {
+  const [activeCardId, setActiveCardId] = useState<string | null>(null);
+  const navigate = useNavigate();
+  const isMobile = useIsMobile();
+
   if (topThree.length < 3) return null;
 
   const [first, second, third] = topThree;
@@ -86,6 +94,23 @@ export default function LeaderboardPodium({ topThree, ranks = [1, 2, 3], filter 
     return false;
   };
 
+  const handleCardClick = (fratId: string) => {
+    if (isMobile) {
+      setActiveCardId(prev => prev === fratId ? null : fratId);
+    }
+  };
+
+  const handleViewProfile = (frat: FraternityWithScores, e: React.MouseEvent) => {
+    e.stopPropagation();
+    navigate(createPageUrl(`Fraternity?id=${frat.id}`));
+  };
+
+  const handleRateClick = (frat: FraternityWithScores, e: React.MouseEvent) => {
+    e.stopPropagation();
+    setActiveCardId(null);
+    onRate(frat);
+  };
+
   const PodiumCard = ({ 
     frat, 
     rank, 
@@ -98,6 +123,7 @@ export default function LeaderboardPodium({ topThree, ranks = [1, 2, 3], filter 
     // Check if this rank appears more than once in the top 3
     const isTied = ranks.filter(r => r === rank).length > 1;
     const Icon = isTied ? Medal : (rank === 1 ? Crown : rank === 2 ? Trophy : Medal);
+    const isActive = activeCardId === frat.id;
     
     const getColor = () => {
       if (isTied) return 'from-slate-400 to-slate-500';
@@ -114,7 +140,10 @@ export default function LeaderboardPodium({ topThree, ranks = [1, 2, 3], filter 
     };
 
     return (
-      <Link to={createPageUrl(`Fraternity?id=${frat.id}`)}>
+      <div 
+        className="group relative"
+        onClick={() => handleCardClick(frat.id)}
+      >
         <Card 
           className={`relative overflow-hidden ${getBgColor()} ${
             size === 'lg' ? 'p-4 sm:p-6' : 'p-3 sm:p-4'
@@ -158,7 +187,34 @@ export default function LeaderboardPodium({ topThree, ranks = [1, 2, 3], filter 
             )}
           </div>
         </Card>
-      </Link>
+
+        {/* Action overlay */}
+        <div 
+          className={`absolute inset-0 bg-black/60 rounded-lg flex flex-col items-center justify-center gap-2 transition-opacity ${
+            isMobile 
+              ? (isActive ? 'opacity-100' : 'opacity-0 pointer-events-none')
+              : 'opacity-0 group-hover:opacity-100'
+          }`}
+        >
+          <Button 
+            size="sm" 
+            variant="secondary" 
+            className="w-[85%]"
+            onClick={(e) => handleViewProfile(frat, e)}
+          >
+            <User className="h-4 w-4 mr-1.5" />
+            View Profile
+          </Button>
+          <Button 
+            size="sm" 
+            className="w-[85%] gradient-primary text-white"
+            onClick={(e) => handleRateClick(frat, e)}
+          >
+            <Star className="h-4 w-4 mr-1.5" />
+            Rate
+          </Button>
+        </div>
+      </div>
     );
   };
 

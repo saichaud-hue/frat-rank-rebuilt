@@ -332,7 +332,7 @@ export default function Leaderboard() {
       />
 
       {topThree.length >= 3 && (
-        <LeaderboardPodium topThree={topThree} ranks={topThreeRanks} filter={filter} />
+        <LeaderboardPodium topThree={topThree} ranks={topThreeRanks} filter={filter} onRate={handleRate} />
       )}
 
       <div className="space-y-3">
