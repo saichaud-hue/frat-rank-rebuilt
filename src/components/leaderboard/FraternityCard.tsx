@@ -21,6 +21,14 @@ interface FraternityCardProps {
 export default function FraternityCard({ fraternity, rank, onRate, filter = 'overall', isTied = false }: FraternityCardProps) {
   const RankIcon = rank === 1 ? Crown : rank <= 3 ? Trophy : null;
   const scores = fraternity.computedScores;
+
+  // Format large numbers: 999 stays as-is, 1000+ becomes "1.2k"
+  const formatCount = (num: number): string => {
+    if (num >= 1000) {
+      return (num / 1000).toFixed(1).replace(/\.0$/, '') + 'k';
+    }
+    return num.toString();
+  };
   
   // Get the score to display based on current filter
   // Returns null when data is insufficient
@@ -175,17 +183,17 @@ export default function FraternityCard({ fraternity, rank, onRate, filter = 'ove
                   <div className="flex items-center gap-5">
                     <div className="flex items-center gap-2">
                       <PartyPopper className="h-5 w-5 text-primary" />
-                      <span className="font-semibold text-base">{scores?.numPartiesHosted ?? 0}</span>
+                      <span className="font-semibold text-base">{formatCount(scores?.numPartiesHosted ?? 0)}</span>
                       <span className="text-muted-foreground text-sm">parties</span>
                     </div>
                     <div className="flex items-center gap-2">
                       <ThumbsUp className="h-5 w-5 text-primary" />
-                      <span className="font-semibold text-base">{(scores?.numRepRatings ?? 0) + (scores?.numPartyRatings ?? 0)}</span>
+                      <span className="font-semibold text-base">{formatCount((scores?.numRepRatings ?? 0) + (scores?.numPartyRatings ?? 0))}</span>
                       <span className="text-muted-foreground text-sm">ratings</span>
                     </div>
                     <div className="flex items-center gap-2">
                       <MessageCircle className="h-5 w-5 text-primary" />
-                      <span className="font-semibold text-base">{(scores?.numPartyComments ?? 0) + (scores?.numFratComments ?? 0)}</span>
+                      <span className="font-semibold text-base">{formatCount((scores?.numPartyComments ?? 0) + (scores?.numFratComments ?? 0))}</span>
                       <span className="text-muted-foreground text-sm">comments</span>
                     </div>
                   </div>
