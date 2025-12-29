@@ -1,12 +1,13 @@
 import { useState, useEffect } from 'react';
-import { Image, Plus, Eye, X, Loader2, ThumbsUp, ThumbsDown, Trash2 } from 'lucide-react';
+import { Image, Plus, Loader2, ThumbsUp, ThumbsDown, Trash2 } from 'lucide-react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { base44, type PartyPhoto, type PartyPhotoVote } from '@/api/base44Client';
-import { formatTimeAgo } from '@/utils';
 import GlobalPhotoUpload from './GlobalPhotoUpload';
+import PhotoGallery from './PhotoGallery';
 import { recomputePartyCoverPhoto, recalculatePhotoVotes } from './photoUtils';
 import { toast } from '@/hooks/use-toast';
+
 interface PhotoBulletinProps {
   partyId: string;
 }
@@ -19,7 +20,8 @@ export default function PhotoBulletin({ partyId }: PhotoBulletinProps) {
   const [photos, setPhotos] = useState<PhotoWithVote[]>([]);
   const [loading, setLoading] = useState(true);
   const [showUpload, setShowUpload] = useState(false);
-  const [viewerPhoto, setViewerPhoto] = useState<PhotoWithVote | null>(null);
+  const [showGallery, setShowGallery] = useState(false);
+  const [galleryStartIndex, setGalleryStartIndex] = useState(0);
   const [votingPhotoId, setVotingPhotoId] = useState<string | null>(null);
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   const [deletingPhotoId, setDeletingPhotoId] = useState<string | null>(null);
@@ -68,15 +70,18 @@ export default function PhotoBulletin({ partyId }: PhotoBulletinProps) {
     loadPhotos(currentUserId);
   };
 
+  const handlePhotosUpdated = () => {
+    loadPhotos(currentUserId);
+  };
+
   const handleVote = async (photo: PhotoWithVote, voteValue: 1 | -1) => {
     if (!currentUserId) {
-      return; // User must be logged in
+      return;
     }
 
     setVotingPhotoId(photo.id);
 
     try {
-      // Find existing vote
       const existingVotes = await base44.entities.PartyPhotoVote.filter({
         party_photo_id: photo.id,
         user_id: currentUserId,
@@ -85,14 +90,11 @@ export default function PhotoBulletin({ partyId }: PhotoBulletinProps) {
 
       if (existingVote) {
         if (existingVote.value === voteValue) {
-          // Toggle off - remove vote
           await base44.entities.PartyPhotoVote.delete(existingVote.id);
         } else {
-          // Change vote
           await base44.entities.PartyPhotoVote.update(existingVote.id, { value: voteValue });
         }
       } else {
-        // Create new vote
         await base44.entities.PartyPhotoVote.create({
           party_photo_id: photo.id,
           party_id: partyId,
@@ -101,13 +103,8 @@ export default function PhotoBulletin({ partyId }: PhotoBulletinProps) {
         });
       }
 
-      // Recalculate photo votes from database
       await recalculatePhotoVotes(photo.id);
-
-      // Recompute cover photo
       await recomputePartyCoverPhoto(partyId);
-
-      // Reload photos to get updated counts
       await loadPhotos(currentUserId);
     } catch (error) {
       console.error('Failed to vote:', error);
@@ -128,29 +125,19 @@ export default function PhotoBulletin({ partyId }: PhotoBulletinProps) {
     setDeletingPhotoId(photo.id);
 
     try {
-      // Delete associated votes first
       const votes = await base44.entities.PartyPhotoVote.filter({ party_photo_id: photo.id });
       for (const vote of votes) {
         await base44.entities.PartyPhotoVote.delete(vote.id);
       }
 
-      // Delete the photo
       await base44.entities.PartyPhoto.delete(photo.id);
-
-      // Recompute cover photo
       await recomputePartyCoverPhoto(partyId);
-
-      // Close viewer if viewing deleted photo
-      if (viewerPhoto?.id === photo.id) {
-        setViewerPhoto(null);
-      }
 
       toast({
         title: 'Photo deleted',
         description: 'Your photo has been removed.',
       });
 
-      // Reload photos
       await loadPhotos(currentUserId);
     } catch (error) {
       console.error('Failed to delete photo:', error);
@@ -168,14 +155,24 @@ export default function PhotoBulletin({ partyId }: PhotoBulletinProps) {
     return currentUserId && photo.user_id === currentUserId;
   };
 
+  const openGallery = (index: number) => {
+    setGalleryStartIndex(index);
+    setShowGallery(true);
+  };
+
   return (
     <>
       <Card className="glass p-4 space-y-4">
         <div className="flex items-center justify-between">
-          <h3 className="font-semibold flex items-center gap-2">
+          <Button
+            variant="ghost"
+            className="font-semibold flex items-center gap-2 px-0 hover:bg-transparent hover:text-primary"
+            onClick={() => photos.length > 0 && openGallery(0)}
+            disabled={photos.length === 0}
+          >
             <Image className="h-5 w-5 text-primary" />
             Photos ({photos.length})
-          </h3>
+          </Button>
           <Button 
             size="sm"
             onClick={() => setShowUpload(true)}
@@ -203,7 +200,7 @@ export default function PhotoBulletin({ partyId }: PhotoBulletinProps) {
           </div>
         ) : (
           <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-            {photos.map((photo) => (
+            {photos.map((photo, index) => (
               <div 
                 key={photo.id}
                 className="relative aspect-square rounded-lg overflow-hidden group"
@@ -212,15 +209,13 @@ export default function PhotoBulletin({ partyId }: PhotoBulletinProps) {
                   src={photo.url} 
                   alt={photo.caption || 'Party photo'}
                   className="w-full h-full object-cover cursor-pointer transition-transform group-hover:scale-105"
-                  onClick={() => setViewerPhoto(photo)}
+                  onClick={() => openGallery(index)}
                 />
                 
-                {/* Overlay with view icon */}
                 <div 
                   className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors pointer-events-none"
                 />
 
-                {/* Delete button - only for own photos */}
                 {canDelete(photo) && (
                   <Button
                     variant="ghost"
@@ -240,7 +235,6 @@ export default function PhotoBulletin({ partyId }: PhotoBulletinProps) {
                   </Button>
                 )}
                 
-                {/* Vote controls at bottom */}
                 <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 to-transparent p-2">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-1">
@@ -292,91 +286,16 @@ export default function PhotoBulletin({ partyId }: PhotoBulletinProps) {
         )}
       </Card>
 
-      {/* Photo Viewer */}
-      {viewerPhoto && (
-        <div 
-          className="fixed inset-0 z-50 bg-black/90 flex items-center justify-center p-4"
-          onClick={() => setViewerPhoto(null)}
-        >
-          <Button
-            variant="ghost"
-            size="icon"
-            className="absolute top-4 right-4 text-white hover:bg-white/20"
-            onClick={() => setViewerPhoto(null)}
-          >
-            <X className="h-6 w-6" />
-          </Button>
-          <div className="flex flex-col items-center max-w-full max-h-full">
-            <img 
-              src={viewerPhoto.url} 
-              alt={viewerPhoto.caption || 'Party photo'}
-              className="max-w-full max-h-[70vh] object-contain"
-              onClick={(e) => e.stopPropagation()}
-            />
-            
-            {/* Vote controls in viewer */}
-            <div className="mt-4 flex items-center gap-4" onClick={(e) => e.stopPropagation()}>
-              <Button
-                variant="outline"
-                size="sm"
-                className={`text-white border-white/30 hover:bg-white/20 ${
-                  viewerPhoto.userVote === 1 ? 'bg-green-500/40 border-green-500' : ''
-                }`}
-                onClick={() => handleVote(viewerPhoto, 1)}
-                disabled={votingPhotoId === viewerPhoto.id || !currentUserId}
-              >
-                <ThumbsUp className={`h-4 w-4 mr-2 ${viewerPhoto.userVote === 1 ? 'fill-current' : ''}`} />
-                {viewerPhoto.likes || 0}
-              </Button>
-              <span className={`text-lg font-bold ${
-                getNetScore(viewerPhoto) > 0 
-                  ? 'text-green-400' 
-                  : getNetScore(viewerPhoto) < 0 
-                    ? 'text-red-400' 
-                    : 'text-white'
-              }`}>
-                {getNetScore(viewerPhoto) > 0 ? '+' : ''}{getNetScore(viewerPhoto)}
-              </span>
-              <Button
-                variant="outline"
-                size="sm"
-                className={`text-white border-white/30 hover:bg-white/20 ${
-                  viewerPhoto.userVote === -1 ? 'bg-red-500/40 border-red-500' : ''
-                }`}
-                onClick={() => handleVote(viewerPhoto, -1)}
-                disabled={votingPhotoId === viewerPhoto.id || !currentUserId}
-              >
-                <ThumbsDown className={`h-4 w-4 mr-2 ${viewerPhoto.userVote === -1 ? 'fill-current' : ''}`} />
-                {viewerPhoto.dislikes || 0}
-              </Button>
-            </div>
-
-            {/* Delete button in viewer */}
-            {canDelete(viewerPhoto) && (
-              <Button
-                variant="outline"
-                size="sm"
-                className="mt-4 text-red-400 border-red-400/50 hover:bg-red-500/20 hover:text-red-300"
-                onClick={() => handleDelete(viewerPhoto)}
-                disabled={deletingPhotoId === viewerPhoto.id}
-              >
-                {deletingPhotoId === viewerPhoto.id ? (
-                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                ) : (
-                  <Trash2 className="h-4 w-4 mr-2" />
-                )}
-                Delete Photo
-              </Button>
-            )}
-
-            {(viewerPhoto.caption || viewerPhoto.created_date) && (
-              <div className="mt-4 text-center text-white">
-                {viewerPhoto.caption && <p className="font-medium">{viewerPhoto.caption}</p>}
-                <p className="text-sm text-white/70">{formatTimeAgo(viewerPhoto.created_date)}</p>
-              </div>
-            )}
-          </div>
-        </div>
+      {/* Photo Gallery */}
+      {showGallery && (
+        <PhotoGallery
+          photos={photos}
+          initialPhotoIndex={galleryStartIndex}
+          partyId={partyId}
+          currentUserId={currentUserId}
+          onClose={() => setShowGallery(false)}
+          onPhotosUpdated={handlePhotosUpdated}
+        />
       )}
 
       {/* Upload Modal */}
