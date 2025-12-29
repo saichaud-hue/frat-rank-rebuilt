@@ -1,12 +1,13 @@
 import { useState, useEffect } from 'react';
 import { useSearchParams, Link } from 'react-router-dom';
-import { ArrowLeft, Calendar, Star, PartyPopper, Users, Shield, Heart, Music } from 'lucide-react';
+import { ArrowLeft, Calendar, Star, PartyPopper, Users, Shield, Heart, Music, Info } from 'lucide-react';
 import { base44, type Fraternity as FraternityType, type Party, type PartyRating, type ReputationRating, type PartyComment, type FraternityComment } from '@/api/base44Client';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Progress } from '@/components/ui/progress';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import PartyCard from '@/components/parties/PartyCard';
 import RateFratSheet from '@/components/leaderboard/RateFratSheet';
 import CommentSection from '@/components/comments/CommentSection';
@@ -389,22 +390,71 @@ export default function FraternityPage() {
 
           {/* Two KPI Cards: Overall Frat Rating + Overall Party Quality */}
           <div className="grid grid-cols-2 gap-4">
-            <div className="bg-muted/50 rounded-lg p-4 text-center">
-              <p className="text-xs text-muted-foreground mb-1">Overall Frat Rating</p>
-              <p className={`text-2xl font-bold ${getScoreColor(computedScores.repAdj)}`}>
-                {computedScores.repAdj.toFixed(1)}
-              </p>
-            </div>
-            <div className="bg-muted/50 rounded-lg p-4 text-center">
-              <p className="text-xs text-muted-foreground mb-1">Overall Party Quality</p>
-              {headerPartyQuality !== null ? (
-                <p className={`text-2xl font-bold ${getScoreColor(headerPartyQuality)}`}>
-                  {headerPartyQuality.toFixed(1)}
-                </p>
-              ) : (
-                <p className="text-2xl font-bold text-muted-foreground">—</p>
-              )}
-            </div>
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <div className="bg-muted/50 rounded-lg p-4 text-center cursor-help relative group">
+                    <div className="flex items-center justify-center gap-1 mb-1">
+                      <p className="text-xs text-muted-foreground">Overall Frat Rating</p>
+                      <Info className="h-3 w-3 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
+                    </div>
+                    {computedScores.hasRepData ? (
+                      <>
+                        <p className={`text-2xl font-bold ${getScoreColor(computedScores.repAdj)}`}>
+                          {computedScores.repAdj.toFixed(1)}
+                        </p>
+                        <p className="text-[10px] text-muted-foreground mt-1">
+                          {computedScores.numRepRatings} {computedScores.numRepRatings === 1 ? 'rating' : 'ratings'}
+                        </p>
+                      </>
+                    ) : (
+                      <>
+                        <p className="text-2xl font-bold text-muted-foreground">—</p>
+                        <Badge variant="outline" className="text-[10px] mt-1 text-muted-foreground">
+                          Needs more ratings
+                        </Badge>
+                      </>
+                    )}
+                  </div>
+                </TooltipTrigger>
+                <TooltipContent side="bottom" className="max-w-xs">
+                  <p className="text-xs">Average of Brotherhood, Reputation & Community scores from member reviews</p>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+            
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <div className="bg-muted/50 rounded-lg p-4 text-center cursor-help relative group">
+                    <div className="flex items-center justify-center gap-1 mb-1">
+                      <p className="text-xs text-muted-foreground">Overall Party Quality</p>
+                      <Info className="h-3 w-3 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
+                    </div>
+                    {headerPartyQuality !== null ? (
+                      <>
+                        <p className={`text-2xl font-bold ${getScoreColor(headerPartyQuality)}`}>
+                          {headerPartyQuality.toFixed(1)}
+                        </p>
+                        <p className="text-[10px] text-muted-foreground mt-1">
+                          {ratedPastParties.length} {ratedPastParties.length === 1 ? 'party' : 'parties'} rated
+                        </p>
+                      </>
+                    ) : (
+                      <>
+                        <p className="text-2xl font-bold text-muted-foreground">—</p>
+                        <Badge variant="outline" className="text-[10px] mt-1 text-muted-foreground">
+                          No party ratings yet
+                        </Badge>
+                      </>
+                    )}
+                  </div>
+                </TooltipTrigger>
+                <TooltipContent side="bottom" className="max-w-xs">
+                  <p className="text-xs">Average quality score across all rated parties (Vibe, Music & Execution)</p>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
           </div>
         </Card>
       )}
