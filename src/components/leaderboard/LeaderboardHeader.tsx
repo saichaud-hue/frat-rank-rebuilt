@@ -35,7 +35,7 @@ export default function LeaderboardHeader({
             Overall
           </TabsTrigger>
           <TabsTrigger value="reputation" className="text-xs sm:text-sm">
-            Reputation
+            Frat Rating
           </TabsTrigger>
           <TabsTrigger value="party" className="text-xs sm:text-sm">
             Parties
