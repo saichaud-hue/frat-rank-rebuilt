@@ -211,7 +211,7 @@ export default function Profile() {
             <User className="h-10 w-10 text-muted-foreground" />
           </div>
           <div className="space-y-2">
-            <h1 className="text-2xl font-bold">Welcome to taus</h1>
+            <h1 className="text-2xl font-bold">Welcome to Touse</h1>
             <p className="text-muted-foreground">
               Sign in to track your ratings and earn points
             </p>

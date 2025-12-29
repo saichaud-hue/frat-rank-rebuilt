@@ -18,7 +18,7 @@ export default function UserNotRegisteredError() {
         <div className="space-y-2">
           <h1 className="text-2xl font-bold">Not Registered</h1>
           <p className="text-muted-foreground">
-            Your account is not registered to use taus. Please sign in with a valid Duke University email address.
+            Your account is not registered to use Touse. Please sign in with a valid Duke University email address.
           </p>
         </div>
 

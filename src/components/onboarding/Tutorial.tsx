@@ -12,7 +12,7 @@ interface TutorialProps {
 const steps = [
   {
     icon: Sparkles,
-    title: 'Welcome to taus',
+    title: 'Welcome to Touse',
     description: 'The definitive ranking platform for Greek life at your campus.',
     color: 'from-primary to-secondary',
   },
