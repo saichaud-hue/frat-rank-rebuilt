@@ -47,9 +47,9 @@ export default function FraternityCard({ fraternity, rank, onRate, filter = 'ove
   const getScoreLabel = (): string => {
     switch (filter) {
       case 'overall':
-        return 'Overall Score';
+        return 'Semester Frat Score';
       case 'reputation':
-        return 'Overall Frat Rating';
+        return 'Semester Frat Score';
       case 'party':
         return 'Semester Party Score';
       case 'trending':
