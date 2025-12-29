@@ -2,9 +2,11 @@ import { useState } from 'react';
 import { ChevronRight, Sparkles, Star, PartyPopper, Users } from 'lucide-react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Label } from '@/components/ui/label';
 
 interface TutorialProps {
-  onComplete: () => void;
+  onComplete: (neverShowAgain: boolean) => void;
 }
 
 const steps = [
@@ -36,12 +38,13 @@ const steps = [
 
 export default function Tutorial({ onComplete }: TutorialProps) {
   const [currentStep, setCurrentStep] = useState(0);
+  const [neverShowAgain, setNeverShowAgain] = useState(false);
 
   const handleNext = () => {
     if (currentStep < steps.length - 1) {
       setCurrentStep(currentStep + 1);
     } else {
-      onComplete();
+      onComplete(neverShowAgain);
     }
   };
 
@@ -74,6 +77,20 @@ export default function Tutorial({ onComplete }: TutorialProps) {
             <h2 className="text-2xl font-bold">{step.title}</h2>
             <p className="text-muted-foreground">{step.description}</p>
           </div>
+
+          {/* Checkbox - only on last step */}
+          {currentStep === steps.length - 1 && (
+            <div className="flex items-center justify-center gap-2">
+              <Checkbox 
+                id="never-show" 
+                checked={neverShowAgain}
+                onCheckedChange={(checked) => setNeverShowAgain(checked === true)}
+              />
+              <Label htmlFor="never-show" className="text-sm text-muted-foreground cursor-pointer">
+                Don't show me this again
+              </Label>
+            </div>
+          )}
 
           {/* Button */}
           <Button 
