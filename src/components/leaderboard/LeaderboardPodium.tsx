@@ -48,10 +48,22 @@ export default function LeaderboardPodium({ topThree, ranks = [1, 2, 3], filter 
       case 'party':
         return 'Semester Party Score';
       case 'trending':
-        return 'Activity';
+        return 'Trending Rank';
       default:
         return 'Overall Score';
     }
+  };
+
+  // Get trending rank display text
+  const getTrendingRankDisplay = (rank: number, isTied: boolean): string => {
+    const prefix = isTied ? 'Tied ' : '';
+    if (rank === 1) return `${prefix}Most Trending`;
+    if (rank === 2) return `${prefix}2nd`;
+    if (rank === 3) return `${prefix}3rd`;
+    const s = ['th', 'st', 'nd', 'rd'];
+    const v = rank % 100;
+    const ordinal = rank + (s[(v - 20) % 10] || s[v] || s[0]);
+    return `${prefix}${ordinal}`;
   };
 
   const hasPartyData = (frat: FraternityWithScores): boolean => {
@@ -83,8 +95,8 @@ export default function LeaderboardPodium({ topThree, ranks = [1, 2, 3], filter 
     rank: number; 
     size: 'lg' | 'md' 
   }) => {
-    // For ties (all same rank), use a neutral styling
-    const isTied = rank === rank1 && rank1 === rank2 && rank2 === rank3;
+    // Check if this rank appears more than once in the top 3
+    const isTied = ranks.filter(r => r === rank).length > 1;
     const Icon = isTied ? Medal : (rank === 1 ? Crown : rank === 2 ? Trophy : Medal);
     
     const getColor = () => {
@@ -130,9 +142,9 @@ export default function LeaderboardPodium({ topThree, ranks = [1, 2, 3], filter 
               </Badge>
             </div>
 
-            <div className={`font-bold ${size === 'lg' ? 'text-2xl' : 'text-xl'} text-foreground`}>
+            <div className={`font-bold ${size === 'lg' ? (filter === 'trending' ? 'text-lg' : 'text-2xl') : (filter === 'trending' ? 'text-sm' : 'text-xl')} text-foreground`}>
               {filter === 'trending' 
-                ? Math.round(getDisplayScore(frat) ?? 0)
+                ? getTrendingRankDisplay(rank, isTied)
                 : getDisplayScore(frat)?.toFixed(1) ?? '—'}
             </div>
             <p className="text-xs text-muted-foreground">{getScoreLabel()}</p>
