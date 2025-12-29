@@ -90,11 +90,11 @@ export default function Layout({ children }: LayoutProps) {
     <SidebarProvider>
       <div className="min-h-screen flex w-full bg-gradient-to-br from-slate-50 to-indigo-50">
         {/* Desktop Sidebar */}
-        <Sidebar className="hidden md:flex border-r bg-white/80 backdrop-blur-sm">
-          <SidebarHeader className="p-4 border-b border-slate-200/50">
+        <Sidebar className="hidden md:flex border-r bg-primary text-primary-foreground">
+          <SidebarHeader className="p-4 border-b border-white/10">
             <Link to="/" className="flex items-center gap-2">
               <img src={tausLogo} alt="taus" className="h-10 w-10 rounded-xl object-cover" />
-              <span className="text-xl font-bold text-foreground">taus</span>
+              <span className="text-xl font-bold text-white">taus</span>
             </Link>
           </SidebarHeader>
 
@@ -109,8 +109,8 @@ export default function Layout({ children }: LayoutProps) {
                           to={item.url}
                           className={`flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors ${
                             isActive(item.url)
-                              ? 'bg-primary/10 text-primary font-medium'
-                              : 'hover:bg-muted/50 text-muted-foreground'
+                              ? 'bg-white/20 text-white font-medium'
+                              : 'hover:bg-white/10 text-white/70'
                           }`}
                         >
                           <item.icon className="h-5 w-5" />
@@ -124,10 +124,10 @@ export default function Layout({ children }: LayoutProps) {
             </SidebarGroup>
 
             {/* Create Party CTA */}
-            <Card className="mx-2 mt-4 p-4 bg-primary text-primary-foreground">
+            <Card className="mx-2 mt-4 p-4 bg-white/10 text-white border-white/10">
               <h3 className="font-semibold mb-2">Host a Party</h3>
               <p className="text-sm opacity-80 mb-3">Create an event for your fraternity</p>
-              <Button asChild variant="secondary" className="w-full bg-white/10 hover:bg-white/20 text-white border-0">
+              <Button asChild variant="secondary" className="w-full bg-white/20 hover:bg-white/30 text-white border-0">
                 <Link to={createPageUrl('CreateParty')}>
                   <Plus className="h-4 w-4 mr-2" />
                   Create Party
@@ -136,33 +136,33 @@ export default function Layout({ children }: LayoutProps) {
             </Card>
           </SidebarContent>
 
-          <SidebarFooter className="p-4 border-t border-slate-200/50">
+          <SidebarFooter className="p-4 border-t border-white/10">
             {loading ? (
               <div className="flex items-center gap-3">
-                <Skeleton className="h-10 w-10 rounded-full" />
+                <Skeleton className="h-10 w-10 rounded-full bg-white/20" />
                 <div className="flex-1">
-                  <Skeleton className="h-4 w-24 mb-1" />
-                  <Skeleton className="h-3 w-32" />
+                  <Skeleton className="h-4 w-24 mb-1 bg-white/20" />
+                  <Skeleton className="h-3 w-32 bg-white/20" />
                 </div>
               </div>
             ) : user ? (
               <div className="flex items-center gap-3">
                 <Avatar>
                   <AvatarImage src={user.avatar_url} />
-                  <AvatarFallback className="bg-gradient-to-br from-indigo-500 to-purple-500 text-white">
+                  <AvatarFallback className="bg-white/20 text-white">
                     {user.name?.charAt(0) || 'U'}
                   </AvatarFallback>
                 </Avatar>
                 <div className="flex-1 min-w-0">
-                  <p className="font-medium truncate">{user.name}</p>
-                  <p className="text-xs text-muted-foreground truncate">{user.email}</p>
+                  <p className="font-medium truncate text-white">{user.name}</p>
+                  <p className="text-xs text-white/70 truncate">{user.email}</p>
                 </div>
-                <Button variant="ghost" size="icon" onClick={handleLogout}>
+                <Button variant="ghost" size="icon" onClick={handleLogout} className="text-white hover:bg-white/10">
                   <LogOut className="h-4 w-4" />
                 </Button>
               </div>
             ) : (
-              <Button onClick={handleLogin} className="w-full gradient-primary text-white">
+              <Button onClick={handleLogin} className="w-full bg-white/20 hover:bg-white/30 text-white border-0">
                 <LogIn className="h-4 w-4 mr-2" />
                 Sign in with Google
               </Button>
