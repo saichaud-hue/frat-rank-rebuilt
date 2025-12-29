@@ -53,10 +53,17 @@ export default function FraternityCard({ fraternity, rank, onRate, filter = 'ove
       case 'party':
         return 'Semester Party Score';
       case 'trending':
-        return 'Activity';
+        return 'Trending Rank';
       default:
         return 'Overall Score';
     }
+  };
+
+  // Convert rank to ordinal (1st, 2nd, 3rd, etc.)
+  const getOrdinal = (n: number): string => {
+    const s = ['th', 'st', 'nd', 'rd'];
+    const v = n % 100;
+    return n + (s[(v - 20) % 10] || s[v] || s[0]);
   };
 
   const hasPartyData = scores?.hasPartyScoreData ?? false;
@@ -106,10 +113,10 @@ export default function FraternityCard({ fraternity, rank, onRate, filter = 'ove
 
               <div className="text-right">
                 <div className="text-2xl font-bold text-foreground">
-                  {getDisplayScore() === null 
-                    ? '—' 
-                    : filter === 'trending' 
-                      ? Math.round(getDisplayScore()!) 
+                  {filter === 'trending'
+                    ? getOrdinal(rank)
+                    : getDisplayScore() === null 
+                      ? '—' 
                       : getDisplayScore()?.toFixed(1)}
                 </div>
                 <p className="text-xs text-muted-foreground">{getScoreLabel()}</p>
@@ -155,18 +162,7 @@ export default function FraternityCard({ fraternity, rank, onRate, filter = 'ove
             />
 
             <div className="flex items-center justify-between pt-2">
-              {filter === 'trending' ? (
-                <Badge 
-                  variant="outline" 
-                  className={`${
-                    activityScore > 5 ? 'text-emerald-600 border-emerald-200 bg-emerald-50' :
-                    activityScore > 0 ? 'text-blue-500 border-blue-200 bg-blue-50' :
-                    'text-muted-foreground'
-                  }`}
-                >
-                  {activityScore} recent activity
-                </Badge>
-              ) : (
+              {filter !== 'trending' && (
                 <Badge 
                   variant="outline" 
                   className={`${
@@ -178,6 +174,7 @@ export default function FraternityCard({ fraternity, rank, onRate, filter = 'ove
                   {trending >= 0 ? '+' : ''}{trending.toFixed(2)} trending
                 </Badge>
               )}
+              {filter === 'trending' && <div />}
               
               <Button 
                 size="sm" 
