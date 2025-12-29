@@ -503,7 +503,7 @@ export default function FraternityPage() {
         <div className="space-y-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
-              <Shield className="h-4 w-4 text-primary" />
+              <Shield className="h-5 w-5 text-primary" />
               <p className="text-sm font-medium">Frat Rating</p>
             </div>
             {userFratScore !== null ? (
