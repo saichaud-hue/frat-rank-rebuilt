@@ -820,31 +820,39 @@ export function computeActivityTrending(
   }
   
   /**
+   * Helper to get robust event timestamp with fallbacks
+   * Returns null if no valid timestamp found (caller should skip event)
+   */
+  function getEventTimestamp(e: { created_date?: string; updated_at?: string; starts_at?: string }): string | null {
+    return e.created_date ?? e.updated_at ?? e.starts_at ?? null;
+  }
+  
+  /**
    * Helper to check rating edit debounce
    * Returns true if this event should be counted, false if it's a duplicate within window
+   * Namespaced to prevent party/frat key collisions
    */
   function checkRatingDebounce(
+    namespace: 'repRating' | 'partyRating',
     userId: string | undefined | null,
     entityId: string | undefined | null,
     eventDate: Date | string
   ): boolean {
     if (!userId || !entityId) return true;
     
-    const key = `${userId}_${entityId}`;
+    const key = `${namespace}:${userId}:${entityId}`;
     const event = typeof eventDate === 'string' ? new Date(eventDate) : eventDate;
     const lastEdit = ratingEditTracker.get(key);
     
     if (lastEdit) {
       const minutesDiff = (event.getTime() - lastEdit.getTime()) / (1000 * 60);
-      if (minutesDiff >= 0 && minutesDiff < RATING_DEBOUNCE_MINUTES) {
+      if (minutesDiff < RATING_DEBOUNCE_MINUTES) {
         return false; // Skip duplicate edit within window
       }
     }
     
-    // Track earliest edit time
-    if (!lastEdit || event < lastEdit) {
-      ratingEditTracker.set(key, event);
-    }
+    // Track LATEST edit time (not earliest)
+    ratingEditTracker.set(key, event);
     return true;
   }
   
@@ -884,11 +892,14 @@ export function computeActivityTrending(
   
   // Process party ratings
   for (const rating of activityData.partyRatings) {
-    const ageDays = getAgeDays(rating.created_date, referenceDate);
+    const timestamp = getEventTimestamp(rating);
+    if (!timestamp) continue; // Skip events without valid timestamp
+    
+    const ageDays = getAgeDays(timestamp, referenceDate);
     if (ageDays > 30) continue;
     
-    // Check debounce for rating edits
-    if (!checkRatingDebounce(rating.user_id, rating.party_id, rating.created_date)) continue;
+    // Check debounce for rating edits (namespaced to partyRating)
+    if (!checkRatingDebounce('partyRating', rating.user_id, rating.party_id, timestamp)) continue;
     
     const ratingScore = rating.party_quality_score ?? 5;
     const magnitudeMultiplier = getRatingMagnitudeMultiplier(ratingScore);
@@ -907,11 +918,14 @@ export function computeActivityTrending(
   
   // Process frat ratings
   for (const rating of activityData.repRatings) {
-    const ageDays = getAgeDays(rating.created_date, referenceDate);
+    const timestamp = getEventTimestamp(rating);
+    if (!timestamp) continue; // Skip events without valid timestamp
+    
+    const ageDays = getAgeDays(timestamp, referenceDate);
     if (ageDays > 30) continue;
     
-    // Check debounce for rating edits
-    if (!checkRatingDebounce(rating.user_id, rating.fraternity_id, rating.created_date)) continue;
+    // Check debounce for rating edits (namespaced to repRating)
+    if (!checkRatingDebounce('repRating', rating.user_id, rating.fraternity_id, timestamp)) continue;
     
     const ratingScore = rating.combined_score ?? 5;
     const magnitudeMultiplier = getRatingMagnitudeMultiplier(ratingScore);
