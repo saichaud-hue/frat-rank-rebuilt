@@ -336,15 +336,20 @@ export default function Leaderboard() {
       )}
 
       <div className="space-y-3">
-        {rest.map((frat, index) => (
-          <FraternityCard
-            key={frat.id}
-            fraternity={frat}
-            rank={restRanks[index]}
-            onRate={handleRate}
-            filter={filter}
-          />
-        ))}
+        {rest.map((frat, index) => {
+          const fratRank = restRanks[index];
+          const isTied = restRanks.filter(r => r === fratRank).length > 1;
+          return (
+            <FraternityCard
+              key={frat.id}
+              fraternity={frat}
+              rank={fratRank}
+              onRate={handleRate}
+              filter={filter}
+              isTied={isTied}
+            />
+          );
+        })}
       </div>
 
       <RateFratSheet

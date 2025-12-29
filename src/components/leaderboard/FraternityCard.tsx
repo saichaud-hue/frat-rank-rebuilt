@@ -15,9 +15,10 @@ interface FraternityCardProps {
   rank: number;
   onRate: (fraternity: FraternityWithScores) => void;
   filter?: FilterType;
+  isTied?: boolean;
 }
 
-export default function FraternityCard({ fraternity, rank, onRate, filter = 'overall' }: FraternityCardProps) {
+export default function FraternityCard({ fraternity, rank, onRate, filter = 'overall', isTied = false }: FraternityCardProps) {
   const RankIcon = rank === 1 ? Crown : rank <= 3 ? Trophy : null;
   const scores = fraternity.computedScores;
   
@@ -59,11 +60,16 @@ export default function FraternityCard({ fraternity, rank, onRate, filter = 'ove
     }
   };
 
-  // Convert rank to ordinal (1st, 2nd, 3rd, etc.)
-  const getOrdinal = (n: number): string => {
+  // Get trending rank display text
+  const getTrendingRankDisplay = (): string => {
+    const prefix = isTied ? 'Tied ' : '';
+    if (rank === 1) return `${prefix}#1 Most Trending`;
+    if (rank === 2) return `${prefix}#2`;
+    if (rank === 3) return `${prefix}#3`;
     const s = ['th', 'st', 'nd', 'rd'];
-    const v = n % 100;
-    return n + (s[(v - 20) % 10] || s[v] || s[0]);
+    const v = rank % 100;
+    const ordinal = rank + (s[(v - 20) % 10] || s[v] || s[0]);
+    return `${prefix}${ordinal}`;
   };
 
   const hasPartyData = scores?.hasPartyScoreData ?? false;
@@ -112,9 +118,9 @@ export default function FraternityCard({ fraternity, rank, onRate, filter = 'ove
               </div>
 
               <div className="text-right">
-                <div className="text-2xl font-bold text-foreground">
+                <div className={`font-bold text-foreground ${filter === 'trending' ? 'text-lg' : 'text-2xl'}`}>
                   {filter === 'trending'
-                    ? getOrdinal(rank)
+                    ? getTrendingRankDisplay()
                     : getDisplayScore() === null 
                       ? '—' 
                       : getDisplayScore()?.toFixed(1)}
