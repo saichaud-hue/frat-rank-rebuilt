@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Plus, MapPin, Loader2, CalendarDays, Clock } from 'lucide-react';
+import { Plus, MapPin, Loader2, CalendarDays } from 'lucide-react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -187,8 +187,7 @@ export default function CreateParty() {
                     
                     <Select value={startTime} onValueChange={setStartTime}>
                       <SelectTrigger className="w-28 h-10 rounded-full">
-                        <Clock className="h-3.5 w-3.5 mr-1.5 text-muted-foreground" />
-                        <SelectValue />
+                        <SelectValue placeholder="Time" />
                       </SelectTrigger>
                       <SelectContent>
                         {timeOptions.map((time) => (
@@ -238,8 +237,7 @@ export default function CreateParty() {
                     
                     <Select value={endTime} onValueChange={setEndTime}>
                       <SelectTrigger className="w-28 h-10 rounded-full">
-                        <Clock className="h-3.5 w-3.5 mr-1.5 text-muted-foreground" />
-                        <SelectValue />
+                        <SelectValue placeholder="Time" />
                       </SelectTrigger>
                       <SelectContent>
                         {timeOptions.map((time) => (
