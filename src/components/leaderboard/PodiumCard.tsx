@@ -10,7 +10,6 @@ type CategoryType = 'overall' | 'reputation' | 'party' | 'trending';
 interface PodiumCardProps {
   category: CategoryType;
   topThree: FraternityWithScores[];
-  onRate?: () => void;
 }
 
 const categoryConfig: Record<CategoryType, { 
@@ -55,7 +54,7 @@ const categoryConfig: Record<CategoryType, {
   },
 };
 
-export default function PodiumCard({ category, topThree, onRate }: PodiumCardProps) {
+export default function PodiumCard({ category, topThree }: PodiumCardProps) {
   const config = categoryConfig[category];
   const Icon = config.icon;
 
@@ -64,12 +63,6 @@ export default function PodiumCard({ category, topThree, onRate }: PodiumCardPro
   const second = topThree[1];
   const first = topThree[0];
   const third = topThree[2];
-
-  const handleRateClick = (e: React.MouseEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    onRate?.();
-  };
 
   return (
     <Link to={createPageUrl(`Rankings?category=${category}`)}>
@@ -140,17 +133,6 @@ export default function PodiumCard({ category, topThree, onRate }: PodiumCardPro
             </p>
           </div>
         </div>
-
-        {/* Rate Button */}
-        {onRate && (
-          <button
-            onClick={handleRateClick}
-            className="absolute bottom-4 right-4 flex items-center gap-1.5 px-4 py-2 rounded-full bg-amber-500 text-white shadow-lg active:scale-95 transition-all hover:bg-amber-600"
-          >
-            <Star className="h-4 w-4" />
-            <span className="font-semibold text-sm">Rate</span>
-          </button>
-        )}
       </Card>
     </Link>
   );
