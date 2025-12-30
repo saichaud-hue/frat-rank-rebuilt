@@ -261,19 +261,14 @@ export default function Parties() {
       {/* UPCOMING PARTIES */}
       {upcomingParties.length > 0 && (
         <Card className="bg-card border-border overflow-hidden">
-          <div className="gradient-secondary p-4 flex items-center justify-between text-primary-foreground">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-white/20 flex items-center justify-center">
-                <Calendar className="h-5 w-5" />
-              </div>
-              <div>
-                <h2 className="font-semibold">Upcoming Events</h2>
-                <p className="text-xs opacity-80">{upcomingParties.length} {upcomingParties.length === 1 ? 'party' : 'parties'} scheduled</p>
-              </div>
+          <div className="gradient-secondary p-4 flex items-center gap-3 text-primary-foreground">
+            <div className="w-10 h-10 rounded-xl bg-white/20 flex items-center justify-center">
+              <Calendar className="h-5 w-5" />
             </div>
-            <Badge className="bg-white/20 text-primary-foreground border-white/30">
-              📅 Mark your calendar
-            </Badge>
+            <div>
+              <h2 className="font-semibold">Upcoming Events</h2>
+              <p className="text-xs opacity-80">{upcomingParties.length} {upcomingParties.length === 1 ? 'party' : 'parties'} scheduled</p>
+            </div>
           </div>
           <div className="p-4 space-y-3 bg-card">
             {upcomingParties.map(party => (
