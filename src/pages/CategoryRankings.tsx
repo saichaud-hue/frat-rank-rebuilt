@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useSearchParams, useNavigate, Link } from 'react-router-dom';
-import { ChevronLeft, Crown, Star, PartyPopper, TrendingUp, Trophy, Medal, type LucideIcon } from 'lucide-react';
+import { ChevronLeft, Crown, Star, PartyPopper, TrendingUp, Trophy, Medal, X, type LucideIcon } from 'lucide-react';
 import { base44, seedInitialData, type Fraternity, type Party, type PartyRating, type ReputationRating, type PartyComment, type FraternityComment } from '@/api/base44Client';
 import { 
   computeFullFraternityScores, 
@@ -16,6 +16,8 @@ import {
   getCachedCampusBaseline,
 } from '@/utils/scoring';
 import RateFratSheet from '@/components/leaderboard/RateFratSheet';
+import RateActionSheet from '@/components/leaderboard/RateActionSheet';
+import PartyRatingForm from '@/components/rate/PartyRatingForm';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
@@ -66,6 +68,9 @@ export default function CategoryRankings() {
   const [loading, setLoading] = useState(true);
   const [selectedFrat, setSelectedFrat] = useState<Fraternity | null>(null);
   const [existingScores, setExistingScores] = useState<{ brotherhood: number; reputation: number; community: number } | undefined>();
+  const [showRateAction, setShowRateAction] = useState<'rate' | 'parties' | false>(false);
+  const [rateExpanded, setRateExpanded] = useState(false);
+  const [selectedParty, setSelectedParty] = useState<Party | null>(null);
 
   const config = categoryConfig[category];
   const Icon = config.icon;
@@ -273,6 +278,17 @@ export default function CategoryRankings() {
     await loadFraternities();
   };
 
+  // Handler for rating a party from the floating button
+  const handleRateParty = (party: Party) => {
+    setShowRateAction(false);
+    setSelectedParty(party);
+  };
+
+  const handlePartyRatingSubmit = async () => {
+    setSelectedParty(null);
+    await loadFraternities();
+  };
+
   const getScore = (frat: FraternityWithScores): number | null => {
     const s = frat.computedScores;
     if (!s) return null;
@@ -470,6 +486,64 @@ export default function CategoryRankings() {
         onSubmit={handleRateSubmit}
         existingScores={existingScores}
       />
+
+      <RateActionSheet
+        isOpen={showRateAction !== false}
+        onClose={() => setShowRateAction(false)}
+        onRateFrat={handleRate}
+        onRateParty={handleRateParty}
+        fraternities={fraternities}
+        initialAction={showRateAction || undefined}
+      />
+
+      {selectedParty && (
+        <PartyRatingForm
+          party={selectedParty}
+          onClose={() => setSelectedParty(null)}
+          onSubmit={handlePartyRatingSubmit}
+        />
+      )}
+
+      {/* Floating Rate Buttons */}
+      {!selectedFrat && !selectedParty && showRateAction === false && (
+        <div 
+          className="fixed bottom-24 right-4 z-50 flex items-center gap-2"
+          style={{ marginBottom: 'env(safe-area-inset-bottom)' }}
+        >
+          {rateExpanded ? (
+            <>
+              <button
+                onClick={() => { setShowRateAction('parties'); setRateExpanded(false); }}
+                className="flex items-center gap-1.5 px-4 py-2.5 rounded-full bg-primary text-white shadow-lg active:scale-95 transition-all animate-scale-in"
+              >
+                <PartyPopper className="h-4 w-4" />
+                <span className="font-medium text-sm">Party</span>
+              </button>
+              <button
+                onClick={() => { setShowRateAction('rate'); setRateExpanded(false); }}
+                className="flex items-center gap-1.5 px-4 py-2.5 rounded-full bg-amber-500 text-white shadow-lg active:scale-95 transition-all animate-scale-in"
+              >
+                <Star className="h-4 w-4" />
+                <span className="font-medium text-sm">Frat</span>
+              </button>
+              <button
+                onClick={() => setRateExpanded(false)}
+                className="flex items-center justify-center w-10 h-10 rounded-full bg-muted text-muted-foreground shadow-lg active:scale-95 transition-all"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </>
+          ) : (
+            <button
+              onClick={() => setRateExpanded(true)}
+              className="flex items-center gap-2 px-5 py-3 rounded-full bg-amber-500 text-white shadow-lg active:scale-95 transition-transform"
+            >
+              <Star className="h-5 w-5" />
+              <span className="font-semibold">Rate</span>
+            </button>
+          )}
+        </div>
+      )}
     </div>
   );
 }

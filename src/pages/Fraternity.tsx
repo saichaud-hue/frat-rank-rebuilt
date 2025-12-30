@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useSearchParams, Link } from 'react-router-dom';
-import { ArrowLeft, Calendar, Star, PartyPopper, Users, Shield, Heart, Music, Info, ThumbsUp, MessageCircle } from 'lucide-react';
+import { ArrowLeft, Calendar, Star, PartyPopper, Users, Shield, Heart, Music, Info, ThumbsUp, MessageCircle, X } from 'lucide-react';
 import { base44, type Fraternity as FraternityType, type Party, type PartyRating, type ReputationRating, type PartyComment, type FraternityComment } from '@/api/base44Client';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -10,6 +10,8 @@ import { Progress } from '@/components/ui/progress';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import PartyCard from '@/components/parties/PartyCard';
 import RateFratSheet from '@/components/leaderboard/RateFratSheet';
+import RateActionSheet from '@/components/leaderboard/RateActionSheet';
+import PartyRatingForm from '@/components/rate/PartyRatingForm';
 import CommentSection from '@/components/comments/CommentSection';
 import TrendIndicator from '@/components/leaderboard/TrendIndicator';
 import ConfidenceBar from '@/components/scores/ConfidenceBar';
@@ -45,6 +47,10 @@ export default function FraternityPage() {
   const [userRating, setUserRating] = useState<{ brotherhood: number; reputation: number; community: number } | null>(null);
   const [userPartyRatings, setUserPartyRatings] = useState<PartyRating[]>([]);
   const [partyScores, setPartyScores] = useState<Map<string, number>>(new Map());
+  const [allFraternities, setAllFraternities] = useState<FraternityType[]>([]);
+  const [showRateAction, setShowRateAction] = useState<'rate' | 'parties' | false>(false);
+  const [rateExpanded, setRateExpanded] = useState(false);
+  const [selectedParty, setSelectedParty] = useState<Party | null>(null);
 
   useEffect(() => {
     if (fratId) loadData();
@@ -65,6 +71,7 @@ export default function FraternityPage() {
       
       setFraternity(fratData);
       setParties(partiesData);
+      setAllFraternities(allFrats);
 
       // Compute campus averages (stable party baseline derived from ratings, not Party fields)
       const campusRepAvg = computeCampusRepAvg(allFrats);
@@ -246,6 +253,45 @@ export default function FraternityPage() {
 
     await loadData();
     await loadUserRatings();
+  };
+
+  // Handler for rating a frat from the floating button
+  const handleRateFratFromSheet = async (frat: FraternityType) => {
+    setShowRateAction(false);
+    const user = await base44.auth.me();
+    if (!user) {
+      base44.auth.redirectToLogin(window.location.href);
+      return;
+    }
+
+    const existingRatings = await base44.entities.ReputationRating.filter({
+      fraternity_id: frat.id,
+      user_id: user.id,
+    });
+
+    if (existingRatings.length > 0) {
+      const rating = existingRatings[0];
+      setExistingScores({
+        brotherhood: rating.brotherhood_score ?? 5,
+        reputation: rating.reputation_score ?? 5,
+        community: rating.community_score ?? 5,
+      });
+    } else {
+      setExistingScores(undefined);
+    }
+    setFraternity(frat as any);
+    setShowRateSheet(true);
+  };
+
+  // Handler for rating a party from the floating button
+  const handleRatePartyFromSheet = (party: Party) => {
+    setShowRateAction(false);
+    setSelectedParty(party);
+  };
+
+  const handlePartyRatingSubmit = async () => {
+    setSelectedParty(null);
+    await loadData();
   };
 
   // Determine party status based on current time, not stored status
@@ -709,6 +755,64 @@ export default function FraternityPage() {
         onSubmit={handleRateSubmit}
         existingScores={existingScores}
       />
+
+      <RateActionSheet
+        isOpen={showRateAction !== false}
+        onClose={() => setShowRateAction(false)}
+        onRateFrat={handleRateFratFromSheet}
+        onRateParty={handleRatePartyFromSheet}
+        fraternities={allFraternities}
+        initialAction={showRateAction || undefined}
+      />
+
+      {selectedParty && (
+        <PartyRatingForm
+          party={selectedParty}
+          onClose={() => setSelectedParty(null)}
+          onSubmit={handlePartyRatingSubmit}
+        />
+      )}
+
+      {/* Floating Rate Buttons */}
+      {!showRateSheet && !selectedParty && showRateAction === false && (
+        <div 
+          className="fixed bottom-24 right-4 z-50 flex items-center gap-2"
+          style={{ marginBottom: 'env(safe-area-inset-bottom)' }}
+        >
+          {rateExpanded ? (
+            <>
+              <button
+                onClick={() => { setShowRateAction('parties'); setRateExpanded(false); }}
+                className="flex items-center gap-1.5 px-4 py-2.5 rounded-full bg-primary text-white shadow-lg active:scale-95 transition-all animate-scale-in"
+              >
+                <PartyPopper className="h-4 w-4" />
+                <span className="font-medium text-sm">Party</span>
+              </button>
+              <button
+                onClick={() => { setShowRateAction('rate'); setRateExpanded(false); }}
+                className="flex items-center gap-1.5 px-4 py-2.5 rounded-full bg-amber-500 text-white shadow-lg active:scale-95 transition-all animate-scale-in"
+              >
+                <Star className="h-4 w-4" />
+                <span className="font-medium text-sm">Frat</span>
+              </button>
+              <button
+                onClick={() => setRateExpanded(false)}
+                className="flex items-center justify-center w-10 h-10 rounded-full bg-muted text-muted-foreground shadow-lg active:scale-95 transition-all"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </>
+          ) : (
+            <button
+              onClick={() => setRateExpanded(true)}
+              className="flex items-center gap-2 px-5 py-3 rounded-full bg-amber-500 text-white shadow-lg active:scale-95 transition-transform"
+            >
+              <Star className="h-5 w-5" />
+              <span className="font-semibold">Rate</span>
+            </button>
+          )}
+        </div>
+      )}
     </div>
   );
 }
