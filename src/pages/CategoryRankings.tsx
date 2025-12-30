@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useSearchParams, useNavigate, Link } from 'react-router-dom';
-import { ChevronLeft, Crown, Trophy, Medal, Star, PartyPopper, TrendingUp } from 'lucide-react';
+import { ChevronLeft, Crown, Star, PartyPopper, TrendingUp, type LucideIcon } from 'lucide-react';
 import { base44, seedInitialData, type Fraternity, type Party, type PartyRating, type ReputationRating, type PartyComment, type FraternityComment } from '@/api/base44Client';
 import { 
   computeFullFraternityScores, 
@@ -17,38 +17,34 @@ import {
 } from '@/utils/scoring';
 import FraternityCard from '@/components/leaderboard/FraternityCard';
 import RateFratSheet from '@/components/leaderboard/RateFratSheet';
+import Podium from '@/components/leaderboard/Podium';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
-import { clamp, createPageUrl, getScoreColor } from '@/utils';
+import { clamp, createPageUrl } from '@/utils';
 import { ensureAuthed } from '@/utils/auth';
 
 type CategoryType = 'overall' | 'reputation' | 'party' | 'trending';
 
-const categoryConfig = {
+const categoryConfig: Record<CategoryType, { title: string; subtitle: string; icon: LucideIcon }> = {
   overall: {
     title: 'Overall Rankings',
     subtitle: 'Combined performance across all metrics',
     icon: Crown,
-    gradient: 'from-amber-500 via-yellow-400 to-amber-600',
   },
   reputation: {
     title: 'Fraternity Rankings',
     subtitle: 'Based on brotherhood, reputation & community',
     icon: Star,
-    gradient: 'from-indigo-500 via-purple-500 to-indigo-600',
   },
   party: {
     title: 'Party Rankings',
     subtitle: 'Best party hosts on campus',
     icon: PartyPopper,
-    gradient: 'from-rose-500 via-pink-500 to-rose-600',
   },
   trending: {
     title: 'Trending Now',
     subtitle: 'Most active fraternities this week',
     icon: TrendingUp,
-    gradient: 'from-emerald-500 via-teal-500 to-emerald-600',
   },
 };
 
@@ -333,7 +329,7 @@ export default function CategoryRankings() {
           <ChevronLeft className="h-5 w-5" />
         </Button>
         <div className="flex items-center gap-3">
-          <div className={`w-10 h-10 rounded-xl bg-gradient-to-br ${config.gradient} flex items-center justify-center shadow-lg`}>
+          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-amber-400 to-yellow-500 flex items-center justify-center shadow-lg">
             <Icon className="h-5 w-5 text-white" />
           </div>
           <div>
@@ -345,69 +341,14 @@ export default function CategoryRankings() {
 
       {/* Full Podium */}
       {topThree.length >= 3 && (
-        <div className={`relative rounded-2xl p-6 bg-gradient-to-br ${config.gradient} overflow-hidden`}>
+        <div className="relative rounded-2xl p-5 bg-gradient-to-br from-slate-800 via-slate-900 to-slate-800 overflow-hidden">
           {/* Decorative elements */}
           <div className="absolute inset-0 bg-black/10" />
-          <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full blur-3xl" />
-          <div className="absolute bottom-0 left-0 w-24 h-24 bg-white/10 rounded-full blur-2xl" />
+          <div className="absolute top-0 right-0 w-32 h-32 bg-amber-500/10 rounded-full blur-3xl" />
+          <div className="absolute bottom-0 left-0 w-24 h-24 bg-amber-500/10 rounded-full blur-2xl" />
           
-          <div className="relative flex items-end justify-center gap-4 h-48">
-            {/* 2nd Place */}
-            <Link 
-              to={createPageUrl(`Fraternity?id=${topThree[1].id}`)}
-              className="flex flex-col items-center active:scale-95 transition-transform"
-            >
-              <div className="bg-gradient-to-br from-slate-300 to-slate-400 w-8 h-8 rounded-full flex items-center justify-center shadow-lg mb-2">
-                <Trophy className="h-4 w-4 text-white" />
-              </div>
-              <Avatar className="h-14 w-14 ring-4 ring-slate-300 shadow-xl">
-                <AvatarImage src={topThree[1].logo_url} />
-                <AvatarFallback className="bg-white text-slate-600 font-bold">
-                  {topThree[1].chapter?.substring(0, 2) || topThree[1].name.substring(0, 2)}
-                </AvatarFallback>
-              </Avatar>
-              <p className="text-white font-semibold text-sm mt-2 text-center">{topThree[1].chapter || topThree[1].name.split(' ')[0]}</p>
-              <p className="text-white/80 text-xs">{getScore(topThree[1])?.toFixed(1) || '—'}</p>
-              <div className="w-16 h-20 bg-gradient-to-t from-slate-400/50 to-slate-300/50 rounded-t-lg mt-2" />
-            </Link>
-
-            {/* 1st Place */}
-            <Link 
-              to={createPageUrl(`Fraternity?id=${topThree[0].id}`)}
-              className="flex flex-col items-center active:scale-95 transition-transform -mt-8"
-            >
-              <div className="bg-gradient-to-br from-amber-400 to-yellow-500 w-10 h-10 rounded-full flex items-center justify-center shadow-lg mb-2 animate-pulse">
-                <Crown className="h-5 w-5 text-white" />
-              </div>
-              <Avatar className="h-20 w-20 ring-4 ring-amber-400 shadow-2xl">
-                <AvatarImage src={topThree[0].logo_url} />
-                <AvatarFallback className="bg-white text-amber-600 font-bold text-lg">
-                  {topThree[0].chapter?.substring(0, 2) || topThree[0].name.substring(0, 2)}
-                </AvatarFallback>
-              </Avatar>
-              <p className="text-white font-bold text-base mt-2 text-center">{topThree[0].chapter || topThree[0].name.split(' ')[0]}</p>
-              <p className="text-white/90 text-sm font-semibold">{getScore(topThree[0])?.toFixed(1) || '—'}</p>
-              <div className="w-20 h-28 bg-gradient-to-t from-amber-500/50 to-amber-400/50 rounded-t-lg mt-2" />
-            </Link>
-
-            {/* 3rd Place */}
-            <Link 
-              to={createPageUrl(`Fraternity?id=${topThree[2].id}`)}
-              className="flex flex-col items-center active:scale-95 transition-transform"
-            >
-              <div className="bg-gradient-to-br from-amber-600 to-amber-700 w-7 h-7 rounded-full flex items-center justify-center shadow-lg mb-2">
-                <Medal className="h-3.5 w-3.5 text-white" />
-              </div>
-              <Avatar className="h-12 w-12 ring-4 ring-amber-600 shadow-xl">
-                <AvatarImage src={topThree[2].logo_url} />
-                <AvatarFallback className="bg-white text-amber-700 font-bold text-sm">
-                  {topThree[2].chapter?.substring(0, 2) || topThree[2].name.substring(0, 2)}
-                </AvatarFallback>
-              </Avatar>
-              <p className="text-white font-semibold text-sm mt-2 text-center">{topThree[2].chapter || topThree[2].name.split(' ')[0]}</p>
-              <p className="text-white/80 text-xs">{getScore(topThree[2])?.toFixed(1) || '—'}</p>
-              <div className="w-14 h-14 bg-gradient-to-t from-amber-700/50 to-amber-600/50 rounded-t-lg mt-2" />
-            </Link>
+          <div className="relative">
+            <Podium topThree={topThree} variant="detail" getScore={getScore} />
           </div>
         </div>
       )}
