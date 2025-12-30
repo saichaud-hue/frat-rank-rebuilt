@@ -238,9 +238,6 @@ export default function Parties() {
                 <p className="text-xs opacity-80">Happening right now!</p>
               </div>
             </div>
-            <Badge className="bg-white/20 text-primary-foreground border-white/30 animate-pulse">
-              🔥 Don't miss out!
-            </Badge>
           </div>
           <div className="p-4 space-y-3 bg-card">
             {liveParties.map(party => (
