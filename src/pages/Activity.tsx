@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { 
   ThumbsUp, 
@@ -21,13 +21,21 @@ import {
   Crown,
   Users,
   Shield,
-  Heart
+  Heart,
+  Clock,
+  Calendar,
+  Vote,
+  Plus,
+  Check,
+  MapPin
 } from 'lucide-react';
+import { Progress } from '@/components/ui/progress';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Textarea } from '@/components/ui/textarea';
-import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import { Input } from '@/components/ui/input';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { 
@@ -43,7 +51,7 @@ import {
   type Fraternity, 
   type ChatMessage 
 } from '@/api/base44Client';
-import { formatDistanceToNow } from 'date-fns';
+import { formatDistanceToNow, differenceInSeconds, differenceInMinutes, differenceInHours, differenceInDays, format, isToday, isTomorrow } from 'date-fns';
 import { getScoreColor, getScoreBgColor, createPageUrl } from '@/utils';
 import { toast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
@@ -104,6 +112,67 @@ export default function Activity() {
   // Data for mentions
   const [fraternities, setFraternities] = useState<Fraternity[]>([]);
   const [parties, setParties] = useState<Party[]>([]);
+
+  // What's the move tonight - voting
+  const [moveVotes, setMoveVotes] = useState<Record<string, number>>({});
+  const [userMoveVote, setUserMoveVote] = useState<string | null>(null);
+  const [showSuggestionInput, setShowSuggestionInput] = useState(false);
+  const [suggestionText, setSuggestionText] = useState('');
+  const [customSuggestions, setCustomSuggestions] = useState<{ id: string; text: string; votes: number }[]>([]);
+  
+  // Countdown timer
+  const [countdownTime, setCountdownTime] = useState<{ days: number; hours: number; minutes: number; seconds: number } | null>(null);
+
+  // Get next upcoming party
+  const nextParty = useMemo(() => {
+    const now = new Date();
+    const upcomingParties = parties
+      .filter(p => p.status === 'upcoming' && new Date(p.starts_at) > now)
+      .sort((a, b) => new Date(a.starts_at).getTime() - new Date(b.starts_at).getTime());
+    return upcomingParties[0] || null;
+  }, [parties]);
+
+  // Get tonight's parties for "What's the move"
+  const tonightsParties = useMemo(() => {
+    const now = new Date();
+    const tonight = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const tomorrowMorning = new Date(tonight.getTime() + 24 * 60 * 60 * 1000 + 6 * 60 * 60 * 1000); // 6am next day
+    
+    return parties.filter(p => {
+      const partyDate = new Date(p.starts_at);
+      return partyDate >= tonight && partyDate < tomorrowMorning && p.status !== 'cancelled';
+    });
+  }, [parties]);
+
+  // Countdown effect
+  useEffect(() => {
+    if (!nextParty) {
+      setCountdownTime(null);
+      return;
+    }
+
+    const updateCountdown = () => {
+      const now = new Date();
+      const partyTime = new Date(nextParty.starts_at);
+      const diffMs = partyTime.getTime() - now.getTime();
+      
+      if (diffMs <= 0) {
+        setCountdownTime(null);
+        return;
+      }
+      
+      const days = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+      const hours = Math.floor((diffMs % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+      const minutes = Math.floor((diffMs % (1000 * 60 * 60)) / (1000 * 60));
+      const seconds = Math.floor((diffMs % (1000 * 60)) / 1000);
+      
+      setCountdownTime({ days, hours, minutes, seconds });
+    };
+
+    updateCountdown();
+    const interval = setInterval(updateCountdown, 1000);
+    return () => clearInterval(interval);
+  }, [nextParty]);
 
   useEffect(() => {
     loadData();
@@ -541,6 +610,64 @@ export default function Activity() {
     }
   };
 
+  // Handle voting for "What's the move"
+  const handleMoveVote = async (partyId: string) => {
+    const user = await base44.auth.me();
+    if (!user) {
+      toast({ title: 'Please sign in to vote', variant: 'destructive' });
+      return;
+    }
+
+    // Toggle vote
+    if (userMoveVote === partyId) {
+      setUserMoveVote(null);
+      setMoveVotes(prev => ({ ...prev, [partyId]: Math.max(0, (prev[partyId] || 1) - 1) }));
+    } else {
+      // Remove previous vote if any
+      if (userMoveVote) {
+        setMoveVotes(prev => ({ ...prev, [userMoveVote!]: Math.max(0, (prev[userMoveVote!] || 1) - 1) }));
+      }
+      setUserMoveVote(partyId);
+      setMoveVotes(prev => ({ ...prev, [partyId]: (prev[partyId] || 0) + 1 }));
+    }
+  };
+
+  const handleCustomSuggestionVote = (suggestionId: string) => {
+    if (userMoveVote === suggestionId) {
+      setUserMoveVote(null);
+      setCustomSuggestions(prev => prev.map(s => s.id === suggestionId ? { ...s, votes: Math.max(0, s.votes - 1) } : s));
+    } else {
+      if (userMoveVote) {
+        // Remove vote from previous selection
+        setMoveVotes(prev => ({ ...prev, [userMoveVote!]: Math.max(0, (prev[userMoveVote!] || 1) - 1) }));
+        setCustomSuggestions(prev => prev.map(s => s.id === userMoveVote ? { ...s, votes: Math.max(0, s.votes - 1) } : s));
+      }
+      setUserMoveVote(suggestionId);
+      setCustomSuggestions(prev => prev.map(s => s.id === suggestionId ? { ...s, votes: s.votes + 1 } : s));
+    }
+  };
+
+  const handleAddSuggestion = () => {
+    if (!suggestionText.trim()) return;
+    const newSuggestion = {
+      id: `custom-${Date.now()}`,
+      text: suggestionText.trim(),
+      votes: 1
+    };
+    setCustomSuggestions(prev => [...prev, newSuggestion]);
+    setUserMoveVote(newSuggestion.id);
+    setSuggestionText('');
+    setShowSuggestionInput(false);
+    toast({ title: 'Suggestion added!' });
+  };
+
+  // Get total votes for progress bars
+  const totalMoveVotes = useMemo(() => {
+    const partyVotes = Object.values(moveVotes).reduce((a, b) => a + b, 0);
+    const suggestionVotes = customSuggestions.reduce((a, s) => a + s.votes, 0);
+    return partyVotes + suggestionVotes;
+  }, [moveVotes, customSuggestions]);
+
   // Get stats
   const totalMessages = chatMessages.length + chatMessages.reduce((acc, m) => acc + (m.replies?.length || 0), 0);
   const totalActivity = activities.length;
@@ -746,6 +873,250 @@ export default function Activity() {
           </div>
         </div>
       </div>
+
+      {/* Party Countdown Section */}
+      {nextParty && countdownTime && (
+        <Card className="overflow-hidden border-2 border-pink-500/30">
+          <div className="bg-gradient-to-r from-pink-500 via-rose-500 to-orange-500 p-4 text-white">
+            <div className="flex items-center gap-3">
+              <div className="w-12 h-12 rounded-xl bg-white/20 backdrop-blur-sm flex items-center justify-center animate-pulse">
+                <Clock className="h-6 w-6" />
+              </div>
+              <div className="flex-1">
+                <p className="text-xs uppercase tracking-wider text-white/80">Next Party In</p>
+                <p className="font-bold text-lg">{nextParty.title}</p>
+              </div>
+              <Link to={createPageUrl(`Party?id=${nextParty.id}`)}>
+                <Badge className="bg-white/20 hover:bg-white/30 transition-colors cursor-pointer">
+                  <ChevronRight className="h-4 w-4" />
+                </Badge>
+              </Link>
+            </div>
+          </div>
+          
+          <div className="p-4 bg-gradient-to-b from-pink-500/5 to-transparent">
+            {/* Countdown Timer */}
+            <div className="grid grid-cols-4 gap-2 mb-4">
+              <div className="text-center p-3 rounded-xl bg-gradient-to-br from-pink-500/10 to-rose-500/10 border border-pink-500/20">
+                <p className="text-3xl font-black text-pink-500">{countdownTime.days}</p>
+                <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">Days</p>
+              </div>
+              <div className="text-center p-3 rounded-xl bg-gradient-to-br from-rose-500/10 to-orange-500/10 border border-rose-500/20">
+                <p className="text-3xl font-black text-rose-500">{countdownTime.hours.toString().padStart(2, '0')}</p>
+                <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">Hours</p>
+              </div>
+              <div className="text-center p-3 rounded-xl bg-gradient-to-br from-orange-500/10 to-amber-500/10 border border-orange-500/20">
+                <p className="text-3xl font-black text-orange-500">{countdownTime.minutes.toString().padStart(2, '0')}</p>
+                <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">Mins</p>
+              </div>
+              <div className="text-center p-3 rounded-xl bg-gradient-to-br from-amber-500/10 to-yellow-500/10 border border-amber-500/20">
+                <p className="text-3xl font-black text-amber-500 tabular-nums">{countdownTime.seconds.toString().padStart(2, '0')}</p>
+                <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">Secs</p>
+              </div>
+            </div>
+            
+            {/* Party Info */}
+            <div className="flex items-center gap-3 p-3 rounded-xl bg-muted/50">
+              <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-pink-500 to-rose-500 flex items-center justify-center text-white">
+                <PartyPopper className="h-5 w-5" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-semibold truncate">{nextParty.theme || nextParty.title}</p>
+                <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                  <MapPin className="h-3 w-3" />
+                  <span className="truncate">{nextParty.venue || 'TBA'}</span>
+                  <span>•</span>
+                  <Calendar className="h-3 w-3" />
+                  <span>{format(new Date(nextParty.starts_at), 'EEE, MMM d @ h:mm a')}</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </Card>
+      )}
+
+      {/* What's the Move Tonight Section */}
+      <Card className="overflow-hidden border-2 border-violet-500/30">
+        <div className="bg-gradient-to-r from-violet-600 via-purple-600 to-fuchsia-500 p-4 text-white">
+          <div className="flex items-center gap-3">
+            <div className="w-12 h-12 rounded-xl bg-white/20 backdrop-blur-sm flex items-center justify-center">
+              <Vote className="h-6 w-6" />
+            </div>
+            <div className="flex-1">
+              <p className="font-bold text-lg">What's the move tonight? 🎉</p>
+              <p className="text-xs text-white/80">Vote for your pick or add a suggestion</p>
+            </div>
+            {totalMoveVotes > 0 && (
+              <Badge className="bg-white/20">
+                <Users className="h-3 w-3 mr-1" />
+                {totalMoveVotes} votes
+              </Badge>
+            )}
+          </div>
+        </div>
+        
+        <div className="p-4 space-y-3">
+          {/* Tonight's Parties */}
+          {tonightsParties.length > 0 ? (
+            <>
+              {tonightsParties.map((party) => {
+                const frat = fraternities.find(f => f.id === party.fraternity_id);
+                const votes = moveVotes[party.id] || 0;
+                const percentage = totalMoveVotes > 0 ? (votes / totalMoveVotes) * 100 : 0;
+                const isSelected = userMoveVote === party.id;
+                
+                return (
+                  <button
+                    key={party.id}
+                    onClick={() => handleMoveVote(party.id)}
+                    className={cn(
+                      "w-full p-4 rounded-xl border-2 transition-all text-left relative overflow-hidden group",
+                      isSelected 
+                        ? "border-violet-500 bg-violet-500/10 ring-2 ring-violet-500/30" 
+                        : "border-muted hover:border-violet-500/50 hover:bg-muted/50"
+                    )}
+                  >
+                    {/* Progress bar background */}
+                    <div 
+                      className={cn(
+                        "absolute inset-0 transition-all duration-500",
+                        isSelected 
+                          ? "bg-gradient-to-r from-violet-500/20 to-purple-500/20" 
+                          : "bg-gradient-to-r from-muted/50 to-transparent"
+                      )}
+                      style={{ width: `${percentage}%` }}
+                    />
+                    
+                    <div className="relative flex items-center gap-3">
+                      <div className={cn(
+                        "w-10 h-10 rounded-lg flex items-center justify-center text-white transition-all",
+                        isSelected 
+                          ? "bg-gradient-to-br from-violet-500 to-purple-500 scale-110" 
+                          : "bg-gradient-to-br from-pink-500 to-rose-500"
+                      )}>
+                        {isSelected ? <Check className="h-5 w-5" /> : <PartyPopper className="h-5 w-5" />}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className={cn(
+                          "font-bold text-sm transition-colors",
+                          isSelected && "text-violet-600"
+                        )}>
+                          {party.title}
+                        </p>
+                        <p className="text-xs text-muted-foreground truncate">
+                          {frat?.name || 'TBA'} • {format(new Date(party.starts_at), 'h:mm a')}
+                        </p>
+                      </div>
+                      <div className="text-right">
+                        <p className={cn(
+                          "text-lg font-black",
+                          isSelected ? "text-violet-500" : "text-muted-foreground"
+                        )}>
+                          {votes}
+                        </p>
+                        <p className="text-[10px] text-muted-foreground uppercase">votes</p>
+                      </div>
+                    </div>
+                  </button>
+                );
+              })}
+            </>
+          ) : (
+            <div className="text-center py-6">
+              <div className="w-16 h-16 mx-auto rounded-full bg-gradient-to-br from-violet-500/20 to-purple-500/20 flex items-center justify-center mb-3">
+                <Calendar className="h-8 w-8 text-violet-500" />
+              </div>
+              <p className="font-semibold">No parties scheduled tonight</p>
+              <p className="text-sm text-muted-foreground">Add your own suggestion below!</p>
+            </div>
+          )}
+
+          {/* Custom Suggestions */}
+          {customSuggestions.length > 0 && (
+            <div className="space-y-2 pt-2 border-t border-muted">
+              <p className="text-xs uppercase tracking-wider text-muted-foreground font-semibold">Suggestions</p>
+              {customSuggestions.map((suggestion) => {
+                const percentage = totalMoveVotes > 0 ? (suggestion.votes / totalMoveVotes) * 100 : 0;
+                const isSelected = userMoveVote === suggestion.id;
+                
+                return (
+                  <button
+                    key={suggestion.id}
+                    onClick={() => handleCustomSuggestionVote(suggestion.id)}
+                    className={cn(
+                      "w-full p-3 rounded-xl border-2 transition-all text-left relative overflow-hidden",
+                      isSelected 
+                        ? "border-fuchsia-500 bg-fuchsia-500/10 ring-2 ring-fuchsia-500/30" 
+                        : "border-muted hover:border-fuchsia-500/50"
+                    )}
+                  >
+                    <div 
+                      className="absolute inset-0 bg-gradient-to-r from-fuchsia-500/10 to-transparent"
+                      style={{ width: `${percentage}%` }}
+                    />
+                    <div className="relative flex items-center gap-3">
+                      <div className={cn(
+                        "w-8 h-8 rounded-lg flex items-center justify-center text-white",
+                        isSelected 
+                          ? "bg-gradient-to-br from-fuchsia-500 to-pink-500" 
+                          : "bg-muted-foreground/20"
+                      )}>
+                        {isSelected ? <Check className="h-4 w-4" /> : <Sparkles className="h-4 w-4 text-muted-foreground" />}
+                      </div>
+                      <p className={cn(
+                        "flex-1 font-medium text-sm",
+                        isSelected && "text-fuchsia-600"
+                      )}>
+                        {suggestion.text}
+                      </p>
+                      <Badge variant={isSelected ? "default" : "secondary"} className={isSelected ? "bg-fuchsia-500" : ""}>
+                        {suggestion.votes}
+                      </Badge>
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+          )}
+
+          {/* Add Suggestion */}
+          {showSuggestionInput ? (
+            <div className="flex gap-2 p-2 rounded-xl bg-muted/50">
+              <Input
+                value={suggestionText}
+                onChange={(e) => setSuggestionText(e.target.value)}
+                placeholder="Where are you going tonight?"
+                className="flex-1 border-2 focus:border-fuchsia-500"
+                onKeyDown={(e) => e.key === 'Enter' && handleAddSuggestion()}
+              />
+              <Button
+                size="icon"
+                onClick={handleAddSuggestion}
+                disabled={!suggestionText.trim()}
+                className="bg-gradient-to-r from-fuchsia-500 to-pink-500"
+              >
+                <Check className="h-4 w-4" />
+              </Button>
+              <Button
+                size="icon"
+                variant="ghost"
+                onClick={() => { setShowSuggestionInput(false); setSuggestionText(''); }}
+              >
+                <X className="h-4 w-4" />
+              </Button>
+            </div>
+          ) : (
+            <Button
+              variant="outline"
+              className="w-full border-2 border-dashed border-fuchsia-500/50 text-fuchsia-600 hover:bg-fuchsia-500/10 hover:border-fuchsia-500"
+              onClick={() => setShowSuggestionInput(true)}
+            >
+              <Plus className="h-4 w-4 mr-2" />
+              Add your own suggestion
+            </Button>
+          )}
+        </div>
+      </Card>
 
       {/* Tabs */}
       <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as 'chat' | 'house')}>
