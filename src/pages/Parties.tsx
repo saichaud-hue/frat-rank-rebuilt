@@ -1,12 +1,13 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { PartyPopper, Plus } from 'lucide-react';
+import { PartyPopper, Plus, Flame, Calendar, Trophy, Sparkles, TrendingUp, Clock } from 'lucide-react';
 import { base44, seedInitialData, type Party, type Fraternity, type PartyRating } from '@/api/base44Client';
 import PartyCard from '@/components/parties/PartyCard';
 import PartyFilters from '@/components/parties/PartyFilters';
 import PartiesIntro from '@/components/onboarding/PartiesIntro';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Badge } from '@/components/ui/badge';
+import { Card } from '@/components/ui/card';
 import { subDays, addDays, startOfDay, endOfDay } from 'date-fns';
 import { computeRawPartyQuality } from '@/utils/scoring';
 
@@ -152,10 +153,16 @@ export default function Parties() {
     .filter(p => getPartyStatus(p) === 'completed')
     .sort((a, b) => (partyScores.get(b.id) ?? 0) - (partyScores.get(a.id) ?? 0));
 
+  // Stats
+  const totalRatings = Array.from(partyRatingCounts.values()).reduce((a, b) => a + b, 0);
+  const avgScore = partyScores.size > 0 
+    ? Array.from(partyScores.values()).reduce((a, b) => a + b, 0) / partyScores.size 
+    : 0;
+
   if (loading) {
     return (
       <div className="max-w-2xl mx-auto space-y-6">
-        <Skeleton className="h-12 w-full rounded-xl" />
+        <Skeleton className="h-48 w-full rounded-3xl" />
         <Skeleton className="h-10 w-full rounded-lg" />
         {[1, 2, 3, 4].map((i) => (
           <Skeleton key={i} className="h-32 rounded-xl" />
@@ -165,87 +172,172 @@ export default function Parties() {
   }
 
   return (
-    <div className="max-w-2xl mx-auto space-y-6">
-      {/* Header */}
-      <div className="flex items-center gap-2">
-        <PartyPopper className="h-6 w-6 text-primary" />
-        <h1 className="text-2xl font-bold text-foreground">Parties</h1>
+    <div className="max-w-2xl mx-auto space-y-5 pb-20">
+      {/* HERO HEADER */}
+      <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-pink-500 via-rose-500 to-orange-500 p-6 text-white shadow-xl">
+        {/* Background Effects */}
+        <div className="absolute inset-0 opacity-20">
+          <div className="absolute top-0 right-0 w-40 h-40 bg-white/30 rounded-full blur-3xl translate-x-10 -translate-y-10" />
+          <div className="absolute bottom-0 left-0 w-32 h-32 bg-white/30 rounded-full blur-3xl -translate-x-10 translate-y-10" />
+        </div>
+        
+        <div className="relative">
+          <div className="flex items-center gap-3 mb-4">
+            <div className="w-14 h-14 rounded-2xl bg-white/20 backdrop-blur-sm flex items-center justify-center">
+              <PartyPopper className="h-7 w-7" />
+            </div>
+            <div>
+              <h1 className="text-2xl font-bold">Campus Parties</h1>
+              <p className="text-white/80 text-sm">Discover and rate the best events</p>
+            </div>
+          </div>
+
+          {/* Quick Stats */}
+          <div className="grid grid-cols-3 gap-3 mt-4">
+            <div className="text-center p-3 rounded-xl bg-white/10 backdrop-blur-sm">
+              <Sparkles className="h-5 w-5 mx-auto mb-1 opacity-80" />
+              <p className="text-2xl font-bold">{parties.length}</p>
+              <p className="text-xs opacity-80">Total Events</p>
+            </div>
+            <div className="text-center p-3 rounded-xl bg-white/10 backdrop-blur-sm">
+              <TrendingUp className="h-5 w-5 mx-auto mb-1 opacity-80" />
+              <p className="text-2xl font-bold">{totalRatings}</p>
+              <p className="text-xs opacity-80">Ratings</p>
+            </div>
+            <div className="text-center p-3 rounded-xl bg-white/10 backdrop-blur-sm">
+              <Trophy className="h-5 w-5 mx-auto mb-1 opacity-80" />
+              <p className="text-2xl font-bold">{avgScore > 0 ? avgScore.toFixed(1) : '—'}</p>
+              <p className="text-xs opacity-80">Avg Score</p>
+            </div>
+          </div>
+        </div>
       </div>
 
-      {/* Filters */}
-      <PartyFilters
-        filters={filters}
-        onFiltersChange={setFilters}
-        fraternities={fraternities}
-      />
+      {/* FILTERS - Styled Card */}
+      <Card className="glass p-4">
+        <PartyFilters
+          filters={filters}
+          onFiltersChange={setFilters}
+          fraternities={fraternities}
+        />
+      </Card>
 
-      {/* Live Parties */}
+      {/* LIVE PARTIES - Urgent Gradient */}
       {liveParties.length > 0 && (
-        <section className="space-y-3">
-          <div className="flex items-center gap-2">
-            <Badge className="bg-red-500 text-white animate-pulse-subtle">LIVE NOW</Badge>
+        <Card className="glass overflow-hidden">
+          <div className="bg-gradient-to-r from-red-500 to-orange-500 p-4 flex items-center justify-between text-white">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-white/20 flex items-center justify-center animate-pulse">
+                <Flame className="h-5 w-5" />
+              </div>
+              <div>
+                <h2 className="font-semibold flex items-center gap-2">
+                  LIVE NOW
+                  <span className="w-2 h-2 bg-white rounded-full animate-pulse" />
+                </h2>
+                <p className="text-xs opacity-80">Happening right now!</p>
+              </div>
+            </div>
+            <Badge className="bg-white/20 text-white border-white/30 animate-pulse">
+              🔥 Don't miss out!
+            </Badge>
           </div>
-          {liveParties.map(party => (
-            <PartyCard
-              key={party.id}
-              party={party}
-              fraternityName={getFraternityName(party.fraternity_id)}
-              isLive
-              computedStatus="live"
-              overallPartyQuality={partyScores.get(party.id)}
-              ratingCount={partyRatingCounts.get(party.id) ?? 0}
-            />
-          ))}
-        </section>
+          <div className="p-4 space-y-3">
+            {liveParties.map(party => (
+              <PartyCard
+                key={party.id}
+                party={party}
+                fraternityName={getFraternityName(party.fraternity_id)}
+                isLive
+                computedStatus="live"
+                overallPartyQuality={partyScores.get(party.id)}
+                ratingCount={partyRatingCounts.get(party.id) ?? 0}
+              />
+            ))}
+          </div>
+        </Card>
       )}
 
-      {/* Upcoming Parties */}
+      {/* UPCOMING PARTIES */}
       {upcomingParties.length > 0 && (
-        <section className="space-y-3">
-          <h2 className="font-semibold text-muted-foreground">Upcoming</h2>
-          {upcomingParties.map(party => (
-            <PartyCard
-              key={party.id}
-              party={party}
-              fraternityName={getFraternityName(party.fraternity_id)}
-              computedStatus="upcoming"
-              overallPartyQuality={partyScores.get(party.id)}
-              ratingCount={partyRatingCounts.get(party.id) ?? 0}
-            />
-          ))}
-        </section>
+        <Card className="glass overflow-hidden">
+          <div className="bg-gradient-to-r from-emerald-500 to-teal-500 p-4 flex items-center justify-between text-white">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-white/20 flex items-center justify-center">
+                <Calendar className="h-5 w-5" />
+              </div>
+              <div>
+                <h2 className="font-semibold">Upcoming Events</h2>
+                <p className="text-xs opacity-80">{upcomingParties.length} {upcomingParties.length === 1 ? 'party' : 'parties'} scheduled</p>
+              </div>
+            </div>
+            <Badge className="bg-white/20 text-white border-white/30">
+              📅 Mark your calendar
+            </Badge>
+          </div>
+          <div className="p-4 space-y-3">
+            {upcomingParties.map(party => (
+              <PartyCard
+                key={party.id}
+                party={party}
+                fraternityName={getFraternityName(party.fraternity_id)}
+                computedStatus="upcoming"
+                overallPartyQuality={partyScores.get(party.id)}
+                ratingCount={partyRatingCounts.get(party.id) ?? 0}
+              />
+            ))}
+          </div>
+        </Card>
       )}
 
-      {/* Completed Parties */}
+      {/* COMPLETED/PAST PARTIES */}
       {completedParties.length > 0 && (
-        <section className="space-y-3">
-          <h2 className="font-semibold text-muted-foreground">Past Parties</h2>
-          {completedParties.map(party => (
-            <PartyCard
-              key={party.id}
-              party={party}
-              fraternityName={getFraternityName(party.fraternity_id)}
-              computedStatus="completed"
-              overallPartyQuality={partyScores.get(party.id)}
-              ratingCount={partyRatingCounts.get(party.id) ?? 0}
-            />
-          ))}
-        </section>
+        <Card className="glass overflow-hidden">
+          <div className="bg-gradient-to-r from-violet-600 to-purple-600 p-4 flex items-center justify-between text-white">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-white/20 flex items-center justify-center">
+                <Clock className="h-5 w-5" />
+              </div>
+              <div>
+                <h2 className="font-semibold">Party History</h2>
+                <p className="text-xs opacity-80">{completedParties.length} completed {completedParties.length === 1 ? 'event' : 'events'}</p>
+              </div>
+            </div>
+            <div className="text-right">
+              <p className="text-lg font-bold">{partyScores.size}</p>
+              <p className="text-xs opacity-80">Rated</p>
+            </div>
+          </div>
+          <div className="p-4 space-y-3">
+            {completedParties.map(party => (
+              <PartyCard
+                key={party.id}
+                party={party}
+                fraternityName={getFraternityName(party.fraternity_id)}
+                computedStatus="completed"
+                overallPartyQuality={partyScores.get(party.id)}
+                ratingCount={partyRatingCounts.get(party.id) ?? 0}
+              />
+            ))}
+          </div>
+        </Card>
       )}
 
       {filteredParties.length === 0 && (
-        <div className="text-center py-12 space-y-2">
-          <PartyPopper className="h-12 w-12 mx-auto text-muted-foreground/50" />
-          <p className="text-muted-foreground">No parties found</p>
-          <p className="text-sm text-muted-foreground">Try adjusting your filters</p>
-        </div>
+        <Card className="glass p-8 text-center">
+          <div className="w-16 h-16 mx-auto mb-4 rounded-2xl bg-muted flex items-center justify-center">
+            <PartyPopper className="h-8 w-8 text-muted-foreground/50" />
+          </div>
+          <p className="font-medium text-muted-foreground">No parties found</p>
+          <p className="text-sm text-muted-foreground/70 mt-1">Try adjusting your filters</p>
+        </Card>
       )}
 
-      {/* Floating Host Button - Only show when intro is dismissed */}
+      {/* Floating Host Button */}
       {!showIntro && (
         <Link
           to="/CreateParty"
-          className="fixed bottom-24 right-4 z-50 flex items-center gap-2 px-5 py-3 rounded-full bg-primary text-primary-foreground shadow-lg active:scale-95 transition-transform"
+          className="fixed bottom-24 right-4 z-50 flex items-center gap-2 px-5 py-3 rounded-full bg-gradient-to-r from-pink-500 to-rose-500 text-white shadow-lg active:scale-95 transition-transform"
           style={{ marginBottom: 'env(safe-area-inset-bottom)' }}
         >
           <Plus className="h-5 w-5" />
