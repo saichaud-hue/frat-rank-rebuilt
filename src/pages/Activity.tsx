@@ -835,8 +835,8 @@ export default function Activity() {
 
       {/* Party Countdown Section */}
       {nextParty && countdownTime && (
-        <Card className="overflow-hidden border-2 border-pink-500/30">
-          <div className="bg-gradient-to-r from-pink-500 via-rose-500 to-orange-500 p-4 text-white">
+        <Card className="overflow-hidden border-0 bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900">
+          <div className="bg-gradient-to-r from-pink-600 via-rose-600 to-orange-600 p-4 text-white">
             <div className="flex items-center gap-3">
               <div className="w-12 h-12 rounded-xl bg-white/20 backdrop-blur-sm flex items-center justify-center animate-pulse">
                 <Clock className="h-6 w-6" />
@@ -853,35 +853,35 @@ export default function Activity() {
             </div>
           </div>
           
-          <div className="p-4 bg-gradient-to-b from-pink-500/5 to-transparent">
+          <div className="p-4 bg-gradient-to-b from-black/20 to-transparent">
             {/* Countdown Timer */}
             <div className="grid grid-cols-4 gap-2 mb-4">
-              <div className="text-center p-3 rounded-xl bg-gradient-to-br from-pink-500/10 to-rose-500/10 border border-pink-500/20">
-                <p className="text-3xl font-black text-pink-500">{countdownTime.days}</p>
-                <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">Days</p>
+              <div className="text-center p-3 rounded-xl bg-pink-950/50 border border-pink-500/30">
+                <p className="text-3xl font-black text-pink-400">{countdownTime.days}</p>
+                <p className="text-[10px] uppercase tracking-wider text-pink-300/70 font-semibold">Days</p>
               </div>
-              <div className="text-center p-3 rounded-xl bg-gradient-to-br from-rose-500/10 to-orange-500/10 border border-rose-500/20">
-                <p className="text-3xl font-black text-rose-500">{countdownTime.hours.toString().padStart(2, '0')}</p>
-                <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">Hours</p>
+              <div className="text-center p-3 rounded-xl bg-rose-950/50 border border-rose-500/30">
+                <p className="text-3xl font-black text-rose-400">{countdownTime.hours.toString().padStart(2, '0')}</p>
+                <p className="text-[10px] uppercase tracking-wider text-rose-300/70 font-semibold">Hours</p>
               </div>
-              <div className="text-center p-3 rounded-xl bg-gradient-to-br from-orange-500/10 to-amber-500/10 border border-orange-500/20">
-                <p className="text-3xl font-black text-orange-500">{countdownTime.minutes.toString().padStart(2, '0')}</p>
-                <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">Mins</p>
+              <div className="text-center p-3 rounded-xl bg-orange-950/50 border border-orange-500/30">
+                <p className="text-3xl font-black text-orange-400">{countdownTime.minutes.toString().padStart(2, '0')}</p>
+                <p className="text-[10px] uppercase tracking-wider text-orange-300/70 font-semibold">Mins</p>
               </div>
-              <div className="text-center p-3 rounded-xl bg-gradient-to-br from-amber-500/10 to-yellow-500/10 border border-amber-500/20">
-                <p className="text-3xl font-black text-amber-500 tabular-nums">{countdownTime.seconds.toString().padStart(2, '0')}</p>
-                <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">Secs</p>
+              <div className="text-center p-3 rounded-xl bg-amber-950/50 border border-amber-500/30">
+                <p className="text-3xl font-black text-amber-400 tabular-nums">{countdownTime.seconds.toString().padStart(2, '0')}</p>
+                <p className="text-[10px] uppercase tracking-wider text-amber-300/70 font-semibold">Secs</p>
               </div>
             </div>
             
             {/* Party Info */}
-            <div className="flex items-center gap-3 p-3 rounded-xl bg-muted/50">
+            <div className="flex items-center gap-3 p-3 rounded-xl bg-white/5 border border-white/10">
               <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-pink-500 to-rose-500 flex items-center justify-center text-white">
                 <PartyPopper className="h-5 w-5" />
               </div>
               <div className="flex-1 min-w-0">
-                <p className="text-sm font-semibold truncate">{nextParty.theme || nextParty.title}</p>
-                <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                <p className="text-sm font-semibold truncate text-white">{nextParty.theme || nextParty.title}</p>
+                <div className="flex items-center gap-2 text-xs text-white/60">
                   <MapPin className="h-3 w-3" />
                   <span className="truncate">{nextParty.venue || 'TBA'}</span>
                   <span>•</span>
