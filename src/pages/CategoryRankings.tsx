@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useSearchParams, useNavigate, Link } from 'react-router-dom';
-import { ChevronLeft, Crown, Star, PartyPopper, TrendingUp, Trophy, Medal, X, type LucideIcon } from 'lucide-react';
+import { ChevronLeft, Crown, Star, PartyPopper, TrendingUp, Trophy, Medal, X, Flame, Sparkles, type LucideIcon } from 'lucide-react';
 import { base44, seedInitialData, type Fraternity, type Party, type PartyRating, type ReputationRating, type PartyComment, type FraternityComment } from '@/api/base44Client';
 import { 
   computeFullFraternityScores, 
@@ -21,9 +21,11 @@ import PartyRatingForm from '@/components/rate/PartyRatingForm';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { clamp, createPageUrl, getScoreColor, getFratGreek, getFratShorthand } from '@/utils';
+import { clamp, createPageUrl, getScoreColor, getScoreBgColor, getFratGreek, getFratShorthand } from '@/utils';
 import { ensureAuthed } from '@/utils/auth';
+import { cn } from '@/lib/utils';
 
 type CategoryType = 'overall' | 'reputation' | 'party' | 'trending';
 
@@ -32,30 +34,35 @@ const categoryConfig: Record<CategoryType, {
   subtitle: string; 
   icon: LucideIcon;
   iconBg: string;
+  headerGradient: string;
 }> = {
   overall: {
     title: 'Overall Rankings',
     subtitle: 'Combined performance across all metrics',
     icon: Crown,
-    iconBg: 'bg-amber-500',
+    iconBg: 'bg-gradient-to-br from-amber-400 to-yellow-500',
+    headerGradient: 'from-amber-500 via-orange-500 to-red-500',
   },
   reputation: {
     title: 'Fraternity Rankings',
     subtitle: 'Based on brotherhood, reputation & community',
     icon: Star,
-    iconBg: 'bg-violet-500',
+    iconBg: 'bg-gradient-to-br from-violet-500 to-purple-600',
+    headerGradient: 'from-violet-500 via-purple-500 to-fuchsia-500',
   },
   party: {
     title: 'Party Rankings',
     subtitle: 'Best party hosts on campus',
     icon: PartyPopper,
-    iconBg: 'bg-rose-500',
+    iconBg: 'bg-gradient-to-br from-pink-500 to-rose-500',
+    headerGradient: 'from-pink-500 via-rose-500 to-red-500',
   },
   trending: {
     title: 'Trending Now',
     subtitle: 'Most active fraternities this week',
     icon: TrendingUp,
-    iconBg: 'bg-emerald-500',
+    iconBg: 'bg-gradient-to-br from-emerald-500 to-teal-500',
+    headerGradient: 'from-emerald-500 via-teal-500 to-cyan-500',
   },
 };
 
@@ -327,21 +334,21 @@ export default function CategoryRankings() {
   const ranks = computeRanks();
   const topThree = fraternities.slice(0, 3);
 
-  // Rank badge colors
+  // Rank badge styles
   const getRankBadgeStyle = (rank: number) => {
-    if (rank === 1) return 'bg-gradient-to-br from-amber-400 to-yellow-500 text-white';
-    if (rank === 2) return 'bg-gradient-to-br from-slate-300 to-slate-400 text-white';
-    if (rank === 3) return 'bg-gradient-to-br from-amber-600 to-amber-700 text-white';
-    return 'bg-slate-100 text-slate-600';
+    if (rank === 1) return 'bg-gradient-to-br from-amber-400 to-yellow-500 text-white shadow-lg shadow-amber-500/30';
+    if (rank === 2) return 'bg-gradient-to-br from-slate-300 to-slate-400 text-white shadow-md';
+    if (rank === 3) return 'bg-gradient-to-br from-amber-600 to-amber-700 text-white shadow-md';
+    return 'bg-muted text-muted-foreground';
   };
 
   if (loading) {
     return (
       <div className="space-y-5">
-        <Skeleton className="h-12 w-48" />
-        <Skeleton className="h-56 w-full rounded-2xl" />
+        <div className="h-32 rounded-2xl bg-gradient-to-r from-primary/20 to-purple-500/20 animate-pulse" />
+        <div className="h-56 rounded-2xl bg-muted/50 animate-pulse" />
         {[1, 2, 3, 4].map((i) => (
-          <Skeleton key={i} className="h-20 rounded-xl" />
+          <div key={i} className="h-20 rounded-xl bg-muted/30 animate-pulse" />
         ))}
       </div>
     );
@@ -349,129 +356,164 @@ export default function CategoryRankings() {
 
   return (
     <div className="space-y-5 pb-24">
-      {/* Header */}
-      <div className="flex items-center gap-3">
-        <Button
-          variant="ghost"
-          size="icon"
-          onClick={() => navigate('/Leaderboard')}
-          className="shrink-0"
-        >
-          <ChevronLeft className="h-5 w-5" />
-        </Button>
-        <div className="flex items-center gap-3">
-          <div className={`w-11 h-11 rounded-2xl ${config.iconBg} flex items-center justify-center shadow-lg`}>
-            <Icon className="h-5 w-5 text-white" />
-          </div>
-          <div>
-            <h1 className="text-xl font-bold">{config.title}</h1>
-            <p className="text-xs text-muted-foreground">{config.subtitle}</p>
+      {/* Hero Header */}
+      <div className={cn(
+        "relative overflow-hidden rounded-2xl p-6 text-white",
+        `bg-gradient-to-r ${config.headerGradient}`
+      )}>
+        <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAwIiBoZWlnaHQ9IjIwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZGVmcz48cGF0dGVybiBpZD0iZ3JpZCIgd2lkdGg9IjQwIiBoZWlnaHQ9IjQwIiBwYXR0ZXJuVW5pdHM9InVzZXJTcGFjZU9uVXNlIj48cGF0aCBkPSJNIDQwIDAgTCAwIDAgMCA0MCIgZmlsbD0ibm9uZSIgc3Ryb2tlPSJ3aGl0ZSIgc3Ryb2tlLW9wYWNpdHk9IjAuMSIgc3Ryb2tlLXdpZHRoPSIxIi8+PC9wYXR0ZXJuPjwvZGVmcz48cmVjdCB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIiBmaWxsPSJ1cmwoI2dyaWQpIi8+PC9zdmc+')] opacity-30" />
+        
+        <div className="relative">
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => navigate('/Leaderboard')}
+            className="absolute -top-1 -left-1 text-white/80 hover:text-white hover:bg-white/20"
+          >
+            <ChevronLeft className="h-5 w-5" />
+          </Button>
+          
+          <div className="flex items-center gap-3 ml-8">
+            <div className={cn(
+              "w-12 h-12 rounded-2xl flex items-center justify-center shadow-lg",
+              config.iconBg
+            )}>
+              <Icon className="h-6 w-6 text-white" />
+            </div>
+            <div>
+              <h1 className="text-2xl font-bold">{config.title}</h1>
+              <p className="text-white/80 text-sm">{config.subtitle}</p>
+            </div>
           </div>
         </div>
       </div>
 
-      {/* Clean Light Podium */}
+      {/* Podium */}
       {topThree.length >= 3 && (
-        <div className="py-6">
-          <div className="flex items-end justify-center gap-3">
+        <Card className="p-6 bg-gradient-to-br from-background to-muted/30 border-0 shadow-lg">
+          <div className="flex items-end justify-center gap-4">
             {/* 2nd Place */}
-            <Link to={createPageUrl(`Fraternity?id=${topThree[1].id}`)} className="flex flex-col items-center">
-              <div className="bg-gradient-to-br from-slate-300 to-slate-400 w-10 h-10 rounded-xl flex items-center justify-center shadow-md mb-2">
+            <Link to={createPageUrl(`Fraternity?id=${topThree[1].id}`)} className="flex flex-col items-center group">
+              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-slate-300 to-slate-400 flex items-center justify-center shadow-lg mb-2">
                 <Trophy className="h-5 w-5 text-white" />
               </div>
-              <p className="font-bold text-lg text-slate-600">
+              <p className="font-bold text-xl text-slate-600 group-hover:text-primary transition-colors">
                 {getFratGreek(topThree[1].name)}
               </p>
-              <p className={`text-lg font-bold ${getScoreColor(getScore(topThree[1]) ?? 0)}`}>
+              <p className={cn("text-lg font-bold", getScoreColor(getScore(topThree[1]) ?? 0))}>
                 {getScore(topThree[1])?.toFixed(1) || '—'}
               </p>
               <p className="text-xs text-muted-foreground mt-0.5 text-center max-w-[70px] truncate">
                 {getFratShorthand(topThree[1].name)}
               </p>
-              <div className="w-20 h-24 bg-gradient-to-b from-slate-200 to-slate-300 rounded-t-xl mt-2 flex items-center justify-center">
-                <span className="text-2xl font-bold text-slate-500">2</span>
+              <div className="w-20 h-24 bg-gradient-to-b from-slate-200 to-slate-300 rounded-t-xl mt-3 flex items-center justify-center shadow-inner">
+                <span className="text-3xl font-bold text-slate-500">2</span>
               </div>
             </Link>
 
             {/* 1st Place */}
-            <Link to={createPageUrl(`Fraternity?id=${topThree[0].id}`)} className="flex flex-col items-center -mt-4">
-              <div className="bg-gradient-to-br from-amber-400 to-yellow-500 w-12 h-12 rounded-xl flex items-center justify-center shadow-lg mb-2">
+            <Link to={createPageUrl(`Fraternity?id=${topThree[0].id}`)} className="flex flex-col items-center -mt-6 group">
+              <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-amber-400 to-yellow-500 flex items-center justify-center shadow-lg mb-2 animate-pulse">
                 <Crown className="h-6 w-6 text-white" />
               </div>
-              <p className="font-bold text-xl text-amber-600">
+              <p className="font-bold text-2xl text-amber-600 group-hover:text-amber-500 transition-colors">
                 {getFratGreek(topThree[0].name)}
               </p>
-              <p className={`text-xl font-bold ${getScoreColor(getScore(topThree[0]) ?? 0)}`}>
+              <p className={cn("text-xl font-bold", getScoreColor(getScore(topThree[0]) ?? 0))}>
                 {getScore(topThree[0])?.toFixed(1) || '—'}
               </p>
               <p className="text-xs text-muted-foreground mt-0.5 text-center max-w-[80px] truncate">
                 {getFratShorthand(topThree[0].name)}
               </p>
-              <div className="w-24 h-32 bg-gradient-to-b from-amber-300 to-amber-400 rounded-t-xl mt-2 flex items-center justify-center">
-                <span className="text-3xl font-bold text-amber-600">1</span>
+              <div className="w-24 h-32 bg-gradient-to-b from-amber-300 to-amber-400 rounded-t-xl mt-3 flex items-center justify-center shadow-inner">
+                <span className="text-4xl font-bold text-amber-600">1</span>
               </div>
             </Link>
 
             {/* 3rd Place */}
-            <Link to={createPageUrl(`Fraternity?id=${topThree[2].id}`)} className="flex flex-col items-center">
-              <div className="bg-gradient-to-br from-amber-600 to-amber-700 w-10 h-10 rounded-xl flex items-center justify-center shadow-md mb-2">
+            <Link to={createPageUrl(`Fraternity?id=${topThree[2].id}`)} className="flex flex-col items-center group">
+              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-amber-600 to-amber-700 flex items-center justify-center shadow-lg mb-2">
                 <Medal className="h-5 w-5 text-white" />
               </div>
-              <p className="font-bold text-lg text-amber-700">
+              <p className="font-bold text-xl text-amber-700 group-hover:text-amber-600 transition-colors">
                 {getFratGreek(topThree[2].name)}
               </p>
-              <p className={`text-lg font-bold ${getScoreColor(getScore(topThree[2]) ?? 0)}`}>
+              <p className={cn("text-lg font-bold", getScoreColor(getScore(topThree[2]) ?? 0))}>
                 {getScore(topThree[2])?.toFixed(1) || '—'}
               </p>
               <p className="text-xs text-muted-foreground mt-0.5 text-center max-w-[70px] truncate">
                 {getFratShorthand(topThree[2].name)}
               </p>
-              <div className="w-20 h-20 bg-gradient-to-b from-amber-500 to-amber-600 rounded-t-xl mt-2 flex items-center justify-center">
-                <span className="text-2xl font-bold text-amber-700">3</span>
+              <div className="w-20 h-20 bg-gradient-to-b from-amber-500 to-amber-600 rounded-t-xl mt-3 flex items-center justify-center shadow-inner">
+                <span className="text-3xl font-bold text-amber-700">3</span>
               </div>
             </Link>
           </div>
-        </div>
+        </Card>
       )}
 
       {/* Full Rankings List */}
       <div className="space-y-3">
-        <div className="flex items-center gap-2 text-muted-foreground">
-          <Trophy className="h-4 w-4" />
-          <h3 className="text-sm font-semibold">Full Rankings</h3>
+        <div className="flex items-center gap-2 px-1">
+          <Trophy className="h-5 w-5 text-amber-500" />
+          <h3 className="font-bold text-lg">Full Rankings</h3>
+          <Badge variant="secondary" className="ml-auto">{fraternities.length} Frats</Badge>
         </div>
         
         {fraternities.map((frat, index) => {
           const rank = ranks[index];
           const score = getScore(frat);
+          const isTop3 = rank <= 3;
           
           return (
             <Link key={frat.id} to={createPageUrl(`Fraternity?id=${frat.id}`)}>
-              <Card className="p-4 bg-white border border-slate-100 shadow-sm hover:shadow-md active:scale-[0.98] transition-all">
+              <Card className={cn(
+                "p-4 transition-all hover:shadow-lg active:scale-[0.98]",
+                isTop3 && "border-l-4",
+                rank === 1 && "border-l-amber-500 bg-amber-50/50",
+                rank === 2 && "border-l-slate-400 bg-slate-50/50",
+                rank === 3 && "border-l-amber-600 bg-amber-50/30"
+              )}>
                 <div className="flex items-center gap-3">
                   {/* Rank Badge */}
-                  <div className={`w-10 h-10 rounded-xl flex items-center justify-center font-bold text-sm ${getRankBadgeStyle(rank)}`}>
+                  <div className={cn(
+                    "w-11 h-11 rounded-xl flex items-center justify-center font-bold text-sm",
+                    getRankBadgeStyle(rank)
+                  )}>
                     {rank}
                   </div>
                   
                   {/* Avatar */}
-                  <Avatar className="h-11 w-11 ring-2 ring-slate-100">
+                  <Avatar className={cn(
+                    "h-12 w-12 ring-2",
+                    rank === 1 ? "ring-amber-400" : rank === 2 ? "ring-slate-300" : rank === 3 ? "ring-amber-600" : "ring-muted"
+                  )}>
                     <AvatarImage src={frat.logo_url} />
-                    <AvatarFallback className="bg-primary/10 text-primary font-bold text-xs">
+                    <AvatarFallback className={cn(
+                      "font-bold text-sm",
+                      rank === 1 ? "bg-amber-100 text-amber-700" : "bg-primary/10 text-primary"
+                    )}>
                       {getFratGreek(frat.name)}
                     </AvatarFallback>
                   </Avatar>
                   
                   {/* Info */}
                   <div className="flex-1 min-w-0">
-                    <h3 className="font-semibold text-base truncate">{frat.name}</h3>
+                    <h3 className="font-bold text-base truncate">{frat.name}</h3>
                     <p className="text-sm text-muted-foreground">{getFratShorthand(frat.name)}</p>
                   </div>
                   
                   {/* Score */}
-                  <p className={`text-2xl font-bold ${getScoreColor(score ?? 0)}`}>
-                    {score?.toFixed(1) || '—'}
-                  </p>
+                  <div className="text-right">
+                    <p className={cn("text-2xl font-bold", getScoreColor(score ?? 0))}>
+                      {score?.toFixed(1) || '—'}
+                    </p>
+                    {isTop3 && (
+                      <Badge variant="secondary" className="text-[10px]">
+                        {rank === 1 ? '🥇' : rank === 2 ? '🥈' : '🥉'}
+                      </Badge>
+                    )}
+                  </div>
                 </div>
               </Card>
             </Link>
@@ -514,14 +556,14 @@ export default function CategoryRankings() {
             <>
               <button
                 onClick={() => { setShowRateAction('parties'); setRateExpanded(false); }}
-                className="flex items-center gap-1.5 px-4 py-2.5 rounded-full bg-primary text-white shadow-lg active:scale-95 transition-all animate-scale-in"
+                className="flex items-center gap-1.5 px-4 py-2.5 rounded-full bg-gradient-to-r from-pink-500 to-rose-500 text-white shadow-lg shadow-pink-500/30 active:scale-95 transition-all animate-scale-in"
               >
                 <PartyPopper className="h-4 w-4" />
                 <span className="font-medium text-sm">Party</span>
               </button>
               <button
                 onClick={() => { setShowRateAction('rate'); setRateExpanded(false); }}
-                className="flex items-center gap-1.5 px-4 py-2.5 rounded-full bg-amber-500 text-white shadow-lg active:scale-95 transition-all animate-scale-in"
+                className="flex items-center gap-1.5 px-4 py-2.5 rounded-full bg-gradient-to-r from-amber-500 to-orange-500 text-white shadow-lg shadow-amber-500/30 active:scale-95 transition-all animate-scale-in"
               >
                 <Star className="h-4 w-4" />
                 <span className="font-medium text-sm">Frat</span>
@@ -536,10 +578,10 @@ export default function CategoryRankings() {
           ) : (
             <button
               onClick={() => setRateExpanded(true)}
-              className="flex items-center gap-2 px-5 py-3 rounded-full bg-amber-500 text-white shadow-lg active:scale-95 transition-transform"
+              className="flex items-center gap-2 px-5 py-3 rounded-full bg-gradient-to-r from-amber-500 to-orange-500 text-white shadow-lg shadow-amber-500/30 active:scale-95 transition-transform hover:shadow-xl"
             >
-              <Star className="h-5 w-5" />
-              <span className="font-semibold">Rate</span>
+              <Sparkles className="h-5 w-5" />
+              <span className="font-bold">Rate</span>
             </button>
           )}
         </div>
