@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { ListOrdered, Trophy, PartyPopper, LogIn, ChevronRight, Lock, Star } from 'lucide-react';
+import { ListOrdered, Trophy, PartyPopper, LogIn, ChevronRight, Lock, Star, Users, Shield, Heart } from 'lucide-react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -19,6 +19,9 @@ interface RankedFrat {
   fraternity: Fraternity;
   score: number;
   rank: number;
+  brotherhood: number;
+  reputation: number;
+  community: number;
 }
 
 interface RankedParty {
@@ -92,6 +95,9 @@ export default function YourRankings() {
             fraternity: fratMap.get(r.fraternity_id!)!,
             score: r.combined_score ?? 5,
             rank: 0,
+            brotherhood: r.brotherhood_score ?? 5,
+            reputation: r.reputation_score ?? 5,
+            community: r.community_score ?? 5,
           }))
           .sort((a, b) => b.score - a.score);
 
@@ -406,32 +412,44 @@ export default function YourRankings() {
             rankedFrats.map((item) => (
               <Link key={item.fraternity.id} to={createPageUrl(`Fraternity?id=${item.fraternity.id}`)}>
                 <Card className="glass p-4 active:scale-[0.98] transition-all hover:shadow-md group">
-                  <div className="flex items-center gap-4">
+                  <div className="flex items-center gap-3">
                     {/* Rank */}
-                    <div className="w-8 text-center">
+                    <div className="w-6 text-center flex-shrink-0">
                       <span className="text-lg font-bold text-muted-foreground">
                         {item.rank}.
                       </span>
                     </div>
 
                     {/* Avatar */}
-                    <Avatar className="h-12 w-12 ring-2 ring-border">
+                    <Avatar className="h-11 w-11 ring-2 ring-border flex-shrink-0">
                       <AvatarImage src={item.fraternity.logo_url} />
-                      <AvatarFallback className="bg-primary/10 text-primary font-bold">
+                      <AvatarFallback className="bg-primary/10 text-primary font-bold text-sm">
                         {item.fraternity.chapter?.substring(0, 2) || item.fraternity.name.substring(0, 2)}
                       </AvatarFallback>
                     </Avatar>
 
-                    {/* Info */}
+                    {/* Info + Category Scores */}
                     <div className="flex-1 min-w-0">
-                      <h3 className="font-semibold truncate">{item.fraternity.name}</h3>
-                      {item.fraternity.chapter && (
-                        <p className="text-sm text-muted-foreground">{item.fraternity.chapter}</p>
-                      )}
+                      <h3 className="font-semibold text-sm truncate">{item.fraternity.name}</h3>
+                      {/* Category breakdown */}
+                      <div className="flex items-center gap-3 mt-1">
+                        <div className="flex items-center gap-1">
+                          <Users className="h-3 w-3 text-blue-500" />
+                          <span className="text-xs font-medium text-muted-foreground">{item.brotherhood.toFixed(1)}</span>
+                        </div>
+                        <div className="flex items-center gap-1">
+                          <Shield className="h-3 w-3 text-primary" />
+                          <span className="text-xs font-medium text-muted-foreground">{item.reputation.toFixed(1)}</span>
+                        </div>
+                        <div className="flex items-center gap-1">
+                          <Heart className="h-3 w-3 text-rose-500" />
+                          <span className="text-xs font-medium text-muted-foreground">{item.community.toFixed(1)}</span>
+                        </div>
+                      </div>
                     </div>
 
-                    {/* Score */}
-                    <div className="flex items-center gap-2">
+                    {/* Overall Score */}
+                    <div className="flex items-center gap-2 flex-shrink-0">
                       <Badge className={`${getScoreBgColor(item.score)} text-white text-sm px-2.5 py-1`}>
                         {item.score.toFixed(1)}
                       </Badge>
