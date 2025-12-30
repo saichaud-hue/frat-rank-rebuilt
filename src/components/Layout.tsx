@@ -119,20 +119,23 @@ export default function Layout({ children }: LayoutProps) {
         {/* Mobile Bottom Nav - iPhone safe area */}
         <nav className="fixed bottom-0 left-0 right-0 bg-white/95 backdrop-blur-md border-t border-slate-200/50 z-40" style={{ paddingBottom: 'max(env(safe-area-inset-bottom), 8px)' }}>
           <div className="grid grid-cols-3 gap-1 px-2 pt-2">
-            {navItems.map((item) => (
-              <Link
-                key={item.title}
-                to={item.url}
-                className={`flex flex-col items-center justify-center gap-1 py-2 min-h-[52px] rounded-xl transition-all active:scale-95 ${
-                  isActive(item.url)
-                    ? 'text-primary bg-primary/10'
-                    : 'text-muted-foreground active:bg-muted/50'
-                }`}
-              >
-                <item.icon className="h-6 w-6" />
-                <span className="text-xs font-medium">{item.title}</span>
-              </Link>
-            ))}
+            {navItems.map((item) => {
+              const active = isActive(item.url);
+              return (
+                <Link
+                  key={item.title}
+                  to={item.url}
+                  className={`flex flex-col items-center justify-center gap-1 py-2 min-h-[52px] rounded-xl transition-all active:scale-95 ${
+                    active
+                      ? 'text-primary bg-primary/10'
+                      : 'text-muted-foreground active:bg-muted/50'
+                  }`}
+                >
+                  <item.icon className="h-6 w-6" fill={active ? 'currentColor' : 'none'} />
+                  <span className="text-xs font-medium">{item.title}</span>
+                </Link>
+              );
+            })}
           </div>
         </nav>
       </div>
