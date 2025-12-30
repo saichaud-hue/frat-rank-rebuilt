@@ -466,7 +466,7 @@ export default function FraternityPage() {
                   </div>
                 </TooltipTrigger>
                 <TooltipContent side="bottom" className="max-w-xs">
-                  <p className="text-xs">30% Brotherhood + 60% Reputation + 10% Community</p>
+                  <p className="text-xs">Combined score based on brotherhood, reputation, and community ratings</p>
                 </TooltipContent>
               </Tooltip>
             </TooltipProvider>
