@@ -131,7 +131,11 @@ export default function Layout({ children }: LayoutProps) {
                       : 'text-muted-foreground active:bg-muted/50'
                   }`}
                 >
-                  <item.icon className="h-6 w-6" fill={active ? 'currentColor' : 'none'} strokeWidth={active ? 1.5 : 2} />
+                  <item.icon 
+                    className={`h-6 w-6 transition-all duration-200 ${active ? 'scale-110' : 'scale-100'}`} 
+                    fill={active ? 'currentColor' : 'none'} 
+                    strokeWidth={active ? 1.5 : 2} 
+                  />
                   <span className="text-xs font-medium">{item.title}</span>
                 </Link>
               );
