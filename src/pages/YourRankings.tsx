@@ -52,6 +52,7 @@ export default function YourRankings() {
   const [selectedFrat, setSelectedFrat] = useState<Fraternity | null>(null);
   const [existingFratScores, setExistingFratScores] = useState<{ brotherhood: number; reputation: number; community: number } | undefined>();
   const [selectedParty, setSelectedParty] = useState<Party | null>(null);
+  const [ratingFromIntro, setRatingFromIntro] = useState(false);
 
   useEffect(() => {
     loadData();
@@ -152,9 +153,11 @@ export default function YourRankings() {
     setShowIntro(false);
   };
 
-  const handleRateFrat = async (fraternity: Fraternity) => {
+  const handleRateFrat = async (fraternity: Fraternity, fromIntro: boolean = false) => {
     const user = await ensureAuthed();
     if (!user) return;
+
+    setRatingFromIntro(fromIntro);
 
     const existingRatings = await base44.entities.ReputationRating.filter({
       fraternity_id: fraternity.id,
@@ -222,17 +225,30 @@ export default function YourRankings() {
 
     setSelectedFrat(null);
     await loadData();
+
+    // If rating was initiated from intro, re-show the intro
+    if (ratingFromIntro) {
+      setShowIntro(true);
+      setRatingFromIntro(false);
+    }
   };
 
-  const handleRateParty = async (party: Party) => {
+  const handleRateParty = async (party: Party, fromIntro: boolean = false) => {
     const user = await ensureAuthed();
     if (!user) return;
+    setRatingFromIntro(fromIntro);
     setSelectedParty(party);
   };
 
   const handlePartyRatingSubmit = async () => {
     setSelectedParty(null);
     await loadData();
+
+    // If rating was initiated from intro, re-show the intro
+    if (ratingFromIntro) {
+      setShowIntro(true);
+      setRatingFromIntro(false);
+    }
   };
 
   if (loading) {

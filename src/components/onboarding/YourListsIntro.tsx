@@ -24,8 +24,8 @@ interface Party {
 
 interface YourListsIntroProps {
   onComplete: (neverShowAgain: boolean) => void;
-  onRateFrat: (fraternity: Fraternity) => void;
-  onRateParty: (party: Party) => void;
+  onRateFrat: (fraternity: Fraternity, fromIntro: boolean) => void;
+  onRateParty: (party: Party, fromIntro: boolean) => void;
   onSwitchToPartiesTab?: () => void;
   fraternities: Fraternity[];
   parties: Party[];
@@ -62,12 +62,12 @@ export default function YourListsIntro({
 
   const handleSelectFrat = (frat: Fraternity) => {
     onComplete(neverShowAgain);
-    onRateFrat(frat);
+    onRateFrat(frat, true);
   };
 
   const handleSelectParty = (party: Party) => {
     onComplete(neverShowAgain);
-    onRateParty(party);
+    onRateParty(party, true);
   };
 
   const handleViewFrats = () => {
