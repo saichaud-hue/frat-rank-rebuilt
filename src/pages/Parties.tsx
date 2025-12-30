@@ -3,10 +3,12 @@ import { PartyPopper } from 'lucide-react';
 import { base44, seedInitialData, type Party, type Fraternity, type PartyRating } from '@/api/base44Client';
 import PartyCard from '@/components/parties/PartyCard';
 import PartyFilters from '@/components/parties/PartyFilters';
+import PartiesIntro from '@/components/onboarding/PartiesIntro';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Badge } from '@/components/ui/badge';
 import { subDays, addDays, startOfDay, endOfDay } from 'date-fns';
 import { computeRawPartyQuality } from '@/utils/scoring';
+
 interface Filters {
   fraternity: string;
   type: string;
@@ -19,6 +21,9 @@ export default function Parties() {
   const [partyScores, setPartyScores] = useState<Map<string, number>>(new Map());
   const [partyRatingCounts, setPartyRatingCounts] = useState<Map<string, number>>(new Map());
   const [loading, setLoading] = useState(true);
+  const [showIntro, setShowIntro] = useState(() => {
+    return !localStorage.getItem('fratrank_parties_intro_never_show');
+  });
   const [filters, setFilters] = useState<Filters>({
     fraternity: 'all',
     type: 'all',
@@ -233,6 +238,18 @@ export default function Parties() {
           <p className="text-muted-foreground">No parties found</p>
           <p className="text-sm text-muted-foreground">Try adjusting your filters</p>
         </div>
+      )}
+
+      {/* Intro Modal */}
+      {showIntro && (
+        <PartiesIntro 
+          onComplete={(neverShowAgain) => {
+            if (neverShowAgain) {
+              localStorage.setItem('fratrank_parties_intro_never_show', 'true');
+            }
+            setShowIntro(false);
+          }} 
+        />
       )}
     </div>
   );
