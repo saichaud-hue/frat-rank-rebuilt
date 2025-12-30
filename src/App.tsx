@@ -6,6 +6,7 @@ import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import Layout from "./components/Layout";
 import Activity from "./pages/Activity";
 import Leaderboard from "./pages/Leaderboard";
+import CategoryRankings from "./pages/CategoryRankings";
 import Parties from "./pages/Parties";
 import Party from "./pages/Party";
 import Fraternity from "./pages/Fraternity";
@@ -27,6 +28,7 @@ const App = () => (
           <Route path="/" element={<Navigate to="/Activity" replace />} />
           <Route path="/Activity" element={<Layout><Activity /></Layout>} />
           <Route path="/Leaderboard" element={<Layout><Leaderboard /></Layout>} />
+          <Route path="/Rankings" element={<Layout><CategoryRankings /></Layout>} />
           <Route path="/Parties" element={<Layout><Parties /></Layout>} />
           <Route path="/Party" element={<Layout><Party /></Layout>} />
           <Route path="/Fraternity" element={<Layout><Fraternity /></Layout>} />

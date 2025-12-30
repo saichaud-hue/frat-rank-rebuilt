@@ -10,30 +10,24 @@ import {
   sortFraternitiesByParty,
   sortFraternitiesByTrending,
   type FraternityWithScores,
-  type FraternityScores,
   type PartyWithRatings,
-  type ActivityData
+  type ActivityData,
+  getCachedCampusBaseline,
 } from '@/utils/scoring';
-import LeaderboardHeader from '@/components/leaderboard/LeaderboardHeader';
-import LeaderboardPodium from '@/components/leaderboard/LeaderboardPodium';
-import FraternityCard from '@/components/leaderboard/FraternityCard';
+import PodiumCard from '@/components/leaderboard/PodiumCard';
 import RateFratSheet from '@/components/leaderboard/RateFratSheet';
 import RateActionSheet from '@/components/leaderboard/RateActionSheet';
 import LeaderboardIntro from '@/components/onboarding/LeaderboardIntro';
 import PartyRatingForm from '@/components/rate/PartyRatingForm';
 import { Skeleton } from '@/components/ui/skeleton';
-import { clamp, createPageUrl } from '@/utils';
-import { getCachedCampusBaseline } from "@/utils/scoring";
+import { clamp } from '@/utils';
 import { ensureAuthed } from '@/utils/auth';
-import { Star, PartyPopper, X } from 'lucide-react';
-
-type FilterType = 'overall' | 'reputation' | 'party' | 'trending';
+import { Star, PartyPopper, X, Trophy } from 'lucide-react';
 
 export default function Leaderboard() {
   const navigate = useNavigate();
-  const [fraternities, setFraternities] = useState<FraternityWithScores[]>([]);
+  const [allFraternities, setAllFraternities] = useState<FraternityWithScores[]>([]);
   const [loading, setLoading] = useState(true);
-  const [filter, setFilter] = useState<FilterType>('overall');
   const [selectedFrat, setSelectedFrat] = useState<Fraternity | null>(null);
   const [existingScores, setExistingScores] = useState<{ brotherhood: number; reputation: number; community: number } | undefined>();
   const [showIntro, setShowIntro] = useState(() => {
@@ -42,6 +36,12 @@ export default function Leaderboard() {
   const [showRateAction, setShowRateAction] = useState<'rate' | 'parties' | false>(false);
   const [rateExpanded, setRateExpanded] = useState(false);
   const [selectedParty, setSelectedParty] = useState<Party | null>(null);
+
+  // Pre-sorted lists for each category
+  const [overallTop3, setOverallTop3] = useState<FraternityWithScores[]>([]);
+  const [reputationTop3, setReputationTop3] = useState<FraternityWithScores[]>([]);
+  const [partyTop3, setPartyTop3] = useState<FraternityWithScores[]>([]);
+  const [trendingTop3, setTrendingTop3] = useState<FraternityWithScores[]>([]);
 
   const handleIntroComplete = (neverShowAgain: boolean) => {
     if (neverShowAgain) {
@@ -58,12 +58,6 @@ export default function Leaderboard() {
     initAndLoad();
   }, []);
 
-  useEffect(() => {
-    if (fraternities.length > 0) {
-      sortFraternities();
-    }
-  }, [filter]);
-
   const initAndLoad = async () => {
     await seedInitialData();
     await loadFraternities();
@@ -71,7 +65,6 @@ export default function Leaderboard() {
 
   const loadFraternities = async () => {
     try {
-      // Load all data needed for scoring including comments for activity trending
       const [fratsData, partiesData, allPartyRatings, allRepRatings, allPartyComments, allFratComments] = await Promise.all([
         base44.entities.Fraternity.filter({ status: 'active' }),
         base44.entities.Party.list(),
@@ -81,11 +74,9 @@ export default function Leaderboard() {
         base44.entities.FraternityComment.list(),
       ]);
 
-      // Compute campus averages
       const campusRepAvg = computeCampusRepAvg(fratsData);
       const campusPartyAvg = computeCampusPartyAvg(allPartyRatings);
 
-      // Group parties and ratings by fraternity
       const partiesByFrat = new Map<string, Party[]>();
       for (const party of partiesData) {
         if (party.fraternity_id) {
@@ -113,7 +104,6 @@ export default function Leaderboard() {
         }
       }
 
-      // Group comments by party
       const partyCommentsByParty = new Map<string, PartyComment[]>();
       for (const comment of allPartyComments) {
         if (comment.party_id) {
@@ -123,7 +113,6 @@ export default function Leaderboard() {
         }
       }
 
-      // Group fraternity comments by fraternity
       const fratCommentsByFrat = new Map<string, FraternityComment[]>();
       for (const comment of allFratComments) {
         if (comment.fraternity_id) {
@@ -133,13 +122,11 @@ export default function Leaderboard() {
         }
       }
 
-      // Build all parties with ratings for campus baseline
       const allPartiesWithRatings: PartyWithRatings[] = partiesData.map(party => ({
         party,
         ratings: partyRatingsMap.get(party.id) || [],
       }));
 
-      // Compute full scores for each fraternity
       const fratsWithScores: FraternityWithScores[] = await Promise.all(
         fratsData.map(async (frat) => {
           const fratParties = partiesByFrat.get(frat.id) || [];
@@ -148,14 +135,9 @@ export default function Leaderboard() {
             ratings: partyRatingsMap.get(party.id) || [],
           }));
           const repRatings = repRatingsByFrat.get(frat.id) || [];
-          
-          // Get all party ratings for this frat's parties
           const fratPartyRatings = fratParties.flatMap(p => partyRatingsMap.get(p.id) || []);
-          
-          // Get all party comments for this frat's parties
           const fratPartyComments = fratParties.flatMap(p => partyCommentsByParty.get(p.id) || []);
           
-          // Build activity data for trending calculation
           const activityData: ActivityData = {
             repRatings,
             partyRatings: fratPartyRatings,
@@ -176,38 +158,22 @@ export default function Leaderboard() {
             campusBaseline
           );
 
-          return {
-            ...frat,
-            computedScores: scores,
-          };
+          return { ...frat, computedScores: scores };
         })
       );
 
-      setFraternities(sortByFilter(fratsWithScores, filter));
+      setAllFraternities(fratsWithScores);
+
+      // Pre-compute top 3 for each category
+      setOverallTop3(sortFraternitiesByOverall([...fratsWithScores]).slice(0, 3));
+      setReputationTop3(sortFraternitiesByReputation([...fratsWithScores]).slice(0, 3));
+      setPartyTop3(sortFraternitiesByParty([...fratsWithScores]).slice(0, 3));
+      setTrendingTop3(sortFraternitiesByTrending([...fratsWithScores]).slice(0, 3));
     } catch (error) {
       console.error('Failed to load fraternities:', error);
     } finally {
       setLoading(false);
     }
-  };
-
-  const sortByFilter = (frats: FraternityWithScores[], f: FilterType): FraternityWithScores[] => {
-    switch (f) {
-      case 'overall':
-        return sortFraternitiesByOverall(frats);
-      case 'reputation':
-        return sortFraternitiesByReputation(frats);
-      case 'party':
-        return sortFraternitiesByParty(frats);
-      case 'trending':
-        return sortFraternitiesByTrending(frats);
-      default:
-        return sortFraternitiesByOverall(frats);
-    }
-  };
-
-  const sortFraternities = () => {
-    setFraternities(prev => sortByFilter(prev, filter));
   };
 
   const handleRate = async (fraternity: Fraternity) => {
@@ -251,7 +217,6 @@ export default function Leaderboard() {
     };
 
     if (existingRatings.length > 0) {
-      // Refresh created_date on updates so edits count as fresh activity for trending
       await base44.entities.ReputationRating.update(existingRatings[0].id, {
         ...ratingData,
         created_date: new Date().toISOString(),
@@ -266,7 +231,6 @@ export default function Leaderboard() {
       });
     }
 
-    // Recalculate fraternity scores
     const allRatings = await base44.entities.ReputationRating.filter({
       fraternity_id: selectedFrat.id,
     });
@@ -293,98 +257,42 @@ export default function Leaderboard() {
     await loadFraternities();
   };
 
-  // Compute ranks with ties (same score = same rank)
-  const computeRanks = (frats: FraternityWithScores[]): number[] => {
-    if (frats.length === 0) return [];
-    
-    const getScore = (f: FraternityWithScores): number | null => {
-      const s = f.computedScores;
-      if (!s) return 5;
-      switch (filter) {
-        case 'overall': return s.hasOverallData ? s.overall : null;
-        case 'reputation': return s.hasRepData ? s.repAdj : null;
-        case 'party': return s.hasPartyScoreData ? s.semesterPartyScore : null;
-        case 'trending': return s.activityTrending;
-        default: return s.hasOverallData ? s.overall : null;
-      }
-    };
-    
-    const ranks: number[] = [];
-    let currentRank = 1;
-    
-    for (let i = 0; i < frats.length; i++) {
-      const currScore = getScore(frats[i]);
-      
-      if (i === 0) {
-        ranks.push(1);
-      } else {
-        const prevScore = getScore(frats[i - 1]);
-        // If both have null scores (no data), assign same rank
-        if (currScore === null && prevScore === null) {
-          ranks.push(ranks[i - 1]);
-        } else if (currScore === null || prevScore === null) {
-          // One has data, one doesn't - different ranks
-          ranks.push(i + 1);
-        } else if (Math.abs(prevScore - currScore) < 0.01) {
-          // If scores are equal (within tolerance), assign same rank
-          ranks.push(ranks[i - 1]);
-        } else {
-          ranks.push(i + 1);
-        }
-      }
-    }
-    return ranks;
-  };
-
-  const ranks = computeRanks(fraternities);
-  const topThree = fraternities.slice(0, 3);
-  const topThreeRanks = ranks.slice(0, 3);
-  const rest = fraternities.slice(3);
-  const restRanks = ranks.slice(3);
-
   if (loading) {
     return (
       <div className="space-y-5">
-        <Skeleton className="h-20 w-full rounded-xl" />
-        <Skeleton className="h-32 w-full rounded-xl" />
-        <Skeleton className="h-20 w-full rounded-xl" />
-        <Skeleton className="h-20 w-full rounded-xl" />
-        {[1, 2, 3].map((i) => (
-          <Skeleton key={i} className="h-20 rounded-xl" />
-        ))}
+        <div className="flex items-center gap-3 mb-2">
+          <Skeleton className="h-10 w-10 rounded-xl" />
+          <Skeleton className="h-8 w-40" />
+        </div>
+        <div className="grid grid-cols-1 gap-4">
+          {[1, 2, 3, 4].map((i) => (
+            <Skeleton key={i} className="h-40 rounded-2xl" />
+          ))}
+        </div>
       </div>
     );
   }
 
   return (
     <div className="space-y-5">
-      <LeaderboardHeader 
-        filter={filter} 
-        onFilterChange={setFilter} 
-      />
-
-      {topThree.length >= 3 && (
-        <LeaderboardPodium topThree={topThree} ranks={topThreeRanks} filter={filter} onRate={handleRate} />
-      )}
-
-      {rest.length > 0 && (
-        <div className="space-y-3">
-          {rest.map((frat, index) => {
-            const fratRank = restRanks[index];
-            const isTied = restRanks.filter(r => r === fratRank).length > 1;
-            return (
-              <FraternityCard
-                key={frat.id}
-                fraternity={frat}
-                rank={fratRank}
-                onRate={handleRate}
-                filter={filter}
-                isTied={isTied}
-              />
-            );
-          })}
+      {/* Header */}
+      <div className="flex items-center gap-3">
+        <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-amber-500 to-yellow-500 flex items-center justify-center shadow-lg">
+          <Trophy className="h-5 w-5 text-white" />
         </div>
-      )}
+        <div>
+          <h1 className="text-2xl font-bold">Leaderboard</h1>
+          <p className="text-xs text-muted-foreground">Who's on top?</p>
+        </div>
+      </div>
+
+      {/* Podium Cards Grid */}
+      <div className="grid grid-cols-1 gap-4">
+        <PodiumCard category="overall" topThree={overallTop3} />
+        <PodiumCard category="reputation" topThree={reputationTop3} />
+        <PodiumCard category="party" topThree={partyTop3} />
+        <PodiumCard category="trending" topThree={trendingTop3} />
+      </div>
 
       <RateFratSheet
         fraternity={selectedFrat}
@@ -394,17 +302,15 @@ export default function Leaderboard() {
         existingScores={existingScores}
       />
 
-      {/* Rate Action Sheet */}
       <RateActionSheet
         isOpen={showRateAction !== false}
         onClose={() => setShowRateAction(false)}
         onRateFrat={handleRate}
         onRateParty={handleRateParty}
-        fraternities={fraternities}
+        fraternities={allFraternities}
         initialAction={showRateAction || undefined}
       />
 
-      {/* Party Rating Form */}
       {selectedParty && (
         <PartyRatingForm
           party={selectedParty}
@@ -413,7 +319,7 @@ export default function Leaderboard() {
         />
       )}
 
-      {/* Floating Rate Buttons - Hide when any modal is open */}
+      {/* Floating Rate Buttons */}
       {!showIntro && !selectedFrat && !selectedParty && showRateAction === false && (
         <div 
           className="fixed bottom-24 right-4 z-50 flex items-center gap-2"
@@ -454,12 +360,11 @@ export default function Leaderboard() {
         </div>
       )}
 
-      {/* Intro Modal */}
       {showIntro && (
         <LeaderboardIntro 
           onComplete={handleIntroComplete}
           onRate={handleIntroRate}
-          fraternities={fraternities}
+          fraternities={allFraternities}
         />
       )}
     </div>
