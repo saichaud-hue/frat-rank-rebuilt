@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { Home, Trophy, ListOrdered, PartyPopper, User } from 'lucide-react';
-import touseLogo from '@/assets/taus-logo.jpg';
+import touseLogo from '@/assets/touse-logo.png';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -93,9 +93,8 @@ export default function Layout({ children }: LayoutProps) {
       <div className="min-h-screen flex flex-col w-full bg-gradient-to-br from-slate-50 to-indigo-50">
         {/* Mobile Header - iPhone optimized */}
         <header className="sticky top-0 z-40 bg-white/90 backdrop-blur-md border-b border-slate-200/50 px-4 py-3 pt-safe flex items-center justify-between">
-          <Link to="/" className="flex items-center gap-2">
-            <img src={touseLogo} alt="Touse" className="h-9 w-9 rounded-xl object-cover" />
-            <span className="text-lg font-bold text-foreground">Touse</span>
+          <Link to="/" className="flex items-center">
+            <img src={touseLogo} alt="Touse" className="h-8 object-contain" />
           </Link>
           {loading ? (
             <Skeleton className="h-9 w-9 rounded-full" />
