@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useSearchParams, Link } from 'react-router-dom';
-import { ArrowLeft, Calendar, Star, PartyPopper, Users, Shield, Heart, Music, Info, ThumbsUp, MessageCircle, X } from 'lucide-react';
+import { ArrowLeft, Calendar, Star, PartyPopper, Users, Shield, Heart, Music, Info, ThumbsUp, MessageCircle, X, Trophy, TrendingUp, Flame, Crown, Sparkles, Zap } from 'lucide-react';
 import { base44, type Fraternity as FraternityType, type Party, type PartyRating, type ReputationRating, type PartyComment, type FraternityComment } from '@/api/base44Client';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -15,7 +15,7 @@ import PartyRatingForm from '@/components/rate/PartyRatingForm';
 import CommentSection from '@/components/comments/CommentSection';
 import TrendIndicator from '@/components/leaderboard/TrendIndicator';
 import ConfidenceBar from '@/components/scores/ConfidenceBar';
-import { createPageUrl, clamp, getScoreColor } from '@/utils';
+import { createPageUrl, clamp, getScoreColor, getScoreBgColor, getFratGreek, getFratShorthand } from '@/utils';
 import { 
   computeFullFraternityScores, 
   computeCampusRepAvg, 
@@ -380,328 +380,354 @@ export default function FraternityPage() {
     : null;
 
   return (
-    <div className="max-w-2xl mx-auto space-y-6">
+    <div className="max-w-2xl mx-auto space-y-5 pb-20">
       {/* Back Button */}
-      <Button asChild variant="ghost" className="px-0">
+      <Button asChild variant="ghost" className="px-0 -mb-2">
         <Link to={createPageUrl('Leaderboard')}>
           <ArrowLeft className="h-4 w-4 mr-2" />
           Back to Leaderboard
         </Link>
       </Button>
 
-      {/* Fraternity Header */}
-      <Card className="glass p-6 space-y-4">
-        <div className="flex items-start gap-4">
-          <div className="w-16 h-16 rounded-2xl gradient-primary flex items-center justify-center text-white text-2xl font-bold flex-shrink-0">
-            {fraternity.chapter.charAt(0)}
+      {/* HERO SECTION - Gamified Header */}
+      <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-primary/90 via-primary to-violet-600 p-6 text-white shadow-xl">
+        {/* Background Pattern */}
+        <div className="absolute inset-0 opacity-10">
+          <div className="absolute top-0 right-0 w-40 h-40 bg-white/20 rounded-full blur-3xl translate-x-10 -translate-y-10" />
+          <div className="absolute bottom-0 left-0 w-32 h-32 bg-white/20 rounded-full blur-3xl -translate-x-10 translate-y-10" />
+        </div>
+        
+        <div className="relative flex items-start gap-5">
+          {/* Greek Letter Avatar */}
+          <div className="relative">
+            <div className="w-20 h-20 rounded-2xl bg-white/20 backdrop-blur-sm flex items-center justify-center text-3xl font-bold ring-4 ring-white/30 shadow-lg">
+              {getFratGreek(fraternity.name)}
+            </div>
+            {computedScores?.hasOverallData && computedScores.overall !== null && computedScores.overall >= 8 && (
+              <div className="absolute -top-2 -right-2 w-8 h-8 rounded-full bg-amber-400 flex items-center justify-center shadow-lg animate-pulse">
+                <Crown className="h-4 w-4 text-amber-900" />
+              </div>
+            )}
           </div>
+          
+          {/* Info */}
           <div className="flex-1 min-w-0">
-            <h1 className="text-2xl font-bold truncate">{fraternity.name}</h1>
-            <div className="flex items-center gap-2 mt-1">
-              <Badge variant="secondary">{fraternity.chapter}</Badge>
+            <h1 className="text-2xl font-bold truncate drop-shadow-sm">{fraternity.name}</h1>
+            <div className="flex items-center gap-2 mt-1 flex-wrap">
+              <span className="px-3 py-1 rounded-full bg-white/20 text-sm font-medium backdrop-blur-sm">
+                {getFratShorthand(fraternity.name)}
+              </span>
               {fraternity.founded_year && (
-                <span className="text-sm text-muted-foreground flex items-center gap-1">
+                <span className="text-white/80 text-sm flex items-center gap-1">
                   <Calendar className="h-3 w-3" />
                   Est. {fraternity.founded_year}
                 </span>
               )}
             </div>
+            {fraternity.description && (
+              <p className="text-white/80 text-sm mt-3 line-clamp-2">{fraternity.description}</p>
+            )}
           </div>
         </div>
 
-        {fraternity.description && (
-          <p className="text-muted-foreground line-clamp-3">{fraternity.description}</p>
-        )}
-      </Card>
-
-      {/* A) SCORE SUMMARY - Overall scores at top */}
-      {computedScores && (
-        <Card className="glass p-6 space-y-4">
-          {/* Overall Score - Big Display */}
-          <div className="space-y-3">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-xs text-muted-foreground mb-1">Overall Score</p>
-                {computedScores.hasOverallData && computedScores.overall !== null ? (
-                  <div className="text-4xl font-bold text-foreground">
-                    {computedScores.overall.toFixed(1)}
-                  </div>
-                ) : (
-                  <div className="text-4xl font-bold text-muted-foreground">—</div>
-                )}
-                {!computedScores.hasOverallData && (
-                  <Badge variant="outline" className="text-[10px] mt-1 text-muted-foreground">
-                    Needs more ratings
-                  </Badge>
-                )}
-              </div>
-              <div className="flex items-center gap-2">
-                <TrendIndicator momentum={computedScores.trending} showLabel />
-                <Badge variant="outline">
-                  {computedScores.trending >= 0 ? '+' : ''}{computedScores.trending.toFixed(2)}
-                </Badge>
-              </div>
-            </div>
-            
-            {/* Overall Score Progress Bar */}
-            <div className="w-full bg-muted rounded-full h-3 overflow-hidden">
-              <div 
-                className="h-full bg-primary transition-all duration-500 rounded-full"
-                style={{ width: `${((computedScores.overall ?? 0) / 10) * 100}%` }}
-              />
-            </div>
+        {/* Quick Stats Row */}
+        <div className="relative grid grid-cols-3 gap-3 mt-5">
+          <div className="text-center p-3 rounded-xl bg-white/10 backdrop-blur-sm">
+            <PartyPopper className="h-5 w-5 mx-auto mb-1 opacity-80" />
+            <p className="text-2xl font-bold">{computedScores?.numPartiesHosted ?? 0}</p>
+            <p className="text-xs opacity-80">Parties</p>
           </div>
+          <div className="text-center p-3 rounded-xl bg-white/10 backdrop-blur-sm">
+            <ThumbsUp className="h-5 w-5 mx-auto mb-1 opacity-80" />
+            <p className="text-2xl font-bold">{(computedScores?.numRepRatings ?? 0) + (computedScores?.numPartyRatings ?? 0)}</p>
+            <p className="text-xs opacity-80">Ratings</p>
+          </div>
+          <div className="text-center p-3 rounded-xl bg-white/10 backdrop-blur-sm">
+            <MessageCircle className="h-5 w-5 mx-auto mb-1 opacity-80" />
+            <p className="text-2xl font-bold">{(computedScores?.numPartyComments ?? 0) + (computedScores?.numFratComments ?? 0)}</p>
+            <p className="text-xs opacity-80">Comments</p>
+          </div>
+        </div>
+      </div>
 
-          {/* Two KPI Cards: Overall Frat Rating + Overall Party Quality */}
-          <div className="grid grid-cols-2 gap-4">
-            <TooltipProvider>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <div className="bg-muted/50 rounded-lg p-4 cursor-help relative group">
-                    <div className="flex items-center justify-center gap-1 mb-1">
-                      <p className="text-xs text-muted-foreground">Overall Frat Rating</p>
-                      <Info className="h-3 w-3 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
-                    </div>
-                    {computedScores.hasRepData ? (
-                      <>
-                        <p className={`text-2xl font-bold text-center ${getScoreColor(computedScores.repAdj)}`}>
-                          {computedScores.repAdj.toFixed(1)}
-                        </p>
-                        <p className="text-[10px] text-muted-foreground text-center mt-1 mb-3">
-                          {computedScores.numRepRatings} {computedScores.numRepRatings === 1 ? 'rating' : 'ratings'}
-                        </p>
-                        {/* Score Breakdown */}
-                        <div className="space-y-2 border-t border-border/50 pt-3">
-                          <div className="flex items-center justify-between text-xs">
-                            <div className="flex items-center gap-1.5">
-                              <Users className="h-3 w-3 text-blue-500" />
-                              <span className="text-muted-foreground">Brotherhood</span>
-                            </div>
-                            <span className={`font-semibold ${getScoreColor(computedScores.avgBrotherhood)}`}>
-                              {computedScores.avgBrotherhood.toFixed(1)}
-                            </span>
-                          </div>
-                          <div className="flex items-center justify-between text-xs">
-                            <div className="flex items-center gap-1.5">
-                              <Shield className="h-3 w-3 text-primary" />
-                              <span className="text-muted-foreground">Reputation</span>
-                            </div>
-                            <span className={`font-semibold ${getScoreColor(computedScores.avgReputation)}`}>
-                              {computedScores.avgReputation.toFixed(1)}
-                            </span>
-                          </div>
-                          <div className="flex items-center justify-between text-xs">
-                            <div className="flex items-center gap-1.5">
-                              <Heart className="h-3 w-3 text-rose-500" />
-                              <span className="text-muted-foreground">Community</span>
-                            </div>
-                            <span className={`font-semibold ${getScoreColor(computedScores.avgCommunity)}`}>
-                              {computedScores.avgCommunity.toFixed(1)}
-                            </span>
-                          </div>
-                        </div>
-                      </>
+      {/* SCORE CARDS - Gamified */}
+      {computedScores && (
+        <div className="grid grid-cols-3 gap-3">
+          {/* Overall Score - Big Card */}
+          <Card className="col-span-3 glass p-5 relative overflow-hidden">
+            <div className="absolute top-0 right-0 w-24 h-24 bg-primary/5 rounded-full blur-2xl" />
+            <div className="relative flex items-center justify-between">
+              <div className="flex items-center gap-4">
+                {/* Circular Score Display */}
+                <div className="relative">
+                  <svg className="w-20 h-20 -rotate-90">
+                    <circle
+                      cx="40"
+                      cy="40"
+                      r="36"
+                      stroke="currentColor"
+                      strokeWidth="6"
+                      fill="none"
+                      className="text-muted"
+                    />
+                    <circle
+                      cx="40"
+                      cy="40"
+                      r="36"
+                      stroke="currentColor"
+                      strokeWidth="6"
+                      fill="none"
+                      strokeDasharray={`${((computedScores.overall ?? 0) / 10) * 226} 226`}
+                      strokeLinecap="round"
+                      className={`${computedScores.hasOverallData ? 'text-primary' : 'text-muted-foreground'} transition-all duration-1000`}
+                    />
+                  </svg>
+                  <div className="absolute inset-0 flex items-center justify-center">
+                    {computedScores.hasOverallData && computedScores.overall !== null ? (
+                      <span className="text-2xl font-bold">{computedScores.overall.toFixed(1)}</span>
                     ) : (
-                      <>
-                        <p className="text-2xl font-bold text-muted-foreground text-center">—</p>
-                        <Badge variant="outline" className="text-[10px] mt-1 text-muted-foreground">
-                          Needs more ratings
-                        </Badge>
-                      </>
+                      <span className="text-xl font-bold text-muted-foreground">—</span>
                     )}
                   </div>
-                </TooltipTrigger>
-                <TooltipContent side="bottom" className="max-w-xs">
-                  <p className="text-xs">Combined score based on brotherhood, reputation, and community ratings</p>
-                </TooltipContent>
-              </Tooltip>
-            </TooltipProvider>
-            
-            <TooltipProvider>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <div className="bg-muted/50 rounded-lg p-4 text-center cursor-help relative group">
-                    <div className="flex items-center justify-center gap-1 mb-1">
-                      <p className="text-xs text-muted-foreground">Overall Party Quality</p>
-                      <Info className="h-3 w-3 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
+                </div>
+                <div>
+                  <p className="text-sm text-muted-foreground font-medium">Overall Score</p>
+                  {!computedScores.hasOverallData ? (
+                    <p className="text-xs text-muted-foreground">Needs more ratings</p>
+                  ) : (
+                    <div className="flex items-center gap-2 mt-1">
+                      <TrendIndicator momentum={computedScores.trending} showLabel />
                     </div>
-                    {headerPartyQuality !== null ? (
-                      <>
-                        <p className={`text-2xl font-bold ${getScoreColor(headerPartyQuality)}`}>
-                          {headerPartyQuality.toFixed(1)}
-                        </p>
-                        <p className="text-[10px] text-muted-foreground mt-1">
-                          {ratedPastParties.length} {ratedPastParties.length === 1 ? 'party' : 'parties'} rated
-                        </p>
-                      </>
-                    ) : (
-                      <>
-                        <p className="text-2xl font-bold text-muted-foreground">—</p>
-                        <Badge variant="outline" className="text-[10px] mt-1 text-muted-foreground">
-                          No party ratings yet
-                        </Badge>
-                      </>
-                    )}
+                  )}
+                </div>
+              </div>
+              
+              {computedScores.trending !== 0 && (
+                <div className={`px-3 py-1.5 rounded-full text-sm font-semibold ${
+                  computedScores.trending > 0 
+                    ? 'bg-emerald-100 text-emerald-700' 
+                    : 'bg-red-100 text-red-700'
+                }`}>
+                  {computedScores.trending > 0 ? '+' : ''}{computedScores.trending.toFixed(2)}
+                </div>
+              )}
+            </div>
+          </Card>
+
+          {/* Frat Rating Card */}
+          <Card className="glass p-4 space-y-2">
+            <div className="flex items-center gap-2">
+              <div className="w-8 h-8 rounded-lg bg-violet-100 flex items-center justify-center">
+                <Star className="h-4 w-4 text-violet-600" />
+              </div>
+            </div>
+            {computedScores.hasRepData ? (
+              <>
+                <p className={`text-2xl font-bold ${getScoreColor(computedScores.repAdj)}`}>
+                  {computedScores.repAdj.toFixed(1)}
+                </p>
+                <p className="text-xs text-muted-foreground">Frat Rating</p>
+              </>
+            ) : (
+              <>
+                <p className="text-2xl font-bold text-muted-foreground">—</p>
+                <p className="text-xs text-muted-foreground">Frat Rating</p>
+              </>
+            )}
+          </Card>
+
+          {/* Party Quality Card */}
+          <Card className="glass p-4 space-y-2">
+            <div className="flex items-center gap-2">
+              <div className="w-8 h-8 rounded-lg bg-pink-100 flex items-center justify-center">
+                <PartyPopper className="h-4 w-4 text-pink-600" />
+              </div>
+            </div>
+            {headerPartyQuality !== null ? (
+              <>
+                <p className={`text-2xl font-bold ${getScoreColor(headerPartyQuality)}`}>
+                  {headerPartyQuality.toFixed(1)}
+                </p>
+                <p className="text-xs text-muted-foreground">Party Score</p>
+              </>
+            ) : (
+              <>
+                <p className="text-2xl font-bold text-muted-foreground">—</p>
+                <p className="text-xs text-muted-foreground">Party Score</p>
+              </>
+            )}
+          </Card>
+
+          {/* Trending Card */}
+          <Card className="glass p-4 space-y-2">
+            <div className="flex items-center gap-2">
+              <div className="w-8 h-8 rounded-lg bg-emerald-100 flex items-center justify-center">
+                <Flame className="h-4 w-4 text-emerald-600" />
+              </div>
+            </div>
+            <p className={`text-2xl font-bold ${computedScores.activityTrending > 0 ? 'text-emerald-600' : 'text-muted-foreground'}`}>
+              {computedScores.activityTrending > 0 ? '+' : ''}{computedScores.activityTrending.toFixed(1)}
+            </p>
+            <p className="text-xs text-muted-foreground">Activity</p>
+          </Card>
+        </div>
+      )}
+
+      {/* CATEGORY BREAKDOWN - Visual */}
+      {computedScores && computedScores.hasRepData && (
+        <Card className="glass p-5 space-y-4">
+          <div className="flex items-center justify-between">
+            <h3 className="font-semibold flex items-center gap-2">
+              <Trophy className="h-5 w-5 text-amber-500" />
+              Rating Breakdown
+            </h3>
+            <span className="text-xs text-muted-foreground">
+              {computedScores.numRepRatings} {computedScores.numRepRatings === 1 ? 'rating' : 'ratings'}
+            </span>
+          </div>
+          
+          <div className="space-y-4">
+            {[
+              { label: 'Brotherhood', icon: Users, value: computedScores.avgBrotherhood, color: 'bg-blue-500', bgColor: 'bg-blue-100', iconColor: 'text-blue-600' },
+              { label: 'Reputation', icon: Shield, value: computedScores.avgReputation, color: 'bg-violet-500', bgColor: 'bg-violet-100', iconColor: 'text-violet-600' },
+              { label: 'Community', icon: Heart, value: computedScores.avgCommunity, color: 'bg-rose-500', bgColor: 'bg-rose-100', iconColor: 'text-rose-600' },
+            ].map(({ label, icon: Icon, value, color, bgColor, iconColor }) => (
+              <div key={label} className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className={`w-9 h-9 rounded-xl ${bgColor} flex items-center justify-center`}>
+                      <Icon className={`h-4 w-4 ${iconColor}`} />
+                    </div>
+                    <span className="font-medium text-sm">{label}</span>
                   </div>
-                </TooltipTrigger>
-                <TooltipContent side="bottom" className="max-w-xs">
-                  <p className="text-xs">Average quality score across all rated parties (Vibe, Music & Execution)</p>
-                </TooltipContent>
-              </Tooltip>
-            </TooltipProvider>
+                  <span className={`text-lg font-bold ${getScoreColor(value)}`}>{value.toFixed(1)}</span>
+                </div>
+                <div className="h-2.5 rounded-full bg-muted overflow-hidden">
+                  <div 
+                    className={`h-full rounded-full ${color} transition-all duration-700`}
+                    style={{ width: `${value * 10}%` }}
+                  />
+                </div>
+              </div>
+            ))}
           </div>
         </Card>
       )}
 
-      {/* B) YOUR RATINGS Section */}
-      <Card className="glass p-6 space-y-6">
-        <div className="flex items-center justify-between">
-          <h2 className="font-semibold text-lg">Your Ratings</h2>
-          <Button onClick={handleRate} size="sm" className="gradient-primary text-white">
-            <Star className="h-4 w-4 mr-2" />
-            {userRating ? 'Update' : 'Rate'} {fraternity.name} Frat Rating
+      {/* YOUR RATINGS Section - Enhanced */}
+      <Card className="glass overflow-hidden">
+        {/* Header with gradient */}
+        <div className="bg-gradient-to-r from-amber-500 to-orange-500 p-4 flex items-center justify-between">
+          <div className="flex items-center gap-3 text-white">
+            <div className="w-10 h-10 rounded-xl bg-white/20 flex items-center justify-center">
+              <Sparkles className="h-5 w-5" />
+            </div>
+            <div>
+              <h2 className="font-semibold">Your Rating</h2>
+              <p className="text-xs opacity-80">Personal score for this frat</p>
+            </div>
+          </div>
+          <Button onClick={handleRate} size="sm" variant="secondary" className="shadow-md">
+            <Star className="h-4 w-4 mr-1" />
+            {userRating ? 'Update' : 'Rate'}
           </Button>
         </div>
-
-        {/* Frat Rating (Your Score) */}
-        <div className="space-y-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <Shield className="h-5 w-5 text-primary" />
-              <p className="text-sm font-medium">Frat Rating</p>
-            </div>
-            {userFratScore !== null ? (
-              <span className={`text-lg font-bold ${getScoreColor(userFratScore)}`}>
+        
+        <div className="p-5 space-y-5">
+          {/* Overall Personal Score */}
+          {userFratScore !== null ? (
+            <div className="flex items-center justify-between p-4 rounded-2xl bg-gradient-to-r from-amber-50 to-orange-50 border border-amber-200/50">
+              <div>
+                <p className="text-sm text-muted-foreground">Your Overall Score</p>
+                <p className="text-xs text-muted-foreground mt-0.5">Based on your ratings</p>
+              </div>
+              <div className={`text-3xl font-bold ${getScoreColor(userFratScore)}`}>
                 {userFratScore.toFixed(1)}
-              </span>
-            ) : (
-              <span className="text-sm text-muted-foreground italic">Not rated yet</span>
-            )}
-          </div>
+              </div>
+            </div>
+          ) : (
+            <div className="text-center py-6 text-muted-foreground">
+              <Star className="h-10 w-10 mx-auto mb-2 opacity-30" />
+              <p className="font-medium">You haven't rated this frat yet</p>
+              <p className="text-sm">Tap the Rate button to add your score</p>
+            </div>
+          )}
           
-          {userRating ? (
-            <div className="space-y-3">
+          {/* Category Ratings */}
+          {userRating && (
+            <div className="space-y-4">
               {[
-                { label: 'Brotherhood', helper: 'Member quality and cohesion', icon: Users, value: userRating.brotherhood, color: 'text-blue-500' },
-                { label: 'Reputation', helper: 'Campus perception and overall standing', icon: Shield, value: userRating.reputation, color: 'text-primary' },
-                { label: 'Community', helper: 'Welcoming, respectful, positive presence', icon: Heart, value: userRating.community, color: 'text-rose-500' },
-              ].map(({ label, helper, icon: Icon, value, color }) => (
-                <div key={label} className="space-y-2">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                      <div className={`w-8 h-8 rounded-full bg-muted flex items-center justify-center ${color}`}>
-                        <Icon className="h-4 w-4" />
-                      </div>
-                      <div>
-                        <p className="font-medium text-sm">{label}</p>
-                        <p className="text-xs text-muted-foreground">{helper}</p>
-                      </div>
-                    </div>
-                    <p className={`text-lg font-bold ${getScoreColor(value)}`}>{value.toFixed(1)}</p>
+                { label: 'Brotherhood', icon: Users, value: userRating.brotherhood, color: 'bg-blue-500', bgColor: 'bg-blue-100', iconColor: 'text-blue-600' },
+                { label: 'Reputation', icon: Shield, value: userRating.reputation, color: 'bg-violet-500', bgColor: 'bg-violet-100', iconColor: 'text-violet-600' },
+                { label: 'Community', icon: Heart, value: userRating.community, color: 'bg-rose-500', bgColor: 'bg-rose-100', iconColor: 'text-rose-600' },
+              ].map(({ label, icon: Icon, value, color, bgColor, iconColor }) => (
+                <div key={label} className="flex items-center gap-4">
+                  <div className={`w-10 h-10 rounded-xl ${bgColor} flex items-center justify-center flex-shrink-0`}>
+                    <Icon className={`h-5 w-5 ${iconColor}`} />
                   </div>
-                  <Progress value={value * 10} className="h-2" />
+                  <div className="flex-1">
+                    <div className="flex items-center justify-between mb-1.5">
+                      <span className="text-sm font-medium">{label}</span>
+                      <span className={`font-bold ${getScoreColor(value)}`}>{value.toFixed(1)}</span>
+                    </div>
+                    <div className="h-2 rounded-full bg-muted overflow-hidden">
+                      <div 
+                        className={`h-full rounded-full ${color} transition-all duration-500`}
+                        style={{ width: `${value * 10}%` }}
+                      />
+                    </div>
+                  </div>
                 </div>
               ))}
             </div>
-          ) : (
-            <p className="text-sm text-muted-foreground">Rate this fraternity to see your scores here.</p>
           )}
-        </div>
 
-        <div className="border-t pt-4" />
-
-        {/* Your Party Ratings Section */}
-        <div className="space-y-4">
-          <div className="flex items-center gap-2">
-            <Music className="h-5 w-5 text-primary" />
-            <p className="text-sm font-medium">Your Party Ratings</p>
-          </div>
-          <p className="text-xs text-muted-foreground">
-            Parties you've rated for this fraternity (your personal scores).
-          </p>
-          
-          {userPartyRatings.length > 0 ? (
-            <div className="space-y-2">
-              {userPartyRatings.map((rating) => {
-                const party = parties.find(p => p.id === rating.party_id);
-                if (!party) return null;
-                return (
-                  <Link key={rating.id} to={createPageUrl(`Party?id=${party.id}`)}>
-                    <div className="flex items-center justify-between p-3 bg-muted/50 rounded-lg hover:bg-muted transition-colors">
-                      <div>
-                        <p className="font-medium text-sm">{party.title}</p>
-                        <p className="text-xs text-muted-foreground">
-                          {new Date(party.starts_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
-                        </p>
+          {/* Your Party Ratings */}
+          {userPartyRatings.length > 0 && (
+            <div className="pt-4 border-t space-y-3">
+              <div className="flex items-center gap-2">
+                <Music className="h-5 w-5 text-pink-500" />
+                <p className="text-sm font-medium">Your Party Ratings</p>
+              </div>
+              <div className="space-y-2">
+                {userPartyRatings.map((rating) => {
+                  const party = parties.find(p => p.id === rating.party_id);
+                  if (!party) return null;
+                  return (
+                    <Link key={rating.id} to={createPageUrl(`Party?id=${party.id}`)}>
+                      <div className="flex items-center justify-between p-3 rounded-xl bg-muted/50 hover:bg-muted transition-colors">
+                        <div className="flex items-center gap-3">
+                          <div className="w-9 h-9 rounded-lg bg-pink-100 flex items-center justify-center">
+                            <PartyPopper className="h-4 w-4 text-pink-600" />
+                          </div>
+                          <div>
+                            <p className="font-medium text-sm">{party.title}</p>
+                            <p className="text-xs text-muted-foreground">
+                              {new Date(party.starts_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                            </p>
+                          </div>
+                        </div>
+                        <span className={`text-lg font-bold ${getScoreColor(rating.party_quality_score)}`}>
+                          {rating.party_quality_score.toFixed(1)}
+                        </span>
                       </div>
-                      <span className={`text-lg font-bold ${getScoreColor(rating.party_quality_score)}`}>
-                        {rating.party_quality_score.toFixed(1)}
-                      </span>
-                    </div>
-                  </Link>
-                );
-              })}
+                    </Link>
+                  );
+                })}
+              </div>
             </div>
-          ) : (
-            <p className="text-sm text-muted-foreground italic">
-              You haven't rated any {fraternity.name} parties yet. Rate a party from the Parties tab.
-            </p>
           )}
         </div>
       </Card>
 
-      {/* C) CONFIDENCE - Below user ratings */}
+      {/* CONFIDENCE */}
       {computedScores && (
-        <Card className="glass p-6">
+        <Card className="glass p-5">
           <ConfidenceBar 
             confidence={computedScores.confidenceOverall}
             repRatings={computedScores.numRepRatings}
             partyRatings={computedScores.numPartyRatings}
           />
-        </Card>
-      )}
-
-      {/* SEMESTER ACTIVITY STATS */}
-      {computedScores && (
-        <Card className="glass p-6">
-          <p className="text-sm font-medium text-muted-foreground mb-3">This semester:</p>
-          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
-            <div className="flex items-center gap-2">
-              <PartyPopper className="h-4 w-4 sm:h-5 sm:w-5 text-primary" />
-              <div className="flex flex-col">
-                <span className="font-semibold text-sm sm:text-base">
-                  {computedScores.numPartiesHosted >= 1000 
-                    ? (computedScores.numPartiesHosted / 1000).toFixed(1).replace(/\.0$/, '') + 'k'
-                    : computedScores.numPartiesHosted}
-                </span>
-                <span className="text-muted-foreground text-xs">Parties</span>
-              </div>
-            </div>
-            <div className="flex items-center gap-2">
-              <ThumbsUp className="h-4 w-4 sm:h-5 sm:w-5 text-primary" />
-              <div className="flex flex-col">
-                <span className="font-semibold text-sm sm:text-base">
-                  {(() => {
-                    const total = computedScores.numRepRatings + computedScores.numPartyRatings;
-                    return total >= 1000 ? (total / 1000).toFixed(1).replace(/\.0$/, '') + 'k' : total;
-                  })()}
-                </span>
-                <span className="text-muted-foreground text-xs">Ratings</span>
-              </div>
-            </div>
-            <div className="flex items-center gap-2 col-span-2 sm:col-span-1">
-              <MessageCircle className="h-4 w-4 sm:h-5 sm:w-5 text-primary" />
-              <div className="flex flex-col">
-                <span className="font-semibold text-sm sm:text-base">
-                  {(() => {
-                    const total = computedScores.numPartyComments + computedScores.numFratComments;
-                    return total >= 1000 ? (total / 1000).toFixed(1).replace(/\.0$/, '') + 'k' : total;
-                  })()}
-                </span>
-                <span className="text-muted-foreground text-xs">Comments</span>
-              </div>
-            </div>
-          </div>
         </Card>
       )}
 
