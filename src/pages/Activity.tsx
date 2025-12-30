@@ -9,7 +9,6 @@ import {
   ChevronRight,
   Loader2,
   Send,
-  Home,
   MessagesSquare,
   AtSign,
   X,
@@ -23,11 +22,11 @@ import {
   Shield,
   Heart,
   Clock,
-  Calendar,
   Vote,
   Plus,
   Check,
-  MapPin
+  MapPin,
+  Radio
 } from 'lucide-react';
 import { Progress } from '@/components/ui/progress';
 import { Card } from '@/components/ui/card';
@@ -37,7 +36,6 @@ import { Textarea } from '@/components/ui/textarea';
 import { Input } from '@/components/ui/input';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { 
   Sheet, 
   SheetContent, 
@@ -93,7 +91,6 @@ interface ChatItem {
 }
 
 export default function Activity() {
-  const [activeTab, setActiveTab] = useState<'chat' | 'house'>('chat');
   const [activities, setActivities] = useState<ActivityItem[]>([]);
   const [chatMessages, setChatMessages] = useState<ChatItem[]>([]);
   const [loading, setLoading] = useState(true);
@@ -123,6 +120,19 @@ export default function Activity() {
   // Countdown timer
   const [countdownTime, setCountdownTime] = useState<{ days: number; hours: number; minutes: number; seconds: number } | null>(null);
 
+  // Get live and upcoming parties for stories
+  const liveParties = useMemo(() => {
+    return parties.filter(p => (p.status as string) === 'active' || (p.status as string) === 'live');
+  }, [parties]);
+
+  const upcomingParties = useMemo(() => {
+    const now = new Date();
+    return parties
+      .filter(p => p.status === 'upcoming' && new Date(p.starts_at) > now)
+      .sort((a, b) => new Date(a.starts_at).getTime() - new Date(b.starts_at).getTime())
+      .slice(0, 6);
+  }, [parties]);
+
   // Get next upcoming party
   const nextParty = useMemo(() => {
     const now = new Date();
@@ -136,7 +146,7 @@ export default function Activity() {
   const tonightsParties = useMemo(() => {
     const now = new Date();
     const tonight = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-    const tomorrowMorning = new Date(tonight.getTime() + 24 * 60 * 60 * 1000 + 6 * 60 * 60 * 1000); // 6am next day
+    const tomorrowMorning = new Date(tonight.getTime() + 24 * 60 * 60 * 1000 + 6 * 60 * 60 * 1000);
     
     return parties.filter(p => {
       const partyDate = new Date(p.starts_at);
@@ -496,120 +506,6 @@ export default function Activity() {
     }
   };
 
-  const handleActivityVote = async (item: ActivityItem, value: 1 | -1) => {
-    const user = await base44.auth.me();
-    if (!user) {
-      toast({ title: 'Please sign in to vote', variant: 'destructive' });
-      return;
-    }
-
-    try {
-      const isPartyComment = item.type === 'party_comment';
-      const VoteEntity = isPartyComment 
-        ? base44.entities.PartyCommentVote 
-        : base44.entities.FraternityCommentVote;
-      const CommentEntity = isPartyComment
-        ? base44.entities.PartyComment
-        : base44.entities.FraternityComment;
-
-      const existingVotes = await VoteEntity.filter({
-        comment_id: item.id,
-        user_id: user.id,
-      });
-
-      let upvoteDelta = 0;
-      let downvoteDelta = 0;
-
-      if (existingVotes.length > 0) {
-        const existingVote = existingVotes[0];
-        if (existingVote.value === value) {
-          await VoteEntity.delete(existingVote.id);
-          if (value === 1) upvoteDelta = -1;
-          else downvoteDelta = -1;
-        } else {
-          await VoteEntity.update(existingVote.id, { value });
-          if (value === 1) {
-            upvoteDelta = 1;
-            downvoteDelta = -1;
-          } else {
-            upvoteDelta = -1;
-            downvoteDelta = 1;
-          }
-        }
-      } else {
-        const voteData: any = {
-          comment_id: item.id,
-          user_id: user.id,
-          value,
-        };
-        if (isPartyComment) {
-          voteData.party_id = item.party?.id;
-        } else {
-          voteData.fraternity_id = item.fraternity?.id;
-        }
-        await VoteEntity.create(voteData);
-        if (value === 1) upvoteDelta = 1;
-        else downvoteDelta = 1;
-      }
-
-      await CommentEntity.update(item.id, {
-        upvotes: (item.upvotes || 0) + upvoteDelta,
-        downvotes: (item.downvotes || 0) + downvoteDelta,
-      });
-
-      await loadActivity();
-    } catch (error) {
-      console.error('Failed to vote:', error);
-      toast({ title: 'Failed to vote', variant: 'destructive' });
-    }
-  };
-
-  const handleActivityReply = async (item: ActivityItem) => {
-    if (!replyText.trim()) return;
-
-    const user = await base44.auth.me();
-    if (!user) {
-      toast({ title: 'Please sign in to reply', variant: 'destructive' });
-      return;
-    }
-
-    setSubmittingReply(true);
-    try {
-      const isPartyComment = item.type === 'party_comment';
-      const CommentEntity = isPartyComment
-        ? base44.entities.PartyComment
-        : base44.entities.FraternityComment;
-
-      const commentData: any = {
-        user_id: user.id,
-        parent_comment_id: item.id,
-        text: replyText.trim(),
-        sentiment_score: 0,
-        toxicity_label: 'safe',
-        upvotes: 0,
-        downvotes: 0,
-        moderated: false,
-      };
-
-      if (isPartyComment) {
-        commentData.party_id = item.party?.id;
-      } else {
-        commentData.fraternity_id = item.fraternity?.id;
-      }
-
-      await CommentEntity.create(commentData);
-      setReplyText('');
-      setReplyingTo(null);
-      toast({ title: 'Reply posted!' });
-      await loadActivity();
-    } catch (error) {
-      console.error('Failed to post reply:', error);
-      toast({ title: 'Failed to post reply', variant: 'destructive' });
-    } finally {
-      setSubmittingReply(false);
-    }
-  };
-
   // Handle voting for "What's the move"
   const handleMoveVote = async (partyId: string) => {
     const user = await base44.auth.me();
@@ -618,12 +514,10 @@ export default function Activity() {
       return;
     }
 
-    // Toggle vote
     if (userMoveVote === partyId) {
       setUserMoveVote(null);
       setMoveVotes(prev => ({ ...prev, [partyId]: Math.max(0, (prev[partyId] || 1) - 1) }));
     } else {
-      // Remove previous vote if any
       if (userMoveVote) {
         setMoveVotes(prev => ({ ...prev, [userMoveVote!]: Math.max(0, (prev[userMoveVote!] || 1) - 1) }));
       }
@@ -638,7 +532,6 @@ export default function Activity() {
       setCustomSuggestions(prev => prev.map(s => s.id === suggestionId ? { ...s, votes: Math.max(0, s.votes - 1) } : s));
     } else {
       if (userMoveVote) {
-        // Remove vote from previous selection
         setMoveVotes(prev => ({ ...prev, [userMoveVote!]: Math.max(0, (prev[userMoveVote!] || 1) - 1) }));
         setCustomSuggestions(prev => prev.map(s => s.id === userMoveVote ? { ...s, votes: Math.max(0, s.votes - 1) } : s));
       }
@@ -661,263 +554,144 @@ export default function Activity() {
     toast({ title: 'Suggestion added!' });
   };
 
-  // Get total votes for progress bars
   const totalMoveVotes = useMemo(() => {
     const partyVotes = Object.values(moveVotes).reduce((a, b) => a + b, 0);
     const suggestionVotes = customSuggestions.reduce((a, s) => a + s.votes, 0);
     return partyVotes + suggestionVotes;
   }, [moveVotes, customSuggestions]);
 
-  // Get stats
-  const totalMessages = chatMessages.length + chatMessages.reduce((acc, m) => acc + (m.replies?.length || 0), 0);
-  const totalActivity = activities.length;
-  const partyRatingsCount = activities.filter(a => a.type === 'party_rating').length;
-  const fratRatingsCount = activities.filter(a => a.type === 'frat_rating').length;
-
-  const renderVoteActions = (item: ChatItem, isReply = false) => {
-    const netVotes = item.upvotes - item.downvotes;
-    const isHot = netVotes >= 5;
-    return (
-      <div className="flex items-center gap-2 mt-3">
-        <button
-          onClick={() => handleChatVote(item, 1)}
-          className={cn(
-            "flex items-center gap-1 px-2 py-1 rounded-full text-sm transition-all",
-            item.userVote === 1 
-              ? 'bg-emerald-500/20 text-emerald-500' 
-              : 'bg-muted/50 text-muted-foreground hover:bg-emerald-500/10 hover:text-emerald-500'
-          )}
-        >
-          <ThumbsUp className="h-3.5 w-3.5" />
-        </button>
-        <span className={cn(
-          "text-sm font-bold min-w-[24px] text-center",
-          netVotes > 0 ? 'text-emerald-500' : netVotes < 0 ? 'text-red-500' : 'text-muted-foreground'
-        )}>
-          {netVotes}
-        </span>
-        <button
-          onClick={() => handleChatVote(item, -1)}
-          className={cn(
-            "flex items-center gap-1 px-2 py-1 rounded-full text-sm transition-all",
-            item.userVote === -1 
-              ? 'bg-red-500/20 text-red-500' 
-              : 'bg-muted/50 text-muted-foreground hover:bg-red-500/10 hover:text-red-500'
-          )}
-        >
-          <ThumbsDown className="h-3.5 w-3.5" />
-        </button>
-        {isHot && (
-          <Badge className="bg-gradient-to-r from-orange-500 to-red-500 text-white text-[10px] px-1.5 py-0">
-            <Flame className="h-3 w-3 mr-0.5" />
-            HOT
-          </Badge>
-        )}
-        {!isReply && (
-          <button
-            onClick={() => setReplyingTo(replyingTo === item.id ? null : item.id)}
-            className="flex items-center gap-1 px-2 py-1 rounded-full text-sm bg-muted/50 text-muted-foreground hover:bg-primary/10 hover:text-primary transition-all ml-auto"
-          >
-            <MessageCircle className="h-3.5 w-3.5" />
-            <span className="text-xs">Reply</span>
-          </button>
-        )}
-      </div>
-    );
-  };
-
-  const renderActivityVoteActions = (item: ActivityItem, isReply = false) => {
-    if (item.type !== 'party_comment' && item.type !== 'frat_comment') return null;
-    const netVotes = (item.upvotes || 0) - (item.downvotes || 0);
-    const isHot = netVotes >= 5;
-    return (
-      <div className="flex items-center gap-2 mt-3">
-        <button
-          onClick={(e) => { e.preventDefault(); handleActivityVote(item, 1); }}
-          className={cn(
-            "flex items-center gap-1 px-2 py-1 rounded-full text-sm transition-all",
-            item.userVote === 1 
-              ? 'bg-emerald-500/20 text-emerald-500' 
-              : 'bg-muted/50 text-muted-foreground hover:bg-emerald-500/10 hover:text-emerald-500'
-          )}
-        >
-          <ThumbsUp className="h-3.5 w-3.5" />
-        </button>
-        <span className={cn(
-          "text-sm font-bold min-w-[24px] text-center",
-          netVotes > 0 ? 'text-emerald-500' : netVotes < 0 ? 'text-red-500' : 'text-muted-foreground'
-        )}>
-          {netVotes}
-        </span>
-        <button
-          onClick={(e) => { e.preventDefault(); handleActivityVote(item, -1); }}
-          className={cn(
-            "flex items-center gap-1 px-2 py-1 rounded-full text-sm transition-all",
-            item.userVote === -1 
-              ? 'bg-red-500/20 text-red-500' 
-              : 'bg-muted/50 text-muted-foreground hover:bg-red-500/10 hover:text-red-500'
-          )}
-        >
-          <ThumbsDown className="h-3.5 w-3.5" />
-        </button>
-        {isHot && (
-          <Badge className="bg-gradient-to-r from-orange-500 to-red-500 text-white text-[10px] px-1.5 py-0">
-            <Flame className="h-3 w-3 mr-0.5" />
-            HOT
-          </Badge>
-        )}
-        {!isReply && (
-          <button
-            onClick={(e) => { e.preventDefault(); setReplyingTo(replyingTo === item.id ? null : item.id); }}
-            className="flex items-center gap-1 px-2 py-1 rounded-full text-sm bg-muted/50 text-muted-foreground hover:bg-primary/10 hover:text-primary transition-all ml-auto"
-          >
-            <MessageCircle className="h-3.5 w-3.5" />
-            <span className="text-xs">Reply</span>
-          </button>
-        )}
-      </div>
-    );
-  };
+  // Combine all feed items (chat + activities) sorted by date
+  const feedItems = useMemo(() => {
+    const allItems: Array<{ type: 'chat' | 'activity'; item: ChatItem | ActivityItem; date: Date }> = [];
+    
+    chatMessages.forEach(msg => {
+      allItems.push({ type: 'chat', item: msg, date: new Date(msg.created_date) });
+    });
+    
+    activities.forEach(act => {
+      allItems.push({ type: 'activity', item: act, date: new Date(act.created_date) });
+    });
+    
+    return allItems.sort((a, b) => b.date.getTime() - a.date.getTime());
+  }, [chatMessages, activities]);
 
   const getActivityIcon = (type: ActivityType) => {
     switch (type) {
       case 'party_rating':
-        return <PartyPopper className="h-4 w-4" />;
+        return <Star className="h-4 w-4" />;
       case 'frat_rating':
         return <Trophy className="h-4 w-4" />;
       case 'party_comment':
-        return <MessageCircle className="h-4 w-4" />;
       case 'frat_comment':
         return <MessageCircle className="h-4 w-4" />;
-    }
-  };
-
-  const getActivityGradient = (type: ActivityType) => {
-    switch (type) {
-      case 'party_rating':
-        return 'from-pink-500 to-rose-500';
-      case 'frat_rating':
-        return 'from-amber-500 to-orange-500';
-      case 'party_comment':
-        return 'from-violet-500 to-purple-500';
-      case 'frat_comment':
-        return 'from-cyan-500 to-blue-500';
-    }
-  };
-
-  const getActivityLabel = (type: ActivityType) => {
-    switch (type) {
-      case 'party_rating':
-        return 'Party Rating';
-      case 'frat_rating':
-        return 'Frat Rating';
-      case 'party_comment':
-        return 'Party Comment';
-      case 'frat_comment':
-        return 'Frat Comment';
     }
   };
 
   if (loading) {
     return (
       <div className="space-y-4">
-        <div className="h-32 rounded-2xl bg-gradient-to-r from-primary/20 to-purple-500/20 animate-pulse" />
-        <div className="h-12 rounded-xl bg-muted animate-pulse" />
+        {/* Stories skeleton */}
+        <div className="flex gap-3 overflow-x-auto pb-2 no-scrollbar">
+          {[1, 2, 3, 4].map((i) => (
+            <Skeleton key={i} className="w-20 h-24 rounded-2xl shrink-0" />
+          ))}
+        </div>
+        {/* Feed skeleton */}
         {[1, 2, 3].map((i) => (
-          <div key={i} className="h-40 rounded-xl bg-muted/50 animate-pulse" />
+          <Skeleton key={i} className="h-32 rounded-2xl" />
         ))}
       </div>
     );
   }
 
   return (
-    <div className="space-y-4 pb-8">
+    <div className="space-y-5 pb-24">
+      {/* Stories-style horizontal scroll for live/upcoming */}
+      {(liveParties.length > 0 || upcomingParties.length > 0) && (
+        <div className="flex gap-3 overflow-x-auto pb-2 no-scrollbar -mx-4 px-4">
+          {/* Live parties first */}
+          {liveParties.map((party) => {
+            const frat = fraternities.find(f => f.id === party.fraternity_id);
+            return (
+              <Link
+                key={party.id}
+                to={createPageUrl(`Party?id=${party.id}`)}
+                className="shrink-0 group"
+              >
+                <div className="relative w-20 h-28 rounded-2xl overflow-hidden ring-[3px] ring-red-500 ring-offset-2 ring-offset-background">
+                  <div className="absolute inset-0 bg-gradient-to-br from-red-500 via-pink-500 to-purple-600" />
+                  <div className="absolute inset-0 flex flex-col items-center justify-center p-2 text-white">
+                    <div className="w-10 h-10 rounded-full bg-white/20 backdrop-blur flex items-center justify-center mb-1">
+                      <Radio className="h-5 w-5 animate-pulse" />
+                    </div>
+                    <span className="text-[10px] font-bold uppercase tracking-wide">LIVE</span>
+                  </div>
+                  <div className="absolute bottom-0 inset-x-0 p-1.5 bg-black/60 backdrop-blur-sm">
+                    <p className="text-[10px] font-semibold text-white text-center truncate">{frat?.name || 'Party'}</p>
+                  </div>
+                </div>
+              </Link>
+            );
+          })}
+          
+          {/* Upcoming parties */}
+          {upcomingParties.map((party) => {
+            const frat = fraternities.find(f => f.id === party.fraternity_id);
+            const partyDate = new Date(party.starts_at);
+            const isPartyToday = isToday(partyDate);
+            const isPartyTomorrow = isTomorrow(partyDate);
+            
+            return (
+              <Link
+                key={party.id}
+                to={createPageUrl(`Party?id=${party.id}`)}
+                className="shrink-0 group"
+              >
+                <div className="relative w-20 h-28 rounded-2xl overflow-hidden ring-2 ring-border hover:ring-primary/50 transition-all">
+                  <div className="absolute inset-0 bg-gradient-to-br from-violet-500 via-purple-500 to-fuchsia-500 opacity-80" />
+                  <div className="absolute inset-0 flex flex-col items-center justify-center p-2 text-white">
+                    <div className="w-10 h-10 rounded-full bg-white/20 backdrop-blur flex items-center justify-center mb-1">
+                      <PartyPopper className="h-5 w-5" />
+                    </div>
+                    <span className="text-[10px] font-semibold text-center">
+                      {isPartyToday ? 'Tonight' : isPartyTomorrow ? 'Tomorrow' : format(partyDate, 'EEE')}
+                    </span>
+                  </div>
+                  <div className="absolute bottom-0 inset-x-0 p-1.5 bg-black/60 backdrop-blur-sm">
+                    <p className="text-[10px] font-semibold text-white text-center truncate">{frat?.name || party.title}</p>
+                  </div>
+                </div>
+              </Link>
+            );
+          })}
+          
+          {/* Add party CTA */}
+          <Link to="/Parties" className="shrink-0">
+            <div className="w-20 h-28 rounded-2xl border-2 border-dashed border-muted-foreground/30 flex flex-col items-center justify-center text-muted-foreground hover:border-primary hover:text-primary transition-all">
+              <Plus className="h-6 w-6 mb-1" />
+              <span className="text-[10px] font-medium">See all</span>
+            </div>
+          </Link>
+        </div>
+      )}
 
-      {/* Party Countdown Section */}
-      {nextParty && countdownTime && (
-        <Card className="overflow-hidden border-0 bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900">
-          <div className="bg-gradient-to-r from-pink-600 via-rose-600 to-orange-600 p-4 text-white">
-            <div className="flex items-center gap-3">
-              <div className="w-12 h-12 rounded-xl bg-white/20 backdrop-blur-sm flex items-center justify-center animate-pulse">
-                <Clock className="h-6 w-6" />
+      {/* What's the move tonight? - Large tappable card */}
+      {(tonightsParties.length > 0 || customSuggestions.length > 0) && (
+        <div className="rounded-3xl overflow-hidden bg-gradient-to-br from-violet-600 via-purple-600 to-fuchsia-600 p-[2px]">
+          <div className="rounded-[22px] bg-card p-5">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-violet-500 to-fuchsia-500 flex items-center justify-center text-white">
+                <Vote className="h-6 w-6" />
               </div>
               <div className="flex-1">
-                <p className="text-xs uppercase tracking-wider text-white/80">Next Party In</p>
-                <p className="font-bold text-lg">{nextParty.title}</p>
-              </div>
-              <Link to={createPageUrl(`Party?id=${nextParty.id}`)}>
-                <Badge className="bg-white/20 hover:bg-white/30 transition-colors cursor-pointer">
-                  <ChevronRight className="h-4 w-4" />
-                </Badge>
-              </Link>
-            </div>
-          </div>
-          
-          <div className="p-4 bg-gradient-to-b from-black/20 to-transparent">
-            {/* Countdown Timer */}
-            <div className="grid grid-cols-4 gap-2 mb-4">
-              <div className="text-center p-3 rounded-xl bg-pink-950/50 border border-pink-500/30">
-                <p className="text-3xl font-black text-pink-400">{countdownTime.days}</p>
-                <p className="text-[10px] uppercase tracking-wider text-pink-300/70 font-semibold">Days</p>
-              </div>
-              <div className="text-center p-3 rounded-xl bg-rose-950/50 border border-rose-500/30">
-                <p className="text-3xl font-black text-rose-400">{countdownTime.hours.toString().padStart(2, '0')}</p>
-                <p className="text-[10px] uppercase tracking-wider text-rose-300/70 font-semibold">Hours</p>
-              </div>
-              <div className="text-center p-3 rounded-xl bg-orange-950/50 border border-orange-500/30">
-                <p className="text-3xl font-black text-orange-400">{countdownTime.minutes.toString().padStart(2, '0')}</p>
-                <p className="text-[10px] uppercase tracking-wider text-orange-300/70 font-semibold">Mins</p>
-              </div>
-              <div className="text-center p-3 rounded-xl bg-amber-950/50 border border-amber-500/30">
-                <p className="text-3xl font-black text-amber-400 tabular-nums">{countdownTime.seconds.toString().padStart(2, '0')}</p>
-                <p className="text-[10px] uppercase tracking-wider text-amber-300/70 font-semibold">Secs</p>
+                <h2 className="text-lg font-bold">What's the move? 🎉</h2>
+                <p className="text-sm text-muted-foreground">
+                  {totalMoveVotes > 0 ? `${totalMoveVotes} votes` : 'Be the first to vote'}
+                </p>
               </div>
             </div>
             
-            {/* Party Info */}
-            <div className="flex items-center gap-3 p-3 rounded-xl bg-white/5 border border-white/10">
-              <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-pink-500 to-rose-500 flex items-center justify-center text-white">
-                <PartyPopper className="h-5 w-5" />
-              </div>
-              <div className="flex-1 min-w-0">
-                <p className="text-sm font-semibold truncate text-white">{nextParty.theme || nextParty.title}</p>
-                <div className="flex items-center gap-2 text-xs text-white/60">
-                  <MapPin className="h-3 w-3" />
-                  <span className="truncate">{nextParty.venue || 'TBA'}</span>
-                  <span>•</span>
-                  <Calendar className="h-3 w-3" />
-                  <span>{format(new Date(nextParty.starts_at), 'EEE, MMM d @ h:mm a')}</span>
-                </div>
-              </div>
-            </div>
-          </div>
-        </Card>
-      )}
-
-      {/* What's the Move Tonight Section */}
-      <Card className="overflow-hidden border-2 border-violet-500/30">
-        <div className="bg-gradient-to-r from-violet-600 via-purple-600 to-fuchsia-500 p-4 text-white">
-          <div className="flex items-center gap-3">
-            <div className="w-12 h-12 rounded-xl bg-white/20 backdrop-blur-sm flex items-center justify-center">
-              <Vote className="h-6 w-6" />
-            </div>
-            <div className="flex-1">
-              <p className="font-bold text-lg">What's the move tonight? 🎉</p>
-              <p className="text-xs text-white/80">Vote for your pick or add a suggestion</p>
-            </div>
-            {totalMoveVotes > 0 && (
-              <Badge className="bg-white/20">
-                <Users className="h-3 w-3 mr-1" />
-                {totalMoveVotes} votes
-              </Badge>
-            )}
-          </div>
-        </div>
-        
-        <div className="p-4 space-y-3">
-          {/* Tonight's Parties */}
-          {tonightsParties.length > 0 ? (
-            <>
+            <div className="space-y-3">
               {tonightsParties.map((party) => {
                 const frat = fraternities.find(f => f.id === party.fraternity_id);
                 const votes = moveVotes[party.id] || 0;
@@ -929,73 +703,41 @@ export default function Activity() {
                     key={party.id}
                     onClick={() => handleMoveVote(party.id)}
                     className={cn(
-                      "w-full p-4 rounded-xl border-2 transition-all text-left relative overflow-hidden group",
+                      "w-full min-h-[56px] p-4 rounded-2xl border-2 transition-all text-left relative overflow-hidden active:scale-[0.98]",
                       isSelected 
-                        ? "border-violet-500 bg-violet-500/10 ring-2 ring-violet-500/30" 
-                        : "border-muted hover:border-violet-500/50 hover:bg-muted/50"
+                        ? "border-violet-500 bg-violet-500/10" 
+                        : "border-border hover:border-violet-500/50"
                     )}
                   >
-                    {/* Progress bar background */}
                     <div 
-                      className={cn(
-                        "absolute inset-0 transition-all duration-500",
-                        isSelected 
-                          ? "bg-gradient-to-r from-violet-500/20 to-purple-500/20" 
-                          : "bg-gradient-to-r from-muted/50 to-transparent"
-                      )}
+                      className="absolute inset-0 bg-gradient-to-r from-violet-500/20 to-transparent transition-all"
                       style={{ width: `${percentage}%` }}
                     />
-                    
                     <div className="relative flex items-center gap-3">
                       <div className={cn(
-                        "w-10 h-10 rounded-lg flex items-center justify-center text-white transition-all",
+                        "w-10 h-10 rounded-xl flex items-center justify-center shrink-0",
                         isSelected 
-                          ? "bg-gradient-to-br from-violet-500 to-purple-500 scale-110" 
-                          : "bg-gradient-to-br from-pink-500 to-rose-500"
+                          ? "bg-gradient-to-br from-violet-500 to-fuchsia-500 text-white" 
+                          : "bg-muted text-muted-foreground"
                       )}>
                         {isSelected ? <Check className="h-5 w-5" /> : <PartyPopper className="h-5 w-5" />}
                       </div>
                       <div className="flex-1 min-w-0">
-                        <p className={cn(
-                          "font-bold text-sm transition-colors",
-                          isSelected && "text-violet-600"
-                        )}>
-                          {party.title}
-                        </p>
-                        <p className="text-xs text-muted-foreground truncate">
-                          {frat?.name || 'TBA'} • {format(new Date(party.starts_at), 'h:mm a')}
-                        </p>
+                        <p className="font-semibold truncate">{party.title}</p>
+                        <p className="text-xs text-muted-foreground truncate">{frat?.name} · {format(new Date(party.starts_at), 'h:mm a')}</p>
                       </div>
-                      <div className="text-right">
-                        <p className={cn(
-                          "text-lg font-black",
-                          isSelected ? "text-violet-500" : "text-muted-foreground"
-                        )}>
-                          {votes}
-                        </p>
-                        <p className="text-[10px] text-muted-foreground uppercase">votes</p>
-                      </div>
+                      <Badge variant={isSelected ? "default" : "secondary"} className={cn(isSelected && "bg-violet-500")}>
+                        {votes}
+                      </Badge>
                     </div>
                   </button>
                 );
               })}
-            </>
-          ) : (
-            <div className="text-center py-6">
-              <div className="w-16 h-16 mx-auto rounded-full bg-gradient-to-br from-violet-500/20 to-purple-500/20 flex items-center justify-center mb-3">
-                <Calendar className="h-8 w-8 text-violet-500" />
-              </div>
-              <p className="font-semibold">No parties scheduled tonight</p>
-              <p className="text-sm text-muted-foreground">Add your own suggestion below!</p>
-            </div>
-          )}
-
-          {/* Custom Suggestions */}
-          {customSuggestions.length > 0 && (
-            <div className="space-y-2 pt-2 border-t border-muted">
-              <p className="text-xs uppercase tracking-wider text-muted-foreground font-semibold">Suggestions</p>
+              
+              {/* Custom suggestions */}
               {customSuggestions.map((suggestion) => {
-                const percentage = totalMoveVotes > 0 ? (suggestion.votes / totalMoveVotes) * 100 : 0;
+                const votes = suggestion.votes;
+                const percentage = totalMoveVotes > 0 ? (votes / totalMoveVotes) * 100 : 0;
                 const isSelected = userMoveVote === suggestion.id;
                 
                 return (
@@ -1003,147 +745,142 @@ export default function Activity() {
                     key={suggestion.id}
                     onClick={() => handleCustomSuggestionVote(suggestion.id)}
                     className={cn(
-                      "w-full p-3 rounded-xl border-2 transition-all text-left relative overflow-hidden",
+                      "w-full min-h-[56px] p-4 rounded-2xl border-2 transition-all text-left relative overflow-hidden active:scale-[0.98]",
                       isSelected 
-                        ? "border-fuchsia-500 bg-fuchsia-500/10 ring-2 ring-fuchsia-500/30" 
-                        : "border-muted hover:border-fuchsia-500/50"
+                        ? "border-fuchsia-500 bg-fuchsia-500/10" 
+                        : "border-border hover:border-fuchsia-500/50"
                     )}
                   >
                     <div 
-                      className="absolute inset-0 bg-gradient-to-r from-fuchsia-500/10 to-transparent"
+                      className="absolute inset-0 bg-gradient-to-r from-fuchsia-500/20 to-transparent transition-all"
                       style={{ width: `${percentage}%` }}
                     />
                     <div className="relative flex items-center gap-3">
                       <div className={cn(
-                        "w-8 h-8 rounded-lg flex items-center justify-center text-white",
+                        "w-10 h-10 rounded-xl flex items-center justify-center shrink-0",
                         isSelected 
-                          ? "bg-gradient-to-br from-fuchsia-500 to-pink-500" 
-                          : "bg-muted-foreground/20"
+                          ? "bg-gradient-to-br from-fuchsia-500 to-pink-500 text-white" 
+                          : "bg-muted text-muted-foreground"
                       )}>
-                        {isSelected ? <Check className="h-4 w-4" /> : <Sparkles className="h-4 w-4 text-muted-foreground" />}
+                        {isSelected ? <Check className="h-5 w-5" /> : <Sparkles className="h-5 w-5" />}
                       </div>
-                      <p className={cn(
-                        "flex-1 font-medium text-sm",
-                        isSelected && "text-fuchsia-600"
-                      )}>
-                        {suggestion.text}
-                      </p>
-                      <Badge variant={isSelected ? "default" : "secondary"} className={isSelected ? "bg-fuchsia-500" : ""}>
-                        {suggestion.votes}
+                      <p className="flex-1 font-semibold truncate">{suggestion.text}</p>
+                      <Badge variant={isSelected ? "default" : "secondary"} className={cn(isSelected && "bg-fuchsia-500")}>
+                        {votes}
                       </Badge>
                     </div>
                   </button>
                 );
               })}
+              
+              {/* Add suggestion */}
+              {showSuggestionInput ? (
+                <div className="flex gap-2">
+                  <Input
+                    value={suggestionText}
+                    onChange={(e) => setSuggestionText(e.target.value)}
+                    placeholder="Where are you going?"
+                    className="flex-1 h-12 rounded-xl text-base"
+                    onKeyDown={(e) => e.key === 'Enter' && handleAddSuggestion()}
+                    autoFocus
+                  />
+                  <Button
+                    onClick={handleAddSuggestion}
+                    disabled={!suggestionText.trim()}
+                    className="h-12 w-12 rounded-xl bg-gradient-to-r from-fuchsia-500 to-pink-500"
+                  >
+                    <Check className="h-5 w-5" />
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    onClick={() => { setShowSuggestionInput(false); setSuggestionText(''); }}
+                    className="h-12 w-12 rounded-xl"
+                  >
+                    <X className="h-5 w-5" />
+                  </Button>
+                </div>
+              ) : (
+                <button
+                  onClick={() => setShowSuggestionInput(true)}
+                  className="w-full min-h-[56px] p-4 rounded-2xl border-2 border-dashed border-muted-foreground/30 flex items-center justify-center gap-2 text-muted-foreground hover:border-fuchsia-500 hover:text-fuchsia-500 transition-all active:scale-[0.98]"
+                >
+                  <Plus className="h-5 w-5" />
+                  <span className="font-medium">Add your own</span>
+                </button>
+              )}
             </div>
-          )}
-
-          {/* Add Suggestion */}
-          {showSuggestionInput ? (
-            <div className="flex gap-2 p-2 rounded-xl bg-muted/50">
-              <Input
-                value={suggestionText}
-                onChange={(e) => setSuggestionText(e.target.value)}
-                placeholder="Where are you going tonight?"
-                className="flex-1 border-2 focus:border-fuchsia-500"
-                onKeyDown={(e) => e.key === 'Enter' && handleAddSuggestion()}
-              />
-              <Button
-                size="icon"
-                onClick={handleAddSuggestion}
-                disabled={!suggestionText.trim()}
-                className="bg-gradient-to-r from-fuchsia-500 to-pink-500"
-              >
-                <Check className="h-4 w-4" />
-              </Button>
-              <Button
-                size="icon"
-                variant="ghost"
-                onClick={() => { setShowSuggestionInput(false); setSuggestionText(''); }}
-              >
-                <X className="h-4 w-4" />
-              </Button>
-            </div>
-          ) : (
-            <Button
-              variant="outline"
-              className="w-full border-2 border-dashed border-fuchsia-500/50 text-fuchsia-600 hover:bg-fuchsia-500/10 hover:border-fuchsia-500"
-              onClick={() => setShowSuggestionInput(true)}
-            >
-              <Plus className="h-4 w-4 mr-2" />
-              Add your own suggestion
-            </Button>
-          )}
+          </div>
         </div>
-      </Card>
+      )}
 
-      {/* Tabs */}
-      <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as 'chat' | 'house')}>
-        <TabsList className="grid w-full grid-cols-2 h-14 p-1 bg-muted/50 rounded-xl">
-          <TabsTrigger 
-            value="chat" 
-            className={cn(
-              "flex items-center gap-2 rounded-lg h-full text-base font-semibold transition-all",
-              activeTab === 'chat' && "bg-gradient-to-r from-violet-500 to-purple-500 text-white shadow-lg"
-            )}
-          >
-            <MessagesSquare className="h-5 w-5" />
-            Chat
-            {chatMessages.length > 0 && (
-              <Badge className="bg-white/20 text-white text-xs">{chatMessages.length}</Badge>
-            )}
-          </TabsTrigger>
-          <TabsTrigger 
-            value="house" 
-            className={cn(
-              "flex items-center gap-2 rounded-lg h-full text-base font-semibold transition-all",
-              activeTab === 'house' && "bg-gradient-to-r from-amber-500 to-orange-500 text-white shadow-lg"
-            )}
-          >
-            <Home className="h-5 w-5" />
-            House
-            {activities.length > 0 && (
-              <Badge className="bg-white/20 text-white text-xs">{activities.length}</Badge>
-            )}
-          </TabsTrigger>
-        </TabsList>
-
-        {/* Chat Tab */}
-        <TabsContent value="chat" className="mt-4 space-y-3">
-          {chatMessages.length === 0 ? (
-            <Card className="p-8 text-center border-2 border-dashed border-muted-foreground/20">
-              <div className="w-16 h-16 mx-auto rounded-full bg-gradient-to-br from-violet-500/20 to-purple-500/20 flex items-center justify-center mb-4">
-                <MessagesSquare className="h-8 w-8 text-violet-500" />
+      {/* Next party countdown - compact */}
+      {nextParty && countdownTime && (
+        <Link to={createPageUrl(`Party?id=${nextParty.id}`)}>
+          <div className="rounded-2xl bg-gradient-to-r from-pink-500 via-rose-500 to-orange-500 p-4 text-white active:scale-[0.99] transition-transform">
+            <div className="flex items-center gap-4">
+              <div className="flex-1 min-w-0">
+                <p className="text-xs uppercase tracking-wider text-white/80 mb-1">Next up</p>
+                <p className="font-bold text-lg truncate">{nextParty.title}</p>
+                <p className="text-sm text-white/80 truncate">{fraternities.find(f => f.id === nextParty.fraternity_id)?.name}</p>
               </div>
-              <p className="font-bold text-lg">No messages yet</p>
-              <p className="text-sm text-muted-foreground mb-4">Be the first to start the conversation!</p>
-              <Button 
-                onClick={() => setShowChatComposer(true)}
-                className="bg-gradient-to-r from-violet-500 to-purple-500 text-white"
-              >
-                <Send className="h-4 w-4 mr-2" />
-                Start Chatting
-              </Button>
-            </Card>
-          ) : (
-            chatMessages.map((msg, index) => {
-              const netVotes = msg.upvotes - msg.downvotes;
-              const isTop = index === 0;
+              <div className="flex items-center gap-2 text-right">
+                <div className="text-center">
+                  <p className="text-2xl font-black tabular-nums">{countdownTime.hours.toString().padStart(2, '0')}</p>
+                  <p className="text-[10px] uppercase text-white/60">hr</p>
+                </div>
+                <span className="text-xl font-bold">:</span>
+                <div className="text-center">
+                  <p className="text-2xl font-black tabular-nums">{countdownTime.minutes.toString().padStart(2, '0')}</p>
+                  <p className="text-[10px] uppercase text-white/60">min</p>
+                </div>
+                <span className="text-xl font-bold">:</span>
+                <div className="text-center">
+                  <p className="text-2xl font-black tabular-nums">{countdownTime.seconds.toString().padStart(2, '0')}</p>
+                  <p className="text-[10px] uppercase text-white/60">sec</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </Link>
+      )}
+
+      {/* Unified Feed */}
+      <div className="space-y-4">
+        {feedItems.length === 0 ? (
+          <div className="text-center py-12">
+            <div className="w-20 h-20 mx-auto rounded-full bg-muted/50 flex items-center justify-center mb-4">
+              <Sparkles className="h-10 w-10 text-muted-foreground" />
+            </div>
+            <h3 className="text-lg font-bold mb-2">Nothing happening yet</h3>
+            <p className="text-muted-foreground mb-6">Be the first to share what's going on!</p>
+            <Button 
+              onClick={() => setShowChatComposer(true)}
+              size="lg"
+              className="rounded-full px-8 bg-gradient-to-r from-violet-500 to-purple-500"
+            >
+              <Send className="h-5 w-5 mr-2" />
+              Start the convo
+            </Button>
+          </div>
+        ) : (
+          feedItems.map(({ type, item }) => {
+            if (type === 'chat') {
+              const chatItem = item as ChatItem;
+              const netVotes = chatItem.upvotes - chatItem.downvotes;
               const isHot = netVotes >= 5;
               
               return (
-                <Card 
-                  key={msg.id} 
+                <div 
+                  key={`chat-${chatItem.id}`} 
                   className={cn(
-                    "p-4 transition-all hover:shadow-md",
-                    isTop && "border-l-4 border-l-violet-500",
-                    isHot && "bg-gradient-to-r from-orange-500/5 to-transparent"
+                    "rounded-2xl bg-card p-5 border transition-all",
+                    isHot && "border-orange-500/50 bg-gradient-to-br from-orange-500/5 to-transparent"
                   )}
                 >
                   <div className="flex items-start gap-3">
                     <Avatar className={cn(
-                      "h-10 w-10 ring-2",
-                      isHot ? "ring-orange-500" : "ring-primary/20"
+                      "h-11 w-11 ring-2 shrink-0",
+                      isHot ? "ring-orange-500" : "ring-border"
                     )}>
                       <AvatarFallback className={cn(
                         "text-white font-bold",
@@ -1151,381 +888,321 @@ export default function Activity() {
                           ? "bg-gradient-to-br from-orange-500 to-red-500" 
                           : "bg-gradient-to-br from-violet-500 to-purple-500"
                       )}>
-                        {isHot ? <Flame className="h-4 w-4" /> : <MessagesSquare className="h-4 w-4" />}
+                        {isHot ? <Flame className="h-5 w-5" /> : <MessagesSquare className="h-5 w-5" />}
                       </AvatarFallback>
                     </Avatar>
                     <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 mb-1">
-                        <Badge variant="secondary" className="text-[10px] px-1.5 py-0">
-                          {formatDistanceToNow(new Date(msg.created_date), { addSuffix: true })}
-                        </Badge>
-                        {isTop && (
-                          <Badge className="bg-gradient-to-r from-violet-500 to-purple-500 text-white text-[10px] px-1.5 py-0">
-                            <Crown className="h-3 w-3 mr-0.5" />
-                            Latest
+                      <div className="flex items-center gap-2 mb-2 flex-wrap">
+                        <span className="text-sm text-muted-foreground">
+                          {formatDistanceToNow(new Date(chatItem.created_date), { addSuffix: true })}
+                        </span>
+                        {isHot && (
+                          <Badge className="bg-gradient-to-r from-orange-500 to-red-500 text-white text-xs px-2 py-0.5">
+                            <Flame className="h-3 w-3 mr-1" />
+                            Hot
                           </Badge>
                         )}
                       </div>
-                      <p className="text-sm leading-relaxed">{msg.text}</p>
+                      <p className="text-base leading-relaxed mb-3">{chatItem.text}</p>
                       
-                      {/* Mention badge */}
-                      {(msg.mentionedFraternity || msg.mentionedParty) && (
+                      {(chatItem.mentionedFraternity || chatItem.mentionedParty) && (
                         <Link 
-                          to={msg.mentionedFraternity 
-                            ? createPageUrl(`Fraternity?id=${msg.mentionedFraternity.id}`)
-                            : createPageUrl(`Party?id=${msg.mentionedParty?.id}`)
+                          to={chatItem.mentionedFraternity 
+                            ? createPageUrl(`Fraternity?id=${chatItem.mentionedFraternity.id}`)
+                            : createPageUrl(`Party?id=${chatItem.mentionedParty?.id}`)
                           }
-                          className="inline-flex items-center gap-1 mt-2 px-3 py-1.5 rounded-full bg-gradient-to-r from-primary/10 to-purple-500/10 text-primary text-xs font-medium hover:from-primary/20 hover:to-purple-500/20 transition-all"
+                          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-primary/10 text-primary text-sm font-medium hover:bg-primary/20 transition-all mb-3"
                         >
-                          <AtSign className="h-3 w-3" />
-                          {msg.mentionedFraternity?.name || msg.mentionedParty?.title}
+                          <AtSign className="h-3.5 w-3.5" />
+                          {chatItem.mentionedFraternity?.name || chatItem.mentionedParty?.title}
                         </Link>
                       )}
-
-                      {renderVoteActions(msg)}
-
+                      
+                      {/* Vote actions - large tap targets */}
+                      <div className="flex items-center gap-3">
+                        <button
+                          onClick={() => handleChatVote(chatItem, 1)}
+                          className={cn(
+                            "min-h-[44px] min-w-[44px] flex items-center justify-center gap-2 px-4 rounded-full text-sm font-medium transition-all active:scale-95",
+                            chatItem.userVote === 1 
+                              ? 'bg-emerald-500 text-white' 
+                              : 'bg-muted hover:bg-emerald-500/20 text-muted-foreground hover:text-emerald-500'
+                          )}
+                        >
+                          <ThumbsUp className="h-5 w-5" />
+                          {chatItem.upvotes > 0 && <span>{chatItem.upvotes}</span>}
+                        </button>
+                        <button
+                          onClick={() => handleChatVote(chatItem, -1)}
+                          className={cn(
+                            "min-h-[44px] min-w-[44px] flex items-center justify-center gap-2 px-4 rounded-full text-sm font-medium transition-all active:scale-95",
+                            chatItem.userVote === -1 
+                              ? 'bg-red-500 text-white' 
+                              : 'bg-muted hover:bg-red-500/20 text-muted-foreground hover:text-red-500'
+                          )}
+                        >
+                          <ThumbsDown className="h-5 w-5" />
+                          {chatItem.downvotes > 0 && <span>{chatItem.downvotes}</span>}
+                        </button>
+                        <button
+                          onClick={() => setReplyingTo(replyingTo === chatItem.id ? null : chatItem.id)}
+                          className="min-h-[44px] min-w-[44px] flex items-center justify-center gap-2 px-4 rounded-full text-sm font-medium bg-muted hover:bg-primary/20 text-muted-foreground hover:text-primary transition-all active:scale-95 ml-auto"
+                        >
+                          <MessageCircle className="h-5 w-5" />
+                          {chatItem.replies && chatItem.replies.length > 0 && (
+                            <span>{chatItem.replies.length}</span>
+                          )}
+                        </button>
+                      </div>
+                      
                       {/* Reply input */}
-                      {replyingTo === msg.id && (
-                        <div className="mt-3 flex gap-2 p-3 rounded-lg bg-muted/30">
+                      {replyingTo === chatItem.id && (
+                        <div className="mt-4 flex gap-2">
                           <Textarea
                             value={replyText}
                             onChange={(e) => setReplyText(e.target.value)}
                             placeholder="Write a reply..."
-                            className="min-h-[60px] text-sm bg-background"
+                            className="min-h-[60px] text-base rounded-xl"
                           />
                           <Button
-                            size="icon"
-                            onClick={() => handleChatReply(msg.id)}
+                            onClick={() => handleChatReply(chatItem.id)}
                             disabled={submittingReply || !replyText.trim()}
-                            className="bg-gradient-to-r from-violet-500 to-purple-500"
+                            className="h-auto rounded-xl bg-gradient-to-r from-violet-500 to-purple-500"
                           >
                             {submittingReply ? (
-                              <Loader2 className="h-4 w-4 animate-spin" />
+                              <Loader2 className="h-5 w-5 animate-spin" />
                             ) : (
-                              <Send className="h-4 w-4" />
+                              <Send className="h-5 w-5" />
                             )}
                           </Button>
                         </div>
                       )}
-
+                      
                       {/* Replies */}
-                      {msg.replies && msg.replies.length > 0 && (
-                        <div className="mt-3 pl-4 border-l-2 border-violet-500/30 space-y-3">
-                          {msg.replies.map((reply) => (
-                            <div key={reply.id} className="text-sm">
-                              <Badge variant="secondary" className="text-[10px] px-1.5 py-0 mb-1">
+                      {chatItem.replies && chatItem.replies.length > 0 && (
+                        <div className="mt-4 pl-4 border-l-2 border-violet-500/30 space-y-3">
+                          {chatItem.replies.map((reply) => (
+                            <div key={reply.id} className="py-2">
+                              <p className="text-sm text-muted-foreground mb-1">
                                 {formatDistanceToNow(new Date(reply.created_date), { addSuffix: true })}
-                              </Badge>
-                              <p className="p-3 bg-muted/30 rounded-lg">{reply.text}</p>
-                              {renderVoteActions(reply, true)}
+                              </p>
+                              <p className="text-sm p-3 bg-muted/50 rounded-xl">{reply.text}</p>
                             </div>
                           ))}
                         </div>
                       )}
                     </div>
                   </div>
-                </Card>
+                </div>
               );
-            })
-          )}
-        </TabsContent>
-
-        {/* House Tab */}
-        <TabsContent value="house" className="mt-4 space-y-3">
-          {activities.length === 0 ? (
-            <Card className="p-8 text-center border-2 border-dashed border-muted-foreground/20">
-              <div className="w-16 h-16 mx-auto rounded-full bg-gradient-to-br from-amber-500/20 to-orange-500/20 flex items-center justify-center mb-4">
-                <TrendingUp className="h-8 w-8 text-amber-500" />
-              </div>
-              <p className="font-bold text-lg">No activity yet</p>
-              <p className="text-sm text-muted-foreground mb-4">Be the first to rate a party or frat!</p>
-              <div className="flex gap-2 justify-center">
-                <Button asChild variant="outline">
-                  <Link to="/Parties">
-                    <PartyPopper className="h-4 w-4 mr-2" />
-                    Browse Parties
-                  </Link>
-                </Button>
-                <Button asChild className="bg-gradient-to-r from-amber-500 to-orange-500 text-white">
-                  <Link to="/Leaderboard">
-                    <Trophy className="h-4 w-4 mr-2" />
-                    View Frats
-                  </Link>
-                </Button>
-              </div>
-            </Card>
-          ) : (
-            activities.map((item, index) => {
-              const isTop = index === 0;
-              const gradient = getActivityGradient(item.type);
+            } else {
+              const activityItem = item as ActivityItem;
+              const isRating = activityItem.type === 'party_rating' || activityItem.type === 'frat_rating';
               
               return (
-                <Card 
-                  key={item.id} 
-                  className={cn(
-                    "overflow-hidden transition-all hover:shadow-md",
-                    isTop && "ring-2 ring-amber-500/50"
-                  )}
+                <Link 
+                  key={`activity-${activityItem.id}`}
+                  to={activityItem.party 
+                    ? createPageUrl(`Party?id=${activityItem.party.id}`) 
+                    : createPageUrl(`Fraternity?id=${activityItem.fraternity?.id}`)
+                  }
                 >
-                  {/* Activity Type Header */}
-                  <div className={cn(
-                    "px-4 py-2 flex items-center gap-2 text-white bg-gradient-to-r",
-                    gradient
-                  )}>
-                    {getActivityIcon(item.type)}
-                    <span className="font-semibold text-sm">{getActivityLabel(item.type)}</span>
-                    <span className="text-white/70 text-xs ml-auto">
-                      {formatDistanceToNow(new Date(item.created_date), { addSuffix: true })}
-                    </span>
-                    {(item.type === 'party_rating' || item.type === 'frat_rating') && item.score && (
-                      <Badge className={cn(
-                        "font-bold text-white",
-                        getScoreBgColor(item.score)
+                  <div className="rounded-2xl bg-card p-5 border hover:border-primary/50 transition-all active:scale-[0.99]">
+                    <div className="flex items-start gap-3">
+                      <div className={cn(
+                        "w-11 h-11 rounded-xl flex items-center justify-center text-white shrink-0",
+                        activityItem.type === 'party_rating' && "bg-gradient-to-br from-pink-500 to-rose-500",
+                        activityItem.type === 'frat_rating' && "bg-gradient-to-br from-amber-500 to-orange-500",
+                        activityItem.type === 'party_comment' && "bg-gradient-to-br from-violet-500 to-purple-500",
+                        activityItem.type === 'frat_comment' && "bg-gradient-to-br from-cyan-500 to-blue-500"
                       )}>
-                        {item.score.toFixed(1)}
-                      </Badge>
-                    )}
-                  </div>
-                  
-                  <div className="p-4">
-                    <Link 
-                      to={item.party ? createPageUrl(`Party?id=${item.party.id}`) : createPageUrl(`Fraternity?id=${item.fraternity?.id}`)}
-                      className="flex items-center justify-between p-3 rounded-xl bg-muted/50 hover:bg-muted transition-all mb-3 group"
-                    >
-                      <div className="flex items-center gap-3">
-                        <div className={cn(
-                          "w-10 h-10 rounded-xl flex items-center justify-center text-white bg-gradient-to-br",
-                          gradient
-                        )}>
-                          {item.type.includes('party') ? (
-                            <PartyPopper className="h-5 w-5" />
-                          ) : (
-                            <Trophy className="h-5 w-5" />
-                          )}
-                        </div>
-                        <div>
-                          <p className="font-bold text-sm group-hover:text-primary transition-colors">
-                            {item.type.includes('party') ? item.party?.title : item.fraternity?.name}
-                          </p>
-                          {item.fraternity && item.type.includes('party') && (
-                            <p className="text-xs text-muted-foreground">{item.fraternity.name}</p>
-                          )}
-                        </div>
+                        {getActivityIcon(activityItem.type)}
                       </div>
-                      <ChevronRight className="h-5 w-5 text-muted-foreground group-hover:text-primary group-hover:translate-x-1 transition-all" />
-                    </Link>
-
-                    {item.type === 'party_rating' && (
-                      <div className="grid grid-cols-3 gap-2 text-center">
-                        <div className="p-2 rounded-lg bg-pink-500/10">
-                          <Zap className="h-4 w-4 mx-auto text-pink-500 mb-1" />
-                          <p className={cn("font-bold text-sm", getScoreColor(item.vibe || 0))}>{item.vibe?.toFixed(1)}</p>
-                          <p className="text-[10px] text-muted-foreground uppercase">Vibe</p>
-                        </div>
-                        <div className="p-2 rounded-lg bg-violet-500/10">
-                          <Star className="h-4 w-4 mx-auto text-violet-500 mb-1" />
-                          <p className={cn("font-bold text-sm", getScoreColor(item.music || 0))}>{item.music?.toFixed(1)}</p>
-                          <p className="text-[10px] text-muted-foreground uppercase">Music</p>
-                        </div>
-                        <div className="p-2 rounded-lg bg-cyan-500/10">
-                          <TrendingUp className="h-4 w-4 mx-auto text-cyan-500 mb-1" />
-                          <p className={cn("font-bold text-sm", getScoreColor(item.execution || 0))}>{item.execution?.toFixed(1)}</p>
-                          <p className="text-[10px] text-muted-foreground uppercase">Execution</p>
-                        </div>
-                      </div>
-                    )}
-
-                    {item.type === 'frat_rating' && (
-                      <div className="grid grid-cols-3 gap-2 text-center">
-                        <div className="p-2 rounded-lg bg-amber-500/10">
-                          <Users className="h-4 w-4 mx-auto text-amber-500 mb-1" />
-                          <p className={cn("font-bold text-sm", getScoreColor(item.brotherhood || 0))}>{item.brotherhood?.toFixed(1)}</p>
-                          <p className="text-[10px] text-muted-foreground uppercase">Brotherhood</p>
-                        </div>
-                        <div className="p-2 rounded-lg bg-emerald-500/10">
-                          <Shield className="h-4 w-4 mx-auto text-emerald-500 mb-1" />
-                          <p className={cn("font-bold text-sm", getScoreColor(item.reputation || 0))}>{item.reputation?.toFixed(1)}</p>
-                          <p className="text-[10px] text-muted-foreground uppercase">Rep</p>
-                        </div>
-                        <div className="p-2 rounded-lg bg-rose-500/10">
-                          <Heart className="h-4 w-4 mx-auto text-rose-500 mb-1" />
-                          <p className={cn("font-bold text-sm", getScoreColor(item.community || 0))}>{item.community?.toFixed(1)}</p>
-                          <p className="text-[10px] text-muted-foreground uppercase">Community</p>
-                        </div>
-                      </div>
-                    )}
-
-                    {item.text && (
-                      <div className="mt-3 p-3 bg-muted/30 rounded-xl border-l-4 border-l-primary/50">
-                        <p className="text-sm italic">"{item.text}"</p>
-                      </div>
-                    )}
-
-                    {renderActivityVoteActions(item)}
-
-                    {replyingTo === item.id && (item.type === 'party_comment' || item.type === 'frat_comment') && (
-                      <div className="mt-3 flex gap-2 p-3 rounded-lg bg-muted/30">
-                        <Textarea
-                          value={replyText}
-                          onChange={(e) => setReplyText(e.target.value)}
-                          placeholder="Write a reply..."
-                          className="min-h-[60px] text-sm bg-background"
-                        />
-                        <Button
-                          size="icon"
-                          onClick={() => handleActivityReply(item)}
-                          disabled={submittingReply || !replyText.trim()}
-                          className="bg-gradient-to-r from-amber-500 to-orange-500"
-                        >
-                          {submittingReply ? (
-                            <Loader2 className="h-4 w-4 animate-spin" />
-                          ) : (
-                            <Send className="h-4 w-4" />
-                          )}
-                        </Button>
-                      </div>
-                    )}
-
-                    {item.replies && item.replies.length > 0 && (
-                      <div className="mt-3 pl-4 border-l-2 border-amber-500/30 space-y-3">
-                        {item.replies.map((reply) => (
-                          <div key={reply.id} className="text-sm">
-                            <Badge variant="secondary" className="text-[10px] px-1.5 py-0 mb-1">
-                              {formatDistanceToNow(new Date(reply.created_date), { addSuffix: true })}
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 mb-1">
+                          <span className="text-sm text-muted-foreground">
+                            {formatDistanceToNow(new Date(activityItem.created_date), { addSuffix: true })}
+                          </span>
+                          {isRating && activityItem.score && (
+                            <Badge className={cn(
+                              "text-white font-bold",
+                              getScoreBgColor(activityItem.score)
+                            )}>
+                              {activityItem.score.toFixed(1)}
                             </Badge>
-                            <p className="p-3 bg-muted/30 rounded-lg">{reply.text}</p>
-                            {renderActivityVoteActions(reply, true)}
+                          )}
+                        </div>
+                        <p className="font-semibold text-base mb-1">
+                          {activityItem.type.includes('party') ? activityItem.party?.title : activityItem.fraternity?.name}
+                        </p>
+                        {activityItem.fraternity && activityItem.type.includes('party') && (
+                          <p className="text-sm text-muted-foreground">{activityItem.fraternity.name}</p>
+                        )}
+                        {activityItem.text && (
+                          <p className="text-sm mt-2 text-muted-foreground line-clamp-2">{activityItem.text}</p>
+                        )}
+                        
+                        {/* Score breakdown for ratings */}
+                        {activityItem.type === 'party_rating' && (
+                          <div className="flex items-center gap-4 mt-3 text-sm">
+                            <div className="flex items-center gap-1">
+                              <Zap className="h-4 w-4 text-pink-500" />
+                              <span className="font-semibold">{activityItem.vibe?.toFixed(1)}</span>
+                            </div>
+                            <div className="flex items-center gap-1">
+                              <Star className="h-4 w-4 text-violet-500" />
+                              <span className="font-semibold">{activityItem.music?.toFixed(1)}</span>
+                            </div>
+                            <div className="flex items-center gap-1">
+                              <TrendingUp className="h-4 w-4 text-cyan-500" />
+                              <span className="font-semibold">{activityItem.execution?.toFixed(1)}</span>
+                            </div>
                           </div>
-                        ))}
+                        )}
+                        
+                        {activityItem.type === 'frat_rating' && (
+                          <div className="flex items-center gap-4 mt-3 text-sm">
+                            <div className="flex items-center gap-1">
+                              <Users className="h-4 w-4 text-amber-500" />
+                              <span className="font-semibold">{activityItem.brotherhood?.toFixed(1)}</span>
+                            </div>
+                            <div className="flex items-center gap-1">
+                              <Shield className="h-4 w-4 text-emerald-500" />
+                              <span className="font-semibold">{activityItem.reputation?.toFixed(1)}</span>
+                            </div>
+                            <div className="flex items-center gap-1">
+                              <Heart className="h-4 w-4 text-rose-500" />
+                              <span className="font-semibold">{activityItem.community?.toFixed(1)}</span>
+                            </div>
+                          </div>
+                        )}
                       </div>
-                    )}
+                      <ChevronRight className="h-5 w-5 text-muted-foreground shrink-0" />
+                    </div>
                   </div>
-                </Card>
+                </Link>
               );
-            })
-          )}
-        </TabsContent>
-      </Tabs>
+            }
+          })
+        )}
+      </div>
 
-      {/* Floating Chat Button - Only on Chat tab */}
-      {activeTab === 'chat' && (
-        <button
-          onClick={() => setShowChatComposer(true)}
-          className="fixed bottom-24 right-4 z-50 flex items-center gap-2 px-5 py-3 rounded-full bg-gradient-to-r from-violet-500 to-purple-500 text-white shadow-lg shadow-violet-500/30 active:scale-95 transition-transform hover:shadow-xl hover:shadow-violet-500/40"
-          style={{ marginBottom: 'env(safe-area-inset-bottom)' }}
-        >
-          <Sparkles className="h-5 w-5" />
-          <span className="font-bold">New Post</span>
-        </button>
-      )}
+      {/* Floating compose button */}
+      <button
+        onClick={() => setShowChatComposer(true)}
+        className="fixed bottom-24 right-4 w-14 h-14 rounded-full bg-gradient-to-r from-violet-500 to-purple-500 text-white shadow-lg shadow-violet-500/30 flex items-center justify-center hover:scale-105 active:scale-95 transition-transform z-40"
+      >
+        <Send className="h-6 w-6" />
+      </button>
 
       {/* Chat Composer Sheet */}
       <Sheet open={showChatComposer} onOpenChange={setShowChatComposer}>
-        <SheetContent side="bottom" className="rounded-t-3xl h-[70vh]">
-          <SheetHeader className="text-left pb-4">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-violet-500 to-purple-500 flex items-center justify-center text-white">
-                <Send className="h-5 w-5" />
-              </div>
-              <div>
-                <SheetTitle className="text-xl">New Message</SheetTitle>
-                <p className="text-xs text-muted-foreground">Share what's on your mind</p>
-              </div>
-            </div>
+        <SheetContent side="bottom" className="h-auto max-h-[80vh] rounded-t-3xl">
+          <SheetHeader className="pb-4">
+            <SheetTitle className="text-xl">What's on your mind?</SheetTitle>
           </SheetHeader>
-
           <div className="space-y-4">
             <Textarea
               value={chatText}
               onChange={(e) => setChatText(e.target.value)}
-              placeholder="What's on your mind?"
-              className="min-h-[120px] text-base border-2 focus:border-violet-500 transition-colors"
+              placeholder="Share what's happening..."
+              className="min-h-[120px] text-base rounded-xl resize-none"
+              autoFocus
             />
-
-            {/* Selected mention */}
+            
             {selectedMention && (
               <div className="flex items-center gap-2">
-                <Badge className="flex items-center gap-1 bg-gradient-to-r from-primary/10 to-purple-500/10 text-primary border-0">
+                <Badge className="flex items-center gap-1 px-3 py-1.5">
                   <AtSign className="h-3 w-3" />
                   {selectedMention.name}
-                  <button onClick={() => setSelectedMention(null)} className="ml-1 hover:text-destructive">
+                  <button onClick={() => setSelectedMention(null)} className="ml-1">
                     <X className="h-3 w-3" />
                   </button>
                 </Badge>
               </div>
             )}
-
-            {/* Mention buttons */}
+            
             <div className="flex gap-2">
               <Button
                 variant="outline"
-                size="sm"
                 onClick={() => { setMentionType('frat'); setShowMentionPicker(true); }}
-                className="border-2 hover:border-amber-500 hover:text-amber-500 transition-colors"
+                className="rounded-xl"
               >
-                <AtSign className="h-4 w-4 mr-1" />
-                Mention Frat
+                <AtSign className="h-4 w-4 mr-2" />
+                Mention
               </Button>
               <Button
-                variant="outline"
-                size="sm"
-                onClick={() => { setMentionType('party'); setShowMentionPicker(true); }}
-                className="border-2 hover:border-pink-500 hover:text-pink-500 transition-colors"
+                onClick={handleSubmitChat}
+                disabled={submittingChat || !chatText.trim()}
+                className="flex-1 rounded-xl bg-gradient-to-r from-violet-500 to-purple-500 text-white"
               >
-                <AtSign className="h-4 w-4 mr-1" />
-                Mention Party
+                {submittingChat ? (
+                  <Loader2 className="h-5 w-5 animate-spin" />
+                ) : (
+                  <>
+                    <Send className="h-5 w-5 mr-2" />
+                    Post
+                  </>
+                )}
               </Button>
             </div>
+          </div>
+        </SheetContent>
+      </Sheet>
 
-            {/* Mention picker */}
-            {showMentionPicker && (
-              <Card className="p-2 max-h-40 overflow-y-auto border-2">
-                <div className="space-y-1">
-                  {mentionType === 'frat' && fraternities.map((frat) => (
-                    <button
-                      key={frat.id}
-                      onClick={() => {
-                        setSelectedMention({ type: 'frat', id: frat.id, name: frat.name });
-                        setShowMentionPicker(false);
-                      }}
-                      className="w-full text-left px-3 py-2 rounded-lg hover:bg-amber-500/10 hover:text-amber-600 transition-colors text-sm font-medium flex items-center gap-2"
-                    >
-                      <Trophy className="h-4 w-4 text-amber-500" />
-                      {frat.name}
-                    </button>
-                  ))}
-                  {mentionType === 'party' && parties.map((party) => (
-                    <button
-                      key={party.id}
-                      onClick={() => {
-                        setSelectedMention({ type: 'party', id: party.id, name: party.title });
-                        setShowMentionPicker(false);
-                      }}
-                      className="w-full text-left px-3 py-2 rounded-lg hover:bg-pink-500/10 hover:text-pink-600 transition-colors text-sm font-medium flex items-center gap-2"
-                    >
-                      <PartyPopper className="h-4 w-4 text-pink-500" />
-                      {party.title}
-                    </button>
-                  ))}
-                </div>
-              </Card>
-            )}
-
+      {/* Mention Picker Sheet */}
+      <Sheet open={showMentionPicker} onOpenChange={setShowMentionPicker}>
+        <SheetContent side="bottom" className="h-[60vh] rounded-t-3xl">
+          <SheetHeader className="pb-4">
+            <SheetTitle>Tag something</SheetTitle>
+          </SheetHeader>
+          <div className="flex gap-2 mb-4">
             <Button
-              className="w-full h-12 text-base font-bold bg-gradient-to-r from-violet-500 to-purple-500 hover:from-violet-600 hover:to-purple-600 transition-all shadow-lg shadow-violet-500/30"
-              onClick={handleSubmitChat}
-              disabled={submittingChat || !chatText.trim()}
+              variant={mentionType === 'frat' ? 'default' : 'outline'}
+              onClick={() => setMentionType('frat')}
+              className="rounded-full"
             >
-              {submittingChat ? (
-                <Loader2 className="h-5 w-5 animate-spin" />
-              ) : (
-                <>
-                  <Send className="h-5 w-5 mr-2" />
-                  Post Message
-                </>
-              )}
+              <Trophy className="h-4 w-4 mr-2" />
+              Frats
+            </Button>
+            <Button
+              variant={mentionType === 'party' ? 'default' : 'outline'}
+              onClick={() => setMentionType('party')}
+              className="rounded-full"
+            >
+              <PartyPopper className="h-4 w-4 mr-2" />
+              Parties
             </Button>
           </div>
+          <ScrollArea className="h-[calc(100%-100px)]">
+            <div className="space-y-2">
+              {mentionType === 'frat' && fraternities.map((frat) => (
+                <button
+                  key={frat.id}
+                  onClick={() => {
+                    setSelectedMention({ type: 'frat', id: frat.id, name: frat.name });
+                    setShowMentionPicker(false);
+                  }}
+                  className="w-full p-4 rounded-xl bg-muted/50 hover:bg-muted text-left transition-all active:scale-[0.98]"
+                >
+                  <p className="font-semibold">{frat.name}</p>
+                </button>
+              ))}
+              {mentionType === 'party' && parties.map((party) => (
+                <button
+                  key={party.id}
+                  onClick={() => {
+                    setSelectedMention({ type: 'party', id: party.id, name: party.title });
+                    setShowMentionPicker(false);
+                  }}
+                  className="w-full p-4 rounded-xl bg-muted/50 hover:bg-muted text-left transition-all active:scale-[0.98]"
+                >
+                  <p className="font-semibold">{party.title}</p>
+                  <p className="text-sm text-muted-foreground">{format(new Date(party.starts_at), 'MMM d, h:mm a')}</p>
+                </button>
+              ))}
+            </div>
+          </ScrollArea>
         </SheetContent>
       </Sheet>
     </div>
