@@ -17,11 +17,13 @@ import LeaderboardHeader from '@/components/leaderboard/LeaderboardHeader';
 import LeaderboardPodium from '@/components/leaderboard/LeaderboardPodium';
 import FraternityCard from '@/components/leaderboard/FraternityCard';
 import RateFratSheet from '@/components/leaderboard/RateFratSheet';
+import FratPickerSheet from '@/components/leaderboard/FratPickerSheet';
 import LeaderboardIntro from '@/components/onboarding/LeaderboardIntro';
 import { Skeleton } from '@/components/ui/skeleton';
 import { clamp } from '@/utils';
 import { getCachedCampusBaseline } from "@/utils/scoring";
 import { ensureAuthed } from '@/utils/auth';
+import { Star } from 'lucide-react';
 
 type FilterType = 'overall' | 'reputation' | 'party' | 'trending';
 
@@ -34,6 +36,7 @@ export default function Leaderboard() {
   const [showIntro, setShowIntro] = useState(() => {
     return !localStorage.getItem('fratrank_leaderboard_intro_never_show');
   });
+  const [showFratPicker, setShowFratPicker] = useState(false);
 
   const handleIntroComplete = (neverShowAgain: boolean) => {
     if (neverShowAgain) {
@@ -374,6 +377,26 @@ export default function Leaderboard() {
         onSubmit={handleRateSubmit}
         existingScores={existingScores}
       />
+
+      {/* Frat Picker Sheet */}
+      <FratPickerSheet
+        isOpen={showFratPicker}
+        onClose={() => setShowFratPicker(false)}
+        onSelect={handleRate}
+        fraternities={fraternities}
+      />
+
+      {/* Floating Rate Button - Only show when intro is dismissed */}
+      {!showIntro && (
+        <button
+          onClick={() => setShowFratPicker(true)}
+          className="fixed bottom-24 right-4 z-50 flex items-center gap-2 px-5 py-3 rounded-full bg-amber-500 text-white shadow-lg active:scale-95 transition-transform"
+          style={{ marginBottom: 'env(safe-area-inset-bottom)' }}
+        >
+          <Star className="h-5 w-5" />
+          <span className="font-semibold">Rate</span>
+        </button>
+      )}
 
       {/* Intro Modal */}
       {showIntro && (
