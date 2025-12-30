@@ -288,10 +288,10 @@ export default function Leaderboard() {
 
       {/* Stacked Podium Cards */}
       <div className="space-y-4">
-        <PodiumCard category="overall" topThree={overallTop3} />
-        <PodiumCard category="reputation" topThree={reputationTop3} />
-        <PodiumCard category="party" topThree={partyTop3} />
-        <PodiumCard category="trending" topThree={trendingTop3} />
+        <PodiumCard category="overall" topThree={overallTop3} onRate={() => setShowRateAction('rate')} />
+        <PodiumCard category="reputation" topThree={reputationTop3} onRate={() => setShowRateAction('rate')} />
+        <PodiumCard category="party" topThree={partyTop3} onRate={() => setShowRateAction('parties')} />
+        <PodiumCard category="trending" topThree={trendingTop3} onRate={() => setShowRateAction('rate')} />
       </div>
 
       <RateFratSheet
