@@ -1,4 +1,4 @@
-import { Crown, Trophy, Star, Calendar, PartyPopper, MessageCircle, ThumbsUp } from 'lucide-react';
+import { Crown, Trophy, Star, PartyPopper, MessageCircle, ThumbsUp, ChevronRight } from 'lucide-react';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -6,7 +6,6 @@ import { Link } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
 import { type FraternityWithScores } from '@/utils/scoring';
 import TrendIndicator from './TrendIndicator';
-import ScoreBreakdown from './ScoreBreakdown';
 
 type FilterType = 'overall' | 'reputation' | 'party' | 'trending';
 
@@ -19,10 +18,9 @@ interface FraternityCardProps {
 }
 
 export default function FraternityCard({ fraternity, rank, onRate, filter = 'overall', isTied = false }: FraternityCardProps) {
-  const RankIcon = rank === 1 ? Crown : rank <= 3 ? Trophy : null;
+  const RankIcon = rank <= 3 ? (rank === 1 ? Crown : Trophy) : null;
   const scores = fraternity.computedScores;
 
-  // Format large numbers: 999 stays as-is, 1000+ becomes "1.2k"
   const formatCount = (num: number): string => {
     if (num >= 1000) {
       return (num / 1000).toFixed(1).replace(/\.0$/, '') + 'k';
@@ -30,24 +28,19 @@ export default function FraternityCard({ fraternity, rank, onRate, filter = 'ove
     return num.toString();
   };
   
-  // Get the score to display based on current filter
-  // Returns null when data is insufficient
   const getDisplayScore = (): number | null => {
     if (!scores) {
       return fraternity.reputation_score ?? 5;
     }
     switch (filter) {
       case 'overall':
-        // Return null if insufficient data for overall
         return scores.hasOverallData ? scores.overall : null;
       case 'reputation':
-        // Return null if insufficient rep data
         return scores.hasRepData ? scores.repAdj : null;
       case 'party':
-        // Return null if no party data (will show "—")
         return scores.hasPartyScoreData ? scores.semesterPartyScore : null;
       case 'trending':
-        return scores.activityTrending; // Show activity score for trending
+        return scores.activityTrending;
       default:
         return scores.hasOverallData ? scores.overall : null;
     }
@@ -56,28 +49,21 @@ export default function FraternityCard({ fraternity, rank, onRate, filter = 'ove
   const getScoreLabel = (): string => {
     switch (filter) {
       case 'overall':
-        return 'Semester Frat Score';
+        return 'Score';
       case 'reputation':
-        return 'Semester Frat Score';
+        return 'Frat';
       case 'party':
-        return 'Semester Party Score';
+        return 'Party';
       case 'trending':
-        return 'Trending Rank';
+        return 'Trend';
       default:
-        return 'Overall Score';
+        return 'Score';
     }
   };
 
-  // Get trending rank display text
   const getTrendingRankDisplay = (): string => {
-    const prefix = isTied ? 'Tied ' : '';
-    if (rank === 1) return `${prefix}#1 Most Trending`;
-    if (rank === 2) return `${prefix}#2`;
-    if (rank === 3) return `${prefix}#3`;
-    const s = ['th', 'st', 'nd', 'rd'];
-    const v = rank % 100;
-    const ordinal = rank + (s[(v - 20) % 10] || s[v] || s[0]);
-    return `${prefix}${ordinal}`;
+    const prefix = isTied ? 'T-' : '';
+    return `${prefix}#${rank}`;
   };
 
   const hasPartyData = scores?.hasPartyScoreData ?? false;
@@ -90,144 +76,91 @@ export default function FraternityCard({ fraternity, rank, onRate, filter = 'ove
     onRate(fraternity);
   };
 
-  const activityScore = scores?.activityTrending ?? 0;
   const trending = scores?.trending ?? (fraternity.momentum ?? 0);
 
   return (
     <Link to={createPageUrl(`Fraternity?id=${fraternity.id}`)}>
-      <Card className="glass p-4 hover:shadow-lg transition-all hover:scale-[1.01] cursor-pointer">
-        <div className="flex items-start gap-4">
+      <Card className="glass p-4 active:scale-[0.98] transition-transform">
+        <div className="flex items-center gap-3">
           {/* Rank Badge */}
-          <div className={`flex-shrink-0 w-10 h-10 rounded-xl flex items-center justify-center font-bold text-white ${
+          <div className={`shrink-0 w-10 h-10 rounded-xl flex items-center justify-center font-bold text-white ${
             rank === 1 ? 'bg-gradient-to-br from-amber-400 to-yellow-500' :
             rank === 2 ? 'bg-gradient-to-br from-slate-300 to-slate-400' :
             rank === 3 ? 'bg-gradient-to-br from-amber-600 to-amber-700' :
             'bg-gradient-to-br from-slate-500 to-slate-600'
           }`}>
-            {RankIcon ? <RankIcon className="h-5 w-5" /> : <span>{rank}</span>}
+            {RankIcon ? <RankIcon className="h-5 w-5" /> : <span className="text-sm">{rank}</span>}
+          </div>
+
+          {/* Avatar */}
+          <div className="shrink-0 w-11 h-11 rounded-xl gradient-primary flex items-center justify-center text-white font-bold text-lg">
+            {fraternity.chapter.charAt(0)}
           </div>
 
           {/* Content */}
-          <div className="flex-1 min-w-0 space-y-3">
-            <div className="flex items-start justify-between gap-3">
-              <div className="min-w-0 flex-1">
-                <h3 className="font-bold text-lg leading-tight truncate">{fraternity.name}</h3>
-                <div className="flex items-center gap-2 mt-1 flex-wrap">
-                  <Badge variant="secondary" className="text-xs">
-                    {fraternity.chapter}
-                  </Badge>
-                  {fraternity.founded_year && (
-                    <span className="text-xs text-muted-foreground flex items-center gap-1">
-                      <Calendar className="h-3 w-3" />
-                      Est. {fraternity.founded_year}
-                    </span>
-                  )}
-                </div>
-              </div>
-
-              <div className="text-right shrink-0">
-                <div className={`font-bold text-foreground ${filter === 'trending' ? 'text-lg' : 'text-2xl'}`}>
-                  {filter === 'trending'
-                    ? getTrendingRankDisplay()
-                    : getDisplayScore() === null 
-                      ? '—' 
-                      : getDisplayScore()?.toFixed(1)}
-                </div>
-                <p className="text-xs text-muted-foreground">{getScoreLabel()}</p>
-                {filter === 'overall' && !hasOverallData && (
-                  <Badge variant="outline" className="text-[10px] mt-1 text-muted-foreground">
-                    Needs more ratings
-                  </Badge>
-                )}
-                {filter === 'reputation' && !hasRepData && (
-                  <Badge variant="outline" className="text-[10px] mt-1 text-muted-foreground">
-                    Needs more ratings
-                  </Badge>
-                )}
-                {filter === 'party' && !hasPartyData && (
-                  <Badge variant="outline" className="text-[10px] mt-1 text-muted-foreground">
-                    Needs more ratings
-                  </Badge>
-                )}
-                {filter === 'party' && hasPartyData && (
-                  <p className="text-[10px] text-muted-foreground/70 mt-0.5">Weighted avg of all parties</p>
-                )}
-                {filter !== 'trending' && <TrendIndicator momentum={trending} />}
-              </div>
-            </div>
-
-            {fraternity.description && (
-              <p className="text-sm text-muted-foreground line-clamp-2">
-                {fraternity.description}
-              </p>
-            )}
-
-            <ScoreBreakdown
-              reputationScore={scores?.repAdj ?? fraternity.reputation_score ?? 5} 
-              partyScore={scores?.partyAdj ?? fraternity.historical_party_score ?? 5}
-              mode={filter === 'party' ? 'party' : filter === 'reputation' ? 'reputation' : 'overall'}
-              hasOverallData={hasOverallData}
-              avgVibe={scores?.avgVibe ?? 5}
-              avgMusic={scores?.avgMusic ?? 5}
-              avgExecution={scores?.avgExecution ?? 5}
-              avgBrotherhood={scores?.avgBrotherhood ?? 5}
-              avgReputation={scores?.avgReputation ?? 5}
-              avgCommunity={scores?.avgCommunity ?? 5}
-            />
-
-            <div className="flex items-end justify-between pt-2">
-              {/* Activity Counter for Trending Filter - Bottom Left */}
-              {filter === 'trending' ? (
-                <div className="bg-muted/50 rounded-lg px-4 py-3">
-                  <p className="text-sm font-medium text-muted-foreground mb-2">This semester:</p>
-                  <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
-                    <div className="flex items-center gap-2">
-                      <PartyPopper className="h-4 w-4 sm:h-5 sm:w-5 text-primary" />
-                      <div className="flex flex-col">
-                        <span className="font-semibold text-sm sm:text-base">{formatCount(scores?.numPartiesHosted ?? 0)}</span>
-                        <span className="text-muted-foreground text-xs">Parties</span>
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <ThumbsUp className="h-4 w-4 sm:h-5 sm:w-5 text-primary" />
-                      <div className="flex flex-col">
-                        <span className="font-semibold text-sm sm:text-base">{formatCount((scores?.numRepRatings ?? 0) + (scores?.numPartyRatings ?? 0))}</span>
-                        <span className="text-muted-foreground text-xs">Ratings</span>
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-2 col-span-2 sm:col-span-1">
-                      <MessageCircle className="h-4 w-4 sm:h-5 sm:w-5 text-primary" />
-                      <div className="flex flex-col">
-                        <span className="font-semibold text-sm sm:text-base">{formatCount((scores?.numPartyComments ?? 0) + (scores?.numFratComments ?? 0))}</span>
-                        <span className="text-muted-foreground text-xs">Comments</span>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              ) : (
-                <Badge 
-                  variant="outline" 
-                  className={`${
-                    trending > 0.5 ? 'text-emerald-600 border-emerald-200 bg-emerald-50' :
-                    trending < -0.5 ? 'text-red-500 border-red-200 bg-red-50' :
-                    'text-muted-foreground'
-                  }`}
-                >
-                  {trending >= 0 ? '+' : ''}{trending.toFixed(2)} trending
-                </Badge>
-              )}
-              
-              <Button 
-                size="default" 
-                className="gradient-primary text-white min-h-[44px]"
-                onClick={handleRateClick}
-              >
-                <Star className="h-4 w-4 mr-1" />
-                Rate
-              </Button>
+          <div className="flex-1 min-w-0">
+            <h3 className="font-semibold text-base leading-tight truncate">{fraternity.name}</h3>
+            <div className="flex items-center gap-2 mt-0.5">
+              <span className="text-sm text-muted-foreground truncate">{fraternity.chapter}</span>
+              {filter !== 'trending' && <TrendIndicator momentum={trending} compact />}
             </div>
           </div>
+
+          {/* Score */}
+          <div className="text-right shrink-0">
+            <div className="font-bold text-xl text-foreground">
+              {filter === 'trending'
+                ? getTrendingRankDisplay()
+                : getDisplayScore() === null 
+                  ? '—' 
+                  : getDisplayScore()?.toFixed(1)}
+            </div>
+            <p className="text-xs text-muted-foreground">{getScoreLabel()}</p>
+          </div>
+
+          {/* Rate Button */}
+          <Button 
+            size="icon"
+            className="shrink-0 h-11 w-11 rounded-xl gradient-primary text-white"
+            onClick={handleRateClick}
+          >
+            <Star className="h-5 w-5" />
+          </Button>
         </div>
+
+        {/* Trending Activity Stats */}
+        {filter === 'trending' && (
+          <div className="mt-3 pt-3 border-t border-slate-200/50">
+            <div className="flex items-center justify-between gap-2">
+              <div className="flex items-center gap-1.5 text-sm">
+                <PartyPopper className="h-4 w-4 text-primary" />
+                <span className="font-medium">{formatCount(scores?.numPartiesHosted ?? 0)}</span>
+                <span className="text-muted-foreground">parties</span>
+              </div>
+              <div className="flex items-center gap-1.5 text-sm">
+                <ThumbsUp className="h-4 w-4 text-primary" />
+                <span className="font-medium">{formatCount((scores?.numRepRatings ?? 0) + (scores?.numPartyRatings ?? 0))}</span>
+                <span className="text-muted-foreground">ratings</span>
+              </div>
+              <div className="flex items-center gap-1.5 text-sm">
+                <MessageCircle className="h-4 w-4 text-primary" />
+                <span className="font-medium">{formatCount((scores?.numPartyComments ?? 0) + (scores?.numFratComments ?? 0))}</span>
+                <span className="text-muted-foreground">comments</span>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Needs More Ratings Badges */}
+        {((filter === 'overall' && !hasOverallData) || 
+          (filter === 'reputation' && !hasRepData) || 
+          (filter === 'party' && !hasPartyData)) && (
+          <div className="mt-2">
+            <Badge variant="outline" className="text-xs text-muted-foreground">
+              Needs more ratings
+            </Badge>
+          </div>
+        )}
       </Card>
     </Link>
   );

@@ -88,125 +88,53 @@ export default function Layout({ children }: LayoutProps) {
 
   return (
     <SidebarProvider>
-      <div className="min-h-screen flex w-full bg-gradient-to-br from-slate-50 to-indigo-50">
-        {/* Desktop Sidebar */}
-        <Sidebar className="hidden md:flex border-r bg-white/80 backdrop-blur-sm">
-          <SidebarHeader className="p-4 border-b border-slate-200/50">
-            <Link to="/" className="flex items-center gap-2">
-              <img src={touseLogo} alt="Touse" className="h-10 w-10 rounded-xl object-cover" />
-              <span className="text-xl font-bold text-foreground">Touse</span>
-            </Link>
-          </SidebarHeader>
+      <div className="min-h-screen flex flex-col w-full bg-gradient-to-br from-slate-50 to-indigo-50">
+        {/* Mobile Header - iPhone optimized */}
+        <header className="sticky top-0 z-40 bg-white/90 backdrop-blur-md border-b border-slate-200/50 px-4 py-3 pt-safe flex items-center justify-between">
+          <Link to="/" className="flex items-center gap-2">
+            <img src={touseLogo} alt="Touse" className="h-9 w-9 rounded-xl object-cover" />
+            <span className="text-lg font-bold text-foreground">Touse</span>
+          </Link>
+          {loading ? (
+            <Skeleton className="h-9 w-9 rounded-full" />
+          ) : user ? (
+            <Avatar className="h-9 w-9">
+              <AvatarImage src={user.avatar_url} />
+              <AvatarFallback className="bg-gradient-to-br from-indigo-500 to-purple-500 text-white text-sm">
+                {user.name?.charAt(0) || 'U'}
+              </AvatarFallback>
+            </Avatar>
+          ) : (
+            <Button onClick={handleLogin} size="sm" className="gradient-primary text-white h-9 px-3 text-sm">
+              Sign in
+            </Button>
+          )}
+        </header>
 
-          <SidebarContent className="p-2">
-            <SidebarGroup>
-              <SidebarGroupContent>
-                <SidebarMenu>
-                  {navItems.map((item) => (
-                    <SidebarMenuItem key={item.title}>
-                      <SidebarMenuButton asChild>
-                        <Link
-                          to={item.url}
-                          className={`flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors ${
-                            isActive(item.url)
-                              ? 'bg-primary/10 text-primary font-medium'
-                              : 'hover:bg-muted/50 text-muted-foreground'
-                          }`}
-                        >
-                          <item.icon className="h-5 w-5" />
-                          <span>{item.title}</span>
-                        </Link>
-                      </SidebarMenuButton>
-                    </SidebarMenuItem>
-                  ))}
-                </SidebarMenu>
-              </SidebarGroupContent>
-            </SidebarGroup>
+        {/* Main Content - iPhone optimized with generous spacing */}
+        <main className="flex-1 px-4 py-5 pb-28 overflow-y-auto">
+          {children}
+        </main>
 
-            {/* Create Party CTA */}
-            <Card className="mx-2 mt-4 p-4 bg-primary text-primary-foreground">
-              <h3 className="font-semibold mb-2">Host a Party</h3>
-              <p className="text-sm opacity-80 mb-3">Create an event for your fraternity</p>
-              <Button asChild variant="secondary" className="w-full bg-white/10 hover:bg-white/20 text-white border-0">
-                <Link to={createPageUrl('CreateParty')}>
-                  <Plus className="h-4 w-4 mr-2" />
-                  Create Party
-                </Link>
-              </Button>
-            </Card>
-          </SidebarContent>
-
-          <SidebarFooter className="p-4 border-t border-slate-200/50">
-            {loading ? (
-              <div className="flex items-center gap-3">
-                <Skeleton className="h-10 w-10 rounded-full" />
-                <div className="flex-1">
-                  <Skeleton className="h-4 w-24 mb-1" />
-                  <Skeleton className="h-3 w-32" />
-                </div>
-              </div>
-            ) : user ? (
-              <div className="flex items-center gap-3">
-                <Avatar>
-                  <AvatarImage src={user.avatar_url} />
-                  <AvatarFallback className="bg-gradient-to-br from-indigo-500 to-purple-500 text-white">
-                    {user.name?.charAt(0) || 'U'}
-                  </AvatarFallback>
-                </Avatar>
-                <div className="flex-1 min-w-0">
-                  <p className="font-medium truncate">{user.name}</p>
-                  <p className="text-xs text-muted-foreground truncate">{user.email}</p>
-                </div>
-                <Button variant="ghost" size="icon" onClick={handleLogout}>
-                  <LogOut className="h-4 w-4" />
-                </Button>
-              </div>
-            ) : (
-              <Button onClick={handleLogin} className="w-full gradient-primary text-white">
-                <LogIn className="h-4 w-4 mr-2" />
-                Sign in with Google
-              </Button>
-            )}
-          </SidebarFooter>
-        </Sidebar>
-
-        <div className="flex-1 flex flex-col min-w-0">
-          {/* Mobile Header */}
-          <header className="md:hidden sticky top-0 z-40 bg-white/80 backdrop-blur-sm border-b border-slate-200/50 px-4 py-3 flex items-center justify-between">
-            <Link to="/" className="flex items-center gap-2">
-              <img src={touseLogo} alt="Touse" className="h-8 w-8 rounded-lg object-cover" />
-              <span className="text-lg font-bold text-foreground">Touse</span>
-            </Link>
-            <SidebarTrigger className="md:hidden">
-              <Menu className="h-5 w-5" />
-            </SidebarTrigger>
-          </header>
-
-          {/* Main Content */}
-          <main className="flex-1 p-4 pb-32 md:pb-4 overflow-y-auto">
-            {children}
-          </main>
-
-          {/* Mobile Bottom Nav */}
-          <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-white/95 backdrop-blur-sm border-t border-slate-200/50 px-2 py-2 pb-safe z-40">
-            <div className="grid grid-cols-3 gap-1">
-              {navItems.map((item) => (
-                <Link
-                  key={item.title}
-                  to={item.url}
-                  className={`flex flex-col items-center justify-center gap-1 py-3 min-h-[44px] rounded-lg transition-colors ${
-                    isActive(item.url)
-                      ? 'text-primary bg-primary/10'
-                      : 'text-muted-foreground'
-                  }`}
-                >
-                  <item.icon className="h-5 w-5" />
-                  <span className="text-xs font-medium">{item.title}</span>
-                </Link>
-              ))}
-            </div>
-          </nav>
-        </div>
+        {/* Mobile Bottom Nav - iPhone safe area */}
+        <nav className="fixed bottom-0 left-0 right-0 bg-white/95 backdrop-blur-md border-t border-slate-200/50 z-40" style={{ paddingBottom: 'max(env(safe-area-inset-bottom), 8px)' }}>
+          <div className="grid grid-cols-3 gap-1 px-2 pt-2">
+            {navItems.map((item) => (
+              <Link
+                key={item.title}
+                to={item.url}
+                className={`flex flex-col items-center justify-center gap-1 py-2 min-h-[52px] rounded-xl transition-all active:scale-95 ${
+                  isActive(item.url)
+                    ? 'text-primary bg-primary/10'
+                    : 'text-muted-foreground active:bg-muted/50'
+                }`}
+              >
+                <item.icon className="h-6 w-6" />
+                <span className="text-xs font-medium">{item.title}</span>
+              </Link>
+            ))}
+          </div>
+        </nav>
       </div>
 
       {/* Tutorial Overlay */}
