@@ -24,7 +24,6 @@ interface RateActionSheetProps {
   onRateFrat: (fraternity: Fraternity) => void;
   onRateParty: (party: Party) => void;
   fraternities: Fraternity[];
-  initialAction?: 'rate' | 'parties';
 }
 
 export default function RateActionSheet({ 
@@ -32,8 +31,7 @@ export default function RateActionSheet({
   onClose, 
   onRateFrat, 
   onRateParty,
-  fraternities,
-  initialAction
+  fraternities
 }: RateActionSheetProps) {
   const [step, setStep] = useState<Step>('choose-action');
   const [actionType, setActionType] = useState<ActionType | null>(null);
@@ -41,19 +39,15 @@ export default function RateActionSheet({
   const [parties, setParties] = useState<Party[]>([]);
   const [loadingParties, setLoadingParties] = useState(false);
 
-  // Reset state when sheet closes, or set initial action when opening
+  // Reset state when sheet closes
   useEffect(() => {
     if (!isOpen) {
       setStep('choose-action');
       setActionType(null);
       setSelectedFrat(null);
       setParties([]);
-    } else if (initialAction) {
-      // Skip to frat selection with the specified action
-      setActionType(initialAction);
-      setStep('choose-frat');
     }
-  }, [isOpen, initialAction]);
+  }, [isOpen]);
 
   const handleActionSelect = (action: ActionType) => {
     setActionType(action);
