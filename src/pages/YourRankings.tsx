@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { ListOrdered, Trophy, PartyPopper, LogIn, ChevronRight } from 'lucide-react';
+import { ListOrdered, Trophy, PartyPopper, LogIn, ChevronRight, Lock, Star } from 'lucide-react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -9,6 +9,7 @@ import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { base44, type Fraternity, type Party } from '@/api/base44Client';
 import { createPageUrl, getScoreBgColor, clamp } from '@/utils';
+import { Progress } from '@/components/ui/progress';
 import { ensureAuthed } from '@/utils/auth';
 import YourListsIntro from '@/components/onboarding/YourListsIntro';
 import RateFratSheet from '@/components/leaderboard/RateFratSheet';
@@ -319,7 +320,58 @@ export default function YourRankings() {
 
         {/* Fraternities Tab */}
         <TabsContent value="frats" className="mt-4 space-y-3">
-          {rankedFrats.length === 0 ? (
+          {ratedFratCount < allFraternities.length ? (
+            // Locked state - show blurred preview with overlay
+            <div className="relative">
+              {/* Blurred background items */}
+              <div className="blur-sm opacity-50 pointer-events-none space-y-3">
+                {[1, 2, 3].map((i) => (
+                  <Card key={i} className="glass p-4">
+                    <div className="flex items-center gap-4">
+                      <div className="w-8 text-center">
+                        <span className="text-lg font-bold text-muted-foreground">{i}.</span>
+                      </div>
+                      <div className="h-12 w-12 rounded-full bg-muted" />
+                      <div className="flex-1 space-y-2">
+                        <div className="h-4 w-32 bg-muted rounded" />
+                        <div className="h-3 w-20 bg-muted rounded" />
+                      </div>
+                      <div className="h-7 w-12 bg-muted rounded-full" />
+                    </div>
+                  </Card>
+                ))}
+              </div>
+
+              {/* Overlay */}
+              <div className="absolute inset-0 flex items-center justify-center">
+                <Card className="glass p-6 text-center space-y-4 max-w-xs mx-4 shadow-xl">
+                  <div className="w-16 h-16 mx-auto rounded-full bg-amber-500/10 flex items-center justify-center">
+                    <Lock className="h-8 w-8 text-amber-500" />
+                  </div>
+                  <div className="space-y-2">
+                    <h3 className="font-bold text-lg">Unlock Your Frat List</h3>
+                    <p className="text-sm text-muted-foreground">
+                      Rate all {allFraternities.length} fraternities to see your personal rankings
+                    </p>
+                  </div>
+                  <div className="space-y-2">
+                    <div className="flex justify-between text-xs text-muted-foreground">
+                      <span>Progress</span>
+                      <span>{ratedFratCount} / {allFraternities.length}</span>
+                    </div>
+                    <Progress value={(ratedFratCount / allFraternities.length) * 100} className="h-2" />
+                  </div>
+                  <Button 
+                    onClick={() => setShowIntro(true)} 
+                    className="w-full bg-amber-500 hover:bg-amber-600 text-white"
+                  >
+                    <Star className="h-4 w-4 mr-2" />
+                    Rate Fraternities
+                  </Button>
+                </Card>
+              </div>
+            </div>
+          ) : rankedFrats.length === 0 ? (
             <Card className="glass p-8 text-center space-y-4">
               <Trophy className="h-12 w-12 mx-auto text-muted-foreground/50" />
               <div className="space-y-1">
@@ -378,7 +430,57 @@ export default function YourRankings() {
 
         {/* Parties Tab */}
         <TabsContent value="parties" className="mt-4 space-y-3">
-          {rankedParties.length === 0 ? (
+          {ratedPartyCount < 3 ? (
+            // Locked state - show blurred preview with overlay
+            <div className="relative">
+              {/* Blurred background items */}
+              <div className="blur-sm opacity-50 pointer-events-none space-y-3">
+                {[1, 2, 3].map((i) => (
+                  <Card key={i} className="glass p-4">
+                    <div className="flex items-center gap-4">
+                      <div className="w-8 text-center">
+                        <span className="text-lg font-bold text-muted-foreground">{i}.</span>
+                      </div>
+                      <div className="h-12 w-12 rounded-xl bg-muted" />
+                      <div className="flex-1 space-y-2">
+                        <div className="h-4 w-32 bg-muted rounded" />
+                        <div className="h-3 w-20 bg-muted rounded" />
+                      </div>
+                      <div className="h-7 w-12 bg-muted rounded-full" />
+                    </div>
+                  </Card>
+                ))}
+              </div>
+
+              {/* Overlay */}
+              <div className="absolute inset-0 flex items-center justify-center">
+                <Card className="glass p-6 text-center space-y-4 max-w-xs mx-4 shadow-xl">
+                  <div className="w-16 h-16 mx-auto rounded-full bg-pink-500/10 flex items-center justify-center">
+                    <Lock className="h-8 w-8 text-pink-500" />
+                  </div>
+                  <div className="space-y-2">
+                    <h3 className="font-bold text-lg">Unlock Your Party List</h3>
+                    <p className="text-sm text-muted-foreground">
+                      Rate at least 3 parties to see your personal rankings
+                    </p>
+                  </div>
+                  <div className="space-y-2">
+                    <div className="flex justify-between text-xs text-muted-foreground">
+                      <span>Progress</span>
+                      <span>{ratedPartyCount} / 3</span>
+                    </div>
+                    <Progress value={(ratedPartyCount / 3) * 100} className="h-2" />
+                  </div>
+                  <Link to="/Parties">
+                    <Button className="w-full bg-pink-500 hover:bg-pink-600 text-white">
+                      <Star className="h-4 w-4 mr-2" />
+                      Rate Parties
+                    </Button>
+                  </Link>
+                </Card>
+              </div>
+            </div>
+          ) : rankedParties.length === 0 ? (
             <Card className="glass p-8 text-center space-y-4">
               <PartyPopper className="h-12 w-12 mx-auto text-muted-foreground/50" />
               <div className="space-y-1">
