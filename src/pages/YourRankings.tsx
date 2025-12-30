@@ -39,6 +39,8 @@ export default function YourRankings() {
   const [allParties, setAllParties] = useState<Party[]>([]);
   const [ratedFratCount, setRatedFratCount] = useState(0);
   const [ratedPartyCount, setRatedPartyCount] = useState(0);
+  const [ratedFratIds, setRatedFratIds] = useState<string[]>([]);
+  const [ratedPartyIds, setRatedPartyIds] = useState<string[]>([]);
   
   // Intro state
   const [showIntro, setShowIntro] = useState(() => {
@@ -75,6 +77,8 @@ export default function YourRankings() {
 
         setRatedFratCount(repRatings.length);
         setRatedPartyCount(partyRatings.length);
+        setRatedFratIds(repRatings.map(r => r.fraternity_id).filter(Boolean) as string[]);
+        setRatedPartyIds(partyRatings.map(r => r.party_id).filter(Boolean) as string[]);
 
         // Build frat rankings from user's reputation ratings
         const fratMap = new Map(fraternities.map(f => [f.id, f]));
@@ -442,6 +446,8 @@ export default function YourRankings() {
           ratedFratCount={ratedFratCount}
           ratedPartyCount={ratedPartyCount}
           totalFratCount={allFraternities.length}
+          ratedFratIds={ratedFratIds}
+          ratedPartyIds={ratedPartyIds}
         />
       )}
 

@@ -30,6 +30,8 @@ interface YourListsIntroProps {
   ratedFratCount: number;
   ratedPartyCount: number;
   totalFratCount: number;
+  ratedFratIds?: string[];
+  ratedPartyIds?: string[];
 }
 
 type IntroStep = 'main' | 'frats' | 'parties' | 'frat-list' | 'party-list';
@@ -43,6 +45,8 @@ export default function YourListsIntro({
   ratedFratCount,
   ratedPartyCount,
   totalFratCount,
+  ratedFratIds = [],
+  ratedPartyIds = [],
 }: YourListsIntroProps) {
   const [neverShowAgain, setNeverShowAgain] = useState(false);
   const [step, setStep] = useState<IntroStep>('main');
@@ -294,27 +298,40 @@ export default function YourListsIntro({
             {/* Fraternity List */}
             <ScrollArea className="h-[320px] -mx-2 px-2">
               <div className="space-y-2">
-                {fraternities.map((frat) => (
-                  <button
-                    key={frat.id}
-                    onClick={() => handleSelectFrat(frat)}
-                    className="w-full flex items-center gap-3 p-3 rounded-xl bg-muted/50 hover:bg-muted active:scale-[0.98] transition-all text-left"
-                  >
-                    <Avatar className="h-12 w-12 rounded-xl">
-                      <AvatarImage src={frat.logo_url} alt={frat.name} />
-                      <AvatarFallback className="rounded-xl bg-primary/10 text-primary font-bold">
-                        {frat.chapter?.substring(0, 2) || frat.name.substring(0, 2)}
-                      </AvatarFallback>
-                    </Avatar>
-                    <div className="flex-1 min-w-0">
-                      <p className="font-semibold truncate">{frat.name}</p>
-                      {frat.chapter && (
-                        <p className="text-sm text-muted-foreground">{frat.chapter}</p>
+                {fraternities.map((frat) => {
+                  const isRated = ratedFratIds.includes(frat.id);
+                  return (
+                    <button
+                      key={frat.id}
+                      onClick={() => handleSelectFrat(frat)}
+                      className={`w-full flex items-center gap-3 p-3 rounded-xl active:scale-[0.98] transition-all text-left ${
+                        isRated 
+                          ? 'bg-green-500/10 border border-green-500/30 hover:bg-green-500/20' 
+                          : 'bg-muted/50 hover:bg-muted'
+                      }`}
+                    >
+                      <Avatar className="h-12 w-12 rounded-xl">
+                        <AvatarImage src={frat.logo_url} alt={frat.name} />
+                        <AvatarFallback className={`rounded-xl font-bold ${
+                          isRated ? 'bg-green-500/20 text-green-600' : 'bg-primary/10 text-primary'
+                        }`}>
+                          {frat.chapter?.substring(0, 2) || frat.name.substring(0, 2)}
+                        </AvatarFallback>
+                      </Avatar>
+                      <div className="flex-1 min-w-0">
+                        <p className="font-semibold truncate">{frat.name}</p>
+                        {frat.chapter && (
+                          <p className="text-sm text-muted-foreground">{frat.chapter}</p>
+                        )}
+                      </div>
+                      {isRated ? (
+                        <CheckCircle2 className="h-5 w-5 text-green-500" />
+                      ) : (
+                        <Star className="h-5 w-5 text-amber-500" />
                       )}
-                    </div>
-                    <Star className="h-5 w-5 text-amber-500" />
-                  </button>
-                ))}
+                    </button>
+                  );
+                })}
               </div>
             </ScrollArea>
           </div>
