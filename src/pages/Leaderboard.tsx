@@ -20,9 +20,10 @@ import RateActionSheet from '@/components/leaderboard/RateActionSheet';
 import LeaderboardIntro from '@/components/onboarding/LeaderboardIntro';
 import PartyRatingForm from '@/components/rate/PartyRatingForm';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Badge } from '@/components/ui/badge';
 import { clamp } from '@/utils';
 import { ensureAuthed } from '@/utils/auth';
-import { Star, PartyPopper, X, Trophy } from 'lucide-react';
+import { Star, PartyPopper, X, Trophy, Crown, Sparkles, TrendingUp, Flame, Users } from 'lucide-react';
 
 export default function Leaderboard() {
   const navigate = useNavigate();
@@ -257,16 +258,17 @@ export default function Leaderboard() {
     await loadFraternities();
   };
 
+  // Stats
+  const totalRatings = allFraternities.reduce((sum, f) => sum + (f.computedScores?.numRepRatings ?? 0) + (f.computedScores?.numPartyRatings ?? 0), 0);
+  const totalParties = allFraternities.reduce((sum, f) => sum + (f.computedScores?.numPartiesHosted ?? 0), 0);
+
   if (loading) {
     return (
       <div className="space-y-5">
-        <div className="flex items-center gap-3 mb-2">
-          <Skeleton className="h-10 w-10 rounded-xl" />
-          <Skeleton className="h-8 w-40" />
-        </div>
+        <div className="h-40 rounded-2xl bg-gradient-to-r from-amber-500/20 to-orange-500/20 animate-pulse" />
         <div className="grid grid-cols-2 gap-3">
           {[1, 2, 3, 4].map((i) => (
-            <Skeleton key={i} className="h-44 rounded-2xl" />
+            <div key={i} className="h-44 rounded-2xl bg-muted/50 animate-pulse" />
           ))}
         </div>
       </div>
@@ -275,14 +277,39 @@ export default function Leaderboard() {
 
   return (
     <div className="space-y-4 pb-28">
-      {/* Header */}
-      <div className="flex items-center gap-3 mb-2">
-        <div className="w-11 h-11 rounded-2xl bg-gradient-to-br from-amber-500 to-yellow-500 flex items-center justify-center shadow-lg">
-          <Trophy className="h-5 w-5 text-white" />
-        </div>
-        <div>
-          <h1 className="text-2xl font-bold text-slate-800">Leaderboard</h1>
-          <p className="text-sm text-slate-500">Who's on top?</p>
+      {/* Hero Header */}
+      <div className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-amber-500 via-orange-500 to-red-500 p-6 text-white">
+        <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAwIiBoZWlnaHQ9IjIwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZGVmcz48cGF0dGVybiBpZD0iZ3JpZCIgd2lkdGg9IjQwIiBoZWlnaHQ9IjQwIiBwYXR0ZXJuVW5pdHM9InVzZXJTcGFjZU9uVXNlIj48cGF0aCBkPSJNIDQwIDAgTCAwIDAgMCA0MCIgZmlsbD0ibm9uZSIgc3Ryb2tlPSJ3aGl0ZSIgc3Ryb2tlLW9wYWNpdHk9IjAuMSIgc3Ryb2tlLXdpZHRoPSIxIi8+PC9wYXR0ZXJuPjwvZGVmcz48cmVjdCB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIiBmaWxsPSJ1cmwoI2dyaWQpIi8+PC9zdmc+')] opacity-30" />
+        
+        <div className="relative">
+          <div className="flex items-center gap-3 mb-4">
+            <div className="w-14 h-14 rounded-2xl bg-white/20 backdrop-blur-sm flex items-center justify-center shadow-lg">
+              <Crown className="h-7 w-7" />
+            </div>
+            <div>
+              <h1 className="text-2xl font-bold">Leaderboard</h1>
+              <p className="text-white/80 text-sm">Who's on top?</p>
+            </div>
+          </div>
+          
+          {/* Quick Stats */}
+          <div className="grid grid-cols-3 gap-3">
+            <div className="bg-white/10 backdrop-blur-sm rounded-xl p-3 text-center">
+              <Users className="h-5 w-5 mx-auto mb-1 opacity-80" />
+              <p className="text-xl font-bold">{allFraternities.length}</p>
+              <p className="text-[10px] text-white/70 uppercase tracking-wider">Fraternities</p>
+            </div>
+            <div className="bg-white/10 backdrop-blur-sm rounded-xl p-3 text-center">
+              <Star className="h-5 w-5 mx-auto mb-1 opacity-80" />
+              <p className="text-xl font-bold">{totalRatings}</p>
+              <p className="text-[10px] text-white/70 uppercase tracking-wider">Ratings</p>
+            </div>
+            <div className="bg-white/10 backdrop-blur-sm rounded-xl p-3 text-center">
+              <PartyPopper className="h-5 w-5 mx-auto mb-1 opacity-80" />
+              <p className="text-xl font-bold">{totalParties}</p>
+              <p className="text-[10px] text-white/70 uppercase tracking-wider">Parties</p>
+            </div>
+          </div>
         </div>
       </div>
 
@@ -329,14 +356,14 @@ export default function Leaderboard() {
             <>
               <button
                 onClick={() => { setShowRateAction('parties'); setRateExpanded(false); }}
-                className="flex items-center gap-1.5 px-4 py-2.5 rounded-full bg-primary text-white shadow-lg active:scale-95 transition-all animate-scale-in"
+                className="flex items-center gap-1.5 px-4 py-2.5 rounded-full bg-gradient-to-r from-pink-500 to-rose-500 text-white shadow-lg shadow-pink-500/30 active:scale-95 transition-all animate-scale-in"
               >
                 <PartyPopper className="h-4 w-4" />
                 <span className="font-medium text-sm">Party</span>
               </button>
               <button
                 onClick={() => { setShowRateAction('rate'); setRateExpanded(false); }}
-                className="flex items-center gap-1.5 px-4 py-2.5 rounded-full bg-amber-500 text-white shadow-lg active:scale-95 transition-all animate-scale-in"
+                className="flex items-center gap-1.5 px-4 py-2.5 rounded-full bg-gradient-to-r from-amber-500 to-orange-500 text-white shadow-lg shadow-amber-500/30 active:scale-95 transition-all animate-scale-in"
               >
                 <Star className="h-4 w-4" />
                 <span className="font-medium text-sm">Frat</span>
@@ -351,10 +378,10 @@ export default function Leaderboard() {
           ) : (
             <button
               onClick={() => setRateExpanded(true)}
-              className="flex items-center gap-2 px-5 py-3 rounded-full bg-amber-500 text-white shadow-lg active:scale-95 transition-transform"
+              className="flex items-center gap-2 px-5 py-3 rounded-full bg-gradient-to-r from-amber-500 to-orange-500 text-white shadow-lg shadow-amber-500/30 active:scale-95 transition-transform hover:shadow-xl"
             >
-              <Star className="h-5 w-5" />
-              <span className="font-semibold">Rate</span>
+              <Sparkles className="h-5 w-5" />
+              <span className="font-bold">Rate</span>
             </button>
           )}
         </div>
