@@ -832,47 +832,6 @@ export default function Activity() {
 
   return (
     <div className="space-y-4 pb-8">
-      {/* Hero Header */}
-      <div className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-500 p-6 text-white">
-        <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAwIiBoZWlnaHQ9IjIwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZGVmcz48cGF0dGVybiBpZD0iZ3JpZCIgd2lkdGg9IjQwIiBoZWlnaHQ9IjQwIiBwYXR0ZXJuVW5pdHM9InVzZXJTcGFjZU9uVXNlIj48cGF0aCBkPSJNIDQwIDAgTCAwIDAgMCA0MCIgZmlsbD0ibm9uZSIgc3Ryb2tlPSJ3aGl0ZSIgc3Ryb2tlLW9wYWNpdHk9IjAuMSIgc3Ryb2tlLXdpZHRoPSIxIi8+PC9wYXR0ZXJuPjwvZGVmcz48cmVjdCB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIiBmaWxsPSJ1cmwoI2dyaWQpIi8+PC9zdmc+')] opacity-30" />
-        
-        <div className="relative">
-          <div className="flex items-center gap-3 mb-4">
-            <div className="w-12 h-12 rounded-xl bg-white/20 backdrop-blur-sm flex items-center justify-center">
-              <Sparkles className="h-6 w-6" />
-            </div>
-            <div>
-              <h1 className="text-2xl font-bold">Activity Feed</h1>
-              <p className="text-white/70 text-sm">What's happening on campus</p>
-            </div>
-          </div>
-          
-          {/* Quick Stats */}
-          <div className="grid grid-cols-3 gap-3">
-            <div className="bg-white/10 backdrop-blur-sm rounded-xl p-3 text-center">
-              <div className="flex items-center justify-center gap-1 mb-1">
-                <MessagesSquare className="h-4 w-4" />
-              </div>
-              <p className="text-xl font-bold">{totalMessages}</p>
-              <p className="text-[10px] text-white/70 uppercase tracking-wider">Messages</p>
-            </div>
-            <div className="bg-white/10 backdrop-blur-sm rounded-xl p-3 text-center">
-              <div className="flex items-center justify-center gap-1 mb-1">
-                <PartyPopper className="h-4 w-4" />
-              </div>
-              <p className="text-xl font-bold">{partyRatingsCount}</p>
-              <p className="text-[10px] text-white/70 uppercase tracking-wider">Party Ratings</p>
-            </div>
-            <div className="bg-white/10 backdrop-blur-sm rounded-xl p-3 text-center">
-              <div className="flex items-center justify-center gap-1 mb-1">
-                <Trophy className="h-4 w-4" />
-              </div>
-              <p className="text-xl font-bold">{fratRatingsCount}</p>
-              <p className="text-[10px] text-white/70 uppercase tracking-wider">Frat Ratings</p>
-            </div>
-          </div>
-        </div>
-      </div>
 
       {/* Party Countdown Section */}
       {nextParty && countdownTime && (
