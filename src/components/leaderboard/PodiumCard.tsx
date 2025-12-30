@@ -72,79 +72,81 @@ export default function PodiumCard({ category, topThree }: PodiumCardProps) {
   return (
     <Link to={createPageUrl(`Rankings?category=${category}`)}>
       <Card 
-        className="relative overflow-hidden p-4 pb-3 bg-white/80 backdrop-blur-sm border-white/50 shadow-lg shadow-slate-200/50 active:scale-[0.97] transition-all duration-200 hover:shadow-xl group"
+        className="relative overflow-hidden p-3 bg-white/80 backdrop-blur-sm border-white/50 shadow-lg shadow-slate-200/50 active:scale-[0.97] transition-all duration-200 hover:shadow-xl group h-[180px]"
       >
         {/* Subtle gradient overlay */}
         <div className="absolute inset-0 bg-gradient-to-br from-violet-50/50 via-white to-rose-50/30 pointer-events-none" />
         
         {/* Header */}
-        <div className="relative flex items-center justify-between mb-4">
-          <div className="flex items-center gap-2.5">
-            <div className={`w-9 h-9 rounded-xl bg-gradient-to-br ${config.accentColor} flex items-center justify-center shadow-md`}>
-              <Icon className="h-4.5 w-4.5 text-white" />
+        <div className="relative flex items-center justify-between mb-2">
+          <div className="flex items-center gap-2">
+            <div className={`w-8 h-8 rounded-xl bg-gradient-to-br ${config.accentColor} flex items-center justify-center shadow-md flex-shrink-0`}>
+              <Icon className="h-4 w-4 text-white" />
             </div>
-            <div>
-              <h3 className="font-bold text-sm text-slate-800">{config.title}</h3>
-              <p className="text-[11px] text-slate-500">{config.subtitle}</p>
+            <div className="min-w-0">
+              <h3 className="font-semibold text-[14px] text-slate-800 truncate">{config.title}</h3>
+              <p className="text-[11px] text-slate-500 truncate">{config.subtitle}</p>
             </div>
           </div>
-          <ChevronRight className="h-5 w-5 text-slate-400 group-hover:translate-x-1 transition-transform" />
+          <ChevronRight className="h-4 w-4 text-slate-400 group-hover:translate-x-1 transition-transform flex-shrink-0" />
         </div>
 
-        {/* Podium Visualization */}
-        <div className="relative flex items-end justify-center gap-2 h-28">
-          {/* 2nd Place */}
-          <div className="flex flex-col items-center w-[72px]">
-            <div className={`${PODIUM_COLORS.silver.badge} w-5 h-5 rounded-full flex items-center justify-center mb-1 shadow-sm`}>
-              <Trophy className="h-2.5 w-2.5 text-white" />
+        {/* Podium Visualization - Fixed height container */}
+        <div className="relative h-[120px] flex items-end justify-center">
+          {/* 3-column grid for podium */}
+          <div className="grid grid-cols-3 gap-1.5 w-full max-w-[180px]">
+            {/* 2nd Place */}
+            <div className="flex flex-col items-center">
+              <div className={`${PODIUM_COLORS.silver.badge} w-3.5 h-3.5 rounded-full flex items-center justify-center mb-0.5`}>
+                <Trophy className="h-2 w-2 text-white" />
+              </div>
+              <Avatar className={`h-9 w-9 ring-2 ${PODIUM_COLORS.silver.ring} bg-white flex-shrink-0`}>
+                <AvatarImage src={second.logo_url} />
+                <AvatarFallback className="bg-white text-slate-700 font-bold text-[11px]">
+                  {second.chapter?.substring(0, 2) || second.name.substring(0, 2)}
+                </AvatarFallback>
+              </Avatar>
+              <div className={`w-full h-11 ${PODIUM_COLORS.silver.bg} rounded-t-xl mt-1.5 flex items-center justify-center`}>
+                <span className="text-white font-bold text-sm">2</span>
+              </div>
             </div>
-            <Avatar className={`h-10 w-10 ring-2 ${PODIUM_COLORS.silver.ring} shadow-md bg-white`}>
-              <AvatarImage src={second.logo_url} />
-              <AvatarFallback className="bg-white text-slate-700 font-bold text-xs">
-                {second.chapter?.substring(0, 2) || second.name.substring(0, 2)}
-              </AvatarFallback>
-            </Avatar>
-            <div className={`w-full h-12 ${PODIUM_COLORS.silver.bg} rounded-t-lg mt-1.5 flex items-center justify-center shadow-inner`}>
-              <span className="text-white font-bold text-lg">2</span>
-            </div>
-          </div>
 
-          {/* 1st Place */}
-          <div className="flex flex-col items-center w-[80px] -mt-2">
-            <div className={`${PODIUM_COLORS.gold.badge} w-6 h-6 rounded-full flex items-center justify-center mb-1 shadow-md animate-pulse`}>
-              <Crown className="h-3.5 w-3.5 text-white" />
+            {/* 1st Place */}
+            <div className="flex flex-col items-center">
+              <div className={`${PODIUM_COLORS.gold.badge} w-4 h-4 rounded-full flex items-center justify-center mb-0.5`}>
+                <Crown className="h-2.5 w-2.5 text-white" />
+              </div>
+              <Avatar className={`h-9 w-9 ring-2 ${PODIUM_COLORS.gold.ring} bg-white flex-shrink-0`}>
+                <AvatarImage src={first.logo_url} />
+                <AvatarFallback className="bg-white text-amber-600 font-bold text-[11px]">
+                  {first.chapter?.substring(0, 2) || first.name.substring(0, 2)}
+                </AvatarFallback>
+              </Avatar>
+              <div className={`w-full h-14 ${PODIUM_COLORS.gold.bg} rounded-t-xl mt-1.5 flex items-center justify-center`}>
+                <span className="text-white font-bold text-base">1</span>
+              </div>
             </div>
-            <Avatar className={`h-12 w-12 ring-2 ${PODIUM_COLORS.gold.ring} shadow-lg bg-white`}>
-              <AvatarImage src={first.logo_url} />
-              <AvatarFallback className="bg-white text-amber-600 font-bold text-sm">
-                {first.chapter?.substring(0, 2) || first.name.substring(0, 2)}
-              </AvatarFallback>
-            </Avatar>
-            <div className={`w-full h-16 ${PODIUM_COLORS.gold.bg} rounded-t-lg mt-1.5 flex items-center justify-center shadow-inner`}>
-              <span className="text-white font-bold text-xl">1</span>
-            </div>
-          </div>
 
-          {/* 3rd Place */}
-          <div className="flex flex-col items-center w-[72px]">
-            <div className={`${PODIUM_COLORS.bronze.badge} w-5 h-5 rounded-full flex items-center justify-center mb-1 shadow-sm`}>
-              <Medal className="h-2.5 w-2.5 text-white" />
-            </div>
-            <Avatar className={`h-9 w-9 ring-2 ${PODIUM_COLORS.bronze.ring} shadow-md bg-white`}>
-              <AvatarImage src={third.logo_url} />
-              <AvatarFallback className="bg-white text-amber-700 font-bold text-[10px]">
-                {third.chapter?.substring(0, 2) || third.name.substring(0, 2)}
-              </AvatarFallback>
-            </Avatar>
-            <div className={`w-full h-10 ${PODIUM_COLORS.bronze.bg} rounded-t-lg mt-1.5 flex items-center justify-center shadow-inner`}>
-              <span className="text-white font-bold text-base">3</span>
+            {/* 3rd Place */}
+            <div className="flex flex-col items-center">
+              <div className={`${PODIUM_COLORS.bronze.badge} w-3.5 h-3.5 rounded-full flex items-center justify-center mb-0.5`}>
+                <Medal className="h-2 w-2 text-white" />
+              </div>
+              <Avatar className={`h-9 w-9 ring-2 ${PODIUM_COLORS.bronze.ring} bg-white flex-shrink-0`}>
+                <AvatarImage src={third.logo_url} />
+                <AvatarFallback className="bg-white text-amber-700 font-bold text-[11px]">
+                  {third.chapter?.substring(0, 2) || third.name.substring(0, 2)}
+                </AvatarFallback>
+              </Avatar>
+              <div className={`w-full h-10 ${PODIUM_COLORS.bronze.bg} rounded-t-xl mt-1.5 flex items-center justify-center`}>
+                <span className="text-white font-bold text-sm">3</span>
+              </div>
             </div>
           </div>
         </div>
 
         {/* Decorative elements */}
-        <div className="absolute -top-8 -right-8 w-24 h-24 bg-gradient-to-br from-amber-200/30 to-yellow-200/20 rounded-full blur-2xl pointer-events-none" />
-        <div className="absolute -bottom-6 -left-6 w-20 h-20 bg-gradient-to-br from-violet-200/20 to-purple-200/10 rounded-full blur-xl pointer-events-none" />
+        <div className="absolute -top-6 -right-6 w-16 h-16 bg-gradient-to-br from-amber-200/30 to-yellow-200/20 rounded-full blur-2xl pointer-events-none" />
       </Card>
     </Link>
   );

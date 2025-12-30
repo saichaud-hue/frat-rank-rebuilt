@@ -287,7 +287,7 @@ export default function Leaderboard() {
       </div>
 
       {/* 2x2 Podium Cards Grid */}
-      <div className="grid grid-cols-2 gap-3">
+      <div className="grid grid-cols-2 gap-3 pb-24">
         <PodiumCard category="overall" topThree={overallTop3} />
         <PodiumCard category="reputation" topThree={reputationTop3} />
         <PodiumCard category="party" topThree={partyTop3} />
