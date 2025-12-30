@@ -377,7 +377,6 @@ export default function Activity() {
       });
       setReplyText('');
       setReplyingTo(null);
-      toast({ title: 'Reply posted!' });
       await loadChat();
     } catch (error) {
       console.error('Failed to post reply:', error);
@@ -409,7 +408,6 @@ export default function Activity() {
       setChatText('');
       setSelectedMention(null);
       setShowChatComposer(false);
-      toast({ title: 'Posted!' });
       await loadChat();
     } catch (error) {
       console.error('Failed to post:', error);

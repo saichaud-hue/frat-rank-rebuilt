@@ -46,11 +46,12 @@ export default function Profile() {
       setUser(userData);
 
       if (userData) {
-        const [partyRatings, repRatings, partyComments, fratComments, parties, fraternities] = await Promise.all([
+        const [partyRatings, repRatings, partyComments, fratComments, chatMessages, parties, fraternities] = await Promise.all([
           base44.entities.PartyRating.filter({ user_id: userData.id }, '-created_date'),
           base44.entities.ReputationRating.filter({ user_id: userData.id }, '-created_date'),
           base44.entities.PartyComment.filter({ user_id: userData.id }),
           base44.entities.FraternityComment.filter({ user_id: userData.id }),
+          base44.entities.ChatMessage.filter({ user_id: userData.id }),
           base44.entities.Party.list(),
           base44.entities.Fraternity.list(),
         ]);
@@ -77,17 +78,23 @@ export default function Profile() {
           const frat = fraternities.find((f: any) => f.id === c.fraternity_id);
           return { ...c, entityName: frat?.name || 'Unknown Fraternity', type: 'fraternity' };
         });
+        const enrichedChatMessages = chatMessages.map((c: any) => {
+          const mentionedParty = c.mentioned_party_id ? parties.find((p: any) => p.id === c.mentioned_party_id) : null;
+          const mentionedFrat = c.mentioned_fraternity_id ? fraternities.find((f: any) => f.id === c.mentioned_fraternity_id) : null;
+          const entityName = mentionedParty?.title || mentionedFrat?.name || 'Chat';
+          return { ...c, entityName, type: 'chat' };
+        });
 
         setPartyRatingsData(enrichedPartyRatings);
         setFratRatingsData(enrichedFratRatings);
-        setCommentsData([...enrichedPartyComments, ...enrichedFratComments].sort((a, b) => 
+        setCommentsData([...enrichedPartyComments, ...enrichedFratComments, ...enrichedChatMessages].sort((a, b) => 
           new Date(b.created_date).getTime() - new Date(a.created_date).getTime()
         ));
 
         setStats({
           partyRatings: partyRatings.length,
           fratRatings: repRatings.length,
-          comments: partyComments.length + fratComments.length,
+          comments: partyComments.length + fratComments.length + chatMessages.length,
         });
       }
     } catch (error) {
@@ -179,8 +186,10 @@ export default function Profile() {
     try {
       if (comment.type === 'party') {
         await base44.entities.PartyComment.delete(comment.id);
-      } else {
+      } else if (comment.type === 'fraternity') {
         await base44.entities.FraternityComment.delete(comment.id);
+      } else if (comment.type === 'chat') {
+        await base44.entities.ChatMessage.delete(comment.id);
       }
       setCommentsData(prev => prev.filter(c => c.id !== comment.id));
       setStats(prev => ({ ...prev, comments: prev.comments - 1 }));
