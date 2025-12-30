@@ -7,8 +7,12 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
-import { base44, type Fraternity, type Party, type PartyRating, type ReputationRating } from '@/api/base44Client';
-import { createPageUrl, getScoreBgColor } from '@/utils';
+import { base44, type Fraternity, type Party } from '@/api/base44Client';
+import { createPageUrl, getScoreBgColor, clamp } from '@/utils';
+import { ensureAuthed } from '@/utils/auth';
+import YourListsIntro from '@/components/onboarding/YourListsIntro';
+import RateFratSheet from '@/components/leaderboard/RateFratSheet';
+import PartyRatingForm from '@/components/rate/PartyRatingForm';
 
 interface RankedFrat {
   fraternity: Fraternity;
@@ -29,6 +33,22 @@ export default function YourRankings() {
   const [activeTab, setActiveTab] = useState<'frats' | 'parties'>('frats');
   const [rankedFrats, setRankedFrats] = useState<RankedFrat[]>([]);
   const [rankedParties, setRankedParties] = useState<RankedParty[]>([]);
+  
+  // All data for intro
+  const [allFraternities, setAllFraternities] = useState<Fraternity[]>([]);
+  const [allParties, setAllParties] = useState<Party[]>([]);
+  const [ratedFratCount, setRatedFratCount] = useState(0);
+  const [ratedPartyCount, setRatedPartyCount] = useState(0);
+  
+  // Intro state
+  const [showIntro, setShowIntro] = useState(() => {
+    return !localStorage.getItem('touse_yourlists_intro_never_show');
+  });
+  
+  // Rating sheets
+  const [selectedFrat, setSelectedFrat] = useState<Fraternity | null>(null);
+  const [existingFratScores, setExistingFratScores] = useState<{ brotherhood: number; reputation: number; community: number } | undefined>();
+  const [selectedParty, setSelectedParty] = useState<Party | null>(null);
 
   useEffect(() => {
     loadData();
@@ -39,13 +59,22 @@ export default function YourRankings() {
       const userData = await base44.auth.me();
       setUser(userData);
 
+      const [fraternities, parties] = await Promise.all([
+        base44.entities.Fraternity.filter({ status: 'active' }),
+        base44.entities.Party.list(),
+      ]);
+      
+      setAllFraternities(fraternities);
+      setAllParties(parties);
+
       if (userData) {
-        const [fraternities, parties, repRatings, partyRatings] = await Promise.all([
-          base44.entities.Fraternity.list(),
-          base44.entities.Party.list(),
+        const [repRatings, partyRatings] = await Promise.all([
           base44.entities.ReputationRating.filter({ user_id: userData.id }),
           base44.entities.PartyRating.filter({ user_id: userData.id }),
         ]);
+
+        setRatedFratCount(repRatings.length);
+        setRatedPartyCount(partyRatings.length);
 
         // Build frat rankings from user's reputation ratings
         const fratMap = new Map(fraternities.map(f => [f.id, f]));
@@ -61,7 +90,6 @@ export default function YourRankings() {
           .sort((a, b) => b.score - a.score);
 
         // Assign ranks with ties
-        let currentRank = 1;
         userFratScores.forEach((item, index) => {
           if (index === 0) {
             item.rank = 1;
@@ -110,6 +138,96 @@ export default function YourRankings() {
 
   const handleLogin = () => {
     base44.auth.redirectToLogin(window.location.href);
+  };
+
+  const handleIntroComplete = (neverShowAgain: boolean) => {
+    if (neverShowAgain) {
+      localStorage.setItem('touse_yourlists_intro_never_show', 'true');
+    }
+    setShowIntro(false);
+  };
+
+  const handleRateFrat = async (fraternity: Fraternity) => {
+    const user = await ensureAuthed();
+    if (!user) return;
+
+    const existingRatings = await base44.entities.ReputationRating.filter({
+      fraternity_id: fraternity.id,
+      user_id: user.id,
+    });
+
+    if (existingRatings.length > 0) {
+      const rating = existingRatings[0];
+      setExistingFratScores({
+        brotherhood: rating.brotherhood_score ?? 5,
+        reputation: rating.reputation_score ?? 5,
+        community: rating.community_score ?? 5,
+      });
+    } else {
+      setExistingFratScores(undefined);
+    }
+    setSelectedFrat(fraternity);
+  };
+
+  const handleFratRatingSubmit = async (scores: { brotherhood: number; reputation: number; community: number; combined: number }) => {
+    if (!selectedFrat) return;
+
+    const user = await base44.auth.me();
+    if (!user) return;
+
+    const existingRatings = await base44.entities.ReputationRating.filter({
+      fraternity_id: selectedFrat.id,
+      user_id: user.id,
+    });
+
+    const ratingData = {
+      brotherhood_score: scores.brotherhood,
+      reputation_score: scores.reputation,
+      community_score: scores.community,
+      combined_score: scores.combined,
+    };
+
+    if (existingRatings.length > 0) {
+      await base44.entities.ReputationRating.update(existingRatings[0].id, {
+        ...ratingData,
+        created_date: new Date().toISOString(),
+      });
+    } else {
+      await base44.entities.ReputationRating.create({
+        fraternity_id: selectedFrat.id,
+        user_id: user.id,
+        ...ratingData,
+        weight: 1,
+        semester: 'Fall 2024',
+      });
+    }
+
+    // Update fraternity reputation score
+    const allRatings = await base44.entities.ReputationRating.filter({
+      fraternity_id: selectedFrat.id,
+    });
+
+    const reputationScore = allRatings.length > 0
+      ? allRatings.reduce((sum, r) => sum + (r.combined_score ?? 5), 0) / allRatings.length
+      : 5;
+
+    await base44.entities.Fraternity.update(selectedFrat.id, {
+      reputation_score: clamp(reputationScore, 0, 10),
+    });
+
+    setSelectedFrat(null);
+    await loadData();
+  };
+
+  const handleRateParty = async (party: Party) => {
+    const user = await ensureAuthed();
+    if (!user) return;
+    setSelectedParty(party);
+  };
+
+  const handlePartyRatingSubmit = async () => {
+    setSelectedParty(null);
+    await loadData();
   };
 
   if (loading) {
@@ -312,6 +430,38 @@ export default function YourRankings() {
           )}
         </TabsContent>
       </Tabs>
+
+      {/* Intro Overlay */}
+      {showIntro && user && (
+        <YourListsIntro
+          onComplete={handleIntroComplete}
+          onRateFrat={handleRateFrat}
+          onRateParty={handleRateParty}
+          fraternities={allFraternities}
+          parties={allParties}
+          ratedFratCount={ratedFratCount}
+          ratedPartyCount={ratedPartyCount}
+          totalFratCount={allFraternities.length}
+        />
+      )}
+
+      {/* Rate Frat Sheet */}
+      <RateFratSheet
+        fraternity={selectedFrat}
+        isOpen={!!selectedFrat}
+        onClose={() => setSelectedFrat(null)}
+        onSubmit={handleFratRatingSubmit}
+        existingScores={existingFratScores}
+      />
+
+      {/* Rate Party Form */}
+      {selectedParty && (
+        <PartyRatingForm
+          party={selectedParty}
+          onClose={() => setSelectedParty(null)}
+          onSubmit={handlePartyRatingSubmit}
+        />
+      )}
     </div>
   );
 }
