@@ -543,6 +543,7 @@ export default function YourRankings() {
           onComplete={handleIntroComplete}
           onRateFrat={handleRateFrat}
           onRateParty={handleRateParty}
+          onSwitchToPartiesTab={() => setActiveTab('parties')}
           fraternities={allFraternities}
           parties={allParties}
           ratedFratCount={ratedFratCount}
