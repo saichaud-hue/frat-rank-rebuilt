@@ -1,0 +1,74 @@
+import { Link } from 'react-router-dom';
+import { createPageUrl } from '@/utils';
+import { type FraternityWithScores } from '@/utils/scoring';
+import { cn } from '@/lib/utils';
+
+type FilterType = 'overall' | 'reputation' | 'party' | 'trending';
+
+interface LeaderboardRowProps {
+  fraternity: FraternityWithScores;
+  rank: number;
+  filter?: FilterType;
+  isTied?: boolean;
+}
+
+export default function LeaderboardRow({ fraternity, rank, filter = 'overall', isTied = false }: LeaderboardRowProps) {
+  const scores = fraternity.computedScores;
+
+  const getDisplayScore = (): number | null => {
+    if (!scores) return fraternity.reputation_score ?? null;
+    switch (filter) {
+      case 'overall': return scores.hasOverallData ? scores.overall : null;
+      case 'reputation': return scores.hasRepData ? scores.repAdj : null;
+      case 'party': return scores.hasPartyScoreData ? scores.semesterPartyScore : null;
+      case 'trending': return scores.activityTrending;
+      default: return scores.hasOverallData ? scores.overall : null;
+    }
+  };
+
+  const score = getDisplayScore();
+  
+  // Score color based on value
+  const getScoreColorClass = (score: number | null): string => {
+    if (score === null) return 'text-muted-foreground border-muted';
+    if (score >= 8.5) return 'text-emerald-600 border-emerald-200 bg-emerald-50';
+    if (score >= 7) return 'text-primary border-primary/20 bg-primary/5';
+    if (score >= 5) return 'text-amber-600 border-amber-200 bg-amber-50';
+    return 'text-muted-foreground border-muted bg-muted/50';
+  };
+
+  return (
+    <Link 
+      to={createPageUrl(`Fraternity?id=${fraternity.id}`)}
+      className="block"
+    >
+      <div className="flex items-center gap-4 py-4 px-1 active:bg-muted/30 transition-colors">
+        {/* Rank */}
+        <span className={cn(
+          "w-6 text-sm font-medium tabular-nums",
+          rank <= 3 ? "text-foreground" : "text-muted-foreground"
+        )}>
+          {isTied ? `T${rank}` : rank}.
+        </span>
+
+        {/* Content */}
+        <div className="flex-1 min-w-0">
+          <h3 className="font-semibold text-base text-foreground leading-tight truncate">
+            {fraternity.name}
+          </h3>
+          <p className="text-sm text-muted-foreground mt-0.5 truncate">
+            {fraternity.chapter}
+          </p>
+        </div>
+
+        {/* Score Badge */}
+        <div className={cn(
+          "flex items-center justify-center w-12 h-12 rounded-full border-2 font-bold text-base",
+          getScoreColorClass(score)
+        )}>
+          {score !== null ? score.toFixed(1) : '—'}
+        </div>
+      </div>
+    </Link>
+  );
+}

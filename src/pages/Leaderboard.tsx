@@ -1,5 +1,4 @@
 import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
 import { base44, seedInitialData, type Fraternity, type Party, type PartyRating, type ReputationRating, type PartyComment, type FraternityComment } from '@/api/base44Client';
 import { 
   computeFullFraternityScores, 
@@ -14,19 +13,20 @@ import {
   type ActivityData,
   getCachedCampusBaseline,
 } from '@/utils/scoring';
-import PodiumCard from '@/components/leaderboard/PodiumCard';
+import LeaderboardHeader from '@/components/leaderboard/LeaderboardHeader';
+import LeaderboardRow from '@/components/leaderboard/LeaderboardRow';
 import RateFratSheet from '@/components/leaderboard/RateFratSheet';
 import RateActionSheet from '@/components/leaderboard/RateActionSheet';
 import LeaderboardIntro from '@/components/onboarding/LeaderboardIntro';
 import PartyRatingForm from '@/components/rate/PartyRatingForm';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Badge } from '@/components/ui/badge';
 import { clamp } from '@/utils';
 import { ensureAuthed } from '@/utils/auth';
-import { Star, PartyPopper, X, Trophy, Crown, Sparkles, TrendingUp, Flame, Users } from 'lucide-react';
+import { Star, PartyPopper, X, Sparkles, ArrowUpDown, Search } from 'lucide-react';
+
+type FilterType = 'overall' | 'reputation' | 'party' | 'trending';
 
 export default function Leaderboard() {
-  const navigate = useNavigate();
   const [allFraternities, setAllFraternities] = useState<FraternityWithScores[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedFrat, setSelectedFrat] = useState<Fraternity | null>(null);
@@ -37,12 +37,7 @@ export default function Leaderboard() {
   const [showRateAction, setShowRateAction] = useState<'rate' | 'parties' | false>(false);
   const [rateExpanded, setRateExpanded] = useState(false);
   const [selectedParty, setSelectedParty] = useState<Party | null>(null);
-
-  // Pre-sorted lists for each category
-  const [overallTop3, setOverallTop3] = useState<FraternityWithScores[]>([]);
-  const [reputationTop3, setReputationTop3] = useState<FraternityWithScores[]>([]);
-  const [partyTop3, setPartyTop3] = useState<FraternityWithScores[]>([]);
-  const [trendingTop3, setTrendingTop3] = useState<FraternityWithScores[]>([]);
+  const [filter, setFilter] = useState<FilterType>('overall');
 
   const handleIntroComplete = (neverShowAgain: boolean) => {
     if (neverShowAgain) {
@@ -164,12 +159,6 @@ export default function Leaderboard() {
       );
 
       setAllFraternities(fratsWithScores);
-
-      // Pre-compute top 3 for each category
-      setOverallTop3(sortFraternitiesByOverall([...fratsWithScores]).slice(0, 3));
-      setReputationTop3(sortFraternitiesByReputation([...fratsWithScores]).slice(0, 3));
-      setPartyTop3(sortFraternitiesByParty([...fratsWithScores]).slice(0, 3));
-      setTrendingTop3(sortFraternitiesByTrending([...fratsWithScores]).slice(0, 3));
     } catch (error) {
       console.error('Failed to load fraternities:', error);
     } finally {
@@ -258,17 +247,42 @@ export default function Leaderboard() {
     await loadFraternities();
   };
 
-  // Stats
-  const totalRatings = allFraternities.reduce((sum, f) => sum + (f.computedScores?.numRepRatings ?? 0) + (f.computedScores?.numPartyRatings ?? 0), 0);
-  const totalParties = allFraternities.reduce((sum, f) => sum + (f.computedScores?.numPartiesHosted ?? 0), 0);
+  // Get sorted list based on current filter
+  const getSortedFraternities = (): FraternityWithScores[] => {
+    const copy = [...allFraternities];
+    switch (filter) {
+      case 'overall': return sortFraternitiesByOverall(copy);
+      case 'reputation': return sortFraternitiesByReputation(copy);
+      case 'party': return sortFraternitiesByParty(copy);
+      case 'trending': return sortFraternitiesByTrending(copy);
+      default: return copy;
+    }
+  };
+
+  const sortedFraternities = getSortedFraternities();
 
   if (loading) {
     return (
-      <div className="space-y-5">
-        <div className="h-40 rounded-2xl bg-gradient-to-r from-amber-500/20 to-orange-500/20 animate-pulse" />
-        <div className="grid grid-cols-2 gap-3">
+      <div className="space-y-6 px-4">
+        <div className="space-y-2">
+          <Skeleton className="h-8 w-32" />
+          <Skeleton className="h-4 w-24" />
+        </div>
+        <div className="flex gap-2">
           {[1, 2, 3, 4].map((i) => (
-            <div key={i} className="h-44 rounded-2xl bg-muted/50 animate-pulse" />
+            <Skeleton key={i} className="h-9 w-16 rounded-full" />
+          ))}
+        </div>
+        <div className="space-y-1">
+          {[1, 2, 3, 4, 5, 6].map((i) => (
+            <div key={i} className="flex items-center gap-4 py-4">
+              <Skeleton className="h-4 w-6" />
+              <div className="flex-1 space-y-2">
+                <Skeleton className="h-5 w-40" />
+                <Skeleton className="h-4 w-24" />
+              </div>
+              <Skeleton className="h-12 w-12 rounded-full" />
+            </div>
           ))}
         </div>
       </div>
@@ -276,49 +290,44 @@ export default function Leaderboard() {
   }
 
   return (
-    <div className="space-y-4 pb-28">
-      {/* Hero Header */}
-      <div className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-amber-500 via-orange-500 to-red-500 p-6 text-white">
-        <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAwIiBoZWlnaHQ9IjIwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZGVmcz48cGF0dGVybiBpZD0iZ3JpZCIgd2lkdGg9IjQwIiBoZWlnaHQ9IjQwIiBwYXR0ZXJuVW5pdHM9InVzZXJTcGFjZU9uVXNlIj48cGF0aCBkPSJNIDQwIDAgTCAwIDAgMCA0MCIgZmlsbD0ibm9uZSIgc3Ryb2tlPSJ3aGl0ZSIgc3Ryb2tlLW9wYWNpdHk9IjAuMSIgc3Ryb2tlLXdpZHRoPSIxIi8+PC9wYXR0ZXJuPjwvZGVmcz48cmVjdCB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIiBmaWxsPSJ1cmwoI2dyaWQpIi8+PC9zdmc+')] opacity-30" />
-        
-        <div className="relative">
-          <div className="flex items-center gap-3 mb-4">
-            <div className="w-14 h-14 rounded-2xl bg-white/20 backdrop-blur-sm flex items-center justify-center shadow-lg">
-              <Crown className="h-7 w-7" />
-            </div>
-            <div>
-              <h1 className="text-2xl font-bold">Leaderboard</h1>
-              <p className="text-white/80 text-sm">Who's on top?</p>
-            </div>
-          </div>
-          
-          {/* Quick Stats */}
-          <div className="grid grid-cols-3 gap-3">
-            <div className="bg-white/10 backdrop-blur-sm rounded-xl p-3 text-center">
-              <Users className="h-5 w-5 mx-auto mb-1 opacity-80" />
-              <p className="text-xl font-bold">{allFraternities.length}</p>
-              <p className="text-[10px] text-white/70 uppercase tracking-wider">Fraternities</p>
-            </div>
-            <div className="bg-white/10 backdrop-blur-sm rounded-xl p-3 text-center">
-              <Star className="h-5 w-5 mx-auto mb-1 opacity-80" />
-              <p className="text-xl font-bold">{totalRatings}</p>
-              <p className="text-[10px] text-white/70 uppercase tracking-wider">Ratings</p>
-            </div>
-            <div className="bg-white/10 backdrop-blur-sm rounded-xl p-3 text-center">
-              <PartyPopper className="h-5 w-5 mx-auto mb-1 opacity-80" />
-              <p className="text-xl font-bold">{totalParties}</p>
-              <p className="text-[10px] text-white/70 uppercase tracking-wider">Parties</p>
-            </div>
-          </div>
-        </div>
+    <div className="pb-28">
+      {/* Header */}
+      <div className="px-4 pt-2">
+        <LeaderboardHeader
+          filter={filter}
+          onFilterChange={setFilter}
+          campusName="Duke University"
+        />
       </div>
 
-      {/* Stacked Podium Cards */}
-      <div className="space-y-4">
-        <PodiumCard category="overall" topThree={overallTop3} />
-        <PodiumCard category="reputation" topThree={reputationTop3} />
-        <PodiumCard category="party" topThree={partyTop3} />
-        <PodiumCard category="trending" topThree={trendingTop3} />
+      {/* Sort indicator */}
+      <div className="flex items-center justify-between px-4 mt-6 mb-2">
+        <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
+          <ArrowUpDown className="h-3.5 w-3.5" />
+          <span>Score</span>
+        </div>
+        <button className="p-2 -mr-2 text-muted-foreground hover:text-foreground transition-colors">
+          <Search className="h-4 w-4" />
+        </button>
+      </div>
+
+      {/* Divider */}
+      <div className="mx-4 border-t border-border" />
+
+      {/* Leaderboard List */}
+      <div className="px-4">
+        {sortedFraternities.map((frat, index) => (
+          <div key={frat.id}>
+            <LeaderboardRow
+              fraternity={frat}
+              rank={index + 1}
+              filter={filter}
+            />
+            {index < sortedFraternities.length - 1 && (
+              <div className="border-t border-border/50" />
+            )}
+          </div>
+        ))}
       </div>
 
       <RateFratSheet
@@ -356,14 +365,14 @@ export default function Leaderboard() {
             <>
               <button
                 onClick={() => { setShowRateAction('parties'); setRateExpanded(false); }}
-                className="flex items-center gap-1.5 px-4 py-2.5 rounded-full bg-gradient-to-r from-pink-500 to-rose-500 text-white shadow-lg shadow-pink-500/30 active:scale-95 transition-all animate-scale-in"
+                className="flex items-center gap-1.5 px-4 py-2.5 rounded-full bg-foreground text-background shadow-lg active:scale-95 transition-all animate-scale-in"
               >
                 <PartyPopper className="h-4 w-4" />
                 <span className="font-medium text-sm">Party</span>
               </button>
               <button
                 onClick={() => { setShowRateAction('rate'); setRateExpanded(false); }}
-                className="flex items-center gap-1.5 px-4 py-2.5 rounded-full bg-gradient-to-r from-amber-500 to-orange-500 text-white shadow-lg shadow-amber-500/30 active:scale-95 transition-all animate-scale-in"
+                className="flex items-center gap-1.5 px-4 py-2.5 rounded-full bg-foreground text-background shadow-lg active:scale-95 transition-all animate-scale-in"
               >
                 <Star className="h-4 w-4" />
                 <span className="font-medium text-sm">Frat</span>
@@ -378,7 +387,7 @@ export default function Leaderboard() {
           ) : (
             <button
               onClick={() => setRateExpanded(true)}
-              className="flex items-center gap-2 px-5 py-3 rounded-full bg-gradient-to-r from-amber-500 to-orange-500 text-white shadow-lg shadow-amber-500/30 active:scale-95 transition-transform hover:shadow-xl"
+              className="flex items-center gap-2 px-5 py-3 rounded-full bg-foreground text-background shadow-lg active:scale-95 transition-transform hover:shadow-xl"
             >
               <Sparkles className="h-5 w-5" />
               <span className="font-bold">Rate</span>
