@@ -40,56 +40,68 @@ export function formatTimeAgo(date: Date | string): string {
   return 'Just now';
 }
 
-// Greek letter mapping for fraternity abbreviations
-const greekLetterMap: Record<string, string> = {
-  'A': 'Α', // Alpha
-  'B': 'Β', // Beta
-  'G': 'Γ', // Gamma
-  'D': 'Δ', // Delta
-  'E': 'Ε', // Epsilon
-  'Z': 'Ζ', // Zeta
-  'H': 'Η', // Eta
-  'TH': 'Θ', // Theta
-  'I': 'Ι', // Iota
-  'K': 'Κ', // Kappa
-  'L': 'Λ', // Lambda
-  'M': 'Μ', // Mu
-  'N': 'Ν', // Nu
-  'X': 'Ξ', // Xi
-  'O': 'Ο', // Omicron
-  'P': 'Π', // Pi
-  'R': 'Ρ', // Rho
-  'S': 'Σ', // Sigma
-  'T': 'Τ', // Tau
-  'U': 'Υ', // Upsilon
-  'PH': 'Φ', // Phi
-  'CH': 'Χ', // Chi
-  'PS': 'Ψ', // Psi
-  'W': 'Ω', // Omega
+// Fraternity name to Greek letters and shorthand mapping
+const fraternityMap: Record<string, { greek: string; shorthand: string }> = {
+  'Alpha Delta Phi': { greek: 'ΑΔΦ', shorthand: 'ADPhi' },
+  'Alpha Tau Omega': { greek: 'ΑΤΩ', shorthand: 'ATO' },
+  'Alpha Epsilon Pi': { greek: 'ΑΕΠ', shorthand: 'AEPi' },
+  'Sigma Chi': { greek: 'ΣΧ', shorthand: 'SigChi' },
+  'Kappa Alpha Order': { greek: 'ΚΑ', shorthand: 'KA' },
+  'Pi Kappa Phi': { greek: 'ΠΚΦ', shorthand: 'PiKapp' },
+  'Wayne Manor': { greek: 'WM', shorthand: 'WM' },
+  'Theta Chi': { greek: 'ΘΧ', shorthand: 'ThetaChi' },
+  'Sigma Nu': { greek: 'ΣΝ', shorthand: 'SigNu' },
+  'Pi Kappa Alpha': { greek: 'ΠΚΑ', shorthand: 'Pike' },
+  'Delta Tau Delta': { greek: 'ΔΤΔ', shorthand: 'Delt' },
+  'Phi Delta Theta': { greek: 'ΦΔΘ', shorthand: 'PhiDelt' },
+  'Sigma Alpha Epsilon': { greek: 'ΣΑΕ', shorthand: 'SAE' },
+  'Beta Theta Pi': { greek: 'ΒΘΠ', shorthand: 'Beta' },
+  'Lambda Chi Alpha': { greek: 'ΛΧΑ', shorthand: 'Lambda' },
+  'Phi Gamma Delta': { greek: 'ΦΓΔ', shorthand: 'Fiji' },
+  'Zeta Beta Tau': { greek: 'ΖΒΤ', shorthand: 'ZBT' },
+  'Tau Kappa Epsilon': { greek: 'ΤΚΕ', shorthand: 'TKE' },
+  'Kappa Sigma': { greek: 'ΚΣ', shorthand: 'KappaSig' },
+  'Chi Phi': { greek: 'ΧΦ', shorthand: 'ChiPhi' },
+  'Alpha Sigma Phi': { greek: 'ΑΣΦ', shorthand: 'AlphaSig' },
 };
 
+// Get Greek letters for a fraternity name
+export function getFratGreek(name: string): string {
+  const mapping = fraternityMap[name];
+  if (mapping) return mapping.greek;
+  
+  // Fallback: try to generate from first letters of each word
+  const words = name.split(' ');
+  if (words.length >= 2) {
+    return words.map(w => toGreekLetter(w[0])).join('');
+  }
+  return name.substring(0, 2).toUpperCase();
+}
+
+// Get shorthand for a fraternity name  
+export function getFratShorthand(name: string): string {
+  const mapping = fraternityMap[name];
+  if (mapping) return mapping.shorthand;
+  
+  // Fallback: use first word or abbreviation
+  const words = name.split(' ');
+  if (words.length === 1) return name;
+  return words.map(w => w[0]).join('');
+}
+
+// Convert single letter to Greek
+function toGreekLetter(letter: string): string {
+  const greekMap: Record<string, string> = {
+    'A': 'Α', 'B': 'Β', 'G': 'Γ', 'D': 'Δ', 'E': 'Ε',
+    'Z': 'Ζ', 'H': 'Η', 'I': 'Ι', 'K': 'Κ', 'L': 'Λ',
+    'M': 'Μ', 'N': 'Ν', 'O': 'Ο', 'P': 'Π', 'R': 'Ρ',
+    'S': 'Σ', 'T': 'Τ', 'U': 'Υ', 'W': 'Ω', 'X': 'Ξ',
+  };
+  return greekMap[letter.toUpperCase()] || letter;
+}
+
+// Legacy function - now uses the proper mapping
 export function toGreekLetters(abbrev: string): string {
   if (!abbrev) return '';
-  
-  let result = '';
-  let i = 0;
-  const upper = abbrev.toUpperCase();
-  
-  while (i < upper.length) {
-    // Check for two-letter combinations first
-    if (i < upper.length - 1) {
-      const twoChar = upper.substring(i, i + 2);
-      if (greekLetterMap[twoChar]) {
-        result += greekLetterMap[twoChar];
-        i += 2;
-        continue;
-      }
-    }
-    // Single letter
-    const oneChar = upper[i];
-    result += greekLetterMap[oneChar] || oneChar;
-    i++;
-  }
-  
-  return result;
+  return abbrev.split('').map(c => toGreekLetter(c)).join('');
 }

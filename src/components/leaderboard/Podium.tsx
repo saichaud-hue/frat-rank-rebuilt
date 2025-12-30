@@ -2,7 +2,7 @@ import { Link } from 'react-router-dom';
 import { Crown, Trophy, Medal } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { type FraternityWithScores } from '@/utils/scoring';
-import { createPageUrl, toGreekLetters } from '@/utils';
+import { createPageUrl, getFratGreek } from '@/utils';
 
 // Consistent medal colors across all podiums
 const MEDAL_COLORS = {
@@ -105,8 +105,8 @@ export default function Podium({ topThree, variant, getScore, showLinks = true }
         {/* Avatar */}
         <Avatar className={`${avatarSize} ring-4 ${medalColor.ring} shadow-lg bg-white`}>
           <AvatarImage src={frat.logo_url} alt={frat.name} />
-          <AvatarFallback className={`font-bold ${medalColor.text} bg-white ${isSummary ? 'text-sm' : 'text-base'}`}>
-            {toGreekLetters(frat.chapter?.substring(0, 3) || frat.name.substring(0, 3))}
+          <AvatarFallback className={`font-bold ${medalColor.text} bg-white ${isSummary ? 'text-xs' : 'text-sm'}`}>
+            {getFratGreek(frat.name)}
           </AvatarFallback>
         </Avatar>
 
