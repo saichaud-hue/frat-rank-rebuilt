@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { ListOrdered, Trophy, PartyPopper, LogIn, ChevronRight, Lock, Star, Users, Shield, Heart, Sparkles, Music, Zap, CheckCircle2 } from 'lucide-react';
+import { ListOrdered, Trophy, PartyPopper, LogIn, ChevronRight, Lock, Star, Users, Shield, Heart, Sparkles, Music, Zap, CheckCircle2, Crown, Gift } from 'lucide-react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -292,8 +292,8 @@ export default function YourRankings() {
     return (
       <div className="space-y-5">
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-indigo-500 to-purple-500 flex items-center justify-center shadow-lg">
-            <ListOrdered className="h-5 w-5 text-white" />
+          <div className="w-10 h-10 rounded-xl gradient-primary flex items-center justify-center shadow-lg">
+            <ListOrdered className="h-5 w-5 text-primary-foreground" />
           </div>
           <div>
             <h1 className="text-2xl font-bold">Your Rankings</h1>
@@ -301,7 +301,7 @@ export default function YourRankings() {
           </div>
         </div>
 
-        <Card className="glass p-8 text-center space-y-6">
+        <Card className="bg-card border-border p-8 text-center space-y-6">
           <div className="w-20 h-20 mx-auto rounded-full bg-muted flex items-center justify-center">
             <ListOrdered className="h-10 w-10 text-muted-foreground" />
           </div>
@@ -311,7 +311,7 @@ export default function YourRankings() {
               Rate fraternities and parties to build your personal list
             </p>
           </div>
-          <Button onClick={handleLogin} className="gradient-primary text-white">
+          <Button onClick={handleLogin} className="gradient-primary text-primary-foreground">
             <LogIn className="h-4 w-4 mr-2" />
             Sign in with Google
           </Button>
@@ -320,12 +320,63 @@ export default function YourRankings() {
     );
   }
 
+  // Check if user has completed all requirements
+  const isFullyUnlocked = ratedFratCount >= allFraternities.length && ratedPartyCount >= 3;
+
   return (
     <div className="space-y-5">
+      {/* Celebration Banner - shown when fully unlocked */}
+      {isFullyUnlocked && (
+        <div className="relative overflow-hidden rounded-3xl gradient-primary p-6 text-primary-foreground shadow-xl animate-scale-in">
+          {/* Background sparkles */}
+          <div className="absolute inset-0 opacity-30">
+            <div className="absolute top-2 left-4 w-2 h-2 bg-white rounded-full animate-pulse" />
+            <div className="absolute top-6 right-8 w-3 h-3 bg-white rounded-full animate-pulse" style={{ animationDelay: '0.3s' }} />
+            <div className="absolute bottom-4 left-12 w-2 h-2 bg-white rounded-full animate-pulse" style={{ animationDelay: '0.6s' }} />
+            <div className="absolute bottom-8 right-4 w-2 h-2 bg-white rounded-full animate-pulse" style={{ animationDelay: '0.9s' }} />
+            <div className="absolute top-1/2 left-1/4 w-1.5 h-1.5 bg-white rounded-full animate-pulse" style={{ animationDelay: '0.2s' }} />
+            <div className="absolute top-1/3 right-1/3 w-2 h-2 bg-white rounded-full animate-pulse" style={{ animationDelay: '0.5s' }} />
+          </div>
+          
+          <div className="relative flex items-center gap-4">
+            <div className="w-16 h-16 rounded-2xl bg-white/20 backdrop-blur-sm flex items-center justify-center animate-bounce-subtle">
+              <Crown className="h-8 w-8" />
+            </div>
+            <div className="flex-1">
+              <div className="flex items-center gap-2 mb-1">
+                <h2 className="text-xl font-bold">Rankings Unlocked!</h2>
+                <Gift className="h-5 w-5" />
+              </div>
+              <p className="text-primary-foreground/80 text-sm">
+                You rated all {allFraternities.length} frats & {ratedPartyCount} parties. Your personal tier list is ready!
+              </p>
+            </div>
+          </div>
+          
+          <div className="relative mt-4 flex gap-3">
+            <div className="flex-1 text-center p-3 rounded-xl bg-white/10 backdrop-blur-sm">
+              <Trophy className="h-5 w-5 mx-auto mb-1" />
+              <p className="text-lg font-bold">{rankedFrats.length}</p>
+              <p className="text-xs opacity-80">Frats Ranked</p>
+            </div>
+            <div className="flex-1 text-center p-3 rounded-xl bg-white/10 backdrop-blur-sm">
+              <PartyPopper className="h-5 w-5 mx-auto mb-1" />
+              <p className="text-lg font-bold">{rankedParties.length}</p>
+              <p className="text-xs opacity-80">Parties Ranked</p>
+            </div>
+            <div className="flex-1 text-center p-3 rounded-xl bg-white/10 backdrop-blur-sm">
+              <Sparkles className="h-5 w-5 mx-auto mb-1" />
+              <p className="text-lg font-bold">100%</p>
+              <p className="text-xs opacity-80">Complete</p>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Header */}
       <div className="flex items-center gap-3">
-        <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-indigo-500 to-purple-500 flex items-center justify-center shadow-lg">
-          <ListOrdered className="h-5 w-5 text-white" />
+        <div className="w-10 h-10 rounded-xl gradient-primary flex items-center justify-center shadow-lg">
+          <ListOrdered className="h-5 w-5 text-primary-foreground" />
         </div>
         <div>
           <h1 className="text-2xl font-bold">Your Rankings</h1>
