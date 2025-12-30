@@ -720,58 +720,166 @@ export default function FraternityPage() {
         </div>
       </Card>
 
-      {/* CONFIDENCE */}
+      {/* CONFIDENCE - Gamified */}
       {computedScores && (
-        <Card className="glass p-5">
-          <ConfidenceBar 
-            confidence={computedScores.confidenceOverall}
-            repRatings={computedScores.numRepRatings}
-            partyRatings={computedScores.numPartyRatings}
-          />
+        <Card className="glass overflow-hidden">
+          <div className="bg-gradient-to-r from-cyan-500 to-blue-500 p-4 flex items-center gap-3 text-white">
+            <div className="w-10 h-10 rounded-xl bg-white/20 flex items-center justify-center">
+              <Zap className="h-5 w-5" />
+            </div>
+            <div>
+              <h2 className="font-semibold">Data Confidence</h2>
+              <p className="text-xs opacity-80">How reliable is this score?</p>
+            </div>
+          </div>
+          <div className="p-5">
+            <div className="flex items-center justify-between mb-3">
+              <div className="flex items-center gap-3">
+                <div className={`text-4xl font-bold ${
+                  computedScores.confidenceOverall >= 0.7 ? 'text-emerald-500' :
+                  computedScores.confidenceOverall >= 0.4 ? 'text-amber-500' : 'text-red-500'
+                }`}>
+                  {Math.round(computedScores.confidenceOverall * 100)}%
+                </div>
+                <Badge className={`${
+                  computedScores.confidenceOverall >= 0.7 ? 'bg-emerald-100 text-emerald-700' :
+                  computedScores.confidenceOverall >= 0.4 ? 'bg-amber-100 text-amber-700' : 'bg-red-100 text-red-700'
+                }`}>
+                  {computedScores.confidenceOverall >= 0.7 ? 'High' :
+                   computedScores.confidenceOverall >= 0.4 ? 'Moderate' : 'Low Data'}
+                </Badge>
+              </div>
+            </div>
+            
+            {/* Confidence bar */}
+            <div className="h-3 rounded-full bg-muted overflow-hidden mb-4">
+              <div 
+                className={`h-full rounded-full transition-all duration-700 ${
+                  computedScores.confidenceOverall >= 0.7 ? 'bg-emerald-500' :
+                  computedScores.confidenceOverall >= 0.4 ? 'bg-amber-500' : 'bg-red-500'
+                }`}
+                style={{ width: `${computedScores.confidenceOverall * 100}%` }}
+              />
+            </div>
+            
+            {/* Stats breakdown */}
+            <div className="grid grid-cols-2 gap-3">
+              <div className="p-3 rounded-xl bg-violet-50 dark:bg-violet-950/30 border border-violet-200/50 dark:border-violet-800/50">
+                <div className="flex items-center gap-2 mb-1">
+                  <Star className="h-4 w-4 text-violet-500" />
+                  <span className="text-xs text-muted-foreground">Frat Ratings</span>
+                </div>
+                <p className="text-2xl font-bold text-violet-600 dark:text-violet-400">{computedScores.numRepRatings}</p>
+              </div>
+              <div className="p-3 rounded-xl bg-pink-50 dark:bg-pink-950/30 border border-pink-200/50 dark:border-pink-800/50">
+                <div className="flex items-center gap-2 mb-1">
+                  <PartyPopper className="h-4 w-4 text-pink-500" />
+                  <span className="text-xs text-muted-foreground">Party Ratings</span>
+                </div>
+                <p className="text-2xl font-bold text-pink-600 dark:text-pink-400">{computedScores.numPartyRatings}</p>
+              </div>
+            </div>
+          </div>
         </Card>
       )}
 
-      {/* Upcoming Parties */}
+      {/* UPCOMING PARTIES - Gamified */}
       {upcomingParties.length > 0 && (
-        <section className="space-y-3">
-          <h2 className="font-semibold flex items-center gap-2">
-            <PartyPopper className="h-5 w-5 text-primary" />
-            Upcoming Parties
-          </h2>
-          {upcomingParties.map(party => (
-            <PartyCard
-              key={party.id}
-              party={party}
-              fraternityName={fraternity.name}
-            />
-          ))}
-        </section>
+        <Card className="glass overflow-hidden">
+          <div className="bg-gradient-to-r from-emerald-500 to-teal-500 p-4 flex items-center justify-between text-white">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-white/20 flex items-center justify-center animate-pulse">
+                <PartyPopper className="h-5 w-5" />
+              </div>
+              <div>
+                <h2 className="font-semibold">Upcoming Events</h2>
+                <p className="text-xs opacity-80">{upcomingParties.length} {upcomingParties.length === 1 ? 'party' : 'parties'} scheduled</p>
+              </div>
+            </div>
+            <Badge className="bg-white/20 text-white border-white/30">
+              🔥 Don't miss out!
+            </Badge>
+          </div>
+          <div className="p-4 space-y-3">
+            {upcomingParties.map(party => (
+              <PartyCard
+                key={party.id}
+                party={party}
+                fraternityName={fraternity.name}
+              />
+            ))}
+          </div>
+        </Card>
       )}
 
-      {/* D) Past Parties - Show per-party overall quality (confidence-adjusted) */}
+      {/* PAST PARTIES - Gamified */}
       {pastParties.length > 0 && (
-        <section className="space-y-3">
-          <h2 className="font-semibold text-muted-foreground">Past Parties</h2>
-          {pastParties.map(party => (
-            <PartyCard
-              key={party.id}
-              party={party}
-              fraternityName={fraternity.name}
-              overallPartyQuality={partyScores.get(party.id)}
-            />
-          ))}
-        </section>
+        <Card className="glass overflow-hidden">
+          <div className="bg-gradient-to-r from-slate-600 to-slate-700 p-4 flex items-center justify-between text-white">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-white/20 flex items-center justify-center">
+                <Calendar className="h-5 w-5" />
+              </div>
+              <div>
+                <h2 className="font-semibold">Party History</h2>
+                <p className="text-xs opacity-80">{pastParties.length} completed {pastParties.length === 1 ? 'event' : 'events'}</p>
+              </div>
+            </div>
+            {ratedPastParties.length > 0 && (
+              <div className="text-right">
+                <p className="text-lg font-bold">
+                  {ratedPastParties.length}/{pastParties.length}
+                </p>
+                <p className="text-xs opacity-80">Rated</p>
+              </div>
+            )}
+          </div>
+          <div className="p-4 space-y-3">
+            {pastParties.map(party => {
+              const score = partyScores.get(party.id);
+              return (
+                <PartyCard
+                  key={party.id}
+                  party={party}
+                  fraternityName={fraternity.name}
+                  overallPartyQuality={score}
+                />
+              );
+            })}
+          </div>
+        </Card>
       )}
 
       {parties.length === 0 && (
         <Card className="glass p-8 text-center">
-          <PartyPopper className="h-12 w-12 mx-auto text-muted-foreground/50 mb-4" />
-          <p className="text-muted-foreground">No parties scheduled yet</p>
+          <div className="w-16 h-16 mx-auto mb-4 rounded-2xl bg-muted flex items-center justify-center">
+            <PartyPopper className="h-8 w-8 text-muted-foreground/50" />
+          </div>
+          <p className="font-medium text-muted-foreground">No parties scheduled yet</p>
+          <p className="text-sm text-muted-foreground/70 mt-1">Check back soon for upcoming events!</p>
         </Card>
       )}
 
-      {/* Comments Section */}
-      <CommentSection entityId={fraternity.id} entityType="fraternity" />
+      {/* COMMENTS SECTION - Gamified wrapper */}
+      <Card className="glass overflow-hidden">
+        <div className="bg-gradient-to-r from-indigo-500 to-purple-500 p-4 flex items-center justify-between text-white">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-white/20 flex items-center justify-center">
+              <MessageCircle className="h-5 w-5" />
+            </div>
+            <div>
+              <h2 className="font-semibold">Community Discussion</h2>
+              <p className="text-xs opacity-80">Share your experience</p>
+            </div>
+          </div>
+          <Badge className="bg-white/20 text-white border-white/30">
+            💬 Join the convo
+          </Badge>
+        </div>
+        <div className="p-4">
+          <CommentSection entityId={fraternity.id} entityType="fraternity" />
+        </div>
+      </Card>
 
       {/* Rate Sheet */}
       <RateFratSheet
