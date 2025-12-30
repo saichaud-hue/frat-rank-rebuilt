@@ -4,6 +4,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import Layout from "./components/Layout";
+import Activity from "./pages/Activity";
 import Leaderboard from "./pages/Leaderboard";
 import Parties from "./pages/Parties";
 import Party from "./pages/Party";
@@ -23,7 +24,8 @@ const App = () => (
       <Sonner />
       <BrowserRouter>
         <Routes>
-          <Route path="/" element={<Navigate to="/Leaderboard" replace />} />
+          <Route path="/" element={<Navigate to="/Activity" replace />} />
+          <Route path="/Activity" element={<Layout><Activity /></Layout>} />
           <Route path="/Leaderboard" element={<Layout><Leaderboard /></Layout>} />
           <Route path="/Parties" element={<Layout><Parties /></Layout>} />
           <Route path="/Party" element={<Layout><Party /></Layout>} />
