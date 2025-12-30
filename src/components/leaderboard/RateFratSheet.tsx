@@ -27,12 +27,14 @@ export default function RateFratSheet({
   const [community, setCommunity] = useState(existingScores?.community ?? 5);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // Reset values when existingScores changes
+  // Reset values when fraternity or existingScores changes
   useEffect(() => {
-    setBrotherhood(existingScores?.brotherhood ?? 5);
-    setReputation(existingScores?.reputation ?? 5);
-    setCommunity(existingScores?.community ?? 5);
-  }, [existingScores]);
+    if (fraternity) {
+      setBrotherhood(existingScores?.brotherhood ?? 5);
+      setReputation(existingScores?.reputation ?? 5);
+      setCommunity(existingScores?.community ?? 5);
+    }
+  }, [fraternity?.id, existingScores]);
 
   const combinedScore = computeCombinedReputation(brotherhood, reputation, community);
 
