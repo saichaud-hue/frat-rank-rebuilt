@@ -112,9 +112,9 @@ export default {
         "bounce-subtle": "bounce-subtle 2s ease-in-out infinite",
       },
       backgroundImage: {
-        "gradient-primary": "linear-gradient(135deg, hsl(337 38% 18%), hsl(267 20% 7%))",
-        "gradient-secondary": "linear-gradient(135deg, hsl(306 18% 11%), hsl(337 38% 18%))",
-        "gradient-accent": "linear-gradient(135deg, hsl(267 20% 7%), hsl(337 38% 25%))",
+        "gradient-primary": "linear-gradient(135deg, hsl(340 36% 18%), hsl(320 22% 11%))",
+        "gradient-secondary": "linear-gradient(135deg, hsl(320 22% 11%), hsl(340 36% 18%))",
+        "gradient-accent": "linear-gradient(135deg, hsl(340 36% 22%), hsl(320 22% 14%))",
       },
     },
   },

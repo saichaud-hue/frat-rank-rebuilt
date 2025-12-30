@@ -90,23 +90,23 @@ export default function Layout({ children }: LayoutProps) {
 
   return (
     <SidebarProvider>
-      <div className="min-h-screen flex flex-col w-full bg-gradient-to-br from-slate-50 to-indigo-50">
+      <div className="min-h-screen flex flex-col w-full bg-background">
         {/* Mobile Header - iPhone optimized */}
-        <header className="sticky top-0 z-40 bg-white/90 backdrop-blur-md border-b border-slate-200/50 px-4 py-3 pt-safe flex items-center justify-between">
+        <header className="sticky top-0 z-40 bg-background/95 backdrop-blur-md border-b border-border/50 px-4 py-3 pt-safe flex items-center justify-between">
           <Link to="/" className="flex items-center">
-            <img src={touseLogo} alt="Touse" className="h-8 object-contain" />
+            <img src={touseLogo} alt="Frapp" className="h-8 object-contain" />
           </Link>
           {loading ? (
             <Skeleton className="h-9 w-9 rounded-full" />
           ) : user ? (
             <Avatar className="h-9 w-9">
               <AvatarImage src={user.avatar_url} />
-              <AvatarFallback className="bg-gradient-to-br from-indigo-500 to-purple-500 text-white text-sm">
+              <AvatarFallback className="gradient-primary text-primary-foreground text-sm">
                 {user.name?.charAt(0) || 'U'}
               </AvatarFallback>
             </Avatar>
           ) : (
-            <Button onClick={handleLogin} size="sm" className="gradient-primary text-white h-9 px-3 text-sm">
+            <Button onClick={handleLogin} size="sm" className="gradient-primary text-primary-foreground h-9 px-3 text-sm">
               Sign in
             </Button>
           )}
@@ -118,7 +118,7 @@ export default function Layout({ children }: LayoutProps) {
         </main>
 
         {/* Mobile Bottom Nav - iPhone safe area */}
-        <nav className="fixed bottom-0 left-0 right-0 bg-white/95 backdrop-blur-md border-t border-slate-200/50 z-40" style={{ paddingBottom: 'max(env(safe-area-inset-bottom), 8px)' }}>
+        <nav className="fixed bottom-0 left-0 right-0 bg-background/95 backdrop-blur-md border-t border-border/50 z-40" style={{ paddingBottom: 'max(env(safe-area-inset-bottom), 8px)' }}>
           <div className="grid grid-cols-5 gap-1 px-2 pt-2">
             {navItems.map((item) => {
               const active = isActive(item.url);
