@@ -1,12 +1,14 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { ListOrdered, Trophy, PartyPopper, LogIn, ChevronRight, Lock, Star, Users, Shield, Heart, Sparkles, Music, Zap } from 'lucide-react';
+import { ListOrdered, Trophy, PartyPopper, LogIn, ChevronRight, Lock, Star, Users, Shield, Heart, Sparkles, Music, Zap, CheckCircle2 } from 'lucide-react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
+import { ScrollArea } from '@/components/ui/scroll-area';
 import { base44, type Fraternity, type Party } from '@/api/base44Client';
 import { createPageUrl, getScoreBgColor, clamp, getFratGreek, getFratShorthand } from '@/utils';
 import { Progress } from '@/components/ui/progress';
@@ -59,6 +61,7 @@ export default function YourRankings() {
   const [existingFratScores, setExistingFratScores] = useState<{ brotherhood: number; reputation: number; community: number } | undefined>();
   const [selectedParty, setSelectedParty] = useState<Party | null>(null);
   const [ratingFromIntro, setRatingFromIntro] = useState(false);
+  const [showPartyPicker, setShowPartyPicker] = useState(false);
 
   useEffect(() => {
     loadData();
@@ -518,12 +521,13 @@ export default function YourRankings() {
                     </div>
                     <Progress value={(ratedPartyCount / 3) * 100} className="h-2" />
                   </div>
-                  <Link to="/Parties">
-                    <Button className="w-full bg-pink-500 hover:bg-pink-600 text-white">
-                      <Star className="h-4 w-4 mr-2" />
-                      Rate Parties
-                    </Button>
-                  </Link>
+                  <Button 
+                    onClick={() => setShowPartyPicker(true)}
+                    className="w-full bg-pink-500 hover:bg-pink-600 text-white"
+                  >
+                    <Star className="h-4 w-4 mr-2" />
+                    Rate Parties
+                  </Button>
                 </Card>
               </div>
             </div>
@@ -536,11 +540,13 @@ export default function YourRankings() {
                   Rate parties to build your personal list
                 </p>
               </div>
-              <Link to="/Parties">
-                <Button variant="outline" className="mt-2">
-                  Browse Parties
-                </Button>
-              </Link>
+              <Button 
+                onClick={() => setShowPartyPicker(true)}
+                variant="outline" 
+                className="mt-2"
+              >
+                Browse Parties
+              </Button>
             </Card>
           ) : (
             rankedParties.map((item) => (
@@ -628,6 +634,65 @@ export default function YourRankings() {
           onSubmit={handlePartyRatingSubmit}
         />
       )}
+
+      {/* Party Picker Sheet */}
+      <Sheet open={showPartyPicker} onOpenChange={setShowPartyPicker}>
+        <SheetContent side="bottom" className="h-[70vh] rounded-t-3xl">
+          <SheetHeader className="pb-4">
+            <SheetTitle>Choose a Party to Rate</SheetTitle>
+          </SheetHeader>
+          <ScrollArea className="h-[calc(100%-60px)]">
+            <div className="space-y-2 pr-4">
+              {allParties.length === 0 ? (
+                <div className="text-center py-8 text-muted-foreground">
+                  <PartyPopper className="h-12 w-12 mx-auto mb-3 opacity-50" />
+                  <p>No past parties available yet</p>
+                </div>
+              ) : (
+                allParties.map((party) => {
+                  const isRated = ratedPartyIds.includes(party.id);
+                  const frat = allFraternities.find(f => f.id === party.fraternity_id);
+                  return (
+                    <button
+                      key={party.id}
+                      onClick={() => {
+                        setShowPartyPicker(false);
+                        handleRateParty(party, false);
+                      }}
+                      className={`w-full flex items-center gap-3 p-3 rounded-xl active:scale-[0.98] transition-all text-left ${
+                        isRated 
+                          ? 'bg-green-500/10 border border-green-500/30 hover:bg-green-500/20' 
+                          : 'bg-muted/50 hover:bg-muted'
+                      }`}
+                    >
+                      <div className={`h-12 w-12 rounded-xl flex items-center justify-center ${
+                        isRated 
+                          ? 'bg-green-500/20' 
+                          : 'bg-gradient-to-br from-pink-500 to-rose-500'
+                      }`}>
+                        <PartyPopper className={`h-6 w-6 ${isRated ? 'text-green-600' : 'text-white'}`} />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="font-semibold truncate">{party.title}</p>
+                        {frat && (
+                          <p className="text-sm text-muted-foreground truncate">
+                            {frat.name} • {getFratShorthand(frat.name)}
+                          </p>
+                        )}
+                      </div>
+                      {isRated ? (
+                        <CheckCircle2 className="h-5 w-5 text-green-500" />
+                      ) : (
+                        <Star className="h-5 w-5 text-pink-500" />
+                      )}
+                    </button>
+                  );
+                })
+              )}
+            </div>
+          </ScrollArea>
+        </SheetContent>
+      </Sheet>
     </div>
   );
 }
