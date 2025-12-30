@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ListOrdered, Trophy, PartyPopper, Star, ChevronLeft, Lock, CheckCircle2 } from 'lucide-react';
+import { ListOrdered, Trophy, PartyPopper, Star, ChevronLeft, Lock, CheckCircle2, Sparkles } from 'lucide-react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -168,14 +168,24 @@ export default function YourListsIntro({
               </Label>
             </div>
 
-            {/* Skip button */}
-            <Button 
-              onClick={() => onComplete(neverShowAgain)} 
-              variant="outline"
-              className="w-full min-h-[52px] text-base font-medium active:scale-[0.98] transition-transform"
-            >
-              Skip for Now
-            </Button>
+            {/* Skip or View Rankings button */}
+            {fratUnlocked && partyUnlocked ? (
+              <Button 
+                onClick={() => onComplete(neverShowAgain)} 
+                className="w-full min-h-[52px] text-base font-semibold bg-gradient-to-r from-amber-500 via-pink-500 to-purple-600 hover:from-amber-600 hover:via-pink-600 hover:to-purple-700 text-white active:scale-[0.98] transition-all shadow-lg"
+              >
+                <Sparkles className="h-5 w-5 mr-2" />
+                View Your Rankings!
+              </Button>
+            ) : (
+              <Button 
+                onClick={() => onComplete(neverShowAgain)} 
+                variant="outline"
+                className="w-full min-h-[52px] text-base font-medium active:scale-[0.98] transition-transform"
+              >
+                Skip for Now
+              </Button>
+            )}
           </div>
         )}
 
