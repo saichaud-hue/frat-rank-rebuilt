@@ -175,7 +175,7 @@ export default function LeaderboardPodium({ topThree, ranks = [1, 2, 3], filter 
             <Icon className={`${size === 'lg' ? 'h-5 w-5' : 'h-4 w-4'} text-white`} />
           </div>
           
-          <div className="text-center space-y-2">
+          <div className="text-center space-y-2 min-w-0">
             <div 
               className={`mx-auto rounded-xl gradient-primary flex items-center justify-center text-white font-bold ${
                 size === 'lg' ? 'w-14 h-14 text-xl' : 'w-10 h-10 text-lg'
@@ -184,7 +184,7 @@ export default function LeaderboardPodium({ topThree, ranks = [1, 2, 3], filter 
               {frat.chapter.charAt(0)}
             </div>
             
-            <div>
+            <div className="min-w-0">
               <h3 className={`font-bold truncate ${size === 'lg' ? 'text-lg' : 'text-sm'}`}>
                 {frat.name}
               </h3>
@@ -221,15 +221,16 @@ export default function LeaderboardPodium({ topThree, ranks = [1, 2, 3], filter 
           <Button 
             size="default" 
             variant="secondary" 
-            className="w-[85%] min-h-[44px]"
+            className="w-[85%] min-h-[44px] whitespace-nowrap"
             onClick={(e) => handleViewProfile(frat, e)}
           >
             <User className="h-4 w-4 mr-1.5" />
-            View Profile
+            <span className="hidden sm:inline">View Profile</span>
+            <span className="sm:hidden">View</span>
           </Button>
           <Button 
             size="default" 
-            className="w-[85%] min-h-[44px] gradient-primary text-white"
+            className="w-[85%] min-h-[44px] gradient-primary text-white whitespace-nowrap"
             onClick={(e) => handleRateClick(frat, e)}
           >
             <Star className="h-4 w-4 mr-1.5" />
@@ -241,11 +242,11 @@ export default function LeaderboardPodium({ topThree, ranks = [1, 2, 3], filter 
   };
 
   return (
-    <div className="grid grid-cols-3 gap-2 sm:gap-4 items-end">
+    <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 sm:gap-4 items-end">
       <div className="order-1">
         <PodiumCard frat={second} rank={rank2} size="md" />
       </div>
-      <div className="order-2 transform translate-y-[-8px]">
+      <div className="order-2 col-span-2 sm:col-span-1 transform translate-y-[-8px]">
         <PodiumCard frat={first} rank={rank1} size="lg" />
       </div>
       <div className="order-3">
