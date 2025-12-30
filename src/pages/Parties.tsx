@@ -174,7 +174,7 @@ export default function Parties() {
   return (
     <div className="max-w-2xl mx-auto space-y-5 pb-20">
       {/* HERO HEADER */}
-      <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-pink-500 via-rose-500 to-orange-500 p-6 text-white shadow-xl">
+      <div className="relative overflow-hidden rounded-3xl gradient-primary p-6 text-primary-foreground shadow-xl">
         {/* Background Effects */}
         <div className="absolute inset-0 opacity-20">
           <div className="absolute top-0 right-0 w-40 h-40 bg-white/30 rounded-full blur-3xl translate-x-10 -translate-y-10" />
@@ -188,7 +188,7 @@ export default function Parties() {
             </div>
             <div>
               <h1 className="text-2xl font-bold">Campus Parties</h1>
-              <p className="text-white/80 text-sm">Discover and rate the best events</p>
+              <p className="text-primary-foreground/80 text-sm">Discover and rate the best events</p>
             </div>
           </div>
 
@@ -214,7 +214,7 @@ export default function Parties() {
       </div>
 
       {/* FILTERS - Styled Card */}
-      <Card className="glass p-4">
+      <Card className="bg-card border-border p-4">
         <PartyFilters
           filters={filters}
           onFiltersChange={setFilters}
@@ -222,10 +222,10 @@ export default function Parties() {
         />
       </Card>
 
-      {/* LIVE PARTIES - Urgent Gradient */}
+      {/* LIVE PARTIES - Urgent Section */}
       {liveParties.length > 0 && (
-        <Card className="glass overflow-hidden">
-          <div className="bg-gradient-to-r from-red-500 to-orange-500 p-4 flex items-center justify-between text-white">
+        <Card className="bg-card border-border overflow-hidden">
+          <div className="gradient-primary p-4 flex items-center justify-between text-primary-foreground">
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 rounded-xl bg-white/20 flex items-center justify-center animate-pulse">
                 <Flame className="h-5 w-5" />
@@ -238,11 +238,11 @@ export default function Parties() {
                 <p className="text-xs opacity-80">Happening right now!</p>
               </div>
             </div>
-            <Badge className="bg-white/20 text-white border-white/30 animate-pulse">
+            <Badge className="bg-white/20 text-primary-foreground border-white/30 animate-pulse">
               🔥 Don't miss out!
             </Badge>
           </div>
-          <div className="p-4 space-y-3">
+          <div className="p-4 space-y-3 bg-card">
             {liveParties.map(party => (
               <PartyCard
                 key={party.id}
@@ -260,8 +260,8 @@ export default function Parties() {
 
       {/* UPCOMING PARTIES */}
       {upcomingParties.length > 0 && (
-        <Card className="glass overflow-hidden">
-          <div className="bg-gradient-to-r from-emerald-500 to-teal-500 p-4 flex items-center justify-between text-white">
+        <Card className="bg-card border-border overflow-hidden">
+          <div className="gradient-secondary p-4 flex items-center justify-between text-primary-foreground">
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 rounded-xl bg-white/20 flex items-center justify-center">
                 <Calendar className="h-5 w-5" />
@@ -271,11 +271,11 @@ export default function Parties() {
                 <p className="text-xs opacity-80">{upcomingParties.length} {upcomingParties.length === 1 ? 'party' : 'parties'} scheduled</p>
               </div>
             </div>
-            <Badge className="bg-white/20 text-white border-white/30">
+            <Badge className="bg-white/20 text-primary-foreground border-white/30">
               📅 Mark your calendar
             </Badge>
           </div>
-          <div className="p-4 space-y-3">
+          <div className="p-4 space-y-3 bg-card">
             {upcomingParties.map(party => (
               <PartyCard
                 key={party.id}
@@ -292,8 +292,8 @@ export default function Parties() {
 
       {/* COMPLETED/PAST PARTIES */}
       {completedParties.length > 0 && (
-        <Card className="glass overflow-hidden">
-          <div className="bg-gradient-to-r from-violet-600 to-purple-600 p-4 flex items-center justify-between text-white">
+        <Card className="bg-card border-border overflow-hidden">
+          <div className="bg-secondary p-4 flex items-center justify-between text-secondary-foreground">
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 rounded-xl bg-white/20 flex items-center justify-center">
                 <Clock className="h-5 w-5" />
@@ -308,7 +308,7 @@ export default function Parties() {
               <p className="text-xs opacity-80">Rated</p>
             </div>
           </div>
-          <div className="p-4 space-y-3">
+          <div className="p-4 space-y-3 bg-card">
             {completedParties.map(party => (
               <PartyCard
                 key={party.id}
@@ -324,7 +324,7 @@ export default function Parties() {
       )}
 
       {filteredParties.length === 0 && (
-        <Card className="glass p-8 text-center">
+        <Card className="bg-card border-border p-8 text-center">
           <div className="w-16 h-16 mx-auto mb-4 rounded-2xl bg-muted flex items-center justify-center">
             <PartyPopper className="h-8 w-8 text-muted-foreground/50" />
           </div>
@@ -337,7 +337,7 @@ export default function Parties() {
       {!showIntro && (
         <Link
           to="/CreateParty"
-          className="fixed bottom-24 right-4 z-50 flex items-center gap-2 px-5 py-3 rounded-full bg-gradient-to-r from-pink-500 to-rose-500 text-white shadow-lg active:scale-95 transition-transform"
+          className="fixed bottom-24 right-4 z-50 flex items-center gap-2 px-5 py-3 rounded-full gradient-primary text-primary-foreground shadow-lg active:scale-95 transition-transform"
           style={{ marginBottom: 'env(safe-area-inset-bottom)' }}
         >
           <Plus className="h-5 w-5" />
