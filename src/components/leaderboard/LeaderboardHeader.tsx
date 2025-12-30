@@ -1,4 +1,4 @@
-import { MapPin } from 'lucide-react';
+import { cn } from '@/lib/utils';
 
 interface LeaderboardHeaderProps {
   filter: 'overall' | 'reputation' | 'party' | 'trending';
@@ -19,27 +19,25 @@ export default function LeaderboardHeader({
   campusName = 'Duke University' 
 }: LeaderboardHeaderProps) {
   return (
-    <div className="space-y-4">
-      {/* Title Section */}
+    <div className="space-y-5">
+      {/* Title Section - Minimal */}
       <div>
-        <h1 className="text-2xl font-bold text-foreground leading-tight">Leaderboard</h1>
-        <div className="flex items-center gap-1.5 text-muted-foreground mt-1">
-          <MapPin className="h-3.5 w-3.5 shrink-0" />
-          <span className="text-sm truncate">{campusName}</span>
-        </div>
+        <h1 className="text-2xl font-bold text-foreground">Leaderboard</h1>
+        <p className="text-sm text-muted-foreground mt-0.5">{campusName}</p>
       </div>
 
-      {/* Filter Pills - Mobile optimized */}
-      <div className="flex gap-2">
+      {/* Filter Pills - Beli style */}
+      <div className="flex gap-2 overflow-x-auto no-scrollbar -mx-4 px-4">
         {filterOptions.map((option) => (
           <button
             key={option.value}
             onClick={() => onFilterChange(option.value)}
-            className={`flex-1 py-3 px-3 rounded-xl text-sm font-medium transition-all active:scale-95 tap-target ${
+            className={cn(
+              "px-4 py-2 rounded-full text-sm font-medium transition-all whitespace-nowrap",
               filter === option.value
-                ? 'gradient-primary text-white'
-                : 'bg-muted/50 text-muted-foreground active:bg-muted'
-            }`}
+                ? 'bg-foreground text-background'
+                : 'bg-muted text-muted-foreground hover:bg-muted/80'
+            )}
           >
             {option.label}
           </button>
