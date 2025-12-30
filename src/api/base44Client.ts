@@ -310,6 +310,26 @@ export interface PartyPhotoVote {
   created_date: string;
 }
 
+export interface ChatMessage {
+  id: string;
+  user_id: string;
+  parent_message_id?: string | null;
+  text: string;
+  mentioned_fraternity_id?: string | null;
+  mentioned_party_id?: string | null;
+  upvotes: number;
+  downvotes: number;
+  created_date: string;
+}
+
+export interface ChatMessageVote {
+  id: string;
+  message_id: string;
+  user_id: string;
+  value: 1 | -1;
+  created_date: string;
+}
+
 export const base44 = {
   auth: new AuthClient(),
   entities: {
@@ -324,6 +344,8 @@ export const base44 = {
     ReputationRating: new EntityClient<ReputationRating>('reputation_rating'),
     PartyPhoto: new EntityClient<PartyPhoto>('party_photo'),
     PartyPhotoVote: new EntityClient<PartyPhotoVote>('party_photo_vote'),
+    ChatMessage: new EntityClient<ChatMessage>('chat_message'),
+    ChatMessageVote: new EntityClient<ChatMessageVote>('chat_message_vote'),
   },
   integrations: new IntegrationsClient(),
 };
