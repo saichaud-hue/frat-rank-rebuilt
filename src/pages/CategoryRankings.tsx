@@ -20,7 +20,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { clamp, createPageUrl, getScoreColor } from '@/utils';
+import { clamp, createPageUrl, getScoreColor, toGreekLetters } from '@/utils';
 import { ensureAuthed } from '@/utils/auth';
 
 type CategoryType = 'overall' | 'reputation' | 'party' | 'trending';
@@ -364,7 +364,7 @@ export default function CategoryRankings() {
                 <Trophy className="h-5 w-5 text-white" />
               </div>
               <p className="font-bold text-lg text-slate-600">
-                {topThree[1].chapter?.substring(0, 2) || topThree[1].name.substring(0, 2)}
+                {toGreekLetters(topThree[1].chapter?.substring(0, 2) || topThree[1].name.substring(0, 2))}
               </p>
               <p className={`text-lg font-bold ${getScoreColor(getScore(topThree[1]) ?? 0)}`}>
                 {getScore(topThree[1])?.toFixed(1) || '—'}
@@ -383,7 +383,7 @@ export default function CategoryRankings() {
                 <Crown className="h-6 w-6 text-white" />
               </div>
               <p className="font-bold text-xl text-amber-600">
-                {topThree[0].chapter?.substring(0, 2) || topThree[0].name.substring(0, 2)}
+                {toGreekLetters(topThree[0].chapter?.substring(0, 2) || topThree[0].name.substring(0, 2))}
               </p>
               <p className={`text-xl font-bold ${getScoreColor(getScore(topThree[0]) ?? 0)}`}>
                 {getScore(topThree[0])?.toFixed(1) || '—'}
@@ -402,7 +402,7 @@ export default function CategoryRankings() {
                 <Medal className="h-5 w-5 text-white" />
               </div>
               <p className="font-bold text-lg text-amber-700">
-                {topThree[2].chapter?.substring(0, 2) || topThree[2].name.substring(0, 2)}
+                {toGreekLetters(topThree[2].chapter?.substring(0, 2) || topThree[2].name.substring(0, 2))}
               </p>
               <p className={`text-lg font-bold ${getScoreColor(getScore(topThree[2]) ?? 0)}`}>
                 {getScore(topThree[2])?.toFixed(1) || '—'}
@@ -442,7 +442,7 @@ export default function CategoryRankings() {
                   <Avatar className="h-11 w-11 ring-2 ring-slate-100">
                     <AvatarImage src={frat.logo_url} />
                     <AvatarFallback className="bg-primary/10 text-primary font-bold text-sm">
-                      {frat.chapter?.substring(0, 2) || frat.name.substring(0, 2)}
+                      {toGreekLetters(frat.chapter?.substring(0, 2) || frat.name.substring(0, 2))}
                     </AvatarFallback>
                   </Avatar>
                   
