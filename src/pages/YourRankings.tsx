@@ -8,7 +8,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { base44, type Fraternity, type Party } from '@/api/base44Client';
-import { createPageUrl, getScoreBgColor, clamp, getFratGreek } from '@/utils';
+import { createPageUrl, getScoreBgColor, clamp, getFratGreek, getFratShorthand } from '@/utils';
 import { Progress } from '@/components/ui/progress';
 import { ensureAuthed } from '@/utils/auth';
 import YourListsIntro from '@/components/onboarding/YourListsIntro';
@@ -540,31 +540,31 @@ export default function YourRankings() {
             rankedParties.map((item) => (
               <Link key={item.party.id} to={createPageUrl(`Party?id=${item.party.id}`)}>
                 <Card className="glass p-4 active:scale-[0.98] transition-all hover:shadow-md group">
-                  <div className="flex items-center gap-4">
+                  <div className="flex items-center gap-3">
                     {/* Rank */}
-                    <div className="w-8 text-center">
+                    <div className="w-6 text-center flex-shrink-0">
                       <span className="text-lg font-bold text-muted-foreground">
                         {item.rank}.
                       </span>
                     </div>
 
                     {/* Avatar */}
-                    <div className="h-12 w-12 rounded-xl bg-gradient-to-br from-pink-500 to-rose-500 flex items-center justify-center">
-                      <PartyPopper className="h-6 w-6 text-white" />
+                    <div className="h-11 w-11 rounded-xl bg-gradient-to-br from-pink-500 to-rose-500 flex items-center justify-center flex-shrink-0">
+                      <PartyPopper className="h-5 w-5 text-white" />
                     </div>
 
                     {/* Info */}
                     <div className="flex-1 min-w-0">
-                      <h3 className="font-semibold truncate">{item.party.title}</h3>
+                      <h3 className="font-semibold text-sm truncate">{item.party.title}</h3>
                       {item.fraternity && (
                         <p className="text-sm text-muted-foreground truncate">
-                          {item.fraternity.name} {item.fraternity.chapter ? `• ${item.fraternity.chapter}` : ''}
+                          {item.fraternity.name} • {getFratShorthand(item.fraternity.name)}
                         </p>
                       )}
                     </div>
 
                     {/* Score */}
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-2 flex-shrink-0">
                       <Badge className={`${getScoreBgColor(item.score)} text-white text-sm px-2.5 py-1`}>
                         {item.score.toFixed(1)}
                       </Badge>
