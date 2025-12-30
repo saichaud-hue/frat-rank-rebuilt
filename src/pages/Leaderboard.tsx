@@ -24,7 +24,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { clamp, createPageUrl } from '@/utils';
 import { getCachedCampusBaseline } from "@/utils/scoring";
 import { ensureAuthed } from '@/utils/auth';
-import { Star } from 'lucide-react';
+import { Star, PartyPopper } from 'lucide-react';
 
 type FilterType = 'overall' | 'reputation' | 'party' | 'trending';
 
@@ -38,7 +38,7 @@ export default function Leaderboard() {
   const [showIntro, setShowIntro] = useState(() => {
     return !localStorage.getItem('fratrank_leaderboard_intro_never_show');
   });
-  const [showRateAction, setShowRateAction] = useState(false);
+  const [showRateAction, setShowRateAction] = useState<'rate' | 'parties' | false>(false);
 
   const handleIntroComplete = (neverShowAgain: boolean) => {
     if (neverShowAgain) {
@@ -387,23 +387,35 @@ export default function Leaderboard() {
 
       {/* Rate Action Sheet */}
       <RateActionSheet
-        isOpen={showRateAction}
+        isOpen={showRateAction !== false}
         onClose={() => setShowRateAction(false)}
         onRateFrat={handleRate}
         onRateParty={handleRateParty}
         fraternities={fraternities}
+        initialAction={showRateAction || undefined}
       />
 
-      {/* Floating Rate Button - Only show when intro is dismissed */}
+      {/* Floating Rate Buttons - Only show when intro is dismissed */}
       {!showIntro && (
-        <button
-          onClick={() => setShowRateAction(true)}
-          className="fixed bottom-24 right-4 z-50 flex items-center gap-2 px-5 py-3 rounded-full bg-amber-500 text-white shadow-lg active:scale-95 transition-transform"
+        <div 
+          className="fixed bottom-24 right-4 z-50 flex gap-2"
           style={{ marginBottom: 'env(safe-area-inset-bottom)' }}
         >
-          <Star className="h-5 w-5" />
-          <span className="font-semibold">Rate</span>
-        </button>
+          <button
+            onClick={() => setShowRateAction('parties')}
+            className="flex items-center gap-1.5 px-4 py-3 rounded-full bg-primary text-white shadow-lg active:scale-95 transition-transform"
+          >
+            <PartyPopper className="h-4 w-4" />
+            <span className="font-semibold text-sm">Party</span>
+          </button>
+          <button
+            onClick={() => setShowRateAction('rate')}
+            className="flex items-center gap-1.5 px-4 py-3 rounded-full bg-amber-500 text-white shadow-lg active:scale-95 transition-transform"
+          >
+            <Star className="h-4 w-4" />
+            <span className="font-semibold text-sm">Frat</span>
+          </button>
+        </div>
       )}
 
       {/* Intro Modal */}

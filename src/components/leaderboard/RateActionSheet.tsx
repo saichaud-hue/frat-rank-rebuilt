@@ -24,6 +24,7 @@ interface RateActionSheetProps {
   onRateFrat: (fraternity: Fraternity) => void;
   onRateParty: (party: Party) => void;
   fraternities: Fraternity[];
+  initialAction?: 'rate' | 'parties';
 }
 
 export default function RateActionSheet({ 
@@ -31,7 +32,8 @@ export default function RateActionSheet({
   onClose, 
   onRateFrat, 
   onRateParty,
-  fraternities 
+  fraternities,
+  initialAction
 }: RateActionSheetProps) {
   const [step, setStep] = useState<Step>('choose-action');
   const [actionType, setActionType] = useState<ActionType | null>(null);
@@ -39,15 +41,19 @@ export default function RateActionSheet({
   const [parties, setParties] = useState<Party[]>([]);
   const [loadingParties, setLoadingParties] = useState(false);
 
-  // Reset state when sheet closes
+  // Reset state when sheet closes, or set initial action when opening
   useEffect(() => {
     if (!isOpen) {
       setStep('choose-action');
       setActionType(null);
       setSelectedFrat(null);
       setParties([]);
+    } else if (initialAction) {
+      // Skip to frat selection with the specified action
+      setActionType(initialAction);
+      setStep('choose-frat');
     }
-  }, [isOpen]);
+  }, [isOpen, initialAction]);
 
   const handleActionSelect = (action: ActionType) => {
     setActionType(action);
@@ -63,9 +69,12 @@ export default function RateActionSheet({
       setLoadingParties(true);
       try {
         const allParties = await base44.entities.Party.filter({ fraternity_id: frat.id });
+        // Filter to only past/completed parties
+        const now = new Date();
+        const pastParties = allParties.filter(p => new Date(p.ends_at) < now);
         // Sort by date, most recent first
-        allParties.sort((a, b) => new Date(b.starts_at).getTime() - new Date(a.starts_at).getTime());
-        setParties(allParties);
+        pastParties.sort((a, b) => new Date(b.starts_at).getTime() - new Date(a.starts_at).getTime());
+        setParties(pastParties);
         setStep('choose-party');
       } catch (error) {
         console.error('Failed to load parties:', error);
@@ -205,8 +214,8 @@ export default function RateActionSheet({
               ) : parties.length === 0 ? (
                 <div className="text-center py-12">
                   <PartyPopper className="h-12 w-12 mx-auto text-muted-foreground/50 mb-3" />
-                  <p className="text-muted-foreground">No parties yet</p>
-                  <p className="text-sm text-muted-foreground/70">This frat hasn't hosted any parties</p>
+                  <p className="text-muted-foreground font-medium">No past parties yet</p>
+                  <p className="text-sm text-muted-foreground/70">Check back after they host one!</p>
                 </div>
               ) : (
                 parties.map((party) => {
