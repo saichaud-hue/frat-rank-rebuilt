@@ -94,7 +94,7 @@ export default function OverallScoreCard({
         <div className="flex items-center justify-between">
           <div>
             <p className="text-xs text-muted-foreground mb-1">Overall Score</p>
-            <div className="text-2xl sm:text-3xl font-semibold text-foreground">
+            <div className="text-4xl font-bold text-foreground">
               {overall.toFixed(1)}
             </div>
           </div>
@@ -126,20 +126,20 @@ export default function OverallScoreCard({
           </div>
           
           {reputationBreakdown.map(({ key, label, helper, icon: Icon, value, color }) => (
-            <div key={key} className="space-y-1.5">
+            <div key={key} className="space-y-2">
               <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <div className={`w-7 h-7 rounded-full bg-muted flex items-center justify-center ${color}`}>
-                    <Icon className="h-3.5 w-3.5" />
+                <div className="flex items-center gap-3">
+                  <div className={`w-8 h-8 rounded-full bg-muted flex items-center justify-center ${color}`}>
+                    <Icon className="h-4 w-4" />
                   </div>
-                  <div className="min-w-0">
-                    <p className="font-medium text-sm truncate">{label}</p>
-                    <p className="text-[10px] text-muted-foreground line-clamp-1">{helper}</p>
+                  <div>
+                    <p className="font-medium text-sm">{label}</p>
+                    <p className="text-xs text-muted-foreground">{helper}</p>
                   </div>
                 </div>
-                <p className={`text-sm font-semibold ${getScoreColor(value)}`}>{value.toFixed(1)}</p>
+                <p className={`text-lg font-bold ${getScoreColor(value)}`}>{value.toFixed(1)}</p>
               </div>
-              <Progress value={value * 10} className="h-1.5" />
+              <Progress value={value * 10} className="h-2" />
             </div>
           ))}
         </div>
@@ -154,20 +154,20 @@ export default function OverallScoreCard({
           </div>
           
           {partyBreakdown.map(({ key, label, helper, icon: Icon, value, color }) => (
-            <div key={key} className="space-y-1.5">
+            <div key={key} className="space-y-2">
               <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <div className={`w-7 h-7 rounded-full bg-muted flex items-center justify-center ${color}`}>
-                    <Icon className="h-3.5 w-3.5" />
+                <div className="flex items-center gap-3">
+                  <div className={`w-8 h-8 rounded-full bg-muted flex items-center justify-center ${color}`}>
+                    <Icon className="h-4 w-4" />
                   </div>
-                  <div className="min-w-0">
-                    <p className="font-medium text-sm truncate">{label}</p>
-                    <p className="text-[10px] text-muted-foreground line-clamp-1">{helper}</p>
+                  <div>
+                    <p className="font-medium text-sm">{label}</p>
+                    <p className="text-xs text-muted-foreground">{helper}</p>
                   </div>
                 </div>
-                <p className={`text-sm font-semibold ${getScoreColor(value)}`}>{value.toFixed(1)}</p>
+                <p className={`text-lg font-bold ${getScoreColor(value)}`}>{value.toFixed(1)}</p>
               </div>
-              <Progress value={value * 10} className="h-1.5" />
+              <Progress value={value * 10} className="h-2" />
             </div>
           ))}
         </div>
