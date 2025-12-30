@@ -1,12 +1,11 @@
 import { useState, useEffect } from 'react';
-import { Check, Star, Users, Shield, Heart } from 'lucide-react';
-import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
+import { X, Loader2, Users, Shield, Heart, Star } from 'lucide-react';
+import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Slider } from '@/components/ui/slider';
-import { Badge } from '@/components/ui/badge';
 import type { Fraternity } from '@/api/base44Client';
 import { computeCombinedReputation } from '@/utils/scoring';
-import { getScoreColor } from '@/utils';
+import { getScoreColor, clamp } from '@/utils';
 
 interface RateFratSheetProps {
   fraternity: Fraternity | null;
@@ -27,7 +26,6 @@ export default function RateFratSheet({
   const [reputation, setReputation] = useState(existingScores?.reputation ?? 5);
   const [community, setCommunity] = useState(existingScores?.community ?? 5);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [showSuccess, setShowSuccess] = useState(false);
 
   // Reset values when existingScores changes
   useEffect(() => {
@@ -42,11 +40,7 @@ export default function RateFratSheet({
     setIsSubmitting(true);
     try {
       await onSubmit({ brotherhood, reputation, community, combined: combinedScore });
-      setShowSuccess(true);
-      setTimeout(() => {
-        setShowSuccess(false);
-        onClose();
-      }, 1500);
+      onClose();
     } catch (error) {
       console.error('Failed to submit rating:', error);
     } finally {
@@ -54,124 +48,111 @@ export default function RateFratSheet({
     }
   };
 
-  const getScoreGradient = (s: number) => {
-    if (s >= 8) return 'from-emerald-500 to-green-400';
-    if (s >= 6) return 'from-blue-500 to-indigo-400';
-    if (s >= 4) return 'from-amber-500 to-yellow-400';
-    return 'from-red-500 to-orange-400';
-  };
+  if (!fraternity || !isOpen) return null;
 
-  if (!fraternity) return null;
-
-  const sliders = [
+  const categories = [
     {
       key: 'brotherhood',
       label: 'Brotherhood',
-      helper: 'Member quality and cohesion',
       icon: Users,
+      color: 'text-blue-500',
       value: brotherhood,
       setValue: setBrotherhood,
-      color: 'text-blue-500'
+      description: 'Member quality and cohesion'
     },
     {
       key: 'reputation',
       label: 'Reputation',
-      helper: 'Campus perception and overall standing',
       icon: Shield,
+      color: 'text-primary',
       value: reputation,
       setValue: setReputation,
-      color: 'text-primary'
+      description: 'Campus perception and standing'
     },
     {
       key: 'community',
       label: 'Community',
-      helper: 'Welcoming, respectful, positive presence',
       icon: Heart,
+      color: 'text-rose-500',
       value: community,
       setValue: setCommunity,
-      color: 'text-rose-500'
+      description: 'Welcoming and respectful'
     },
   ];
 
   return (
-    <Sheet open={isOpen} onOpenChange={onClose}>
-      <SheetContent side="bottom" className="rounded-t-3xl h-[85vh] overflow-y-auto">
-        {showSuccess ? (
-          <div className="flex flex-col items-center justify-center h-full space-y-4 animate-scale-in">
-            <div className="w-20 h-20 rounded-full bg-emerald-100 flex items-center justify-center">
-              <Check className="h-10 w-10 text-emerald-600" />
-            </div>
-            <h2 className="text-2xl font-bold">
-              {existingScores ? 'Rating Updated!' : 'Rating Submitted!'}
-            </h2>
-            <p className="text-muted-foreground">Thank you for your feedback</p>
+    <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4">
+      <Card className="w-full max-w-lg max-h-[90vh] overflow-y-auto">
+        {/* Header */}
+        <div className="sticky top-0 bg-card p-4 border-b flex items-center justify-between">
+          <div>
+            <h2 className="text-xl font-bold">{fraternity.name}</h2>
+            {fraternity.chapter && (
+              <p className="text-sm text-muted-foreground">{fraternity.chapter}</p>
+            )}
           </div>
-        ) : (
-          <>
-            <SheetHeader className="pb-4">
-              <SheetTitle className="text-center">
-                Rate {fraternity.name}
-              </SheetTitle>
-            </SheetHeader>
+          <Button variant="ghost" size="icon" onClick={onClose}>
+            <X className="h-5 w-5" />
+          </Button>
+        </div>
 
-            <div className="space-y-6 px-2">
-              {/* Combined Score Display */}
-              <div className="text-center space-y-2">
-                <p className="text-sm text-muted-foreground">Combined Reputation Score</p>
-                <div 
-                  className={`inline-block px-6 py-2 rounded-full text-white font-bold text-3xl bg-gradient-to-r ${getScoreGradient(combinedScore)}`}
-                >
-                  {combinedScore.toFixed(1)}
-                </div>
-              </div>
+        {/* Combined Score */}
+        <div className="p-6 text-center border-b">
+          <p className="text-sm text-muted-foreground mb-2">Reputation Score</p>
+          <div className={`text-5xl font-bold ${getScoreColor(combinedScore)}`}>
+            {combinedScore.toFixed(1)}
+          </div>
+        </div>
 
-              {/* Sliders */}
-              <div className="space-y-5">
-                {sliders.map(({ key, label, helper, icon: Icon, value, setValue, color }) => (
-                  <div key={key} className="space-y-3">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-3">
-                        <div className={`w-9 h-9 rounded-full bg-muted flex items-center justify-center ${color}`}>
-                          <Icon className="h-4 w-4" />
-                        </div>
-                        <div>
-                          <p className="font-medium text-sm">{label}</p>
-                          <p className="text-xs text-muted-foreground">{helper}</p>
-                        </div>
-                      </div>
-                      <p className={`text-lg font-bold ${getScoreColor(value)}`}>{value.toFixed(1)}</p>
-                    </div>
-                    <Slider
-                      value={[value]}
-                      onValueChange={([v]) => setValue(v)}
-                      min={1}
-                      max={10}
-                      step={0.5}
-                      className="w-full"
-                    />
+        {/* Categories */}
+        <div className="p-4 space-y-6">
+          {categories.map(({ key, label, icon: Icon, color, value, setValue, description }) => (
+            <div key={key} className="space-y-3">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className={`w-10 h-10 rounded-full bg-muted flex items-center justify-center ${color}`}>
+                    <Icon className="h-5 w-5" />
                   </div>
-                ))}
+                  <div>
+                    <p className="font-medium">{label}</p>
+                    <p className="text-xs text-muted-foreground">{description}</p>
+                  </div>
+                </div>
+                <p className={`text-xl font-bold ${getScoreColor(value)}`}>{value.toFixed(1)}</p>
               </div>
-
-              {/* Submit Button */}
-              <Button 
-                className="w-full gradient-primary text-white py-6 text-lg"
-                onClick={handleSubmit}
-                disabled={isSubmitting}
-              >
-                {isSubmitting ? (
-                  <span className="animate-pulse">Submitting...</span>
-                ) : (
-                  <>
-                    <Star className="h-5 w-5 mr-2" />
-                    Submit Rating
-                  </>
-                )}
-              </Button>
+              <Slider
+                value={[value]}
+                onValueChange={([v]) => setValue(clamp(v, 0, 10))}
+                min={0}
+                max={10}
+                step={0.1}
+                className="w-full"
+              />
             </div>
-          </>
-        )}
-      </SheetContent>
-    </Sheet>
+          ))}
+        </div>
+
+        {/* Footer */}
+        <div className="sticky bottom-0 bg-card p-4 border-t flex gap-2">
+          <Button variant="outline" onClick={onClose} className="flex-1">
+            Cancel
+          </Button>
+          <Button 
+            onClick={handleSubmit}
+            disabled={isSubmitting}
+            className="flex-1 gradient-primary text-white"
+          >
+            {isSubmitting ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <>
+                <Star className="h-4 w-4 mr-2" />
+                {existingScores ? 'Update Rating' : 'Submit Rating'}
+              </>
+            )}
+          </Button>
+        </div>
+      </Card>
+    </div>
   );
 }
