@@ -1,0 +1,317 @@
+import { useState, useEffect } from 'react';
+import { Link } from 'react-router-dom';
+import { ListOrdered, Trophy, PartyPopper, LogIn, ChevronRight } from 'lucide-react';
+import { Card } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Badge } from '@/components/ui/badge';
+import { Skeleton } from '@/components/ui/skeleton';
+import { base44, type Fraternity, type Party, type PartyRating, type ReputationRating } from '@/api/base44Client';
+import { createPageUrl, getScoreBgColor } from '@/utils';
+
+interface RankedFrat {
+  fraternity: Fraternity;
+  score: number;
+  rank: number;
+}
+
+interface RankedParty {
+  party: Party;
+  fraternity?: Fraternity;
+  score: number;
+  rank: number;
+}
+
+export default function YourRankings() {
+  const [user, setUser] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+  const [activeTab, setActiveTab] = useState<'frats' | 'parties'>('frats');
+  const [rankedFrats, setRankedFrats] = useState<RankedFrat[]>([]);
+  const [rankedParties, setRankedParties] = useState<RankedParty[]>([]);
+
+  useEffect(() => {
+    loadData();
+  }, []);
+
+  const loadData = async () => {
+    try {
+      const userData = await base44.auth.me();
+      setUser(userData);
+
+      if (userData) {
+        const [fraternities, parties, repRatings, partyRatings] = await Promise.all([
+          base44.entities.Fraternity.list(),
+          base44.entities.Party.list(),
+          base44.entities.ReputationRating.filter({ user_id: userData.id }),
+          base44.entities.PartyRating.filter({ user_id: userData.id }),
+        ]);
+
+        // Build frat rankings from user's reputation ratings
+        const fratMap = new Map(fraternities.map(f => [f.id, f]));
+        const partyMap = new Map(parties.map(p => [p.id, p]));
+
+        const userFratScores: RankedFrat[] = repRatings
+          .filter(r => r.fraternity_id && fratMap.has(r.fraternity_id))
+          .map(r => ({
+            fraternity: fratMap.get(r.fraternity_id!)!,
+            score: r.combined_score ?? 5,
+            rank: 0,
+          }))
+          .sort((a, b) => b.score - a.score);
+
+        // Assign ranks with ties
+        let currentRank = 1;
+        userFratScores.forEach((item, index) => {
+          if (index === 0) {
+            item.rank = 1;
+          } else if (Math.abs(item.score - userFratScores[index - 1].score) < 0.01) {
+            item.rank = userFratScores[index - 1].rank;
+          } else {
+            item.rank = index + 1;
+          }
+        });
+
+        setRankedFrats(userFratScores);
+
+        // Build party rankings from user's party ratings
+        const userPartyScores: RankedParty[] = partyRatings
+          .filter(r => r.party_id && partyMap.has(r.party_id))
+          .map(r => {
+            const party = partyMap.get(r.party_id!)!;
+            return {
+              party,
+              fraternity: party.fraternity_id ? fratMap.get(party.fraternity_id) : undefined,
+              score: r.party_quality_score ?? 5,
+              rank: 0,
+            };
+          })
+          .sort((a, b) => b.score - a.score);
+
+        // Assign ranks with ties
+        userPartyScores.forEach((item, index) => {
+          if (index === 0) {
+            item.rank = 1;
+          } else if (Math.abs(item.score - userPartyScores[index - 1].score) < 0.01) {
+            item.rank = userPartyScores[index - 1].rank;
+          } else {
+            item.rank = index + 1;
+          }
+        });
+
+        setRankedParties(userPartyScores);
+      }
+    } catch (error) {
+      console.error('Failed to load rankings:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleLogin = () => {
+    base44.auth.redirectToLogin(window.location.href);
+  };
+
+  if (loading) {
+    return (
+      <div className="space-y-5">
+        <div className="flex items-center gap-3">
+          <Skeleton className="h-10 w-10 rounded-xl" />
+          <Skeleton className="h-8 w-40" />
+        </div>
+        <Skeleton className="h-12 w-full rounded-lg" />
+        {[1, 2, 3, 4, 5].map((i) => (
+          <Skeleton key={i} className="h-20 rounded-xl" />
+        ))}
+      </div>
+    );
+  }
+
+  if (!user) {
+    return (
+      <div className="space-y-5">
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-indigo-500 to-purple-500 flex items-center justify-center shadow-lg">
+            <ListOrdered className="h-5 w-5 text-white" />
+          </div>
+          <div>
+            <h1 className="text-2xl font-bold">Your Rankings</h1>
+            <p className="text-xs text-muted-foreground">Your personal scores</p>
+          </div>
+        </div>
+
+        <Card className="glass p-8 text-center space-y-6">
+          <div className="w-20 h-20 mx-auto rounded-full bg-muted flex items-center justify-center">
+            <ListOrdered className="h-10 w-10 text-muted-foreground" />
+          </div>
+          <div className="space-y-2">
+            <h2 className="text-xl font-bold">Sign in to see your rankings</h2>
+            <p className="text-muted-foreground text-sm">
+              Rate fraternities and parties to build your personal list
+            </p>
+          </div>
+          <Button onClick={handleLogin} className="gradient-primary text-white">
+            <LogIn className="h-4 w-4 mr-2" />
+            Sign in with Google
+          </Button>
+        </Card>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-5">
+      {/* Header */}
+      <div className="flex items-center gap-3">
+        <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-indigo-500 to-purple-500 flex items-center justify-center shadow-lg">
+          <ListOrdered className="h-5 w-5 text-white" />
+        </div>
+        <div>
+          <h1 className="text-2xl font-bold">Your Rankings</h1>
+          <p className="text-xs text-muted-foreground">Your personal scores</p>
+        </div>
+      </div>
+
+      {/* Tabs */}
+      <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as 'frats' | 'parties')}>
+        <TabsList className="grid w-full grid-cols-2 h-12">
+          <TabsTrigger value="frats" className="gap-2 text-sm">
+            <Trophy className="h-4 w-4" />
+            Fraternities
+            {rankedFrats.length > 0 && (
+              <Badge variant="secondary" className="ml-1 h-5 px-1.5 text-xs">
+                {rankedFrats.length}
+              </Badge>
+            )}
+          </TabsTrigger>
+          <TabsTrigger value="parties" className="gap-2 text-sm">
+            <PartyPopper className="h-4 w-4" />
+            Parties
+            {rankedParties.length > 0 && (
+              <Badge variant="secondary" className="ml-1 h-5 px-1.5 text-xs">
+                {rankedParties.length}
+              </Badge>
+            )}
+          </TabsTrigger>
+        </TabsList>
+
+        {/* Fraternities Tab */}
+        <TabsContent value="frats" className="mt-4 space-y-3">
+          {rankedFrats.length === 0 ? (
+            <Card className="glass p-8 text-center space-y-4">
+              <Trophy className="h-12 w-12 mx-auto text-muted-foreground/50" />
+              <div className="space-y-1">
+                <h3 className="font-semibold">No fraternities rated yet</h3>
+                <p className="text-sm text-muted-foreground">
+                  Rate fraternities on the Leaderboard to build your personal list
+                </p>
+              </div>
+              <Link to="/Leaderboard">
+                <Button variant="outline" className="mt-2">
+                  Go to Leaderboard
+                </Button>
+              </Link>
+            </Card>
+          ) : (
+            rankedFrats.map((item) => (
+              <Link key={item.fraternity.id} to={createPageUrl(`Fraternity?id=${item.fraternity.id}`)}>
+                <Card className="glass p-4 active:scale-[0.98] transition-all hover:shadow-md group">
+                  <div className="flex items-center gap-4">
+                    {/* Rank */}
+                    <div className="w-8 text-center">
+                      <span className="text-lg font-bold text-muted-foreground">
+                        {item.rank}.
+                      </span>
+                    </div>
+
+                    {/* Avatar */}
+                    <Avatar className="h-12 w-12 ring-2 ring-border">
+                      <AvatarImage src={item.fraternity.logo_url} />
+                      <AvatarFallback className="bg-primary/10 text-primary font-bold">
+                        {item.fraternity.chapter?.substring(0, 2) || item.fraternity.name.substring(0, 2)}
+                      </AvatarFallback>
+                    </Avatar>
+
+                    {/* Info */}
+                    <div className="flex-1 min-w-0">
+                      <h3 className="font-semibold truncate">{item.fraternity.name}</h3>
+                      {item.fraternity.chapter && (
+                        <p className="text-sm text-muted-foreground">{item.fraternity.chapter}</p>
+                      )}
+                    </div>
+
+                    {/* Score */}
+                    <div className="flex items-center gap-2">
+                      <Badge className={`${getScoreBgColor(item.score)} text-white text-sm px-2.5 py-1`}>
+                        {item.score.toFixed(1)}
+                      </Badge>
+                      <ChevronRight className="h-5 w-5 text-muted-foreground group-hover:translate-x-1 transition-transform" />
+                    </div>
+                  </div>
+                </Card>
+              </Link>
+            ))
+          )}
+        </TabsContent>
+
+        {/* Parties Tab */}
+        <TabsContent value="parties" className="mt-4 space-y-3">
+          {rankedParties.length === 0 ? (
+            <Card className="glass p-8 text-center space-y-4">
+              <PartyPopper className="h-12 w-12 mx-auto text-muted-foreground/50" />
+              <div className="space-y-1">
+                <h3 className="font-semibold">No parties rated yet</h3>
+                <p className="text-sm text-muted-foreground">
+                  Rate parties to build your personal list
+                </p>
+              </div>
+              <Link to="/Parties">
+                <Button variant="outline" className="mt-2">
+                  Browse Parties
+                </Button>
+              </Link>
+            </Card>
+          ) : (
+            rankedParties.map((item) => (
+              <Link key={item.party.id} to={createPageUrl(`Party?id=${item.party.id}`)}>
+                <Card className="glass p-4 active:scale-[0.98] transition-all hover:shadow-md group">
+                  <div className="flex items-center gap-4">
+                    {/* Rank */}
+                    <div className="w-8 text-center">
+                      <span className="text-lg font-bold text-muted-foreground">
+                        {item.rank}.
+                      </span>
+                    </div>
+
+                    {/* Avatar */}
+                    <div className="h-12 w-12 rounded-xl bg-gradient-to-br from-pink-500 to-rose-500 flex items-center justify-center">
+                      <PartyPopper className="h-6 w-6 text-white" />
+                    </div>
+
+                    {/* Info */}
+                    <div className="flex-1 min-w-0">
+                      <h3 className="font-semibold truncate">{item.party.title}</h3>
+                      {item.fraternity && (
+                        <p className="text-sm text-muted-foreground truncate">
+                          {item.fraternity.name} {item.fraternity.chapter ? `• ${item.fraternity.chapter}` : ''}
+                        </p>
+                      )}
+                    </div>
+
+                    {/* Score */}
+                    <div className="flex items-center gap-2">
+                      <Badge className={`${getScoreBgColor(item.score)} text-white text-sm px-2.5 py-1`}>
+                        {item.score.toFixed(1)}
+                      </Badge>
+                      <ChevronRight className="h-5 w-5 text-muted-foreground group-hover:translate-x-1 transition-transform" />
+                    </div>
+                  </div>
+                </Card>
+              </Link>
+            ))
+          )}
+        </TabsContent>
+      </Tabs>
+    </div>
+  );
+}
