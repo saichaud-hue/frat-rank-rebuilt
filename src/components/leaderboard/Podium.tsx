@@ -106,7 +106,7 @@ export default function Podium({ topThree, variant, getScore, showLinks = true }
         <Avatar className={`${avatarSize} ring-4 ${medalColor.ring} shadow-lg bg-white`}>
           <AvatarImage src={frat.logo_url} alt={frat.name} />
           <AvatarFallback className={`font-bold ${medalColor.text} bg-white ${isSummary ? 'text-sm' : 'text-base'}`}>
-            {toGreekLetters(frat.chapter?.substring(0, 2) || frat.name.substring(0, 2))}
+            {toGreekLetters(frat.chapter?.substring(0, 3) || frat.name.substring(0, 3))}
           </AvatarFallback>
         </Avatar>
 
