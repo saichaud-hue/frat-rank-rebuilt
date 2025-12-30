@@ -274,20 +274,20 @@ export default function Leaderboard() {
   }
 
   return (
-    <div className="space-y-5">
+    <div className="space-y-4 pb-28">
       {/* Header */}
-      <div className="flex items-center gap-3">
-        <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-amber-500 to-yellow-500 flex items-center justify-center shadow-lg">
+      <div className="flex items-center gap-3 mb-2">
+        <div className="w-11 h-11 rounded-2xl bg-gradient-to-br from-amber-500 to-yellow-500 flex items-center justify-center shadow-lg">
           <Trophy className="h-5 w-5 text-white" />
         </div>
         <div>
           <h1 className="text-2xl font-bold text-slate-800">Leaderboard</h1>
-          <p className="text-xs text-slate-500">Who's on top?</p>
+          <p className="text-sm text-slate-500">Who's on top?</p>
         </div>
       </div>
 
-      {/* 2x2 Podium Cards Grid */}
-      <div className="grid grid-cols-2 gap-3 pb-24">
+      {/* Stacked Podium Cards */}
+      <div className="space-y-4">
         <PodiumCard category="overall" topThree={overallTop3} />
         <PodiumCard category="reputation" topThree={reputationTop3} />
         <PodiumCard category="party" topThree={partyTop3} />
