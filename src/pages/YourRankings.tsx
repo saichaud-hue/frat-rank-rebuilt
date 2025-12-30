@@ -72,7 +72,14 @@ export default function YourRankings() {
       ]);
       
       setAllFraternities(fraternities);
-      setAllParties(parties);
+      
+      // Filter to only past parties
+      const now = new Date();
+      const pastParties = parties.filter(p => {
+        if (!p.ends_at) return false;
+        return new Date(p.ends_at) < now;
+      });
+      setAllParties(pastParties);
 
       if (userData) {
         const [repRatings, partyRatings] = await Promise.all([

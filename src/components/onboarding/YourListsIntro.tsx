@@ -366,24 +366,39 @@ export default function YourListsIntro({
                 {parties.length === 0 ? (
                   <div className="text-center py-8 text-muted-foreground">
                     <PartyPopper className="h-12 w-12 mx-auto mb-3 opacity-50" />
-                    <p>No parties available yet</p>
+                    <p>No past parties available yet</p>
                   </div>
                 ) : (
-                  parties.map((party) => (
-                    <button
-                      key={party.id}
-                      onClick={() => handleSelectParty(party)}
-                      className="w-full flex items-center gap-3 p-3 rounded-xl bg-muted/50 hover:bg-muted active:scale-[0.98] transition-all text-left"
-                    >
-                      <div className="h-12 w-12 rounded-xl bg-gradient-to-br from-pink-500 to-rose-500 flex items-center justify-center">
-                        <PartyPopper className="h-6 w-6 text-white" />
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="font-semibold truncate">{party.title}</p>
-                      </div>
-                      <Star className="h-5 w-5 text-pink-500" />
-                    </button>
-                  ))
+                  parties.map((party) => {
+                    const isRated = ratedPartyIds.includes(party.id);
+                    return (
+                      <button
+                        key={party.id}
+                        onClick={() => handleSelectParty(party)}
+                        className={`w-full flex items-center gap-3 p-3 rounded-xl active:scale-[0.98] transition-all text-left ${
+                          isRated 
+                            ? 'bg-green-500/10 border border-green-500/30 hover:bg-green-500/20' 
+                            : 'bg-muted/50 hover:bg-muted'
+                        }`}
+                      >
+                        <div className={`h-12 w-12 rounded-xl flex items-center justify-center ${
+                          isRated 
+                            ? 'bg-green-500/20' 
+                            : 'bg-gradient-to-br from-pink-500 to-rose-500'
+                        }`}>
+                          <PartyPopper className={`h-6 w-6 ${isRated ? 'text-green-600' : 'text-white'}`} />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="font-semibold truncate">{party.title}</p>
+                        </div>
+                        {isRated ? (
+                          <CheckCircle2 className="h-5 w-5 text-green-500" />
+                        ) : (
+                          <Star className="h-5 w-5 text-pink-500" />
+                        )}
+                      </button>
+                    );
+                  })
                 )}
               </div>
             </ScrollArea>
