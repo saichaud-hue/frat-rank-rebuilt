@@ -177,28 +177,28 @@ export default function LeaderboardPodium({ topThree, ranks = [1, 2, 3], filter 
           
           <div className="text-center space-y-2">
             <div 
-              className={`mx-auto rounded-xl gradient-primary flex items-center justify-center text-white font-bold ${
-                size === 'lg' ? 'w-14 h-14 text-xl' : 'w-10 h-10 text-lg'
+              className={`mx-auto rounded-xl gradient-primary flex items-center justify-center text-white font-semibold ${
+                size === 'lg' ? 'w-12 h-12 text-base' : 'w-10 h-10 text-sm'
               }`}
             >
               {frat.chapter.charAt(0)}
             </div>
             
-            <div>
-              <h3 className={`font-bold truncate ${size === 'lg' ? 'text-lg' : 'text-sm'}`}>
+            <div className="min-w-0">
+              <h3 className={`font-semibold truncate ${size === 'lg' ? 'text-sm' : 'text-xs'}`}>
                 {frat.name}
               </h3>
-              <Badge variant="outline" className="text-xs mt-1">
+              <Badge variant="outline" className="text-[10px] mt-1 truncate max-w-full">
                 {frat.chapter}
               </Badge>
             </div>
 
-            <div className={`font-bold ${size === 'lg' ? (filter === 'trending' ? 'text-lg' : 'text-2xl') : (filter === 'trending' ? 'text-sm' : 'text-xl')} text-foreground`}>
+            <div className={`font-semibold ${size === 'lg' ? (filter === 'trending' ? 'text-sm' : 'text-lg') : (filter === 'trending' ? 'text-xs' : 'text-base')} text-foreground`}>
               {filter === 'trending' 
                 ? getTrendingRankDisplay(rank, isTied)
                 : getDisplayScore(frat)?.toFixed(1) ?? '—'}
             </div>
-            <p className="text-xs text-muted-foreground">{getScoreLabel()}</p>
+            <p className="text-[10px] text-muted-foreground line-clamp-1">{getScoreLabel()}</p>
             {needsMoreRatings(frat) && (
               <Badge variant="outline" className="text-[9px] mt-1 text-muted-foreground">
                 Needs more ratings
