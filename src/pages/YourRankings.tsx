@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { ListOrdered, Trophy, PartyPopper, LogIn, ChevronRight, Lock, Star, Users, Shield, Heart } from 'lucide-react';
+import { ListOrdered, Trophy, PartyPopper, LogIn, ChevronRight, Lock, Star, Users, Shield, Heart, Sparkles, Music, Zap } from 'lucide-react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -29,6 +29,9 @@ interface RankedParty {
   fraternity?: Fraternity;
   score: number;
   rank: number;
+  vibe: number;
+  music: number;
+  execution: number;
 }
 
 export default function YourRankings() {
@@ -131,6 +134,9 @@ export default function YourRankings() {
               fraternity: party.fraternity_id ? fratMap.get(party.fraternity_id) : undefined,
               score: r.party_quality_score ?? 5,
               rank: 0,
+              vibe: r.vibe_score ?? 5,
+              music: r.music_score ?? 5,
+              execution: r.execution_score ?? 5,
             };
           })
           .sort((a, b) => b.score - a.score);
@@ -553,14 +559,24 @@ export default function YourRankings() {
                       <PartyPopper className="h-5 w-5 text-white" />
                     </div>
 
-                    {/* Info */}
+                    {/* Info + Category Scores */}
                     <div className="flex-1 min-w-0">
                       <h3 className="font-semibold text-sm truncate">{item.party.title}</h3>
-                      {item.fraternity && (
-                        <p className="text-sm text-muted-foreground truncate">
-                          {item.fraternity.name} • {getFratShorthand(item.fraternity.name)}
-                        </p>
-                      )}
+                      {/* Category breakdown */}
+                      <div className="flex items-center gap-3 mt-1">
+                        <div className="flex items-center gap-1">
+                          <Sparkles className="h-3 w-3 text-purple-500" />
+                          <span className="text-xs font-medium text-muted-foreground">{item.vibe.toFixed(1)}</span>
+                        </div>
+                        <div className="flex items-center gap-1">
+                          <Music className="h-3 w-3 text-blue-500" />
+                          <span className="text-xs font-medium text-muted-foreground">{item.music.toFixed(1)}</span>
+                        </div>
+                        <div className="flex items-center gap-1">
+                          <Zap className="h-3 w-3 text-amber-500" />
+                          <span className="text-xs font-medium text-muted-foreground">{item.execution.toFixed(1)}</span>
+                        </div>
+                      </div>
                     </div>
 
                     {/* Score */}
