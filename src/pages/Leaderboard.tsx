@@ -310,22 +310,20 @@ export default function Leaderboard() {
 
   if (loading) {
     return (
-      <div className="max-w-2xl mx-auto space-y-6">
-        <Skeleton className="h-24 w-full rounded-xl" />
-        <div className="grid grid-cols-3 gap-4">
-          {[1, 2, 3].map((i) => (
-            <Skeleton key={i} className="h-40 rounded-xl" />
-          ))}
-        </div>
-        {[1, 2, 3, 4].map((i) => (
-          <Skeleton key={i} className="h-32 rounded-xl" />
+      <div className="space-y-5">
+        <Skeleton className="h-20 w-full rounded-xl" />
+        <Skeleton className="h-32 w-full rounded-xl" />
+        <Skeleton className="h-20 w-full rounded-xl" />
+        <Skeleton className="h-20 w-full rounded-xl" />
+        {[1, 2, 3].map((i) => (
+          <Skeleton key={i} className="h-20 rounded-xl" />
         ))}
       </div>
     );
   }
 
   return (
-    <div className="max-w-2xl mx-auto space-y-6">
+    <div className="space-y-5">
       <LeaderboardHeader 
         filter={filter} 
         onFilterChange={setFilter} 
@@ -335,22 +333,24 @@ export default function Leaderboard() {
         <LeaderboardPodium topThree={topThree} ranks={topThreeRanks} filter={filter} onRate={handleRate} />
       )}
 
-      <div className="space-y-3">
-        {rest.map((frat, index) => {
-          const fratRank = restRanks[index];
-          const isTied = restRanks.filter(r => r === fratRank).length > 1;
-          return (
-            <FraternityCard
-              key={frat.id}
-              fraternity={frat}
-              rank={fratRank}
-              onRate={handleRate}
-              filter={filter}
-              isTied={isTied}
-            />
-          );
-        })}
-      </div>
+      {rest.length > 0 && (
+        <div className="space-y-3">
+          {rest.map((frat, index) => {
+            const fratRank = restRanks[index];
+            const isTied = restRanks.filter(r => r === fratRank).length > 1;
+            return (
+              <FraternityCard
+                key={frat.id}
+                fraternity={frat}
+                rank={fratRank}
+                onRate={handleRate}
+                filter={filter}
+                isTied={isTied}
+              />
+            );
+          })}
+        </div>
+      )}
 
       <RateFratSheet
         fraternity={selectedFrat}
