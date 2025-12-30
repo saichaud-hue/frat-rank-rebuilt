@@ -12,7 +12,16 @@ import {
   Home,
   MessagesSquare,
   AtSign,
-  X
+  X,
+  Flame,
+  Trophy,
+  Zap,
+  TrendingUp,
+  Sparkles,
+  Crown,
+  Users,
+  Shield,
+  Heart
 } from 'lucide-react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -35,8 +44,9 @@ import {
   type ChatMessage 
 } from '@/api/base44Client';
 import { formatDistanceToNow } from 'date-fns';
-import { getScoreColor, createPageUrl } from '@/utils';
+import { getScoreColor, getScoreBgColor, createPageUrl } from '@/utils';
 import { toast } from '@/hooks/use-toast';
+import { cn } from '@/lib/utils';
 
 type ActivityType = 'party_rating' | 'frat_rating' | 'party_comment' | 'frat_comment';
 
@@ -531,38 +541,58 @@ export default function Activity() {
     }
   };
 
+  // Get stats
+  const totalMessages = chatMessages.length + chatMessages.reduce((acc, m) => acc + (m.replies?.length || 0), 0);
+  const totalActivity = activities.length;
+  const partyRatingsCount = activities.filter(a => a.type === 'party_rating').length;
+  const fratRatingsCount = activities.filter(a => a.type === 'frat_rating').length;
+
   const renderVoteActions = (item: ChatItem, isReply = false) => {
     const netVotes = item.upvotes - item.downvotes;
+    const isHot = netVotes >= 5;
     return (
-      <div className="flex items-center gap-3 mt-3">
+      <div className="flex items-center gap-2 mt-3">
         <button
           onClick={() => handleChatVote(item, 1)}
-          className={`flex items-center gap-1 text-sm transition-colors ${
-            item.userVote === 1 ? 'text-emerald-500' : 'text-muted-foreground hover:text-emerald-500'
-          }`}
+          className={cn(
+            "flex items-center gap-1 px-2 py-1 rounded-full text-sm transition-all",
+            item.userVote === 1 
+              ? 'bg-emerald-500/20 text-emerald-500' 
+              : 'bg-muted/50 text-muted-foreground hover:bg-emerald-500/10 hover:text-emerald-500'
+          )}
         >
-          <ThumbsUp className="h-4 w-4" />
+          <ThumbsUp className="h-3.5 w-3.5" />
         </button>
-        <span className={`text-sm font-medium ${
+        <span className={cn(
+          "text-sm font-bold min-w-[24px] text-center",
           netVotes > 0 ? 'text-emerald-500' : netVotes < 0 ? 'text-red-500' : 'text-muted-foreground'
-        }`}>
+        )}>
           {netVotes}
         </span>
         <button
           onClick={() => handleChatVote(item, -1)}
-          className={`flex items-center gap-1 text-sm transition-colors ${
-            item.userVote === -1 ? 'text-red-500' : 'text-muted-foreground hover:text-red-500'
-          }`}
+          className={cn(
+            "flex items-center gap-1 px-2 py-1 rounded-full text-sm transition-all",
+            item.userVote === -1 
+              ? 'bg-red-500/20 text-red-500' 
+              : 'bg-muted/50 text-muted-foreground hover:bg-red-500/10 hover:text-red-500'
+          )}
         >
-          <ThumbsDown className="h-4 w-4" />
+          <ThumbsDown className="h-3.5 w-3.5" />
         </button>
+        {isHot && (
+          <Badge className="bg-gradient-to-r from-orange-500 to-red-500 text-white text-[10px] px-1.5 py-0">
+            <Flame className="h-3 w-3 mr-0.5" />
+            HOT
+          </Badge>
+        )}
         {!isReply && (
           <button
             onClick={() => setReplyingTo(replyingTo === item.id ? null : item.id)}
-            className="flex items-center gap-1 text-sm text-muted-foreground hover:text-primary transition-colors ml-2"
+            className="flex items-center gap-1 px-2 py-1 rounded-full text-sm bg-muted/50 text-muted-foreground hover:bg-primary/10 hover:text-primary transition-all ml-auto"
           >
-            <MessageCircle className="h-4 w-4" />
-            <span>Reply</span>
+            <MessageCircle className="h-3.5 w-3.5" />
+            <span className="text-xs">Reply</span>
           </button>
         )}
       </div>
@@ -572,132 +602,450 @@ export default function Activity() {
   const renderActivityVoteActions = (item: ActivityItem, isReply = false) => {
     if (item.type !== 'party_comment' && item.type !== 'frat_comment') return null;
     const netVotes = (item.upvotes || 0) - (item.downvotes || 0);
+    const isHot = netVotes >= 5;
     return (
-      <div className="flex items-center gap-3 mt-3">
+      <div className="flex items-center gap-2 mt-3">
         <button
           onClick={(e) => { e.preventDefault(); handleActivityVote(item, 1); }}
-          className={`flex items-center gap-1 text-sm transition-colors ${
-            item.userVote === 1 ? 'text-emerald-500' : 'text-muted-foreground hover:text-emerald-500'
-          }`}
+          className={cn(
+            "flex items-center gap-1 px-2 py-1 rounded-full text-sm transition-all",
+            item.userVote === 1 
+              ? 'bg-emerald-500/20 text-emerald-500' 
+              : 'bg-muted/50 text-muted-foreground hover:bg-emerald-500/10 hover:text-emerald-500'
+          )}
         >
-          <ThumbsUp className="h-4 w-4" />
+          <ThumbsUp className="h-3.5 w-3.5" />
         </button>
-        <span className={`text-sm font-medium ${
+        <span className={cn(
+          "text-sm font-bold min-w-[24px] text-center",
           netVotes > 0 ? 'text-emerald-500' : netVotes < 0 ? 'text-red-500' : 'text-muted-foreground'
-        }`}>
+        )}>
           {netVotes}
         </span>
         <button
           onClick={(e) => { e.preventDefault(); handleActivityVote(item, -1); }}
-          className={`flex items-center gap-1 text-sm transition-colors ${
-            item.userVote === -1 ? 'text-red-500' : 'text-muted-foreground hover:text-red-500'
-          }`}
+          className={cn(
+            "flex items-center gap-1 px-2 py-1 rounded-full text-sm transition-all",
+            item.userVote === -1 
+              ? 'bg-red-500/20 text-red-500' 
+              : 'bg-muted/50 text-muted-foreground hover:bg-red-500/10 hover:text-red-500'
+          )}
         >
-          <ThumbsDown className="h-4 w-4" />
+          <ThumbsDown className="h-3.5 w-3.5" />
         </button>
+        {isHot && (
+          <Badge className="bg-gradient-to-r from-orange-500 to-red-500 text-white text-[10px] px-1.5 py-0">
+            <Flame className="h-3 w-3 mr-0.5" />
+            HOT
+          </Badge>
+        )}
         {!isReply && (
           <button
             onClick={(e) => { e.preventDefault(); setReplyingTo(replyingTo === item.id ? null : item.id); }}
-            className="flex items-center gap-1 text-sm text-muted-foreground hover:text-primary transition-colors ml-2"
+            className="flex items-center gap-1 px-2 py-1 rounded-full text-sm bg-muted/50 text-muted-foreground hover:bg-primary/10 hover:text-primary transition-all ml-auto"
           >
-            <MessageCircle className="h-4 w-4" />
-            <span>Reply</span>
+            <MessageCircle className="h-3.5 w-3.5" />
+            <span className="text-xs">Reply</span>
           </button>
         )}
       </div>
     );
   };
 
+  const getActivityIcon = (type: ActivityType) => {
+    switch (type) {
+      case 'party_rating':
+        return <PartyPopper className="h-4 w-4" />;
+      case 'frat_rating':
+        return <Trophy className="h-4 w-4" />;
+      case 'party_comment':
+        return <MessageCircle className="h-4 w-4" />;
+      case 'frat_comment':
+        return <MessageCircle className="h-4 w-4" />;
+    }
+  };
+
+  const getActivityGradient = (type: ActivityType) => {
+    switch (type) {
+      case 'party_rating':
+        return 'from-pink-500 to-rose-500';
+      case 'frat_rating':
+        return 'from-amber-500 to-orange-500';
+      case 'party_comment':
+        return 'from-violet-500 to-purple-500';
+      case 'frat_comment':
+        return 'from-cyan-500 to-blue-500';
+    }
+  };
+
+  const getActivityLabel = (type: ActivityType) => {
+    switch (type) {
+      case 'party_rating':
+        return 'Party Rating';
+      case 'frat_rating':
+        return 'Frat Rating';
+      case 'party_comment':
+        return 'Party Comment';
+      case 'frat_comment':
+        return 'Frat Comment';
+    }
+  };
+
   if (loading) {
     return (
       <div className="space-y-4">
-        <Skeleton className="h-10 w-48" />
-        <Skeleton className="h-12 w-full rounded-lg" />
-        {[1, 2, 3, 4].map((i) => (
-          <Skeleton key={i} className="h-32 rounded-xl" />
+        <div className="h-32 rounded-2xl bg-gradient-to-r from-primary/20 to-purple-500/20 animate-pulse" />
+        <div className="h-12 rounded-xl bg-muted animate-pulse" />
+        {[1, 2, 3].map((i) => (
+          <div key={i} className="h-40 rounded-xl bg-muted/50 animate-pulse" />
         ))}
       </div>
     );
   }
 
   return (
-    <div className="space-y-4">
-      {/* Header */}
-      <div className="flex items-center gap-3">
-        <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-primary to-indigo-500 flex items-center justify-center shadow-lg">
-          <Home className="h-5 w-5 text-white" />
-        </div>
-        <div>
-          <h1 className="text-2xl font-bold">Home</h1>
-          <p className="text-xs text-muted-foreground">See what's happening</p>
+    <div className="space-y-4 pb-8">
+      {/* Hero Header */}
+      <div className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-500 p-6 text-white">
+        <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAwIiBoZWlnaHQ9IjIwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZGVmcz48cGF0dGVybiBpZD0iZ3JpZCIgd2lkdGg9IjQwIiBoZWlnaHQ9IjQwIiBwYXR0ZXJuVW5pdHM9InVzZXJTcGFjZU9uVXNlIj48cGF0aCBkPSJNIDQwIDAgTCAwIDAgMCA0MCIgZmlsbD0ibm9uZSIgc3Ryb2tlPSJ3aGl0ZSIgc3Ryb2tlLW9wYWNpdHk9IjAuMSIgc3Ryb2tlLXdpZHRoPSIxIi8+PC9wYXR0ZXJuPjwvZGVmcz48cmVjdCB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIiBmaWxsPSJ1cmwoI2dyaWQpIi8+PC9zdmc+')] opacity-30" />
+        
+        <div className="relative">
+          <div className="flex items-center gap-3 mb-4">
+            <div className="w-12 h-12 rounded-xl bg-white/20 backdrop-blur-sm flex items-center justify-center">
+              <Sparkles className="h-6 w-6" />
+            </div>
+            <div>
+              <h1 className="text-2xl font-bold">Activity Feed</h1>
+              <p className="text-white/70 text-sm">What's happening on campus</p>
+            </div>
+          </div>
+          
+          {/* Quick Stats */}
+          <div className="grid grid-cols-3 gap-3">
+            <div className="bg-white/10 backdrop-blur-sm rounded-xl p-3 text-center">
+              <div className="flex items-center justify-center gap-1 mb-1">
+                <MessagesSquare className="h-4 w-4" />
+              </div>
+              <p className="text-xl font-bold">{totalMessages}</p>
+              <p className="text-[10px] text-white/70 uppercase tracking-wider">Messages</p>
+            </div>
+            <div className="bg-white/10 backdrop-blur-sm rounded-xl p-3 text-center">
+              <div className="flex items-center justify-center gap-1 mb-1">
+                <PartyPopper className="h-4 w-4" />
+              </div>
+              <p className="text-xl font-bold">{partyRatingsCount}</p>
+              <p className="text-[10px] text-white/70 uppercase tracking-wider">Party Ratings</p>
+            </div>
+            <div className="bg-white/10 backdrop-blur-sm rounded-xl p-3 text-center">
+              <div className="flex items-center justify-center gap-1 mb-1">
+                <Trophy className="h-4 w-4" />
+              </div>
+              <p className="text-xl font-bold">{fratRatingsCount}</p>
+              <p className="text-[10px] text-white/70 uppercase tracking-wider">Frat Ratings</p>
+            </div>
+          </div>
         </div>
       </div>
 
       {/* Tabs */}
       <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as 'chat' | 'house')}>
-        <TabsList className="grid w-full grid-cols-2">
-          <TabsTrigger value="chat" className="flex items-center gap-2">
-            <MessagesSquare className="h-4 w-4" />
+        <TabsList className="grid w-full grid-cols-2 h-14 p-1 bg-muted/50 rounded-xl">
+          <TabsTrigger 
+            value="chat" 
+            className={cn(
+              "flex items-center gap-2 rounded-lg h-full text-base font-semibold transition-all",
+              activeTab === 'chat' && "bg-gradient-to-r from-violet-500 to-purple-500 text-white shadow-lg"
+            )}
+          >
+            <MessagesSquare className="h-5 w-5" />
             Chat
+            {chatMessages.length > 0 && (
+              <Badge className="bg-white/20 text-white text-xs">{chatMessages.length}</Badge>
+            )}
           </TabsTrigger>
-          <TabsTrigger value="house" className="flex items-center gap-2">
-            <Home className="h-4 w-4" />
+          <TabsTrigger 
+            value="house" 
+            className={cn(
+              "flex items-center gap-2 rounded-lg h-full text-base font-semibold transition-all",
+              activeTab === 'house' && "bg-gradient-to-r from-amber-500 to-orange-500 text-white shadow-lg"
+            )}
+          >
+            <Home className="h-5 w-5" />
             House
+            {activities.length > 0 && (
+              <Badge className="bg-white/20 text-white text-xs">{activities.length}</Badge>
+            )}
           </TabsTrigger>
         </TabsList>
 
         {/* Chat Tab */}
         <TabsContent value="chat" className="mt-4 space-y-3">
           {chatMessages.length === 0 ? (
-            <Card className="p-8 text-center">
-              <MessagesSquare className="h-12 w-12 mx-auto text-muted-foreground/50 mb-3" />
-              <p className="font-medium">No messages yet</p>
-              <p className="text-sm text-muted-foreground">Start the conversation!</p>
+            <Card className="p-8 text-center border-2 border-dashed border-muted-foreground/20">
+              <div className="w-16 h-16 mx-auto rounded-full bg-gradient-to-br from-violet-500/20 to-purple-500/20 flex items-center justify-center mb-4">
+                <MessagesSquare className="h-8 w-8 text-violet-500" />
+              </div>
+              <p className="font-bold text-lg">No messages yet</p>
+              <p className="text-sm text-muted-foreground mb-4">Be the first to start the conversation!</p>
+              <Button 
+                onClick={() => setShowChatComposer(true)}
+                className="bg-gradient-to-r from-violet-500 to-purple-500 text-white"
+              >
+                <Send className="h-4 w-4 mr-2" />
+                Start Chatting
+              </Button>
             </Card>
           ) : (
-            chatMessages.map((msg) => (
-              <Card key={msg.id} className="p-4 glass">
-                <div className="flex items-start gap-3">
-                  <Avatar className="h-8 w-8">
-                    <AvatarFallback className="bg-primary/10 text-primary text-xs">
-                      <MessagesSquare className="h-4 w-4" />
-                    </AvatarFallback>
-                  </Avatar>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-xs text-muted-foreground mb-1">
-                      {formatDistanceToNow(new Date(msg.created_date), { addSuffix: true })}
-                    </p>
-                    <p className="text-sm">{msg.text}</p>
-                    
-                    {/* Mention badge */}
-                    {(msg.mentionedFraternity || msg.mentionedParty) && (
-                      <Link 
-                        to={msg.mentionedFraternity 
-                          ? createPageUrl(`Fraternity?id=${msg.mentionedFraternity.id}`)
-                          : createPageUrl(`Party?id=${msg.mentionedParty?.id}`)
-                        }
-                        className="inline-flex items-center gap-1 mt-2 px-2 py-1 rounded-full bg-primary/10 text-primary text-xs hover:bg-primary/20 transition-colors"
-                      >
-                        <AtSign className="h-3 w-3" />
-                        {msg.mentionedFraternity?.name || msg.mentionedParty?.title}
-                      </Link>
+            chatMessages.map((msg, index) => {
+              const netVotes = msg.upvotes - msg.downvotes;
+              const isTop = index === 0;
+              const isHot = netVotes >= 5;
+              
+              return (
+                <Card 
+                  key={msg.id} 
+                  className={cn(
+                    "p-4 transition-all hover:shadow-md",
+                    isTop && "border-l-4 border-l-violet-500",
+                    isHot && "bg-gradient-to-r from-orange-500/5 to-transparent"
+                  )}
+                >
+                  <div className="flex items-start gap-3">
+                    <Avatar className={cn(
+                      "h-10 w-10 ring-2",
+                      isHot ? "ring-orange-500" : "ring-primary/20"
+                    )}>
+                      <AvatarFallback className={cn(
+                        "text-white font-bold",
+                        isHot 
+                          ? "bg-gradient-to-br from-orange-500 to-red-500" 
+                          : "bg-gradient-to-br from-violet-500 to-purple-500"
+                      )}>
+                        {isHot ? <Flame className="h-4 w-4" /> : <MessagesSquare className="h-4 w-4" />}
+                      </AvatarFallback>
+                    </Avatar>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 mb-1">
+                        <Badge variant="secondary" className="text-[10px] px-1.5 py-0">
+                          {formatDistanceToNow(new Date(msg.created_date), { addSuffix: true })}
+                        </Badge>
+                        {isTop && (
+                          <Badge className="bg-gradient-to-r from-violet-500 to-purple-500 text-white text-[10px] px-1.5 py-0">
+                            <Crown className="h-3 w-3 mr-0.5" />
+                            Latest
+                          </Badge>
+                        )}
+                      </div>
+                      <p className="text-sm leading-relaxed">{msg.text}</p>
+                      
+                      {/* Mention badge */}
+                      {(msg.mentionedFraternity || msg.mentionedParty) && (
+                        <Link 
+                          to={msg.mentionedFraternity 
+                            ? createPageUrl(`Fraternity?id=${msg.mentionedFraternity.id}`)
+                            : createPageUrl(`Party?id=${msg.mentionedParty?.id}`)
+                          }
+                          className="inline-flex items-center gap-1 mt-2 px-3 py-1.5 rounded-full bg-gradient-to-r from-primary/10 to-purple-500/10 text-primary text-xs font-medium hover:from-primary/20 hover:to-purple-500/20 transition-all"
+                        >
+                          <AtSign className="h-3 w-3" />
+                          {msg.mentionedFraternity?.name || msg.mentionedParty?.title}
+                        </Link>
+                      )}
+
+                      {renderVoteActions(msg)}
+
+                      {/* Reply input */}
+                      {replyingTo === msg.id && (
+                        <div className="mt-3 flex gap-2 p-3 rounded-lg bg-muted/30">
+                          <Textarea
+                            value={replyText}
+                            onChange={(e) => setReplyText(e.target.value)}
+                            placeholder="Write a reply..."
+                            className="min-h-[60px] text-sm bg-background"
+                          />
+                          <Button
+                            size="icon"
+                            onClick={() => handleChatReply(msg.id)}
+                            disabled={submittingReply || !replyText.trim()}
+                            className="bg-gradient-to-r from-violet-500 to-purple-500"
+                          >
+                            {submittingReply ? (
+                              <Loader2 className="h-4 w-4 animate-spin" />
+                            ) : (
+                              <Send className="h-4 w-4" />
+                            )}
+                          </Button>
+                        </div>
+                      )}
+
+                      {/* Replies */}
+                      {msg.replies && msg.replies.length > 0 && (
+                        <div className="mt-3 pl-4 border-l-2 border-violet-500/30 space-y-3">
+                          {msg.replies.map((reply) => (
+                            <div key={reply.id} className="text-sm">
+                              <Badge variant="secondary" className="text-[10px] px-1.5 py-0 mb-1">
+                                {formatDistanceToNow(new Date(reply.created_date), { addSuffix: true })}
+                              </Badge>
+                              <p className="p-3 bg-muted/30 rounded-lg">{reply.text}</p>
+                              {renderVoteActions(reply, true)}
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </Card>
+              );
+            })
+          )}
+        </TabsContent>
+
+        {/* House Tab */}
+        <TabsContent value="house" className="mt-4 space-y-3">
+          {activities.length === 0 ? (
+            <Card className="p-8 text-center border-2 border-dashed border-muted-foreground/20">
+              <div className="w-16 h-16 mx-auto rounded-full bg-gradient-to-br from-amber-500/20 to-orange-500/20 flex items-center justify-center mb-4">
+                <TrendingUp className="h-8 w-8 text-amber-500" />
+              </div>
+              <p className="font-bold text-lg">No activity yet</p>
+              <p className="text-sm text-muted-foreground mb-4">Be the first to rate a party or frat!</p>
+              <div className="flex gap-2 justify-center">
+                <Button asChild variant="outline">
+                  <Link to="/Parties">
+                    <PartyPopper className="h-4 w-4 mr-2" />
+                    Browse Parties
+                  </Link>
+                </Button>
+                <Button asChild className="bg-gradient-to-r from-amber-500 to-orange-500 text-white">
+                  <Link to="/Leaderboard">
+                    <Trophy className="h-4 w-4 mr-2" />
+                    View Frats
+                  </Link>
+                </Button>
+              </div>
+            </Card>
+          ) : (
+            activities.map((item, index) => {
+              const isTop = index === 0;
+              const gradient = getActivityGradient(item.type);
+              
+              return (
+                <Card 
+                  key={item.id} 
+                  className={cn(
+                    "overflow-hidden transition-all hover:shadow-md",
+                    isTop && "ring-2 ring-amber-500/50"
+                  )}
+                >
+                  {/* Activity Type Header */}
+                  <div className={cn(
+                    "px-4 py-2 flex items-center gap-2 text-white bg-gradient-to-r",
+                    gradient
+                  )}>
+                    {getActivityIcon(item.type)}
+                    <span className="font-semibold text-sm">{getActivityLabel(item.type)}</span>
+                    <span className="text-white/70 text-xs ml-auto">
+                      {formatDistanceToNow(new Date(item.created_date), { addSuffix: true })}
+                    </span>
+                    {(item.type === 'party_rating' || item.type === 'frat_rating') && item.score && (
+                      <Badge className={cn(
+                        "font-bold text-white",
+                        getScoreBgColor(item.score)
+                      )}>
+                        {item.score.toFixed(1)}
+                      </Badge>
+                    )}
+                  </div>
+                  
+                  <div className="p-4">
+                    <Link 
+                      to={item.party ? createPageUrl(`Party?id=${item.party.id}`) : createPageUrl(`Fraternity?id=${item.fraternity?.id}`)}
+                      className="flex items-center justify-between p-3 rounded-xl bg-muted/50 hover:bg-muted transition-all mb-3 group"
+                    >
+                      <div className="flex items-center gap-3">
+                        <div className={cn(
+                          "w-10 h-10 rounded-xl flex items-center justify-center text-white bg-gradient-to-br",
+                          gradient
+                        )}>
+                          {item.type.includes('party') ? (
+                            <PartyPopper className="h-5 w-5" />
+                          ) : (
+                            <Trophy className="h-5 w-5" />
+                          )}
+                        </div>
+                        <div>
+                          <p className="font-bold text-sm group-hover:text-primary transition-colors">
+                            {item.type.includes('party') ? item.party?.title : item.fraternity?.name}
+                          </p>
+                          {item.fraternity && item.type.includes('party') && (
+                            <p className="text-xs text-muted-foreground">{item.fraternity.name}</p>
+                          )}
+                        </div>
+                      </div>
+                      <ChevronRight className="h-5 w-5 text-muted-foreground group-hover:text-primary group-hover:translate-x-1 transition-all" />
+                    </Link>
+
+                    {item.type === 'party_rating' && (
+                      <div className="grid grid-cols-3 gap-2 text-center">
+                        <div className="p-2 rounded-lg bg-pink-500/10">
+                          <Zap className="h-4 w-4 mx-auto text-pink-500 mb-1" />
+                          <p className={cn("font-bold text-sm", getScoreColor(item.vibe || 0))}>{item.vibe?.toFixed(1)}</p>
+                          <p className="text-[10px] text-muted-foreground uppercase">Vibe</p>
+                        </div>
+                        <div className="p-2 rounded-lg bg-violet-500/10">
+                          <Star className="h-4 w-4 mx-auto text-violet-500 mb-1" />
+                          <p className={cn("font-bold text-sm", getScoreColor(item.music || 0))}>{item.music?.toFixed(1)}</p>
+                          <p className="text-[10px] text-muted-foreground uppercase">Music</p>
+                        </div>
+                        <div className="p-2 rounded-lg bg-cyan-500/10">
+                          <TrendingUp className="h-4 w-4 mx-auto text-cyan-500 mb-1" />
+                          <p className={cn("font-bold text-sm", getScoreColor(item.execution || 0))}>{item.execution?.toFixed(1)}</p>
+                          <p className="text-[10px] text-muted-foreground uppercase">Execution</p>
+                        </div>
+                      </div>
                     )}
 
-                    {renderVoteActions(msg)}
+                    {item.type === 'frat_rating' && (
+                      <div className="grid grid-cols-3 gap-2 text-center">
+                        <div className="p-2 rounded-lg bg-amber-500/10">
+                          <Users className="h-4 w-4 mx-auto text-amber-500 mb-1" />
+                          <p className={cn("font-bold text-sm", getScoreColor(item.brotherhood || 0))}>{item.brotherhood?.toFixed(1)}</p>
+                          <p className="text-[10px] text-muted-foreground uppercase">Brotherhood</p>
+                        </div>
+                        <div className="p-2 rounded-lg bg-emerald-500/10">
+                          <Shield className="h-4 w-4 mx-auto text-emerald-500 mb-1" />
+                          <p className={cn("font-bold text-sm", getScoreColor(item.reputation || 0))}>{item.reputation?.toFixed(1)}</p>
+                          <p className="text-[10px] text-muted-foreground uppercase">Rep</p>
+                        </div>
+                        <div className="p-2 rounded-lg bg-rose-500/10">
+                          <Heart className="h-4 w-4 mx-auto text-rose-500 mb-1" />
+                          <p className={cn("font-bold text-sm", getScoreColor(item.community || 0))}>{item.community?.toFixed(1)}</p>
+                          <p className="text-[10px] text-muted-foreground uppercase">Community</p>
+                        </div>
+                      </div>
+                    )}
 
-                    {/* Reply input */}
-                    {replyingTo === msg.id && (
-                      <div className="mt-3 flex gap-2">
+                    {item.text && (
+                      <div className="mt-3 p-3 bg-muted/30 rounded-xl border-l-4 border-l-primary/50">
+                        <p className="text-sm italic">"{item.text}"</p>
+                      </div>
+                    )}
+
+                    {renderActivityVoteActions(item)}
+
+                    {replyingTo === item.id && (item.type === 'party_comment' || item.type === 'frat_comment') && (
+                      <div className="mt-3 flex gap-2 p-3 rounded-lg bg-muted/30">
                         <Textarea
                           value={replyText}
                           onChange={(e) => setReplyText(e.target.value)}
                           placeholder="Write a reply..."
-                          className="min-h-[60px] text-sm"
+                          className="min-h-[60px] text-sm bg-background"
                         />
                         <Button
                           size="icon"
-                          onClick={() => handleChatReply(msg.id)}
+                          onClick={() => handleActivityReply(item)}
                           disabled={submittingReply || !replyText.trim()}
+                          className="bg-gradient-to-r from-amber-500 to-orange-500"
                         >
                           {submittingReply ? (
                             <Loader2 className="h-4 w-4 animate-spin" />
@@ -708,148 +1056,23 @@ export default function Activity() {
                       </div>
                     )}
 
-                    {/* Replies */}
-                    {msg.replies && msg.replies.length > 0 && (
-                      <div className="mt-3 pl-4 border-l-2 border-muted space-y-3">
-                        {msg.replies.map((reply) => (
+                    {item.replies && item.replies.length > 0 && (
+                      <div className="mt-3 pl-4 border-l-2 border-amber-500/30 space-y-3">
+                        {item.replies.map((reply) => (
                           <div key={reply.id} className="text-sm">
-                            <p className="text-xs text-muted-foreground mb-1">
+                            <Badge variant="secondary" className="text-[10px] px-1.5 py-0 mb-1">
                               {formatDistanceToNow(new Date(reply.created_date), { addSuffix: true })}
-                            </p>
-                            <p className="p-2 bg-muted/30 rounded-lg">{reply.text}</p>
-                            {renderVoteActions(reply, true)}
+                            </Badge>
+                            <p className="p-3 bg-muted/30 rounded-lg">{reply.text}</p>
+                            {renderActivityVoteActions(reply, true)}
                           </div>
                         ))}
                       </div>
                     )}
                   </div>
-                </div>
-              </Card>
-            ))
-          )}
-        </TabsContent>
-
-        {/* House Tab */}
-        <TabsContent value="house" className="mt-4 space-y-3">
-          {activities.length === 0 ? (
-            <Card className="p-8 text-center">
-              <PartyPopper className="h-12 w-12 mx-auto text-muted-foreground/50 mb-3" />
-              <p className="font-medium">No activity yet</p>
-              <p className="text-sm text-muted-foreground">Be the first to rate a party or frat!</p>
-            </Card>
-          ) : (
-            activities.map((item) => (
-              <Card key={item.id} className="p-4 glass">
-                <div className="flex items-center gap-2 mb-3">
-                  <Avatar className="h-8 w-8">
-                    <AvatarFallback className="bg-primary/10 text-primary text-xs">
-                      {item.type.includes('party') ? <PartyPopper className="h-4 w-4" /> : <Star className="h-4 w-4" />}
-                    </AvatarFallback>
-                  </Avatar>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm">
-                      <span className="text-muted-foreground">Someone </span>
-                      <span className="font-medium">
-                        {item.type === 'party_rating' && 'rated a party'}
-                        {item.type === 'frat_rating' && 'rated a fraternity'}
-                        {item.type === 'party_comment' && 'commented on a party'}
-                        {item.type === 'frat_comment' && 'commented on a fraternity'}
-                      </span>
-                    </p>
-                    <p className="text-xs text-muted-foreground">
-                      {formatDistanceToNow(new Date(item.created_date), { addSuffix: true })}
-                    </p>
-                  </div>
-                  {(item.type === 'party_rating' || item.type === 'frat_rating') && item.score && (
-                    <Badge variant="secondary" className={`${getScoreColor(item.score)} font-bold`}>
-                      {item.score.toFixed(1)}
-                    </Badge>
-                  )}
-                </div>
-
-                <Link 
-                  to={item.party ? createPageUrl(`Party?id=${item.party.id}`) : createPageUrl(`Fraternity?id=${item.fraternity?.id}`)}
-                  className="flex items-center justify-between p-3 rounded-lg bg-muted/50 hover:bg-muted transition-colors mb-2"
-                >
-                  <div className="flex items-center gap-2">
-                    <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center">
-                      {item.type.includes('party') ? (
-                        <PartyPopper className="h-4 w-4 text-primary" />
-                      ) : (
-                        <Star className="h-4 w-4 text-amber-500" />
-                      )}
-                    </div>
-                    <div>
-                      <p className="font-medium text-sm">
-                        {item.type.includes('party') ? item.party?.title : item.fraternity?.name}
-                      </p>
-                      {item.fraternity && item.type.includes('party') && (
-                        <p className="text-xs text-muted-foreground">{item.fraternity.name}</p>
-                      )}
-                    </div>
-                  </div>
-                  <ChevronRight className="h-4 w-4 text-muted-foreground" />
-                </Link>
-
-                {item.type === 'party_rating' && (
-                  <div className="flex gap-3 text-xs text-muted-foreground mt-2">
-                    <span>Vibe: <span className={getScoreColor(item.vibe || 0)}>{item.vibe?.toFixed(1)}</span></span>
-                    <span>Music: <span className={getScoreColor(item.music || 0)}>{item.music?.toFixed(1)}</span></span>
-                    <span>Execution: <span className={getScoreColor(item.execution || 0)}>{item.execution?.toFixed(1)}</span></span>
-                  </div>
-                )}
-
-                {item.type === 'frat_rating' && (
-                  <div className="flex gap-3 text-xs text-muted-foreground mt-2">
-                    <span>Brotherhood: <span className={getScoreColor(item.brotherhood || 0)}>{item.brotherhood?.toFixed(1)}</span></span>
-                    <span>Rep: <span className={getScoreColor(item.reputation || 0)}>{item.reputation?.toFixed(1)}</span></span>
-                    <span>Community: <span className={getScoreColor(item.community || 0)}>{item.community?.toFixed(1)}</span></span>
-                  </div>
-                )}
-
-                {item.text && (
-                  <p className="text-sm mt-2 p-3 bg-muted/30 rounded-lg">{item.text}</p>
-                )}
-
-                {renderActivityVoteActions(item)}
-
-                {replyingTo === item.id && (item.type === 'party_comment' || item.type === 'frat_comment') && (
-                  <div className="mt-3 flex gap-2">
-                    <Textarea
-                      value={replyText}
-                      onChange={(e) => setReplyText(e.target.value)}
-                      placeholder="Write a reply..."
-                      className="min-h-[60px] text-sm"
-                    />
-                    <Button
-                      size="icon"
-                      onClick={() => handleActivityReply(item)}
-                      disabled={submittingReply || !replyText.trim()}
-                    >
-                      {submittingReply ? (
-                        <Loader2 className="h-4 w-4 animate-spin" />
-                      ) : (
-                        <Send className="h-4 w-4" />
-                      )}
-                    </Button>
-                  </div>
-                )}
-
-                {item.replies && item.replies.length > 0 && (
-                  <div className="mt-3 pl-4 border-l-2 border-muted space-y-3">
-                    {item.replies.map((reply) => (
-                      <div key={reply.id} className="text-sm">
-                        <p className="text-xs text-muted-foreground mb-1">
-                          {formatDistanceToNow(new Date(reply.created_date), { addSuffix: true })}
-                        </p>
-                        <p className="p-2 bg-muted/30 rounded-lg">{reply.text}</p>
-                        {renderActivityVoteActions(reply, true)}
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </Card>
-            ))
+                </Card>
+              );
+            })
           )}
         </TabsContent>
       </Tabs>
@@ -858,11 +1081,11 @@ export default function Activity() {
       {activeTab === 'chat' && (
         <button
           onClick={() => setShowChatComposer(true)}
-          className="fixed bottom-24 right-4 z-50 flex items-center gap-2 px-5 py-3 rounded-full bg-primary text-white shadow-lg active:scale-95 transition-transform"
+          className="fixed bottom-24 right-4 z-50 flex items-center gap-2 px-5 py-3 rounded-full bg-gradient-to-r from-violet-500 to-purple-500 text-white shadow-lg shadow-violet-500/30 active:scale-95 transition-transform hover:shadow-xl hover:shadow-violet-500/40"
           style={{ marginBottom: 'env(safe-area-inset-bottom)' }}
         >
-          <MessagesSquare className="h-5 w-5" />
-          <span className="font-semibold">Chat</span>
+          <Sparkles className="h-5 w-5" />
+          <span className="font-bold">New Post</span>
         </button>
       )}
 
@@ -870,7 +1093,15 @@ export default function Activity() {
       <Sheet open={showChatComposer} onOpenChange={setShowChatComposer}>
         <SheetContent side="bottom" className="rounded-t-3xl h-[70vh]">
           <SheetHeader className="text-left pb-4">
-            <SheetTitle>New Message</SheetTitle>
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-violet-500 to-purple-500 flex items-center justify-center text-white">
+                <Send className="h-5 w-5" />
+              </div>
+              <div>
+                <SheetTitle className="text-xl">New Message</SheetTitle>
+                <p className="text-xs text-muted-foreground">Share what's on your mind</p>
+              </div>
+            </div>
           </SheetHeader>
 
           <div className="space-y-4">
@@ -878,16 +1109,16 @@ export default function Activity() {
               value={chatText}
               onChange={(e) => setChatText(e.target.value)}
               placeholder="What's on your mind?"
-              className="min-h-[120px]"
+              className="min-h-[120px] text-base border-2 focus:border-violet-500 transition-colors"
             />
 
             {/* Selected mention */}
             {selectedMention && (
               <div className="flex items-center gap-2">
-                <Badge variant="secondary" className="flex items-center gap-1">
+                <Badge className="flex items-center gap-1 bg-gradient-to-r from-primary/10 to-purple-500/10 text-primary border-0">
                   <AtSign className="h-3 w-3" />
                   {selectedMention.name}
-                  <button onClick={() => setSelectedMention(null)} className="ml-1">
+                  <button onClick={() => setSelectedMention(null)} className="ml-1 hover:text-destructive">
                     <X className="h-3 w-3" />
                   </button>
                 </Badge>
@@ -900,6 +1131,7 @@ export default function Activity() {
                 variant="outline"
                 size="sm"
                 onClick={() => { setMentionType('frat'); setShowMentionPicker(true); }}
+                className="border-2 hover:border-amber-500 hover:text-amber-500 transition-colors"
               >
                 <AtSign className="h-4 w-4 mr-1" />
                 Mention Frat
@@ -908,6 +1140,7 @@ export default function Activity() {
                 variant="outline"
                 size="sm"
                 onClick={() => { setMentionType('party'); setShowMentionPicker(true); }}
+                className="border-2 hover:border-pink-500 hover:text-pink-500 transition-colors"
               >
                 <AtSign className="h-4 w-4 mr-1" />
                 Mention Party
@@ -916,7 +1149,7 @@ export default function Activity() {
 
             {/* Mention picker */}
             {showMentionPicker && (
-              <Card className="p-2 max-h-40 overflow-y-auto">
+              <Card className="p-2 max-h-40 overflow-y-auto border-2">
                 <div className="space-y-1">
                   {mentionType === 'frat' && fraternities.map((frat) => (
                     <button
@@ -925,8 +1158,9 @@ export default function Activity() {
                         setSelectedMention({ type: 'frat', id: frat.id, name: frat.name });
                         setShowMentionPicker(false);
                       }}
-                      className="w-full text-left px-3 py-2 rounded-lg hover:bg-muted transition-colors text-sm"
+                      className="w-full text-left px-3 py-2 rounded-lg hover:bg-amber-500/10 hover:text-amber-600 transition-colors text-sm font-medium flex items-center gap-2"
                     >
+                      <Trophy className="h-4 w-4 text-amber-500" />
                       {frat.name}
                     </button>
                   ))}
@@ -937,8 +1171,9 @@ export default function Activity() {
                         setSelectedMention({ type: 'party', id: party.id, name: party.title });
                         setShowMentionPicker(false);
                       }}
-                      className="w-full text-left px-3 py-2 rounded-lg hover:bg-muted transition-colors text-sm"
+                      className="w-full text-left px-3 py-2 rounded-lg hover:bg-pink-500/10 hover:text-pink-600 transition-colors text-sm font-medium flex items-center gap-2"
                     >
+                      <PartyPopper className="h-4 w-4 text-pink-500" />
                       {party.title}
                     </button>
                   ))}
@@ -947,16 +1182,16 @@ export default function Activity() {
             )}
 
             <Button
-              className="w-full"
+              className="w-full h-12 text-base font-bold bg-gradient-to-r from-violet-500 to-purple-500 hover:from-violet-600 hover:to-purple-600 transition-all shadow-lg shadow-violet-500/30"
               onClick={handleSubmitChat}
               disabled={submittingChat || !chatText.trim()}
             >
               {submittingChat ? (
-                <Loader2 className="h-4 w-4 animate-spin" />
+                <Loader2 className="h-5 w-5 animate-spin" />
               ) : (
                 <>
-                  <Send className="h-4 w-4 mr-2" />
-                  Post
+                  <Send className="h-5 w-5 mr-2" />
+                  Post Message
                 </>
               )}
             </Button>
