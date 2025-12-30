@@ -3,7 +3,7 @@ import { ChevronRight, Crown, Star, PartyPopper, TrendingUp, Trophy, Medal, type
 import { Card } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { type FraternityWithScores } from '@/utils/scoring';
-import { createPageUrl } from '@/utils';
+import { createPageUrl, toGreekLetters } from '@/utils';
 
 type CategoryType = 'overall' | 'reputation' | 'party' | 'trending';
 
@@ -93,7 +93,7 @@ export default function PodiumCard({ category, topThree }: PodiumCardProps) {
             <Avatar className="h-14 w-14 ring-2 ring-slate-300 bg-white shadow-md">
               <AvatarImage src={second.logo_url} />
               <AvatarFallback className="bg-white text-slate-700 font-bold text-sm">
-                {second.chapter?.substring(0, 2) || second.name.substring(0, 2)}
+                {toGreekLetters(second.chapter?.substring(0, 2) || second.name.substring(0, 2))}
               </AvatarFallback>
             </Avatar>
             <p className="text-xs font-medium text-slate-600 mt-2 truncate max-w-[60px]">
@@ -109,7 +109,7 @@ export default function PodiumCard({ category, topThree }: PodiumCardProps) {
             <Avatar className="h-16 w-16 ring-3 ring-amber-400 bg-white shadow-lg">
               <AvatarImage src={first.logo_url} />
               <AvatarFallback className="bg-white text-amber-600 font-bold text-base">
-                {first.chapter?.substring(0, 2) || first.name.substring(0, 2)}
+                {toGreekLetters(first.chapter?.substring(0, 2) || first.name.substring(0, 2))}
               </AvatarFallback>
             </Avatar>
             <p className="text-xs font-semibold text-slate-700 mt-2 truncate max-w-[60px]">
@@ -125,7 +125,7 @@ export default function PodiumCard({ category, topThree }: PodiumCardProps) {
             <Avatar className="h-14 w-14 ring-2 ring-amber-600/50 bg-white shadow-md">
               <AvatarImage src={third.logo_url} />
               <AvatarFallback className="bg-white text-amber-700 font-bold text-sm">
-                {third.chapter?.substring(0, 2) || third.name.substring(0, 2)}
+                {toGreekLetters(third.chapter?.substring(0, 2) || third.name.substring(0, 2))}
               </AvatarFallback>
             </Avatar>
             <p className="text-xs font-medium text-slate-600 mt-2 truncate max-w-[60px]">

@@ -8,7 +8,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { base44, type Fraternity, type Party } from '@/api/base44Client';
-import { createPageUrl, getScoreBgColor, clamp } from '@/utils';
+import { createPageUrl, getScoreBgColor, clamp, toGreekLetters } from '@/utils';
 import { Progress } from '@/components/ui/progress';
 import { ensureAuthed } from '@/utils/auth';
 import YourListsIntro from '@/components/onboarding/YourListsIntro';
@@ -431,7 +431,7 @@ export default function YourRankings() {
                     <Avatar className="h-11 w-11 ring-2 ring-border flex-shrink-0">
                       <AvatarImage src={item.fraternity.logo_url} />
                       <AvatarFallback className="bg-primary/10 text-primary font-bold text-sm">
-                        {item.fraternity.chapter?.substring(0, 2) || item.fraternity.name.substring(0, 2)}
+                        {toGreekLetters(item.fraternity.chapter?.substring(0, 2) || item.fraternity.name.substring(0, 2))}
                       </AvatarFallback>
                     </Avatar>
 

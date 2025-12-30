@@ -39,3 +39,57 @@ export function formatTimeAgo(date: Date | string): string {
   if (diffMins > 0) return `${diffMins}m ago`;
   return 'Just now';
 }
+
+// Greek letter mapping for fraternity abbreviations
+const greekLetterMap: Record<string, string> = {
+  'A': 'Α', // Alpha
+  'B': 'Β', // Beta
+  'G': 'Γ', // Gamma
+  'D': 'Δ', // Delta
+  'E': 'Ε', // Epsilon
+  'Z': 'Ζ', // Zeta
+  'H': 'Η', // Eta
+  'TH': 'Θ', // Theta
+  'I': 'Ι', // Iota
+  'K': 'Κ', // Kappa
+  'L': 'Λ', // Lambda
+  'M': 'Μ', // Mu
+  'N': 'Ν', // Nu
+  'X': 'Ξ', // Xi
+  'O': 'Ο', // Omicron
+  'P': 'Π', // Pi
+  'R': 'Ρ', // Rho
+  'S': 'Σ', // Sigma
+  'T': 'Τ', // Tau
+  'U': 'Υ', // Upsilon
+  'PH': 'Φ', // Phi
+  'CH': 'Χ', // Chi
+  'PS': 'Ψ', // Psi
+  'W': 'Ω', // Omega
+};
+
+export function toGreekLetters(abbrev: string): string {
+  if (!abbrev) return '';
+  
+  let result = '';
+  let i = 0;
+  const upper = abbrev.toUpperCase();
+  
+  while (i < upper.length) {
+    // Check for two-letter combinations first
+    if (i < upper.length - 1) {
+      const twoChar = upper.substring(i, i + 2);
+      if (greekLetterMap[twoChar]) {
+        result += greekLetterMap[twoChar];
+        i += 2;
+        continue;
+      }
+    }
+    // Single letter
+    const oneChar = upper[i];
+    result += greekLetterMap[oneChar] || oneChar;
+    i++;
+  }
+  
+  return result;
+}
