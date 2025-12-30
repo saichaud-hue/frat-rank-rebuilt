@@ -128,7 +128,7 @@ export default function RateActionSheet({
             <div>
               <SheetTitle className="text-xl">
                 {step === 'choose-action' && 'What would you like to rate?'}
-                {step === 'choose-frat' && (actionType === 'rate' ? 'Choose a Frat to Rate' : 'Choose a Frat')}
+                {step === 'choose-frat' && 'Choose a Frat to Rate'}
                 {step === 'choose-party' && `${selectedFrat?.name}'s Parties`}
               </SheetTitle>
               <p className="text-sm text-muted-foreground mt-0.5">
