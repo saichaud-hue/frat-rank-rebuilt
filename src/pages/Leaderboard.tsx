@@ -413,8 +413,8 @@ export default function Leaderboard() {
         />
       )}
 
-      {/* Floating Rate Buttons - Only show when intro is dismissed */}
-      {!showIntro && (
+      {/* Floating Rate Buttons - Hide when any modal is open */}
+      {!showIntro && !selectedFrat && !selectedParty && showRateAction === false && (
         <div 
           className="fixed bottom-24 right-4 z-50 flex items-center gap-2"
           style={{ marginBottom: 'env(safe-area-inset-bottom)' }}
