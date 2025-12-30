@@ -1,4 +1,4 @@
-import { Crown, Trophy, Medal, Star, PartyPopper, MessageCircle, ThumbsUp, ChevronRight } from 'lucide-react';
+import { Star, PartyPopper, MessageCircle, ThumbsUp } from 'lucide-react';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -18,7 +18,8 @@ interface FraternityCardProps {
 }
 
 export default function FraternityCard({ fraternity, rank, onRate, filter = 'overall', isTied = false }: FraternityCardProps) {
-  const RankIcon = rank === 1 ? Crown : rank === 2 ? Trophy : rank === 3 ? Medal : null;
+  // FraternityCard is used for positions 4+ (rest list), so no special rank icons needed
+  const RankIcon = null;
   const scores = fraternity.computedScores;
 
   const formatCount = (num: number): string => {
@@ -78,25 +79,13 @@ export default function FraternityCard({ fraternity, rank, onRate, filter = 'ove
 
   const trending = scores?.trending ?? (fraternity.momentum ?? 0);
 
-  const getCardBgColor = () => {
-    if (rank === 1) return 'bg-gradient-to-br from-amber-50 to-yellow-50 border-amber-200/50';
-    if (rank === 2) return 'bg-gradient-to-br from-slate-100 to-gray-50 border-slate-300/50';
-    if (rank === 3) return 'bg-gradient-to-br from-orange-50 to-amber-50 border-orange-200/50';
-    return 'glass';
-  };
-
   return (
     <Link to={createPageUrl(`Fraternity?id=${fraternity.id}`)}>
-      <Card className={`${getCardBgColor()} p-4 active:scale-[0.98] transition-transform`}>
+      <Card className="glass p-4 active:scale-[0.98] transition-transform">
         <div className="flex items-center gap-3">
-          {/* Rank Badge */}
-          <div className={`shrink-0 w-10 h-10 rounded-xl flex items-center justify-center font-bold text-white ${
-            rank === 1 ? 'bg-gradient-to-br from-amber-400 to-yellow-500' :
-            rank === 2 ? 'bg-gradient-to-br from-slate-300 to-slate-400' :
-            rank === 3 ? 'bg-gradient-to-br from-amber-600 to-amber-700' :
-            'bg-gradient-to-br from-slate-500 to-slate-600'
-          }`}>
-            {RankIcon ? <RankIcon className="h-5 w-5" /> : <span className="text-sm">{rank}</span>}
+          {/* Rank Number */}
+          <div className="shrink-0 w-10 h-10 rounded-xl flex items-center justify-center font-bold text-white bg-gradient-to-br from-slate-500 to-slate-600">
+            <span className="text-sm">{rank}</span>
           </div>
 
           {/* Avatar */}
