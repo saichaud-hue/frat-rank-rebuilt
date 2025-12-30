@@ -1,4 +1,4 @@
-import { Crown, Trophy, Star, PartyPopper, MessageCircle, ThumbsUp, ChevronRight } from 'lucide-react';
+import { Crown, Trophy, Medal, Star, PartyPopper, MessageCircle, ThumbsUp, ChevronRight } from 'lucide-react';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -18,7 +18,7 @@ interface FraternityCardProps {
 }
 
 export default function FraternityCard({ fraternity, rank, onRate, filter = 'overall', isTied = false }: FraternityCardProps) {
-  const RankIcon = rank <= 3 ? (rank === 1 ? Crown : Trophy) : null;
+  const RankIcon = rank === 1 ? Crown : rank === 2 ? Trophy : rank === 3 ? Medal : null;
   const scores = fraternity.computedScores;
 
   const formatCount = (num: number): string => {
