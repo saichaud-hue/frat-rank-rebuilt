@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { base44, seedInitialData, type Fraternity, type Party, type PartyRating, type ReputationRating, type PartyComment, type FraternityComment } from '@/api/base44Client';
 import { 
   computeFullFraternityScores, 
@@ -17,10 +18,10 @@ import LeaderboardHeader from '@/components/leaderboard/LeaderboardHeader';
 import LeaderboardPodium from '@/components/leaderboard/LeaderboardPodium';
 import FraternityCard from '@/components/leaderboard/FraternityCard';
 import RateFratSheet from '@/components/leaderboard/RateFratSheet';
-import FratPickerSheet from '@/components/leaderboard/FratPickerSheet';
+import RateActionSheet from '@/components/leaderboard/RateActionSheet';
 import LeaderboardIntro from '@/components/onboarding/LeaderboardIntro';
 import { Skeleton } from '@/components/ui/skeleton';
-import { clamp } from '@/utils';
+import { clamp, createPageUrl } from '@/utils';
 import { getCachedCampusBaseline } from "@/utils/scoring";
 import { ensureAuthed } from '@/utils/auth';
 import { Star } from 'lucide-react';
@@ -28,6 +29,7 @@ import { Star } from 'lucide-react';
 type FilterType = 'overall' | 'reputation' | 'party' | 'trending';
 
 export default function Leaderboard() {
+  const navigate = useNavigate();
   const [fraternities, setFraternities] = useState<FraternityWithScores[]>([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<FilterType>('overall');
@@ -36,7 +38,7 @@ export default function Leaderboard() {
   const [showIntro, setShowIntro] = useState(() => {
     return !localStorage.getItem('fratrank_leaderboard_intro_never_show');
   });
-  const [showFratPicker, setShowFratPicker] = useState(false);
+  const [showRateAction, setShowRateAction] = useState(false);
 
   const handleIntroComplete = (neverShowAgain: boolean) => {
     if (neverShowAgain) {
@@ -277,6 +279,11 @@ export default function Leaderboard() {
     await loadFraternities();
   };
 
+  const handleRateParty = (party: Party) => {
+    // Navigate to the party page where they can rate it
+    navigate(createPageUrl(`Party?id=${party.id}`));
+  };
+
   // Compute ranks with ties (same score = same rank)
   const computeRanks = (frats: FraternityWithScores[]): number[] => {
     if (frats.length === 0) return [];
@@ -378,18 +385,19 @@ export default function Leaderboard() {
         existingScores={existingScores}
       />
 
-      {/* Frat Picker Sheet */}
-      <FratPickerSheet
-        isOpen={showFratPicker}
-        onClose={() => setShowFratPicker(false)}
-        onSelect={handleRate}
+      {/* Rate Action Sheet */}
+      <RateActionSheet
+        isOpen={showRateAction}
+        onClose={() => setShowRateAction(false)}
+        onRateFrat={handleRate}
+        onRateParty={handleRateParty}
         fraternities={fraternities}
       />
 
       {/* Floating Rate Button - Only show when intro is dismissed */}
       {!showIntro && (
         <button
-          onClick={() => setShowFratPicker(true)}
+          onClick={() => setShowRateAction(true)}
           className="fixed bottom-24 right-4 z-50 flex items-center gap-2 px-5 py-3 rounded-full bg-amber-500 text-white shadow-lg active:scale-95 transition-transform"
           style={{ marginBottom: 'env(safe-area-inset-bottom)' }}
         >
