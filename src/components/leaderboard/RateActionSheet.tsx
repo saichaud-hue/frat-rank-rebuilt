@@ -184,7 +184,7 @@ export default function RateActionSheet({
                   <Avatar className="h-12 w-12 rounded-xl">
                     <AvatarImage src={frat.logo_url} alt={frat.name} />
                     <AvatarFallback className="rounded-xl bg-primary/10 text-primary font-bold">
-                      {frat.letters?.substring(0, 2) || frat.name.substring(0, 2)}
+                      {frat.letters?.substring(0, 3) || frat.name.substring(0, 3)}
                     </AvatarFallback>
                   </Avatar>
                   <div className="flex-1 min-w-0">

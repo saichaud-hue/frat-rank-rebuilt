@@ -431,7 +431,7 @@ export default function YourRankings() {
                     <Avatar className="h-11 w-11 ring-2 ring-border flex-shrink-0">
                       <AvatarImage src={item.fraternity.logo_url} />
                       <AvatarFallback className="bg-primary/10 text-primary font-bold text-sm">
-                        {toGreekLetters(item.fraternity.chapter?.substring(0, 2) || item.fraternity.name.substring(0, 2))}
+                        {toGreekLetters(item.fraternity.chapter?.substring(0, 3) || item.fraternity.name.substring(0, 3))}
                       </AvatarFallback>
                     </Avatar>
 
