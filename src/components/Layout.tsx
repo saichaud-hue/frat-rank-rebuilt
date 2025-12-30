@@ -28,7 +28,7 @@ interface LayoutProps {
 }
 
 const navItems = [
-  { title: 'Activity', url: '/Activity', icon: Home },
+  { title: 'Feed', url: '/Activity', icon: Home },
   { title: 'Leaderboard', url: '/Leaderboard', icon: Trophy },
   { title: 'Parties', url: '/Parties', icon: PartyPopper },
   { title: 'Profile', url: '/Profile', icon: User },
