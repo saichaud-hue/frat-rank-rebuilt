@@ -264,9 +264,9 @@ export default function Leaderboard() {
           <Skeleton className="h-10 w-10 rounded-xl" />
           <Skeleton className="h-8 w-40" />
         </div>
-        <div className="grid grid-cols-1 gap-4">
+        <div className="grid grid-cols-2 gap-3">
           {[1, 2, 3, 4].map((i) => (
-            <Skeleton key={i} className="h-40 rounded-2xl" />
+            <Skeleton key={i} className="h-44 rounded-2xl" />
           ))}
         </div>
       </div>
@@ -281,13 +281,13 @@ export default function Leaderboard() {
           <Trophy className="h-5 w-5 text-white" />
         </div>
         <div>
-          <h1 className="text-2xl font-bold">Leaderboard</h1>
-          <p className="text-xs text-muted-foreground">Who's on top?</p>
+          <h1 className="text-2xl font-bold text-slate-800">Leaderboard</h1>
+          <p className="text-xs text-slate-500">Who's on top?</p>
         </div>
       </div>
 
-      {/* Podium Cards Grid */}
-      <div className="grid grid-cols-1 gap-4">
+      {/* 2x2 Podium Cards Grid */}
+      <div className="grid grid-cols-2 gap-3">
         <PodiumCard category="overall" topThree={overallTop3} />
         <PodiumCard category="reputation" topThree={reputationTop3} />
         <PodiumCard category="party" topThree={partyTop3} />
