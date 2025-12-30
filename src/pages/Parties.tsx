@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
-import { PartyPopper } from 'lucide-react';
+import { Link } from 'react-router-dom';
+import { PartyPopper, Plus } from 'lucide-react';
 import { base44, seedInitialData, type Party, type Fraternity, type PartyRating } from '@/api/base44Client';
 import PartyCard from '@/components/parties/PartyCard';
 import PartyFilters from '@/components/parties/PartyFilters';
@@ -238,6 +239,18 @@ export default function Parties() {
           <p className="text-muted-foreground">No parties found</p>
           <p className="text-sm text-muted-foreground">Try adjusting your filters</p>
         </div>
+      )}
+
+      {/* Floating Host Button - Only show when intro is dismissed */}
+      {!showIntro && (
+        <Link
+          to="/CreateParty"
+          className="fixed bottom-24 right-4 z-50 flex items-center gap-2 px-5 py-3 rounded-full bg-primary text-primary-foreground shadow-lg active:scale-95 transition-transform"
+          style={{ marginBottom: 'env(safe-area-inset-bottom)' }}
+        >
+          <Plus className="h-5 w-5" />
+          <span className="font-semibold">Host</span>
+        </Link>
       )}
 
       {/* Intro Modal */}
