@@ -3,7 +3,7 @@ import { ChevronRight, Crown, Star, PartyPopper, TrendingUp, Trophy, Medal, type
 import { Card } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { type FraternityWithScores } from '@/utils/scoring';
-import { createPageUrl, toGreekLetters } from '@/utils';
+import { createPageUrl, getFratGreek, getFratShorthand } from '@/utils';
 
 type CategoryType = 'overall' | 'reputation' | 'party' | 'trending';
 
@@ -92,12 +92,12 @@ export default function PodiumCard({ category, topThree }: PodiumCardProps) {
             </div>
             <Avatar className="h-14 w-14 ring-2 ring-slate-300 bg-white shadow-md">
               <AvatarImage src={second.logo_url} />
-              <AvatarFallback className="bg-white text-slate-700 font-bold text-sm">
-                {toGreekLetters(second.chapter?.substring(0, 3) || second.name.substring(0, 3))}
+              <AvatarFallback className="bg-white text-slate-700 font-bold text-xs">
+                {getFratGreek(second.name)}
               </AvatarFallback>
             </Avatar>
             <p className="text-xs font-medium text-slate-600 mt-2 truncate max-w-[60px]">
-              {second.chapter || second.name.substring(0, 5)}
+              {getFratShorthand(second.name)}
             </p>
           </div>
 
@@ -108,12 +108,12 @@ export default function PodiumCard({ category, topThree }: PodiumCardProps) {
             </div>
             <Avatar className="h-16 w-16 ring-3 ring-amber-400 bg-white shadow-lg">
               <AvatarImage src={first.logo_url} />
-              <AvatarFallback className="bg-white text-amber-600 font-bold text-base">
-                {toGreekLetters(first.chapter?.substring(0, 3) || first.name.substring(0, 3))}
+              <AvatarFallback className="bg-white text-amber-600 font-bold text-sm">
+                {getFratGreek(first.name)}
               </AvatarFallback>
             </Avatar>
             <p className="text-xs font-semibold text-slate-700 mt-2 truncate max-w-[60px]">
-              {first.chapter || first.name.substring(0, 5)}
+              {getFratShorthand(first.name)}
             </p>
           </div>
 
@@ -124,12 +124,12 @@ export default function PodiumCard({ category, topThree }: PodiumCardProps) {
             </div>
             <Avatar className="h-14 w-14 ring-2 ring-amber-600/50 bg-white shadow-md">
               <AvatarImage src={third.logo_url} />
-              <AvatarFallback className="bg-white text-amber-700 font-bold text-sm">
-                {toGreekLetters(third.chapter?.substring(0, 3) || third.name.substring(0, 3))}
+              <AvatarFallback className="bg-white text-amber-700 font-bold text-xs">
+                {getFratGreek(third.name)}
               </AvatarFallback>
             </Avatar>
             <p className="text-xs font-medium text-slate-600 mt-2 truncate max-w-[60px]">
-              {third.chapter || third.name.substring(0, 5)}
+              {getFratShorthand(third.name)}
             </p>
           </div>
         </div>

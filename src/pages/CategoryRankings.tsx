@@ -20,7 +20,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { clamp, createPageUrl, getScoreColor, toGreekLetters } from '@/utils';
+import { clamp, createPageUrl, getScoreColor, getFratGreek, getFratShorthand } from '@/utils';
 import { ensureAuthed } from '@/utils/auth';
 
 type CategoryType = 'overall' | 'reputation' | 'party' | 'trending';
@@ -364,13 +364,13 @@ export default function CategoryRankings() {
                 <Trophy className="h-5 w-5 text-white" />
               </div>
               <p className="font-bold text-lg text-slate-600">
-                {toGreekLetters(topThree[1].chapter?.substring(0, 3) || topThree[1].name.substring(0, 3))}
+                {getFratGreek(topThree[1].name)}
               </p>
               <p className={`text-lg font-bold ${getScoreColor(getScore(topThree[1]) ?? 0)}`}>
                 {getScore(topThree[1])?.toFixed(1) || '—'}
               </p>
               <p className="text-xs text-muted-foreground mt-0.5 text-center max-w-[70px] truncate">
-                {topThree[1].name}
+                {getFratShorthand(topThree[1].name)}
               </p>
               <div className="w-20 h-24 bg-gradient-to-b from-slate-200 to-slate-300 rounded-t-xl mt-2 flex items-center justify-center">
                 <span className="text-2xl font-bold text-slate-500">2</span>
@@ -383,13 +383,13 @@ export default function CategoryRankings() {
                 <Crown className="h-6 w-6 text-white" />
               </div>
               <p className="font-bold text-xl text-amber-600">
-                {toGreekLetters(topThree[0].chapter?.substring(0, 3) || topThree[0].name.substring(0, 3))}
+                {getFratGreek(topThree[0].name)}
               </p>
               <p className={`text-xl font-bold ${getScoreColor(getScore(topThree[0]) ?? 0)}`}>
                 {getScore(topThree[0])?.toFixed(1) || '—'}
               </p>
               <p className="text-xs text-muted-foreground mt-0.5 text-center max-w-[80px] truncate">
-                {topThree[0].name}
+                {getFratShorthand(topThree[0].name)}
               </p>
               <div className="w-24 h-32 bg-gradient-to-b from-amber-300 to-amber-400 rounded-t-xl mt-2 flex items-center justify-center">
                 <span className="text-3xl font-bold text-amber-600">1</span>
@@ -402,13 +402,13 @@ export default function CategoryRankings() {
                 <Medal className="h-5 w-5 text-white" />
               </div>
               <p className="font-bold text-lg text-amber-700">
-                {toGreekLetters(topThree[2].chapter?.substring(0, 3) || topThree[2].name.substring(0, 3))}
+                {getFratGreek(topThree[2].name)}
               </p>
               <p className={`text-lg font-bold ${getScoreColor(getScore(topThree[2]) ?? 0)}`}>
                 {getScore(topThree[2])?.toFixed(1) || '—'}
               </p>
               <p className="text-xs text-muted-foreground mt-0.5 text-center max-w-[70px] truncate">
-                {topThree[2].name}
+                {getFratShorthand(topThree[2].name)}
               </p>
               <div className="w-20 h-20 bg-gradient-to-b from-amber-500 to-amber-600 rounded-t-xl mt-2 flex items-center justify-center">
                 <span className="text-2xl font-bold text-amber-700">3</span>
@@ -441,15 +441,15 @@ export default function CategoryRankings() {
                   {/* Avatar */}
                   <Avatar className="h-11 w-11 ring-2 ring-slate-100">
                     <AvatarImage src={frat.logo_url} />
-                    <AvatarFallback className="bg-primary/10 text-primary font-bold text-sm">
-                      {toGreekLetters(frat.chapter?.substring(0, 3) || frat.name.substring(0, 3))}
+                    <AvatarFallback className="bg-primary/10 text-primary font-bold text-xs">
+                      {getFratGreek(frat.name)}
                     </AvatarFallback>
                   </Avatar>
                   
                   {/* Info */}
                   <div className="flex-1 min-w-0">
                     <h3 className="font-semibold text-base truncate">{frat.name}</h3>
-                    <p className="text-sm text-muted-foreground">{frat.chapter}</p>
+                    <p className="text-sm text-muted-foreground">{getFratShorthand(frat.name)}</p>
                   </div>
                   
                   {/* Score */}

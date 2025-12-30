@@ -6,7 +6,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { base44, type Party } from '@/api/base44Client';
 import { format } from 'date-fns';
-import { getScoreColor } from '@/utils';
+import { getScoreColor, getFratGreek, getFratShorthand } from '@/utils';
 
 interface Fraternity {
   id: string;
@@ -183,15 +183,13 @@ export default function RateActionSheet({
                 >
                   <Avatar className="h-12 w-12 rounded-xl">
                     <AvatarImage src={frat.logo_url} alt={frat.name} />
-                    <AvatarFallback className="rounded-xl bg-primary/10 text-primary font-bold">
-                      {frat.letters?.substring(0, 3) || frat.name.substring(0, 3)}
+                    <AvatarFallback className="rounded-xl bg-primary/10 text-primary font-bold text-xs">
+                      {getFratGreek(frat.name)}
                     </AvatarFallback>
                   </Avatar>
                   <div className="flex-1 min-w-0">
                     <p className="font-semibold truncate">{frat.name}</p>
-                    {frat.letters && (
-                      <p className="text-sm text-muted-foreground">{frat.letters}</p>
-                    )}
+                    <p className="text-sm text-muted-foreground">{getFratShorthand(frat.name)}</p>
                   </div>
                   {actionType === 'rate' ? (
                     <Star className="h-5 w-5 text-amber-500" />

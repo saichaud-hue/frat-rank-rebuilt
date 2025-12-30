@@ -8,7 +8,7 @@ import { Label } from '@/components/ui/label';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Progress } from '@/components/ui/progress';
-import { toGreekLetters } from '@/utils';
+import { getFratGreek } from '@/utils';
 
 interface Fraternity {
   id: string;
@@ -318,10 +318,10 @@ export default function YourListsIntro({
                     >
                       <Avatar className="h-12 w-12 rounded-xl">
                         <AvatarImage src={frat.logo_url} alt={frat.name} />
-                        <AvatarFallback className={`rounded-xl font-bold ${
+                        <AvatarFallback className={`rounded-xl font-bold text-xs ${
                           isRated ? 'bg-green-500/20 text-green-600' : 'bg-primary/10 text-primary'
                         }`}>
-                          {toGreekLetters(frat.chapter?.substring(0, 3) || frat.name.substring(0, 3))}
+                          {getFratGreek(frat.name)}
                         </AvatarFallback>
                       </Avatar>
                       <div className="flex-1 min-w-0">
