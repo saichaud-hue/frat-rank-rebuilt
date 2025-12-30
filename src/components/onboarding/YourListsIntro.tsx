@@ -26,6 +26,7 @@ interface YourListsIntroProps {
   onComplete: (neverShowAgain: boolean) => void;
   onRateFrat: (fraternity: Fraternity) => void;
   onRateParty: (party: Party) => void;
+  onSwitchToPartiesTab?: () => void;
   fraternities: Fraternity[];
   parties: Party[];
   ratedFratCount: number;
@@ -41,6 +42,7 @@ export default function YourListsIntro({
   onComplete, 
   onRateFrat, 
   onRateParty,
+  onSwitchToPartiesTab,
   fraternities, 
   parties,
   ratedFratCount,
@@ -79,7 +81,7 @@ export default function YourListsIntro({
   const handleViewParties = () => {
     if (partyUnlocked) {
       onComplete(neverShowAgain);
-      navigate('/Parties');
+      onSwitchToPartiesTab?.();
     } else {
       setStep('parties');
     }
