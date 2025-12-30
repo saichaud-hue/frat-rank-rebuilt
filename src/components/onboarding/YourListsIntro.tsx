@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { ListOrdered, Trophy, PartyPopper, Star, ChevronLeft, Lock, CheckCircle2 } from 'lucide-react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -48,6 +49,7 @@ export default function YourListsIntro({
   ratedFratIds = [],
   ratedPartyIds = [],
 }: YourListsIntroProps) {
+  const navigate = useNavigate();
   const [neverShowAgain, setNeverShowAgain] = useState(false);
   const [step, setStep] = useState<IntroStep>('main');
 
@@ -77,6 +79,7 @@ export default function YourListsIntro({
   const handleViewParties = () => {
     if (partyUnlocked) {
       onComplete(neverShowAgain);
+      navigate('/Parties');
     } else {
       setStep('parties');
     }
