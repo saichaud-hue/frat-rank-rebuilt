@@ -20,6 +20,7 @@ import FraternityCard from '@/components/leaderboard/FraternityCard';
 import RateFratSheet from '@/components/leaderboard/RateFratSheet';
 import RateActionSheet from '@/components/leaderboard/RateActionSheet';
 import LeaderboardIntro from '@/components/onboarding/LeaderboardIntro';
+import PartyRatingForm from '@/components/rate/PartyRatingForm';
 import { Skeleton } from '@/components/ui/skeleton';
 import { clamp, createPageUrl } from '@/utils';
 import { getCachedCampusBaseline } from "@/utils/scoring";
@@ -40,6 +41,7 @@ export default function Leaderboard() {
   });
   const [showRateAction, setShowRateAction] = useState<'rate' | 'parties' | false>(false);
   const [rateExpanded, setRateExpanded] = useState(false);
+  const [selectedParty, setSelectedParty] = useState<Party | null>(null);
 
   const handleIntroComplete = (neverShowAgain: boolean) => {
     if (neverShowAgain) {
@@ -280,9 +282,15 @@ export default function Leaderboard() {
     await loadFraternities();
   };
 
-  const handleRateParty = (party: Party) => {
-    // Navigate to the party page where they can rate it
-    navigate(createPageUrl(`Party?id=${party.id}`));
+  const handleRateParty = async (party: Party) => {
+    const user = await ensureAuthed();
+    if (!user) return;
+    setSelectedParty(party);
+  };
+
+  const handlePartyRatingSubmit = async () => {
+    setSelectedParty(null);
+    await loadFraternities();
   };
 
   // Compute ranks with ties (same score = same rank)
@@ -395,6 +403,15 @@ export default function Leaderboard() {
         fraternities={fraternities}
         initialAction={showRateAction || undefined}
       />
+
+      {/* Party Rating Form */}
+      {selectedParty && (
+        <PartyRatingForm
+          party={selectedParty}
+          onClose={() => setSelectedParty(null)}
+          onSubmit={handlePartyRatingSubmit}
+        />
+      )}
 
       {/* Floating Rate Buttons - Only show when intro is dismissed */}
       {!showIntro && (
