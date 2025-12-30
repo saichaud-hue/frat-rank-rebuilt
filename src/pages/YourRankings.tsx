@@ -322,10 +322,10 @@ export default function YourRankings() {
         <TabsContent value="frats" className="mt-4 space-y-3">
           {ratedFratCount < allFraternities.length ? (
             // Locked state - show blurred preview with overlay
-            <div className="relative">
+            <div className="relative min-h-[400px]">
               {/* Blurred background items */}
               <div className="blur-sm opacity-50 pointer-events-none space-y-3">
-                {[1, 2, 3].map((i) => (
+                {[1, 2, 3, 4, 5].map((i) => (
                   <Card key={i} className="glass p-4">
                     <div className="flex items-center gap-4">
                       <div className="w-8 text-center">
@@ -342,8 +342,8 @@ export default function YourRankings() {
                 ))}
               </div>
 
-              {/* Overlay */}
-              <div className="absolute inset-0 flex items-center justify-center">
+              {/* Overlay - centered */}
+              <div className="absolute inset-0 flex items-center justify-center pt-8">
                 <Card className="glass p-6 text-center space-y-4 max-w-xs mx-4 shadow-xl">
                   <div className="w-16 h-16 mx-auto rounded-full bg-amber-500/10 flex items-center justify-center">
                     <Lock className="h-8 w-8 text-amber-500" />
@@ -432,10 +432,10 @@ export default function YourRankings() {
         <TabsContent value="parties" className="mt-4 space-y-3">
           {ratedPartyCount < 3 ? (
             // Locked state - show blurred preview with overlay
-            <div className="relative">
+            <div className="relative min-h-[400px]">
               {/* Blurred background items */}
               <div className="blur-sm opacity-50 pointer-events-none space-y-3">
-                {[1, 2, 3].map((i) => (
+                {[1, 2, 3, 4, 5].map((i) => (
                   <Card key={i} className="glass p-4">
                     <div className="flex items-center gap-4">
                       <div className="w-8 text-center">
@@ -452,8 +452,8 @@ export default function YourRankings() {
                 ))}
               </div>
 
-              {/* Overlay */}
-              <div className="absolute inset-0 flex items-center justify-center">
+              {/* Overlay - centered */}
+              <div className="absolute inset-0 flex items-center justify-center pt-8">
                 <Card className="glass p-6 text-center space-y-4 max-w-xs mx-4 shadow-xl">
                   <div className="w-16 h-16 mx-auto rounded-full bg-pink-500/10 flex items-center justify-center">
                     <Lock className="h-8 w-8 text-pink-500" />
