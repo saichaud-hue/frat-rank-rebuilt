@@ -108,16 +108,16 @@ export default function FraternityCard({ fraternity, rank, onRate, filter = 'ove
           </div>
 
           {/* Content */}
-          <div className="flex-1 min-w-0 space-y-3">
-            <div className="flex items-start justify-between">
-              <div>
-                <h3 className="font-bold text-lg leading-tight truncate">{fraternity.name}</h3>
+          <div className="flex-1 min-w-0 space-y-2">
+            <div className="flex items-start justify-between gap-2">
+              <div className="min-w-0 flex-1">
+                <h3 className="font-semibold text-sm leading-tight truncate">{fraternity.name}</h3>
                 <div className="flex items-center gap-2 mt-1">
-                  <Badge variant="secondary" className="text-xs">
+                  <Badge variant="secondary" className="text-[10px] truncate">
                     {fraternity.chapter}
                   </Badge>
                   {fraternity.founded_year && (
-                    <span className="text-xs text-muted-foreground flex items-center gap-1">
+                    <span className="text-[10px] text-muted-foreground flex items-center gap-1 shrink-0">
                       <Calendar className="h-3 w-3" />
                       Est. {fraternity.founded_year}
                     </span>
@@ -125,15 +125,15 @@ export default function FraternityCard({ fraternity, rank, onRate, filter = 'ove
                 </div>
               </div>
 
-              <div className="text-right">
-                <div className={`font-bold text-foreground ${filter === 'trending' ? 'text-lg' : 'text-2xl'}`}>
+              <div className="text-right shrink-0">
+                <div className={`font-semibold text-foreground ${filter === 'trending' ? 'text-sm' : 'text-lg'}`}>
                   {filter === 'trending'
                     ? getTrendingRankDisplay()
                     : getDisplayScore() === null 
                       ? '—' 
                       : getDisplayScore()?.toFixed(1)}
                 </div>
-                <p className="text-xs text-muted-foreground">{getScoreLabel()}</p>
+                <p className="text-[10px] text-muted-foreground">{getScoreLabel()}</p>
                 {filter === 'overall' && !hasOverallData && (
                   <Badge variant="outline" className="text-[10px] mt-1 text-muted-foreground">
                     Needs more ratings
@@ -178,28 +178,28 @@ export default function FraternityCard({ fraternity, rank, onRate, filter = 'ove
             <div className="flex items-end justify-between pt-2">
               {/* Activity Counter for Trending Filter - Bottom Left */}
               {filter === 'trending' ? (
-                <div className="bg-muted/50 rounded-lg px-4 py-3">
-                  <p className="text-sm font-medium text-muted-foreground mb-2">This semester:</p>
+                <div className="bg-muted/50 rounded-lg px-3 py-2">
+                  <p className="text-xs font-medium text-muted-foreground mb-1.5">This semester:</p>
                   <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
-                    <div className="flex items-center gap-2">
-                      <PartyPopper className="h-4 w-4 sm:h-5 sm:w-5 text-primary" />
-                      <div className="flex flex-col">
-                        <span className="font-semibold text-sm sm:text-base">{formatCount(scores?.numPartiesHosted ?? 0)}</span>
-                        <span className="text-muted-foreground text-xs">Parties</span>
+                    <div className="flex items-center gap-1.5">
+                      <PartyPopper className="h-3.5 w-3.5 text-primary shrink-0" />
+                      <div className="flex flex-col min-w-0">
+                        <span className="font-semibold text-xs">{formatCount(scores?.numPartiesHosted ?? 0)}</span>
+                        <span className="text-muted-foreground text-[10px]">Parties</span>
                       </div>
                     </div>
-                    <div className="flex items-center gap-2">
-                      <ThumbsUp className="h-4 w-4 sm:h-5 sm:w-5 text-primary" />
-                      <div className="flex flex-col">
-                        <span className="font-semibold text-sm sm:text-base">{formatCount((scores?.numRepRatings ?? 0) + (scores?.numPartyRatings ?? 0))}</span>
-                        <span className="text-muted-foreground text-xs">Ratings</span>
+                    <div className="flex items-center gap-1.5">
+                      <ThumbsUp className="h-3.5 w-3.5 text-primary shrink-0" />
+                      <div className="flex flex-col min-w-0">
+                        <span className="font-semibold text-xs">{formatCount((scores?.numRepRatings ?? 0) + (scores?.numPartyRatings ?? 0))}</span>
+                        <span className="text-muted-foreground text-[10px]">Ratings</span>
                       </div>
                     </div>
-                    <div className="flex items-center gap-2 col-span-2 sm:col-span-1">
-                      <MessageCircle className="h-4 w-4 sm:h-5 sm:w-5 text-primary" />
-                      <div className="flex flex-col">
-                        <span className="font-semibold text-sm sm:text-base">{formatCount((scores?.numPartyComments ?? 0) + (scores?.numFratComments ?? 0))}</span>
-                        <span className="text-muted-foreground text-xs">Comments</span>
+                    <div className="flex items-center gap-1.5 col-span-2 sm:col-span-1">
+                      <MessageCircle className="h-3.5 w-3.5 text-primary shrink-0" />
+                      <div className="flex flex-col min-w-0">
+                        <span className="font-semibold text-xs">{formatCount((scores?.numPartyComments ?? 0) + (scores?.numFratComments ?? 0))}</span>
+                        <span className="text-muted-foreground text-[10px]">Comments</span>
                       </div>
                     </div>
                   </div>
