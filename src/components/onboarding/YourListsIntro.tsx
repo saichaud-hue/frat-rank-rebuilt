@@ -272,14 +272,26 @@ export default function YourListsIntro({
               Rate at least 3 parties to see your personalized party ranking
             </p>
 
-            {/* Action */}
-            <Button 
-              onClick={() => setStep('party-list')} 
-              className="w-full min-h-[52px] text-base font-semibold bg-pink-500 hover:bg-pink-600 text-white active:scale-[0.98] transition-transform"
-            >
-              <Star className="h-5 w-5 mr-2" />
-              Rate a Party
-            </Button>
+            {/* Actions */}
+            <div className="space-y-3">
+              <Button 
+                onClick={() => setStep('party-list')} 
+                className="w-full min-h-[52px] text-base font-semibold bg-pink-500 hover:bg-pink-600 text-white active:scale-[0.98] transition-transform"
+              >
+                <Star className="h-5 w-5 mr-2" />
+                Rate a Party
+              </Button>
+              <Button 
+                onClick={() => {
+                  onComplete(neverShowAgain);
+                  onSwitchToPartiesTab?.();
+                }} 
+                variant="outline"
+                className="w-full min-h-[52px] text-base font-medium active:scale-[0.98] transition-transform"
+              >
+                Browse Parties
+              </Button>
+            </div>
           </div>
         )}
 
