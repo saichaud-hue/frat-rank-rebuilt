@@ -42,11 +42,8 @@ export default function Leaderboard() {
     setShowIntro(false);
   };
 
-  const handleIntroRate = () => {
-    // Select the first fraternity to rate after intro
-    if (fraternities.length > 0) {
-      handleRate(fraternities[0]);
-    }
+  const handleIntroRate = (fraternity: Fraternity) => {
+    handleRate(fraternity);
   };
 
   useEffect(() => {
@@ -383,6 +380,7 @@ export default function Leaderboard() {
         <LeaderboardIntro 
           onComplete={handleIntroComplete}
           onRate={handleIntroRate}
+          fraternities={fraternities}
         />
       )}
     </div>
