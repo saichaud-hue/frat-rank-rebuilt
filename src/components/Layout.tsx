@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { Trophy, PartyPopper, User, Plus } from 'lucide-react';
+import { Trophy, PartyPopper, User } from 'lucide-react';
 import touseLogo from '@/assets/taus-logo.jpg';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -115,18 +115,6 @@ export default function Layout({ children }: LayoutProps) {
         <main className="flex-1 px-4 py-5 pb-28 overflow-y-auto">
           {children}
         </main>
-
-        {/* Floating Host Button - Only on Parties page */}
-        {location.pathname === '/Parties' && (
-          <Link
-            to="/CreateParty"
-            className="fixed bottom-24 right-4 z-50 flex items-center gap-2 px-5 py-3 rounded-full bg-primary text-primary-foreground shadow-lg active:scale-95 transition-transform"
-            style={{ marginBottom: 'env(safe-area-inset-bottom)' }}
-          >
-            <Plus className="h-5 w-5" />
-            <span className="font-semibold">Host</span>
-          </Link>
-        )}
 
         {/* Mobile Bottom Nav - iPhone safe area */}
         <nav className="fixed bottom-0 left-0 right-0 bg-white/95 backdrop-blur-md border-t border-slate-200/50 z-40" style={{ paddingBottom: 'max(env(safe-area-inset-bottom), 8px)' }}>
