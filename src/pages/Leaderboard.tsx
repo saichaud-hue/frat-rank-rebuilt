@@ -17,6 +17,7 @@ import LeaderboardHeader from '@/components/leaderboard/LeaderboardHeader';
 import LeaderboardPodium from '@/components/leaderboard/LeaderboardPodium';
 import FraternityCard from '@/components/leaderboard/FraternityCard';
 import RateFratSheet from '@/components/leaderboard/RateFratSheet';
+import LeaderboardIntro from '@/components/onboarding/LeaderboardIntro';
 import { Skeleton } from '@/components/ui/skeleton';
 import { clamp } from '@/utils';
 import { getCachedCampusBaseline } from "@/utils/scoring";
@@ -30,6 +31,23 @@ export default function Leaderboard() {
   const [filter, setFilter] = useState<FilterType>('overall');
   const [selectedFrat, setSelectedFrat] = useState<Fraternity | null>(null);
   const [existingScores, setExistingScores] = useState<{ brotherhood: number; reputation: number; community: number } | undefined>();
+  const [showIntro, setShowIntro] = useState(() => {
+    return !localStorage.getItem('fratrank_leaderboard_intro_never_show');
+  });
+
+  const handleIntroComplete = (neverShowAgain: boolean) => {
+    if (neverShowAgain) {
+      localStorage.setItem('fratrank_leaderboard_intro_never_show', 'true');
+    }
+    setShowIntro(false);
+  };
+
+  const handleIntroRate = () => {
+    // Select the first fraternity to rate after intro
+    if (fraternities.length > 0) {
+      handleRate(fraternities[0]);
+    }
+  };
 
   useEffect(() => {
     initAndLoad();
@@ -359,6 +377,14 @@ export default function Leaderboard() {
         onSubmit={handleRateSubmit}
         existingScores={existingScores}
       />
+
+      {/* Intro Modal */}
+      {showIntro && (
+        <LeaderboardIntro 
+          onComplete={handleIntroComplete}
+          onRate={handleIntroRate}
+        />
+      )}
     </div>
   );
 }
