@@ -106,9 +106,20 @@ export default function Activity() {
   const [mentionType, setMentionType] = useState<'frat' | 'party' | null>(null);
   const [selectedMention, setSelectedMention] = useState<{ type: 'frat' | 'party'; id: string; name: string } | null>(null);
   
-  // Frat opinion mode
-  const [showFratOpinionPicker, setShowFratOpinionPicker] = useState(false);
-  const [opinionFrat, setOpinionFrat] = useState<Fraternity | null>(null);
+  // Frat ranking post mode
+  const [showFratRankingPicker, setShowFratRankingPicker] = useState(false);
+  const [fratRanking, setFratRanking] = useState<Record<string, Fraternity | null>>({
+    'Upper Touse': null,
+    'Touse': null,
+    'Lower Touse': null,
+    'Upper Mouse': null,
+    'Mouse 1': null,
+    'Mouse 2': null,
+    'Lower Mouse': null,
+    'Upper Bouse': null,
+    'Bouse': null,
+    'Lower Bouse': null,
+  });
   
   // Data for mentions
   const [fraternities, setFraternities] = useState<Fraternity[]>([]);
@@ -1103,42 +1114,78 @@ export default function Activity() {
       <Sheet open={showChatComposer} onOpenChange={(open) => {
         setShowChatComposer(open);
         if (!open) {
-          setOpinionFrat(null);
+          // Reset frat ranking when closing
+          setFratRanking({
+            'Upper Touse': null,
+            'Touse': null,
+            'Lower Touse': null,
+            'Upper Mouse': null,
+            'Mouse 1': null,
+            'Mouse 2': null,
+            'Lower Mouse': null,
+            'Upper Bouse': null,
+            'Bouse': null,
+            'Lower Bouse': null,
+          });
         }
       }}>
         <SheetContent side="bottom" className="h-auto max-h-[80vh] rounded-t-3xl">
           <SheetHeader className="pb-4">
             <SheetTitle className="text-xl">
-              {opinionFrat ? `Share about ${opinionFrat.name}` : "What's on your mind?"}
+              {Object.values(fratRanking).some(Boolean) ? "Share Frat Ranking" : "What's on your mind?"}
             </SheetTitle>
           </SheetHeader>
           <div className="space-y-4">
-            {/* Frat opinion badge */}
-            {opinionFrat && (
-              <div className="flex items-center gap-2 p-3 rounded-xl bg-amber-500/10 border border-amber-500/20">
-                <Trophy className="h-5 w-5 text-amber-500" />
-                <div className="flex-1">
-                  <p className="font-medium text-sm">{opinionFrat.name}</p>
-                  <p className="text-xs text-muted-foreground">Opinion post (doesn't affect ratings)</p>
+            {/* Frat ranking display */}
+            {Object.values(fratRanking).some(Boolean) && (
+              <div className="space-y-2 p-3 rounded-xl bg-amber-500/10 border border-amber-500/20">
+                <div className="flex items-center justify-between mb-2">
+                  <div className="flex items-center gap-2">
+                    <Trophy className="h-5 w-5 text-amber-500" />
+                    <p className="font-medium text-sm">Frat Ranking Post</p>
+                  </div>
+                  <button 
+                    onClick={() => setFratRanking({
+                      'Upper Touse': null,
+                      'Touse': null,
+                      'Lower Touse': null,
+                      'Upper Mouse': null,
+                      'Mouse 1': null,
+                      'Mouse 2': null,
+                      'Lower Mouse': null,
+                      'Upper Bouse': null,
+                      'Bouse': null,
+                      'Lower Bouse': null,
+                    })} 
+                    className="p-1 hover:bg-muted rounded-full"
+                  >
+                    <X className="h-4 w-4 text-muted-foreground" />
+                  </button>
                 </div>
-                <button 
-                  onClick={() => setOpinionFrat(null)} 
-                  className="p-1 hover:bg-muted rounded-full"
-                >
-                  <X className="h-4 w-4 text-muted-foreground" />
-                </button>
+                <div className="grid grid-cols-2 gap-1 text-xs">
+                  {['Upper Touse', 'Touse', 'Lower Touse', 'Upper Mouse', 'Mouse 1', 'Mouse 2', 'Lower Mouse', 'Upper Bouse', 'Bouse', 'Lower Bouse'].map(tier => {
+                    const frat = fratRanking[tier];
+                    if (!frat) return null;
+                    const displayTier = tier === 'Mouse 1' || tier === 'Mouse 2' ? 'Mouse' : tier;
+                    return (
+                      <div key={tier} className="truncate">
+                        <span className="text-muted-foreground">{displayTier}:</span> {frat.name}
+                      </div>
+                    );
+                  })}
+                </div>
               </div>
             )}
             
             <Textarea
               value={chatText}
               onChange={(e) => setChatText(e.target.value)}
-              placeholder={opinionFrat ? `Share your thoughts on ${opinionFrat.name}...` : "Share what's happening..."}
+              placeholder={Object.values(fratRanking).some(Boolean) ? "Add a comment to your ranking (optional)..." : "Share what's happening..."}
               className="min-h-[120px] text-base rounded-xl resize-none"
               autoFocus
             />
             
-            {selectedMention && !opinionFrat && (
+            {selectedMention && !Object.values(fratRanking).some(Boolean) && (
               <div className="flex items-center gap-2">
                 <Badge className="flex items-center gap-1 px-3 py-1.5">
                   <AtSign className="h-3 w-3" />
@@ -1151,7 +1198,7 @@ export default function Activity() {
             )}
             
             <div className="flex gap-2 flex-wrap">
-              {!opinionFrat && (
+              {!Object.values(fratRanking).some(Boolean) && (
                 <>
                   <Button
                     variant="outline"
@@ -1163,17 +1210,75 @@ export default function Activity() {
                   </Button>
                   <Button
                     variant="outline"
-                    onClick={() => setShowFratOpinionPicker(true)}
+                    onClick={() => setShowFratRankingPicker(true)}
                     className="rounded-xl border-amber-500/50 text-amber-600 hover:bg-amber-500/10"
                   >
                     <Trophy className="h-4 w-4 mr-2" />
-                    Frat Opinion
+                    Frat Ranking
                   </Button>
                 </>
               )}
               <Button
-                onClick={handleSubmitChat}
-                disabled={submittingChat || !chatText.trim()}
+                onClick={async () => {
+                  // If frat ranking mode, post the ranking
+                  if (Object.values(fratRanking).some(Boolean)) {
+                    const user = await base44.auth.me();
+                    if (!user) {
+                      toast({ title: 'Please sign in to post', variant: 'destructive' });
+                      return;
+                    }
+                    
+                    setSubmittingChat(true);
+                    try {
+                      const tiers = ['Upper Touse', 'Touse', 'Lower Touse', 'Upper Mouse', 'Mouse 1', 'Mouse 2', 'Lower Mouse', 'Upper Bouse', 'Bouse', 'Lower Bouse'];
+                      const tierLines = tiers
+                        .map(tier => {
+                          const frat = fratRanking[tier];
+                          if (!frat) return null;
+                          const displayTier = tier === 'Mouse 1' || tier === 'Mouse 2' ? 'Mouse' : tier;
+                          return `${displayTier}: ${frat.name}`;
+                        })
+                        .filter(Boolean);
+                      
+                      let message = tierLines.join('\n');
+                      if (chatText.trim()) {
+                        message = `${chatText.trim()}\n\n${message}`;
+                      }
+                      
+                      await base44.entities.ChatMessage.create({
+                        user_id: user.id,
+                        text: message,
+                        upvotes: 0,
+                        downvotes: 0,
+                      });
+                      
+                      setChatText('');
+                      setFratRanking({
+                        'Upper Touse': null,
+                        'Touse': null,
+                        'Lower Touse': null,
+                        'Upper Mouse': null,
+                        'Mouse 1': null,
+                        'Mouse 2': null,
+                        'Lower Mouse': null,
+                        'Upper Bouse': null,
+                        'Bouse': null,
+                        'Lower Bouse': null,
+                      });
+                      setShowChatComposer(false);
+                      await loadChat();
+                      toast({ title: 'Ranking posted!' });
+                    } catch (error) {
+                      console.error('Failed to post:', error);
+                      toast({ title: 'Failed to post', variant: 'destructive' });
+                    } finally {
+                      setSubmittingChat(false);
+                    }
+                  } else {
+                    handleSubmitChat();
+                  }
+                }}
+                disabled={submittingChat || (!chatText.trim() && !Object.values(fratRanking).some(Boolean))}
                 className="flex-1 rounded-xl bg-gradient-to-r from-violet-500 to-purple-500 text-white"
               >
                 {submittingChat ? (
@@ -1190,36 +1295,80 @@ export default function Activity() {
         </SheetContent>
       </Sheet>
 
-      {/* Frat Opinion Picker Sheet */}
-      <Sheet open={showFratOpinionPicker} onOpenChange={setShowFratOpinionPicker}>
-        <SheetContent side="bottom" className="h-[60vh] rounded-t-3xl">
+      {/* Frat Ranking Picker Sheet */}
+      <Sheet open={showFratRankingPicker} onOpenChange={setShowFratRankingPicker}>
+        <SheetContent side="bottom" className="h-[80vh] rounded-t-3xl">
           <SheetHeader className="pb-4">
             <SheetTitle className="flex items-center gap-2">
               <Trophy className="h-5 w-5 text-amber-500" />
-              Share a Frat Opinion
+              Create Frat Ranking
             </SheetTitle>
             <p className="text-sm text-muted-foreground">
-              Post your thoughts about a frat - this won't affect any ratings
+              Fill in your tier list - this is just for sharing, doesn't affect ratings
             </p>
           </SheetHeader>
-          <ScrollArea className="h-[calc(100%-100px)]">
-            <div className="space-y-2">
-              {fraternities.map((frat) => (
-                <button
-                  key={frat.id}
-                  onClick={() => {
-                    setOpinionFrat(frat);
-                    setSelectedMention({ type: 'frat', id: frat.id, name: frat.name });
-                    setShowFratOpinionPicker(false);
-                  }}
-                  className="w-full p-4 rounded-xl bg-muted/50 hover:bg-amber-500/10 hover:border-amber-500/30 border border-transparent text-left transition-all active:scale-[0.98]"
-                >
-                  <p className="font-semibold">{frat.name}</p>
-                  {frat.chapter && <p className="text-sm text-muted-foreground">{frat.chapter}</p>}
-                </button>
-              ))}
+          <ScrollArea className="h-[calc(100%-120px)]">
+            <div className="space-y-3 pr-2">
+              {[
+                { tier: 'Upper Touse', label: 'Upper Touse (1st)', color: 'bg-green-500/20 border-green-500/40' },
+                { tier: 'Touse', label: 'Touse (2nd)', color: 'bg-green-500/15 border-green-500/30' },
+                { tier: 'Lower Touse', label: 'Lower Touse (3rd)', color: 'bg-green-500/10 border-green-500/20' },
+                { tier: 'Upper Mouse', label: 'Upper Mouse (4th)', color: 'bg-yellow-500/15 border-yellow-500/30' },
+                { tier: 'Mouse 1', label: 'Mouse (5th)', color: 'bg-yellow-500/10 border-yellow-500/20' },
+                { tier: 'Mouse 2', label: 'Mouse (6th)', color: 'bg-yellow-500/10 border-yellow-500/20' },
+                { tier: 'Lower Mouse', label: 'Lower Mouse (7th)', color: 'bg-orange-500/15 border-orange-500/30' },
+                { tier: 'Upper Bouse', label: 'Upper Bouse (8th)', color: 'bg-red-500/10 border-red-500/20' },
+                { tier: 'Bouse', label: 'Bouse (9th)', color: 'bg-red-500/15 border-red-500/30' },
+                { tier: 'Lower Bouse', label: 'Lower Bouse (10th)', color: 'bg-red-500/20 border-red-500/40' },
+              ].map(({ tier, label, color }) => {
+                const selectedFrat = fratRanking[tier];
+                const usedFratIds = Object.values(fratRanking).filter(Boolean).map(f => f!.id);
+                const availableFrats = fraternities.filter(f => !usedFratIds.includes(f.id) || f.id === selectedFrat?.id);
+                
+                return (
+                  <div key={tier} className={cn("p-3 rounded-xl border", color)}>
+                    <p className="text-xs font-medium text-muted-foreground mb-2">{label}</p>
+                    {selectedFrat ? (
+                      <div className="flex items-center justify-between">
+                        <p className="font-semibold">{selectedFrat.name}</p>
+                        <button 
+                          onClick={() => setFratRanking(prev => ({ ...prev, [tier]: null }))}
+                          className="p-1 hover:bg-muted rounded-full"
+                        >
+                          <X className="h-4 w-4" />
+                        </button>
+                      </div>
+                    ) : (
+                      <div className="flex gap-2 flex-wrap">
+                        {availableFrats.slice(0, 5).map(frat => (
+                          <button
+                            key={frat.id}
+                            onClick={() => setFratRanking(prev => ({ ...prev, [tier]: frat }))}
+                            className="px-3 py-1.5 text-sm rounded-lg bg-background/50 hover:bg-background border border-border transition-all"
+                          >
+                            {frat.name}
+                          </button>
+                        ))}
+                        {availableFrats.length > 5 && (
+                          <span className="text-xs text-muted-foreground self-center">+{availableFrats.length - 5} more</span>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
             </div>
           </ScrollArea>
+          <div className="pt-4 border-t">
+            <Button 
+              onClick={() => setShowFratRankingPicker(false)}
+              className="w-full rounded-xl bg-gradient-to-r from-amber-500 to-orange-500 text-white"
+              disabled={!Object.values(fratRanking).some(Boolean)}
+            >
+              <Check className="h-5 w-5 mr-2" />
+              Continue to Post
+            </Button>
+          </div>
         </SheetContent>
       </Sheet>
 
