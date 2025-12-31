@@ -24,7 +24,10 @@ export default function Parties() {
   const [partyRatingCounts, setPartyRatingCounts] = useState<Map<string, number>>(new Map());
   const [loading, setLoading] = useState(true);
   const [showIntro, setShowIntro] = useState(() => {
-    return !localStorage.getItem('fratrank_parties_intro_never_show');
+    // Only show if: not permanently dismissed AND not already shown this session
+    const permanentOptOut = localStorage.getItem('fratrank_parties_intro_never_show');
+    const shownThisSession = sessionStorage.getItem('fratrank_parties_intro_shown_session');
+    return !permanentOptOut && !shownThisSession;
   });
   const [filters, setFilters] = useState<Filters>({
     fraternity: 'all',
@@ -341,6 +344,8 @@ export default function Parties() {
       {showIntro && (
         <PartiesIntro 
           onComplete={(neverShowAgain) => {
+            // Mark as shown this session
+            sessionStorage.setItem('fratrank_parties_intro_shown_session', 'true');
             if (neverShowAgain) {
               localStorage.setItem('fratrank_parties_intro_never_show', 'true');
             }
