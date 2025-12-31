@@ -22,6 +22,7 @@ import { Confetti } from '@/components/ui/confetti';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { format } from 'date-fns';
 import { recordUserAction } from '@/utils/streak';
+import ShareBattleDialog from '@/components/share/ShareBattleDialog';
 
 interface SavedBattleRanking {
   id: string;
@@ -91,6 +92,10 @@ export default function YourRankings() {
   // Frat Battle game state
   const [showFratBattleGame, setShowFratBattleGame] = useState(false);
   const [expandedBattles, setExpandedBattles] = useState<Record<string, boolean>>({});
+  
+  // Battle share dialog state
+  const [shareBattleDialogOpen, setShareBattleDialogOpen] = useState(false);
+  const [battleToShare, setBattleToShare] = useState<SavedBattleRanking | null>(null);
 
   useEffect(() => {
     loadData();
@@ -889,28 +894,9 @@ export default function YourRankings() {
                         variant="ghost"
                         size="icon"
                         className="h-8 w-8"
-                        onClick={async () => {
-                          const userData = await base44.auth.me();
-                          if (!userData) {
-                            toast({ title: "Please sign in to share", variant: "destructive" });
-                            return;
-                          }
-                          
-                          const tierLines = battleRanking.ranking.map(r => {
-                            const displayTier = r.tier === 'Mouse 1' || r.tier === 'Mouse 2' ? 'Mouse' : r.tier;
-                            return `${displayTier}: ${r.fratName}`;
-                          });
-                          
-                          const message = `🎮 Frat Battle Results\n\n${tierLines.join('\n')}`;
-                          
-                          await base44.entities.ChatMessage.create({
-                            user_id: userData.id,
-                            text: message,
-                            upvotes: 0,
-                            downvotes: 0,
-                          });
-                          
-                          toast({ title: "Shared to Feed!" });
+                        onClick={() => {
+                          setBattleToShare(battleRanking);
+                          setShareBattleDialogOpen(true);
                         }}
                       >
                         <Share2 className="h-4 w-4" />
@@ -1171,6 +1157,18 @@ export default function YourRankings() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Share Battle Dialog */}
+      {battleToShare && (
+        <ShareBattleDialog
+          isOpen={shareBattleDialogOpen}
+          onClose={() => {
+            setShareBattleDialogOpen(false);
+            setBattleToShare(null);
+          }}
+          ranking={battleToShare.ranking}
+        />
+      )}
     </div>
   );
 }
