@@ -51,6 +51,12 @@ import {
   SheetHeader, 
   SheetTitle 
 } from '@/components/ui/sheet';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { 
   base44, 
@@ -1363,8 +1369,8 @@ export default function Activity() {
         <Send className="h-6 w-6" />
       </button>
 
-      {/* Chat Composer Sheet */}
-      <Sheet open={showChatComposer} onOpenChange={(open) => {
+      {/* Chat Composer Dialog */}
+      <Dialog open={showChatComposer} onOpenChange={(open) => {
         setShowChatComposer(open);
         if (!open) {
           // Reset states when closing
@@ -1383,12 +1389,12 @@ export default function Activity() {
           });
         }
       }}>
-        <SheetContent side="bottom" className="h-auto max-h-[80vh] rounded-t-3xl">
-          <SheetHeader className="pb-4">
-            <SheetTitle className="text-xl">
+        <DialogContent className="max-w-md mx-auto rounded-2xl">
+          <DialogHeader className="pb-4">
+            <DialogTitle className="text-xl">
               {Object.values(fratRanking).some(Boolean) ? "Share Frat Ranking" : "What's on your mind?"}
-            </SheetTitle>
-          </SheetHeader>
+            </DialogTitle>
+          </DialogHeader>
           <div className="space-y-4">
             {/* Frat ranking display */}
             {Object.values(fratRanking).some(Boolean) && (
@@ -1551,8 +1557,8 @@ export default function Activity() {
               </Button>
             </div>
           </div>
-        </SheetContent>
-      </Sheet>
+        </DialogContent>
+      </Dialog>
 
       {/* Frat Ranking Picker Sheet */}
       <Sheet open={showFratRankingPicker} onOpenChange={(open) => {
