@@ -284,13 +284,43 @@ export default function YourRankings() {
 
   const postCompletionToFeed = async (userId: string) => {
     try {
-      const topFrats = rankedFrats.slice(0, 3);
-      const topNames = topFrats.map((f, i) => `${i + 1}. ${f.fraternity.name}`).join(', ');
+      // Build tier list from ranked frats (need fresh data after rating)
+      const [repRatings, fraternities] = await Promise.all([
+        base44.entities.ReputationRating.filter({ user_id: userId }),
+        base44.entities.Fraternity.filter({ status: 'active' }),
+      ]);
       
-      const celebrationEmojis = ['🏆', '🎉', '👑', '🔥', '⭐'];
-      const randomEmoji = celebrationEmojis[Math.floor(Math.random() * celebrationEmojis.length)];
+      const fratMap = new Map(fraternities.map(f => [f.id, f]));
+      const sortedRatings = repRatings
+        .filter(r => r.fraternity_id && fratMap.has(r.fraternity_id))
+        .map(r => ({
+          frat: fratMap.get(r.fraternity_id!)!,
+          score: r.combined_score ?? 5,
+        }))
+        .sort((a, b) => b.score - a.score);
       
-      const message = `${randomEmoji} Just completed ranking ALL ${allFraternities.length} fraternities! My top picks: ${topNames || 'Check my list!'} 🎊`;
+      // Build tier message - tiers in order from best to worst
+      const tiers = [
+        { name: 'Upper Touse', ranks: [1] },
+        { name: 'Touse', ranks: [2] },
+        { name: 'Lower Touse', ranks: [3] },
+        { name: 'Upper Mouse', ranks: [4] },
+        { name: 'Mouse', ranks: [5, 6] },
+        { name: 'Lower Mouse', ranks: [7] },
+        { name: 'Upper Bouse', ranks: [8] },
+        { name: 'Bouse', ranks: [9] },
+        { name: 'Lower Bouse', ranks: [10] },
+      ];
+      
+      const tierLines = tiers.map(tier => {
+        const fratNames = tier.ranks
+          .map(r => sortedRatings[r - 1]?.frat?.name)
+          .filter(Boolean)
+          .join(', ');
+        return fratNames ? `${tier.name}: ${fratNames}` : null;
+      }).filter(Boolean);
+      
+      const message = `Just completed ranking all ${fraternities.length} fraternities.\n\n${tierLines.join('\n')}`;
       
       await base44.entities.ChatMessage.create({
         user_id: userId,
@@ -300,8 +330,8 @@ export default function YourRankings() {
       });
       
       toast({
-        title: "🎉 Achievement Unlocked!",
-        description: "Your ranking completion was shared to the feed!",
+        title: "Achievement Unlocked",
+        description: "Your ranking was shared to the feed",
       });
     } catch (error) {
       console.error('Failed to post completion:', error);
