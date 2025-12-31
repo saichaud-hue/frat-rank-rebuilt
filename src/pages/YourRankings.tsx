@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
-import { ListOrdered, Trophy, PartyPopper, LogIn, ChevronRight, Lock, Star, Users, Shield, Heart, Sparkles, Music, Zap, CheckCircle2, Crown, Gift, Loader2, Share2, Swords, Trash2 } from 'lucide-react';
+import { ListOrdered, Trophy, PartyPopper, LogIn, ChevronRight, ChevronDown, Lock, Star, Users, Shield, Heart, Sparkles, Music, Zap, CheckCircle2, Crown, Gift, Loader2, Share2, Swords, Trash2 } from 'lucide-react';
 import FratBattleGame from '@/components/activity/FratBattleGame';
 import { toast } from '@/hooks/use-toast';
 import { Card } from '@/components/ui/card';
@@ -89,6 +89,7 @@ export default function YourRankings() {
   
   // Frat Battle game state
   const [showFratBattleGame, setShowFratBattleGame] = useState(false);
+  const [expandedBattles, setExpandedBattles] = useState<Record<string, boolean>>({});
 
   useEffect(() => {
     loadData();
@@ -850,88 +851,120 @@ export default function YourRankings() {
               </Button>
             </Card>
           ) : (
-            savedBattleRankings.map((battleRanking, index) => (
-              <Card key={battleRanking.id} className="glass p-4 space-y-3">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-amber-500 to-orange-500 flex items-center justify-center text-white">
-                      <Swords className="h-5 w-5" />
-                    </div>
-                    <div>
-                      <p className="font-semibold">Battle #{savedBattleRankings.length - index}</p>
-                      <p className="text-xs text-muted-foreground">
-                        {format(new Date(battleRanking.date), 'MMM d, yyyy h:mm a')}
-                      </p>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={async () => {
-                        const user = await base44.auth.me();
-                        if (!user) {
-                          toast({ title: "Please sign in to share", variant: "destructive" });
-                          return;
-                        }
-                        
-                        const tierLines = battleRanking.ranking.map(r => {
-                          const displayTier = r.tier === 'Mouse 1' || r.tier === 'Mouse 2' ? 'Mouse' : r.tier;
-                          return `${displayTier}: ${r.fratName}`;
-                        });
-                        
-                        const message = `🎮 Frat Battle Results\n\n${tierLines.join('\n')}`;
-                        
-                        await base44.entities.ChatMessage.create({
-                          user_id: user.id,
-                          text: message,
-                          upvotes: 0,
-                          downvotes: 0,
-                        });
-                        
-                        toast({ title: "Shared to Feed!" });
-                      }}
-                    >
-                      <Share2 className="h-4 w-4" />
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => {
-                        const updated = savedBattleRankings.filter(r => r.id !== battleRanking.id);
-                        setSavedBattleRankings(updated);
-                        localStorage.setItem('touse_saved_battle_rankings', JSON.stringify(updated));
-                        toast({ title: "Deleted" });
-                      }}
-                    >
-                      <Trash2 className="h-4 w-4 text-destructive" />
-                    </Button>
-                  </div>
-                </div>
-                
-                <div className="space-y-1.5">
-                  {battleRanking.ranking.slice(0, 5).map((item, idx) => {
-                    const displayTier = item.tier === 'Mouse 1' || item.tier === 'Mouse 2' ? 'Mouse' : item.tier;
-                    return (
-                      <div 
-                        key={item.fratId} 
-                        className="flex items-center gap-2 text-sm py-1 px-2 rounded-lg bg-muted/50"
-                      >
-                        <span className="font-bold text-muted-foreground w-5">{idx + 1}.</span>
-                        <span className="flex-1 font-medium truncate">{item.fratName}</span>
-                        <span className="text-xs text-muted-foreground">{displayTier}</span>
-                        <span className="text-xs text-muted-foreground">{item.wins} {item.wins === 1 ? 'win' : 'wins'}</span>
+            savedBattleRankings.map((battleRanking, index) => {
+              const isExpanded = expandedBattles[battleRanking.id];
+              const displayedRankings = isExpanded ? battleRanking.ranking : battleRanking.ranking.slice(0, 5);
+              const remainingCount = battleRanking.ranking.length - 5;
+              
+              const getTierColor = (tier: string) => {
+                if (tier.includes('Touse')) return 'bg-green-100 text-green-700';
+                if (tier.includes('Mouse')) return 'bg-amber-100 text-amber-700';
+                if (tier.includes('Bouse')) return 'bg-red-100 text-red-700';
+                return 'bg-muted';
+              };
+              
+              return (
+                <div key={battleRanking.id} className="space-y-2">
+                  {/* Header */}
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-amber-500 to-orange-500 flex items-center justify-center text-white">
+                        <Trophy className="h-5 w-5" />
                       </div>
-                    );
-                  })}
+                      <div>
+                        <p className="font-semibold">Battle #{savedBattleRankings.length - index}</p>
+                        <p className="text-xs text-muted-foreground">
+                          {format(new Date(battleRanking.date), 'MMM d, yyyy h:mm a')}
+                        </p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-1">
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8"
+                        onClick={async () => {
+                          const userData = await base44.auth.me();
+                          if (!userData) {
+                            toast({ title: "Please sign in to share", variant: "destructive" });
+                            return;
+                          }
+                          
+                          const tierLines = battleRanking.ranking.map(r => {
+                            const displayTier = r.tier === 'Mouse 1' || r.tier === 'Mouse 2' ? 'Mouse' : r.tier;
+                            return `${displayTier}: ${r.fratName}`;
+                          });
+                          
+                          const message = `🎮 Frat Battle Results\n\n${tierLines.join('\n')}`;
+                          
+                          await base44.entities.ChatMessage.create({
+                            user_id: userData.id,
+                            text: message,
+                            upvotes: 0,
+                            downvotes: 0,
+                          });
+                          
+                          toast({ title: "Shared to Feed!" });
+                        }}
+                      >
+                        <Share2 className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8"
+                        onClick={() => {
+                          const updated = savedBattleRankings.filter(r => r.id !== battleRanking.id);
+                          setSavedBattleRankings(updated);
+                          localStorage.setItem('touse_saved_battle_rankings', JSON.stringify(updated));
+                          toast({ title: "Deleted" });
+                        }}
+                      >
+                        <Trash2 className="h-4 w-4 text-destructive" />
+                      </Button>
+                    </div>
+                  </div>
+                  
+                  {/* Rankings list */}
+                  <div className="space-y-1">
+                    {displayedRankings.map((item, idx) => {
+                      const displayTier = item.tier === 'Mouse 1' || item.tier === 'Mouse 2' ? 'Mouse' : item.tier;
+                      const actualIndex = isExpanded ? idx : idx;
+                      return (
+                        <div 
+                          key={item.fratId} 
+                          className="flex items-center justify-between py-2 border-b border-border/50 last:border-0"
+                        >
+                          <div className="flex items-center gap-3">
+                            <span className="font-semibold text-muted-foreground w-6">{actualIndex + 1}.</span>
+                            <span className="font-medium">{item.fratName}</span>
+                          </div>
+                          <div className="flex items-center gap-3">
+                            <span className={`text-xs font-medium px-2 py-0.5 rounded ${getTierColor(item.tier)}`}>
+                              {displayTier}
+                            </span>
+                            <span className="text-xs text-muted-foreground w-12 text-right">
+                              {item.wins} {item.wins === 1 ? 'win' : 'wins'}
+                            </span>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                  
+                  {/* View all button */}
                   {battleRanking.ranking.length > 5 && (
-                    <p className="text-xs text-muted-foreground text-center pt-1">
-                      +{battleRanking.ranking.length - 5} more
-                    </p>
+                    <button
+                      onClick={() => setExpandedBattles(prev => ({ ...prev, [battleRanking.id]: !prev[battleRanking.id] }))}
+                      className="w-full flex items-center justify-center gap-1 py-2 text-sm text-muted-foreground hover:text-foreground transition-colors"
+                    >
+                      <ChevronDown className={`h-4 w-4 transition-transform ${isExpanded ? 'rotate-180' : ''}`} />
+                      {isExpanded ? 'Show less' : `View all ${battleRanking.ranking.length} rankings`}
+                    </button>
                   )}
                 </div>
-              </Card>
-            ))
+              );
+            })
           )}
         </TabsContent>
       </Tabs>
