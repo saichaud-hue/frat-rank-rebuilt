@@ -359,7 +359,7 @@ export default function FratBattleGame({
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       {/* Header */}
       <div className="text-center">
         <div className="flex items-center justify-center gap-2 mb-2">
@@ -371,12 +371,17 @@ export default function FratBattleGame({
         </p>
       </div>
 
-      {/* Progress */}
+      {/* Progress - Two-color bar */}
       <div className="space-y-2">
-        <Progress value={progress} className="h-2" />
+        <div className="relative h-3 w-full rounded-full bg-muted overflow-hidden">
+          <div 
+            className="absolute inset-y-0 left-0 bg-gradient-to-r from-amber-500 to-orange-500 rounded-full transition-all duration-300"
+            style={{ width: `${progress}%` }}
+          />
+        </div>
         <div className="flex justify-between text-xs text-muted-foreground">
           <span>Start</span>
-          <span>{Math.round(progress)}%</span>
+          <span className="font-semibold text-foreground">{Math.round(progress)}%</span>
           <span>Done</span>
         </div>
       </div>
