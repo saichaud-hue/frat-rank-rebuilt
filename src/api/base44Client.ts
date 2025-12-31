@@ -7,6 +7,9 @@ interface User {
   name: string;
   avatar_url?: string;
   points: number;
+  streak: number;
+  last_action_at: string;
+  rank?: number;
   created_at: string;
 }
 
@@ -143,6 +146,8 @@ class AuthClient {
       name: 'Duke Student',
       avatar_url: undefined,
       points: 0,
+      streak: 0,
+      last_action_at: new Date().toISOString(),
       created_at: new Date().toISOString(),
     };
     localStorage.setItem(this.storageKey, JSON.stringify(demoUser));

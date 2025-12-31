@@ -8,6 +8,7 @@ import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Skeleton } from '@/components/ui/skeleton';
 import { base44, type PartyComment, type PartyCommentVote } from '@/api/base44Client';
 import { formatTimeAgo } from '@/utils';
+import { recordUserAction } from '@/utils/streak';
 
 interface CommentSectionProps {
   partyId: string;
@@ -116,8 +117,9 @@ export default function CommentSection({ partyId }: CommentSectionProps) {
         moderated: false,
       });
 
-      // Update user points
+      // Update user points and streak
       await base44.auth.updateMe({ points: (user.points || 0) + 2 });
+      await recordUserAction();
 
       // Recalculate comment-derived score (kept on Party as unquantifiable_score).
       // IMPORTANT: Do NOT update Party.performance_score here; party quality must be derived from PartyRating aggregation.

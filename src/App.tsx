@@ -1,3 +1,4 @@
+import { useEffect } from "react";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -16,8 +17,12 @@ import Profile from "./pages/Profile";
 import CreateParty from "./pages/CreateParty";
 import UserNotRegisteredError from "./components/errors/UserNotRegisteredError";
 import NotFound from "./pages/NotFound";
+import { checkStreakStatus } from "./utils/streak";
 
 const queryClient = new QueryClient();
+
+// Check streak status on app load
+checkStreakStatus();
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
