@@ -1570,7 +1570,7 @@ export default function Activity() {
           setExpandedTiers({});
         }
       }}>
-        <DialogContent className="w-[90vw] max-w-sm rounded-xl max-h-[80vh] overflow-y-auto p-5">
+        <DialogContent className="w-[90vw] max-w-sm rounded-xl max-h-[85vh] overflow-y-auto p-4">
           {showFratBattleGame ? (
             <FratBattleGame
               fraternities={fraternities}
@@ -1775,7 +1775,7 @@ export default function Activity() {
                           <Swords className="h-4 w-4 text-amber-500" />
                         </div>
                         <div className="flex-1 min-w-0">
-                          <p className="text-sm font-medium text-foreground truncate">
+                          <p className="text-sm font-medium text-foreground leading-snug">
                             {saved.ranking.slice(0, 3).map(r => r.fratName).join(' → ')}...
                           </p>
                           <p className="text-xs text-muted-foreground">{format(new Date(saved.date), 'MMM d, h:mm a')}</p>
@@ -1828,7 +1828,7 @@ export default function Activity() {
                           <Trophy className="h-4 w-4 text-emerald-500" />
                         </div>
                         <div className="flex-1 min-w-0">
-                          <p className="text-sm font-medium text-foreground truncate">
+                          <p className="text-sm font-medium text-foreground leading-snug">
                             {saved.ranking.slice(0, 3).map(r => r.fratName).join(' → ')}...
                           </p>
                           <p className="text-xs text-muted-foreground">{format(new Date(saved.date), 'MMM d, h:mm a')}</p>
