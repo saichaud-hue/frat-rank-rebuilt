@@ -1370,8 +1370,8 @@ export default function Activity() {
         <Send className="h-6 w-6" />
       </button>
 
-      {/* Chat Composer Dialog */}
-      <Dialog open={showChatComposer} onOpenChange={(open) => {
+      {/* Chat Composer Sheet */}
+      <Sheet open={showChatComposer} onOpenChange={(open) => {
         setShowChatComposer(open);
         if (!open) {
           // Reset states when closing
@@ -1390,12 +1390,12 @@ export default function Activity() {
           });
         }
       }}>
-        <DialogContent className="w-[95vw] max-w-md mx-auto rounded-2xl p-4 sm:p-6">
-          <DialogHeader className="pb-2">
-            <DialogTitle className="text-lg">
+        <SheetContent side="bottom" className="rounded-t-3xl" style={{ paddingBottom: 'max(env(safe-area-inset-bottom), 24px)' }}>
+          <SheetHeader className="pb-4 text-left">
+            <SheetTitle className="text-lg">
               {Object.values(fratRanking).some(Boolean) ? "Share Frat Ranking" : "What's on your mind?"}
-            </DialogTitle>
-          </DialogHeader>
+            </SheetTitle>
+          </SheetHeader>
           <div className="space-y-4">
             {/* Frat ranking display */}
             {Object.values(fratRanking).some(Boolean) && (
@@ -1558,11 +1558,11 @@ export default function Activity() {
               </Button>
             </div>
           </div>
-        </DialogContent>
-      </Dialog>
+        </SheetContent>
+      </Sheet>
 
-      {/* Frat Ranking Picker Dialog */}
-      <Dialog open={showFratRankingPicker} onOpenChange={(open) => {
+      {/* Frat Ranking Picker Sheet */}
+      <Sheet open={showFratRankingPicker} onOpenChange={(open) => {
         setShowFratRankingPicker(open);
         if (!open) {
           setShowFratBattleGame(false);
@@ -1570,12 +1570,11 @@ export default function Activity() {
           setExpandedTiers({});
         }
       }}>
-        <DialogContent className="w-[90vw] max-w-sm rounded-xl max-h-[85vh] overflow-y-auto p-4">
+        <SheetContent side="bottom" className="rounded-t-3xl h-[85vh]" style={{ paddingBottom: 'max(env(safe-area-inset-bottom), 24px)' }}>
           {showFratBattleGame ? (
             <FratBattleGame
               fraternities={fraternities}
               onComplete={(ranking) => {
-                // Convert the ranking object to include null for missing tiers
                 const fullRanking: Record<string, Fraternity | null> = {
                   'Upper Touse': ranking['Upper Touse'] || null,
                   'Touse': ranking['Touse'] || null,
@@ -1591,11 +1590,9 @@ export default function Activity() {
                 setFratRanking(fullRanking);
                 setShowFratBattleGame(false);
                 setShowFratRankingPicker(false);
-                // Open the composer to show preview before posting
                 setShowChatComposer(true);
               }}
               onShare={(rankingData) => {
-                // Convert rankingData to fratRanking format for preview
                 const fullRanking: Record<string, Fraternity | null> = {
                   'Upper Touse': null,
                   'Touse': null,
@@ -1617,11 +1614,9 @@ export default function Activity() {
                 setFratRanking(fullRanking);
                 setShowFratBattleGame(false);
                 setShowFratRankingPicker(false);
-                // Open the composer to show preview before posting
                 setShowChatComposer(true);
               }}
               onSave={(rankingData) => {
-                // Save to localStorage (max 3 recent rankings)
                 const savedRankings = JSON.parse(localStorage.getItem('touse_saved_battle_rankings') || '[]');
                 const newRanking = {
                   id: `battle-${Date.now()}`,
@@ -1636,8 +1631,8 @@ export default function Activity() {
               onClose={() => setShowFratBattleGame(false)}
             />
           ) : showManualPicker ? (
-            <div className="flex flex-col h-full max-h-[calc(85vh-2rem)] overflow-hidden">
-              <DialogHeader className="pb-4 shrink-0">
+            <div className="flex flex-col h-full overflow-hidden">
+              <SheetHeader className="pb-4 shrink-0 text-left">
                 <div className="flex items-center gap-2">
                   <button 
                     onClick={() => setShowManualPicker(false)}
@@ -1645,17 +1640,15 @@ export default function Activity() {
                   >
                     <ChevronRight className="h-5 w-5 rotate-180" />
                   </button>
-                  <DialogTitle className="flex items-center gap-2">
+                  <SheetTitle className="flex items-center gap-2">
                     <Trophy className="h-5 w-5 text-amber-500" />
                     Pick Manually
-                  </DialogTitle>
+                  </SheetTitle>
                 </div>
-                <DialogDescription>
-                  Select a frat for each tier position
-                </DialogDescription>
-              </DialogHeader>
+                <p className="text-sm text-muted-foreground pl-8">Select a frat for each tier position</p>
+              </SheetHeader>
               
-              <div className="flex-1 overflow-y-auto pr-2">
+              <ScrollArea className="flex-1 -mx-6 px-6">
                 <div className="space-y-3 pb-4">
                   {[
                     { tier: 'Upper Touse', label: 'Upper Touse (1st)', color: 'bg-green-500/20 border-green-500/40' },
@@ -1722,12 +1715,11 @@ export default function Activity() {
                     );
                   })}
                 </div>
-              </div>
+              </ScrollArea>
               <div className="pt-4 border-t shrink-0">
                 <Button 
                   onClick={() => {
                     setShowFratRankingPicker(false);
-                    // Open the composer to show preview before posting
                     setShowChatComposer(true);
                   }}
                   className="w-full rounded-xl bg-gradient-to-r from-amber-500 to-orange-500 text-white"
@@ -1745,12 +1737,12 @@ export default function Activity() {
               
               return (
                 <>
-                  <DialogHeader className="pb-4 border-b border-border">
-                    <DialogTitle className="text-lg font-semibold">Create Frat Ranking</DialogTitle>
-                    <DialogDescription className="text-sm text-muted-foreground">
+                  <SheetHeader className="pb-4 border-b border-border text-left">
+                    <SheetTitle className="text-lg font-semibold">Create Frat Ranking</SheetTitle>
+                    <p className="text-sm text-muted-foreground">
                       Fill in your tier list - this is just for sharing, doesn't affect ratings
-                    </DialogDescription>
-                  </DialogHeader>
+                    </p>
+                  </SheetHeader>
                   
                   <div className="divide-y divide-border">
                     {/* Battle Game Row */}
@@ -1768,7 +1760,7 @@ export default function Activity() {
                       <ChevronRight className="h-5 w-5 text-muted-foreground shrink-0" />
                     </button>
                     
-                    {/* Past Battles - as simple list rows */}
+                    {/* Past Battles */}
                     {savedBattleRankings.slice(0, 3).map((saved: { id: string; date: string; ranking: { tier: string; fratName: string; wins: number }[] }) => (
                       <div key={saved.id} className="py-3 flex items-center gap-3">
                         <div className="w-8 h-8 rounded-full bg-amber-500/10 flex items-center justify-center shrink-0">
@@ -1821,7 +1813,7 @@ export default function Activity() {
                       <ChevronRight className="h-5 w-5 text-muted-foreground shrink-0" />
                     </button>
                     
-                    {/* Past Manual Choices - as simple list rows */}
+                    {/* Past Manual Choices */}
                     {savedManualRankings.slice(0, 3).map((saved: { id: string; date: string; ranking: { tier: string; fratName: string }[] }) => (
                       <div key={saved.id} className="py-3 flex items-center gap-3">
                         <div className="w-8 h-8 rounded-full bg-emerald-500/10 flex items-center justify-center shrink-0">
@@ -1863,15 +1855,15 @@ export default function Activity() {
               );
             })()
           )}
-        </DialogContent>
-      </Dialog>
+        </SheetContent>
+      </Sheet>
 
-      {/* Mention Picker Dialog */}
-      <Dialog open={showMentionPicker} onOpenChange={setShowMentionPicker}>
-        <DialogContent className="w-[95vw] max-w-md mx-auto rounded-2xl max-h-[60vh] flex flex-col p-4 sm:p-6">
-          <DialogHeader className="pb-2">
-            <DialogTitle>Tag something</DialogTitle>
-          </DialogHeader>
+      {/* Mention Picker Sheet */}
+      <Sheet open={showMentionPicker} onOpenChange={setShowMentionPicker}>
+        <SheetContent side="bottom" className="rounded-t-3xl h-[70vh]" style={{ paddingBottom: 'max(env(safe-area-inset-bottom), 24px)' }}>
+          <SheetHeader className="pb-4 text-left">
+            <SheetTitle>Tag something</SheetTitle>
+          </SheetHeader>
           <div className="flex gap-2 mb-4">
             <Button
               variant={mentionType === 'frat' ? 'default' : 'outline'}
@@ -1890,7 +1882,7 @@ export default function Activity() {
               Parties
             </Button>
           </div>
-          <ScrollArea className="h-[calc(100%-100px)]">
+          <ScrollArea className="h-[calc(70vh-160px)]">
             <div className="space-y-2">
               {mentionType === 'frat' && fraternities.map((frat) => (
                 <button
@@ -1958,26 +1950,26 @@ export default function Activity() {
               })()}
             </div>
           </ScrollArea>
-        </DialogContent>
-      </Dialog>
+        </SheetContent>
+      </Sheet>
 
-      {/* Comments Dialog */}
-      <Dialog open={!!commentsSheetItem} onOpenChange={(open) => {
+      {/* Comments Sheet */}
+      <Sheet open={!!commentsSheetItem} onOpenChange={(open) => {
         if (!open) {
           setCommentsSheetItem(null);
           setReplyText('');
         }
       }}>
-        <DialogContent className="w-[95vw] max-w-md mx-auto rounded-2xl max-h-[70vh] flex flex-col p-4 sm:p-6">
-          <DialogHeader className="pb-2 shrink-0">
-            <DialogTitle className="flex items-center gap-2">
+        <SheetContent side="bottom" className="rounded-t-3xl h-[75vh]" style={{ paddingBottom: 'max(env(safe-area-inset-bottom), 24px)' }}>
+          <SheetHeader className="pb-4 shrink-0 text-left">
+            <SheetTitle className="flex items-center gap-2">
               <MessageCircle className="h-5 w-5" />
               Comments
               {commentsSheetItem?.replies && commentsSheetItem.replies.length > 0 && (
                 <Badge variant="secondary">{commentsSheetItem.replies.length}</Badge>
               )}
-            </DialogTitle>
-          </DialogHeader>
+            </SheetTitle>
+          </SheetHeader>
           
           {/* Original message preview */}
           {commentsSheetItem && (
@@ -1990,7 +1982,7 @@ export default function Activity() {
           )}
           
           {/* Comments list */}
-          <ScrollArea className="flex-1 -mx-6 px-6">
+          <ScrollArea className="h-[calc(75vh-280px)] -mx-6 px-6">
             <div className="space-y-3 pb-4">
               {commentsSheetItem?.replies && commentsSheetItem.replies.length > 0 ? (
                 commentsSheetItem.replies.map((reply) => (
@@ -2034,7 +2026,6 @@ export default function Activity() {
               onClick={async () => {
                 if (commentsSheetItem) {
                   await handleChatReply(commentsSheetItem.id);
-                  // Refresh the comments sheet item with updated replies
                   const updatedMessage = chatMessages.find(m => m.id === commentsSheetItem.id);
                   if (updatedMessage) {
                     setCommentsSheetItem(updatedMessage);
@@ -2051,8 +2042,8 @@ export default function Activity() {
               )}
             </Button>
           </div>
-        </DialogContent>
-      </Dialog>
+        </SheetContent>
+      </Sheet>
     </div>
   );
 }
