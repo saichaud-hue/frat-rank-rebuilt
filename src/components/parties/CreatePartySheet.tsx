@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
-import { Plus, MapPin, Loader2, CalendarDays, AlertCircle, PartyPopper, Sparkles, Clock, Users, Music, Lock, Globe } from 'lucide-react';
+import { Plus, MapPin, Loader2, CalendarDays, AlertCircle, PartyPopper, Sparkles, Clock, Users, Music, Lock, Globe, ImageIcon, Link2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -30,6 +30,7 @@ export default function CreatePartySheet({ open, onOpenChange, onSuccess }: Crea
     venue: '',
     type: '',
     invite_only: false,
+    cover_photo_url: '',
   });
 
   const [startDate, setStartDate] = useState<Date | undefined>();
@@ -123,6 +124,7 @@ export default function CreatePartySheet({ open, onOpenChange, onSuccess }: Crea
       venue: '',
       type: '',
       invite_only: false,
+      cover_photo_url: '',
     });
     setStartDate(undefined);
     setEndDate(undefined);
@@ -144,7 +146,7 @@ export default function CreatePartySheet({ open, onOpenChange, onSuccess }: Crea
         venue: formData.venue,
         theme: formData.type,
         tags: [formData.type, formData.invite_only ? 'invite_only' : 'open'].filter(Boolean),
-        display_photo_url: '',
+        display_photo_url: formData.cover_photo_url,
         performance_score: 0,
         quantifiable_score: 0,
         unquantifiable_score: 5,
@@ -202,36 +204,57 @@ export default function CreatePartySheet({ open, onOpenChange, onSuccess }: Crea
 
           <form onSubmit={handleSubmit} className="p-4 space-y-4">
             {/* Live Preview */}
-            {(formData.title || selectedFrat || startDate) && (
+            {(formData.title || selectedFrat || startDate || formData.cover_photo_url) && (
               <div className="p-4 rounded-xl bg-muted/50 border border-border">
                 <div className="flex items-center gap-2 mb-2">
                   <Sparkles className="h-4 w-4 text-primary" />
                   <span className="text-xs font-medium text-muted-foreground">Preview</span>
                 </div>
-                <h3 className="font-bold">{formData.title || 'Your Event'}</h3>
-                {selectedFrat && (
-                  <p className="text-sm text-muted-foreground">{selectedFrat.name}</p>
-                )}
-                <div className="flex flex-wrap gap-2 mt-2">
-                  {startDate && (
-                    <Badge variant="secondary" className="text-xs">
-                      {format(startDate, 'MMM d')} • {startTime}
-                    </Badge>
-                  )}
-                  {formData.type && (
-                    <Badge variant="outline" className="capitalize text-xs">{formData.type}</Badge>
-                  )}
-                  <Badge 
-                    variant="outline" 
-                    className={cn(
-                      "text-xs",
-                      formData.invite_only 
-                        ? "border-amber-500/50 text-amber-600" 
-                        : "border-emerald-500/50 text-emerald-600"
+                <div className="flex gap-3">
+                  {/* Cover Photo Preview */}
+                  <div className="w-16 h-16 rounded-lg bg-muted flex-shrink-0 overflow-hidden">
+                    {formData.cover_photo_url ? (
+                      <img 
+                        src={formData.cover_photo_url} 
+                        alt="Cover preview" 
+                        className="w-full h-full object-cover"
+                        onError={(e) => {
+                          e.currentTarget.style.display = 'none';
+                        }}
+                      />
+                    ) : (
+                      <div className="w-full h-full flex items-center justify-center">
+                        <ImageIcon className="h-6 w-6 text-muted-foreground/50" />
+                      </div>
                     )}
-                  >
-                    {formData.invite_only ? 'Invite Only' : 'Open'}
-                  </Badge>
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <h3 className="font-bold truncate">{formData.title || 'Your Event'}</h3>
+                    {selectedFrat && (
+                      <p className="text-sm text-muted-foreground truncate">{selectedFrat.name}</p>
+                    )}
+                    <div className="flex flex-wrap gap-1.5 mt-1.5">
+                      {startDate && (
+                        <Badge variant="secondary" className="text-xs">
+                          {format(startDate, 'MMM d')} • {startTime}
+                        </Badge>
+                      )}
+                      {formData.type && (
+                        <Badge variant="outline" className="capitalize text-xs">{formData.type}</Badge>
+                      )}
+                      <Badge 
+                        variant="outline" 
+                        className={cn(
+                          "text-xs",
+                          formData.invite_only 
+                            ? "border-amber-500/50 text-amber-600" 
+                            : "border-emerald-500/50 text-emerald-600"
+                        )}
+                      >
+                        {formData.invite_only ? 'Invite Only' : 'Open'}
+                      </Badge>
+                    </div>
+                  </div>
                 </div>
               </div>
             )}
@@ -285,6 +308,28 @@ export default function CreatePartySheet({ open, onOpenChange, onSuccess }: Crea
                 onChange={(e) => setFormData(prev => ({ ...prev, venue: e.target.value }))}
                 className="h-12"
               />
+            </div>
+
+            {/* Cover Photo URL */}
+            <div className="space-y-2">
+              <Label className="text-sm font-medium flex items-center gap-2">
+                <ImageIcon className="h-4 w-4 text-primary" />
+                Cover Photo
+              </Label>
+              <div className="flex gap-2">
+                <div className="relative flex-1">
+                  <Link2 className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    placeholder="Paste image URL..."
+                    value={formData.cover_photo_url}
+                    onChange={(e) => setFormData(prev => ({ ...prev, cover_photo_url: e.target.value }))}
+                    className="h-12 pl-10"
+                  />
+                </div>
+              </div>
+              <p className="text-xs text-muted-foreground">
+                Add a photo to make your party stand out in the feed
+              </p>
             </div>
 
             {/* Date & Time */}
