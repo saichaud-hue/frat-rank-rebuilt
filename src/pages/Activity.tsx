@@ -1605,34 +1605,34 @@ export default function Activity() {
                 setFratRanking(fullRanking);
                 setShowFratBattleGame(false);
                 setShowFratRankingPicker(false);
+                // Open the composer to show preview before posting
+                setShowChatComposer(true);
               }}
-              onShare={async (rankingData) => {
-                const user = await base44.auth.me();
-                if (!user) {
-                  toast({ title: "Please sign in to share", variant: "destructive" });
-                  return;
-                }
-                
-                // Build tier message
-                const tierLines = rankingData.map(r => {
-                  const displayTier = r.tier === 'Mouse 1' || r.tier === 'Mouse 2' ? 'Mouse' : r.tier;
-                  return `${displayTier}: ${r.fratName}`;
+              onShare={(rankingData) => {
+                // Convert rankingData to fratRanking format for preview
+                const fullRanking: Record<string, Fraternity | null> = {
+                  'Upper Touse': null,
+                  'Touse': null,
+                  'Lower Touse': null,
+                  'Upper Mouse': null,
+                  'Mouse 1': null,
+                  'Mouse 2': null,
+                  'Lower Mouse': null,
+                  'Upper Bouse': null,
+                  'Bouse': null,
+                  'Lower Bouse': null,
+                };
+                rankingData.forEach(r => {
+                  const frat = fraternities.find(f => f.name === r.fratName);
+                  if (frat && r.tier in fullRanking) {
+                    fullRanking[r.tier] = frat;
+                  }
                 });
-                
-                const message = `🎮 Frat Battle Results\n\n${tierLines.join('\n')}`;
-                
-                await base44.entities.ChatMessage.create({
-                  user_id: user.id,
-                  text: message,
-                  upvotes: 0,
-                  downvotes: 0,
-                });
-                
+                setFratRanking(fullRanking);
                 setShowFratBattleGame(false);
                 setShowFratRankingPicker(false);
-                await loadChat();
-                
-                toast({ title: "Shared to Feed!", description: "Your Frat Battle ranking is now visible to everyone" });
+                // Open the composer to show preview before posting
+                setShowChatComposer(true);
               }}
               onSave={(rankingData) => {
                 // Save to localStorage (max 3 recent rankings)
@@ -1739,7 +1739,11 @@ export default function Activity() {
               </div>
               <div className="pt-4 border-t shrink-0">
                 <Button 
-                  onClick={() => setShowFratRankingPicker(false)}
+                  onClick={() => {
+                    setShowFratRankingPicker(false);
+                    // Open the composer to show preview before posting
+                    setShowChatComposer(true);
+                  }}
                   className="w-full rounded-xl bg-gradient-to-r from-amber-500 to-orange-500 text-white"
                   disabled={!Object.values(fratRanking).some(Boolean)}
                 >
@@ -1803,31 +1807,30 @@ export default function Activity() {
                                 size="sm"
                                 variant="outline"
                                 className="shrink-0 rounded-lg text-xs border-amber-500/50 text-amber-600 hover:bg-amber-500/10"
-                                onClick={async () => {
-                                  const user = await base44.auth.me();
-                                  if (!user) {
-                                    toast({ title: "Please sign in to share", variant: "destructive" });
-                                    return;
-                                  }
-                                  
-                                  const tierLines = saved.ranking.map((r: { tier: string; fratName: string }) => {
-                                    const displayTier = r.tier === 'Mouse 1' || r.tier === 'Mouse 2' ? 'Mouse' : r.tier;
-                                    return `${displayTier}: ${r.fratName}`;
+                                onClick={() => {
+                                  // Convert saved ranking to fratRanking format for preview
+                                  const fullRanking: Record<string, Fraternity | null> = {
+                                    'Upper Touse': null,
+                                    'Touse': null,
+                                    'Lower Touse': null,
+                                    'Upper Mouse': null,
+                                    'Mouse 1': null,
+                                    'Mouse 2': null,
+                                    'Lower Mouse': null,
+                                    'Upper Bouse': null,
+                                    'Bouse': null,
+                                    'Lower Bouse': null,
+                                  };
+                                  saved.ranking.forEach((r: { tier: string; fratName: string }) => {
+                                    const frat = fraternities.find(f => f.name === r.fratName);
+                                    if (frat && r.tier in fullRanking) {
+                                      fullRanking[r.tier] = frat;
+                                    }
                                   });
-                                  
-                                  const message = `🎮 Frat Battle Results\n\n${tierLines.join('\n')}`;
-                                  
-                                  await base44.entities.ChatMessage.create({
-                                    user_id: user.id,
-                                    text: message,
-                                    upvotes: 0,
-                                    downvotes: 0,
-                                  });
-                                  
+                                  setFratRanking(fullRanking);
                                   setShowFratRankingPicker(false);
-                                  await loadChat();
-                                  
-                                  toast({ title: "Shared to Feed!" });
+                                  // Open the composer to show preview before posting
+                                  setShowChatComposer(true);
                                 }}
                               >
                                 <Send className="h-3 w-3 mr-1" />
@@ -1878,31 +1881,30 @@ export default function Activity() {
                                 size="sm"
                                 variant="outline"
                                 className="shrink-0 rounded-lg text-xs border-green-500/50 text-green-600 hover:bg-green-500/10"
-                                onClick={async () => {
-                                  const user = await base44.auth.me();
-                                  if (!user) {
-                                    toast({ title: "Please sign in to share", variant: "destructive" });
-                                    return;
-                                  }
-                                  
-                                  const tierLines = saved.ranking.map((r: { tier: string; fratName: string }) => {
-                                    const displayTier = r.tier === 'Mouse 1' || r.tier === 'Mouse 2' ? 'Mouse' : r.tier;
-                                    return `${displayTier}: ${r.fratName}`;
+                                onClick={() => {
+                                  // Convert saved ranking to fratRanking format for preview
+                                  const fullRanking: Record<string, Fraternity | null> = {
+                                    'Upper Touse': null,
+                                    'Touse': null,
+                                    'Lower Touse': null,
+                                    'Upper Mouse': null,
+                                    'Mouse 1': null,
+                                    'Mouse 2': null,
+                                    'Lower Mouse': null,
+                                    'Upper Bouse': null,
+                                    'Bouse': null,
+                                    'Lower Bouse': null,
+                                  };
+                                  saved.ranking.forEach((r: { tier: string; fratName: string }) => {
+                                    const frat = fraternities.find(f => f.name === r.fratName);
+                                    if (frat && r.tier in fullRanking) {
+                                      fullRanking[r.tier] = frat;
+                                    }
                                   });
-                                  
-                                  const message = `🏆 My Frat Ranking\n\n${tierLines.join('\n')}`;
-                                  
-                                  await base44.entities.ChatMessage.create({
-                                    user_id: user.id,
-                                    text: message,
-                                    upvotes: 0,
-                                    downvotes: 0,
-                                  });
-                                  
+                                  setFratRanking(fullRanking);
                                   setShowFratRankingPicker(false);
-                                  await loadChat();
-                                  
-                                  toast({ title: "Shared to Feed!" });
+                                  // Open the composer to show preview before posting
+                                  setShowChatComposer(true);
                                 }}
                               >
                                 <Send className="h-3 w-3 mr-1" />
