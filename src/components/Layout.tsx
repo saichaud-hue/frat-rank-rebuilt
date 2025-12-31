@@ -147,70 +147,57 @@ export default function Layout({ children }: LayoutProps) {
   return (
     <>
       <div className="min-h-screen flex flex-col w-full bg-background">
-        {/* Mobile Header - Dark themed with Next Up Party */}
-        <header className="sticky top-0 z-40 gradient-primary pt-safe">
-          <div className="px-4 py-3 flex items-center justify-between">
+        {/* Mobile Header - Black background with inline Next Up Party */}
+        <header className="sticky top-0 z-40 bg-black pt-safe">
+          <div className="px-4 py-3 flex items-center justify-between gap-3">
             {/* Left: Touse text */}
-            <Link to="/" className="flex items-center">
-              <span className="text-xl font-bold text-primary-foreground">Touse</span>
+            <Link to="/" className="flex items-center shrink-0">
+              <span className="text-xl font-bold text-white">Touse</span>
             </Link>
+            
+            {/* Center: Next Up Party Banner - Compact */}
+            {nextParty && (
+              <Link 
+                to={`/Party?id=${nextParty.id}`}
+                className="flex-1 min-w-0 rounded-xl overflow-hidden px-3 py-1.5 flex items-center justify-between gap-2"
+                style={{
+                  background: 'linear-gradient(135deg, hsl(350 70% 55%), hsl(25 90% 55%))'
+                }}
+              >
+                <div className="min-w-0 flex-1">
+                  <p className="text-[10px] text-white/80 font-medium uppercase tracking-wide leading-none">Next Up</p>
+                  <p className="text-sm font-bold text-white truncate leading-tight">{nextParty.title}</p>
+                </div>
+                
+                {/* Compact Countdown */}
+                <div className="flex items-center gap-0.5 text-white shrink-0">
+                  <span className="text-sm font-bold tabular-nums">{countdown.hours.toString().padStart(2, '0')}</span>
+                  <span className="text-xs opacity-60">:</span>
+                  <span className="text-sm font-bold tabular-nums">{countdown.minutes.toString().padStart(2, '0')}</span>
+                  <span className="text-xs opacity-60">:</span>
+                  <span className="text-sm font-bold tabular-nums">{countdown.seconds.toString().padStart(2, '0')}</span>
+                </div>
+              </Link>
+            )}
             
             {/* Right: Profile button */}
             {loading ? (
-              <Skeleton className="h-9 w-9 rounded-full bg-white/20" />
+              <Skeleton className="h-9 w-9 rounded-full bg-white/20 shrink-0" />
             ) : user ? (
-              <Link to="/Profile">
+              <Link to="/Profile" className="shrink-0">
                 <Avatar className="h-9 w-9 border-2 border-white/30">
                   <AvatarImage src={user.avatar_url} />
-                  <AvatarFallback className="bg-white/20 text-primary-foreground text-sm">
+                  <AvatarFallback className="bg-white/20 text-white text-sm">
                     {user.name?.charAt(0) || 'U'}
                   </AvatarFallback>
                 </Avatar>
               </Link>
             ) : (
-              <Button onClick={handleLogin} size="sm" className="bg-white/20 hover:bg-white/30 text-primary-foreground h-9 px-3 text-sm">
+              <Button onClick={handleLogin} size="sm" className="bg-white/20 hover:bg-white/30 text-white h-9 px-3 text-sm shrink-0">
                 Sign in
               </Button>
             )}
           </div>
-          
-          {/* Next Up Party Banner */}
-          {nextParty && (
-            <Link 
-              to={`/Party?id=${nextParty.id}`}
-              className="block mx-3 mb-3 rounded-2xl overflow-hidden"
-              style={{
-                background: 'linear-gradient(135deg, hsl(350 70% 55%), hsl(25 90% 55%))'
-              }}
-            >
-              <div className="px-4 py-3 flex items-center justify-between">
-                <div className="flex-1 min-w-0">
-                  <p className="text-xs text-white/80 font-medium uppercase tracking-wide">Next Up</p>
-                  <p className="text-lg font-bold text-white truncate">{nextParty.title}</p>
-                  <p className="text-sm text-white/80 truncate">{nextPartyFrat?.name || 'TBA'}</p>
-                </div>
-                
-                {/* Countdown */}
-                <div className="flex items-center gap-1 text-white">
-                  <div className="text-right">
-                    <div className="flex items-baseline gap-0.5">
-                      <span className="text-2xl font-bold tabular-nums">{countdown.hours.toString().padStart(2, '0')}</span>
-                      <span className="text-lg opacity-60">:</span>
-                      <span className="text-2xl font-bold tabular-nums">{countdown.minutes.toString().padStart(2, '0')}</span>
-                      <span className="text-lg opacity-60">:</span>
-                      <span className="text-2xl font-bold tabular-nums">{countdown.seconds.toString().padStart(2, '0')}</span>
-                    </div>
-                    <div className="flex gap-3 text-[10px] text-white/60 uppercase tracking-wider">
-                      <span className="w-6 text-center">HR</span>
-                      <span className="w-6 text-center">MIN</span>
-                      <span className="w-6 text-center">SEC</span>
-                    </div>
-                  </div>
-                  <ChevronRight className="h-5 w-5 opacity-60 ml-1" />
-                </div>
-              </div>
-            </Link>
-          )}
         </header>
 
         {/* Main Content */}
