@@ -1678,19 +1678,32 @@ export default function Activity() {
                   <p className="font-semibold">{frat.name}</p>
                 </button>
               ))}
-              {mentionType === 'party' && parties.map((party) => (
-                <button
-                  key={party.id}
-                  onClick={() => {
-                    setSelectedMention({ type: 'party', id: party.id, name: party.title });
-                    setShowMentionPicker(false);
-                  }}
-                  className="w-full p-4 rounded-xl bg-muted/50 hover:bg-muted text-left transition-all active:scale-[0.98]"
-                >
-                  <p className="font-semibold">{party.title}</p>
-                  <p className="text-sm text-muted-foreground">{format(new Date(party.starts_at), 'MMM d, h:mm a')}</p>
-                </button>
-              ))}
+              {mentionType === 'party' && (() => {
+                const now = new Date();
+                const upcomingParties = parties
+                  .filter(p => new Date(p.starts_at) >= now)
+                  .sort((a, b) => new Date(a.starts_at).getTime() - new Date(b.starts_at).getTime())
+                  .slice(0, 5);
+                const pastParties = parties
+                  .filter(p => new Date(p.starts_at) < now)
+                  .sort((a, b) => new Date(b.starts_at).getTime() - new Date(a.starts_at).getTime())
+                  .slice(0, 5);
+                const displayParties = [...upcomingParties, ...pastParties];
+                
+                return displayParties.map((party) => (
+                  <button
+                    key={party.id}
+                    onClick={() => {
+                      setSelectedMention({ type: 'party', id: party.id, name: party.title });
+                      setShowMentionPicker(false);
+                    }}
+                    className="w-full p-4 rounded-xl bg-muted/50 hover:bg-muted text-left transition-all active:scale-[0.98]"
+                  >
+                    <p className="font-semibold">{party.title}</p>
+                    <p className="text-sm text-muted-foreground">{format(new Date(party.starts_at), 'MMM d, h:mm a')}</p>
+                  </button>
+                ));
+              })()}
             </div>
           </ScrollArea>
         </SheetContent>
