@@ -860,14 +860,32 @@ export default function Activity() {
                 className="shrink-0 group"
               >
                 <div className="relative w-20 h-28 rounded-2xl overflow-hidden ring-2 ring-border hover:ring-primary/50 transition-all">
-                  <div className="absolute inset-0 bg-primary" />
-                  <div className="absolute inset-0 flex flex-col items-center justify-center p-2 text-white">
-                    <PartyPopper className="h-8 w-8 text-white mb-1" />
-                    <span className="text-[10px] font-semibold text-center">
-                      {isPartyToday ? 'Tonight' : isPartyTomorrow ? 'Tomorrow' : format(partyDate, 'EEE')}
+                  {/* Cover photo or fallback gradient */}
+                  {party.display_photo_url ? (
+                    <img 
+                      src={party.display_photo_url} 
+                      alt={party.title}
+                      className="absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-transform"
+                    />
+                  ) : (
+                    <div className="absolute inset-0 bg-primary" />
+                  )}
+                  {/* Overlay for text readability */}
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent" />
+                  {/* Day label */}
+                  <div className="absolute top-2 left-1/2 -translate-x-1/2 px-2 py-0.5 rounded-full bg-black/60 backdrop-blur-sm">
+                    <span className="text-[10px] font-semibold text-white">
+                      {isPartyToday ? 'Tonight' : isPartyTomorrow ? 'Tmrw' : format(partyDate, 'EEE')}
                     </span>
                   </div>
-                  <div className="absolute bottom-0 inset-x-0 p-1.5 bg-black/60 backdrop-blur-sm">
+                  {/* If no cover photo, show icon */}
+                  {!party.display_photo_url && (
+                    <div className="absolute inset-0 flex items-center justify-center">
+                      <PartyPopper className="h-8 w-8 text-white/80" />
+                    </div>
+                  )}
+                  {/* Frat name at bottom */}
+                  <div className="absolute bottom-0 inset-x-0 p-1.5">
                     <p className="text-[10px] font-semibold text-white text-center truncate">{frat?.name || party.title}</p>
                   </div>
                 </div>
