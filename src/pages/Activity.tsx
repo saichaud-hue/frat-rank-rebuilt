@@ -56,6 +56,7 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
+  DialogDescription,
 } from '@/components/ui/dialog';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { 
@@ -1389,9 +1390,9 @@ export default function Activity() {
           });
         }
       }}>
-        <DialogContent className="max-w-md mx-auto rounded-2xl">
-          <DialogHeader className="pb-4">
-            <DialogTitle className="text-xl">
+        <DialogContent className="w-[95vw] max-w-md mx-auto rounded-2xl p-4 sm:p-6">
+          <DialogHeader className="pb-2">
+            <DialogTitle className="text-lg">
               {Object.values(fratRanking).some(Boolean) ? "Share Frat Ranking" : "What's on your mind?"}
             </DialogTitle>
           </DialogHeader>
@@ -1569,7 +1570,7 @@ export default function Activity() {
           setExpandedTiers({});
         }
       }}>
-        <DialogContent className="max-w-lg mx-auto rounded-2xl max-h-[85vh] overflow-y-auto">
+        <DialogContent className="w-[95vw] max-w-md mx-auto rounded-2xl max-h-[85vh] overflow-y-auto p-4 sm:p-6">
           {showFratBattleGame ? (
             <FratBattleGame
               fraternities={fraternities}
@@ -1636,7 +1637,7 @@ export default function Activity() {
             />
           ) : showManualPicker ? (
             <div className="flex flex-col h-full max-h-[calc(85vh-2rem)] overflow-hidden">
-              <SheetHeader className="pb-4 shrink-0">
+              <DialogHeader className="pb-4 shrink-0">
                 <div className="flex items-center gap-2">
                   <button 
                     onClick={() => setShowManualPicker(false)}
@@ -1644,15 +1645,15 @@ export default function Activity() {
                   >
                     <ChevronRight className="h-5 w-5 rotate-180" />
                   </button>
-                  <SheetTitle className="flex items-center gap-2">
+                  <DialogTitle className="flex items-center gap-2">
                     <Trophy className="h-5 w-5 text-amber-500" />
                     Pick Manually
-                  </SheetTitle>
+                  </DialogTitle>
                 </div>
-                <p className="text-sm text-muted-foreground">
+                <DialogDescription>
                   Select a frat for each tier position
-                </p>
-              </SheetHeader>
+                </DialogDescription>
+              </DialogHeader>
               
               <div className="flex-1 overflow-y-auto pr-2">
                 <div className="space-y-3 pb-4">
@@ -1744,15 +1745,15 @@ export default function Activity() {
               
               return (
                 <>
-                  <SheetHeader className="pb-4">
-                    <SheetTitle className="flex items-center gap-2">
+                  <DialogHeader className="pb-4">
+                    <DialogTitle className="flex items-center gap-2">
                       <Trophy className="h-5 w-5 text-amber-500" />
                       Create Frat Ranking
-                    </SheetTitle>
-                    <p className="text-sm text-muted-foreground">
+                    </DialogTitle>
+                    <DialogDescription>
                       Fill in your tier list - this is just for sharing, doesn't affect ratings
-                    </p>
-                  </SheetHeader>
+                    </DialogDescription>
+                  </DialogHeader>
                   
                   <div className="space-y-3 pb-4">
                     {/* Battle Game CTA */}
@@ -1910,8 +1911,8 @@ export default function Activity() {
 
       {/* Mention Picker Dialog */}
       <Dialog open={showMentionPicker} onOpenChange={setShowMentionPicker}>
-        <DialogContent className="max-w-md mx-auto rounded-2xl max-h-[60vh] flex flex-col">
-          <DialogHeader className="pb-4">
+        <DialogContent className="w-[95vw] max-w-md mx-auto rounded-2xl max-h-[60vh] flex flex-col p-4 sm:p-6">
+          <DialogHeader className="pb-2">
             <DialogTitle>Tag something</DialogTitle>
           </DialogHeader>
           <div className="flex gap-2 mb-4">
@@ -2010,8 +2011,8 @@ export default function Activity() {
           setReplyText('');
         }
       }}>
-        <DialogContent className="max-w-md mx-auto rounded-2xl max-h-[70vh] flex flex-col">
-          <DialogHeader className="pb-4 shrink-0">
+        <DialogContent className="w-[95vw] max-w-md mx-auto rounded-2xl max-h-[70vh] flex flex-col p-4 sm:p-6">
+          <DialogHeader className="pb-2 shrink-0">
             <DialogTitle className="flex items-center gap-2">
               <MessageCircle className="h-5 w-5" />
               Comments
