@@ -118,6 +118,7 @@ export default function Activity() {
   const [showFratRankingPicker, setShowFratRankingPicker] = useState(false);
   const [showFratBattleGame, setShowFratBattleGame] = useState(false);
   const [showManualPicker, setShowManualPicker] = useState(false);
+  const [expandedTiers, setExpandedTiers] = useState<Record<string, boolean>>({});
   const [fratRanking, setFratRanking] = useState<Record<string, Fraternity | null>>({
     'Upper Touse': null,
     'Touse': null,
@@ -1572,6 +1573,7 @@ export default function Activity() {
         if (!open) {
           setShowFratBattleGame(false);
           setShowManualPicker(false);
+          setExpandedTiers({});
         }
       }}>
         <SheetContent side="bottom" className="h-auto max-h-[85vh] rounded-t-3xl">
@@ -1640,8 +1642,8 @@ export default function Activity() {
               onClose={() => setShowFratBattleGame(false)}
             />
           ) : showManualPicker ? (
-            <>
-              <SheetHeader className="pb-4">
+            <div className="flex flex-col h-full max-h-[calc(85vh-2rem)] overflow-hidden">
+              <SheetHeader className="pb-4 shrink-0">
                 <div className="flex items-center gap-2">
                   <button 
                     onClick={() => setShowManualPicker(false)}
@@ -1659,8 +1661,8 @@ export default function Activity() {
                 </p>
               </SheetHeader>
               
-              <ScrollArea className="h-[calc(100%-180px)]">
-                <div className="space-y-3 pr-2">
+              <div className="flex-1 overflow-y-auto pr-2">
+                <div className="space-y-3 pb-4">
                   {[
                     { tier: 'Upper Touse', label: 'Upper Touse (1st)', color: 'bg-green-500/20 border-green-500/40' },
                     { tier: 'Touse', label: 'Touse (2nd)', color: 'bg-green-500/15 border-green-500/30' },
@@ -1676,6 +1678,9 @@ export default function Activity() {
                     const selectedFrat = fratRanking[tier];
                     const usedFratIds = Object.values(fratRanking).filter(Boolean).map(f => f!.id);
                     const availableFrats = fraternities.filter(f => !usedFratIds.includes(f.id) || f.id === selectedFrat?.id);
+                    const isExpanded = expandedTiers[tier] || false;
+                    const displayedFrats = isExpanded ? availableFrats : availableFrats.slice(0, 5);
+                    const hasMore = availableFrats.length > 5;
                     
                     return (
                       <div key={tier} className={cn("p-3 rounded-xl border", color)}>
@@ -1692,7 +1697,7 @@ export default function Activity() {
                           </div>
                         ) : (
                           <div className="flex gap-2 flex-wrap">
-                            {availableFrats.slice(0, 5).map(frat => (
+                            {displayedFrats.map(frat => (
                               <button
                                 key={frat.id}
                                 onClick={() => setFratRanking(prev => ({ ...prev, [tier]: frat }))}
@@ -1701,8 +1706,21 @@ export default function Activity() {
                                 {frat.name}
                               </button>
                             ))}
-                            {availableFrats.length > 5 && (
-                              <span className="text-xs text-muted-foreground self-center">+{availableFrats.length - 5} more</span>
+                            {hasMore && !isExpanded && (
+                              <button
+                                onClick={() => setExpandedTiers(prev => ({ ...prev, [tier]: true }))}
+                                className="px-3 py-1.5 text-sm rounded-lg bg-primary/10 hover:bg-primary/20 text-primary border border-primary/30 transition-all font-medium"
+                              >
+                                +{availableFrats.length - 5} more
+                              </button>
+                            )}
+                            {hasMore && isExpanded && (
+                              <button
+                                onClick={() => setExpandedTiers(prev => ({ ...prev, [tier]: false }))}
+                                className="px-3 py-1.5 text-sm rounded-lg bg-muted hover:bg-muted/80 text-muted-foreground border border-border transition-all"
+                              >
+                                Show less
+                              </button>
                             )}
                           </div>
                         )}
@@ -1710,8 +1728,8 @@ export default function Activity() {
                     );
                   })}
                 </div>
-              </ScrollArea>
-              <div className="pt-4 border-t">
+              </div>
+              <div className="pt-4 border-t shrink-0">
                 <Button 
                   onClick={() => setShowFratRankingPicker(false)}
                   className="w-full rounded-xl bg-gradient-to-r from-amber-500 to-orange-500 text-white"
@@ -1721,7 +1739,7 @@ export default function Activity() {
                   Continue to Post
                 </Button>
               </div>
-            </>
+            </div>
           ) : (
             (() => {
               const savedBattleRankings = JSON.parse(localStorage.getItem('touse_saved_battle_rankings') || '[]');
