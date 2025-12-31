@@ -90,7 +90,7 @@ export default function PartyRow({
         <div className="flex items-center gap-1.5 shrink-0">
           {/* Party Type */}
           {party.theme && (
-            <span className="text-[10px] font-medium px-2 py-1 rounded-full bg-muted text-muted-foreground">
+            <span className="text-[10px] font-medium px-2 py-1 rounded-full bg-muted text-muted-foreground capitalize">
               {party.theme}
             </span>
           )}
