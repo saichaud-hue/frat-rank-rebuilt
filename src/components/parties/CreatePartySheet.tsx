@@ -1,5 +1,5 @@
-import { useState, useEffect, useMemo } from 'react';
-import { Plus, MapPin, Loader2, CalendarDays, AlertCircle, PartyPopper, Sparkles, Clock, Users, Music, Lock, Globe, ImageIcon, Link2 } from 'lucide-react';
+import { useState, useEffect, useMemo, useRef } from 'react';
+import { Plus, MapPin, Loader2, CalendarDays, AlertCircle, PartyPopper, Sparkles, Clock, Users, Music, Lock, Globe, ImageIcon, Upload, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -37,6 +37,8 @@ export default function CreatePartySheet({ open, onOpenChange, onSuccess }: Crea
   const [startTime, setStartTime] = useState('20:00');
   const [endDate, setEndDate] = useState<Date | undefined>();
   const [endTime, setEndTime] = useState('23:00');
+  const [uploadingPhoto, setUploadingPhoto] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     if (open) {
@@ -310,23 +312,70 @@ export default function CreatePartySheet({ open, onOpenChange, onSuccess }: Crea
               />
             </div>
 
-            {/* Cover Photo URL */}
+            {/* Cover Photo Upload */}
             <div className="space-y-2">
               <Label className="text-sm font-medium flex items-center gap-2">
                 <ImageIcon className="h-4 w-4 text-primary" />
                 Cover Photo
               </Label>
-              <div className="flex gap-2">
-                <div className="relative flex-1">
-                  <Link2 className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                  <Input
-                    placeholder="Paste image URL..."
-                    value={formData.cover_photo_url}
-                    onChange={(e) => setFormData(prev => ({ ...prev, cover_photo_url: e.target.value }))}
-                    className="h-12 pl-10"
+              
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/*"
+                className="hidden"
+                onChange={async (e) => {
+                  const file = e.target.files?.[0];
+                  if (!file) return;
+                  
+                  setUploadingPhoto(true);
+                  try {
+                    const { url } = await base44.integrations.Core.UploadFile({ file });
+                    setFormData(prev => ({ ...prev, cover_photo_url: url }));
+                  } catch (error) {
+                    console.error('Failed to upload photo:', error);
+                  } finally {
+                    setUploadingPhoto(false);
+                  }
+                }}
+              />
+              
+              {formData.cover_photo_url ? (
+                <div className="relative w-full h-32 rounded-xl overflow-hidden border border-border">
+                  <img 
+                    src={formData.cover_photo_url} 
+                    alt="Cover preview" 
+                    className="w-full h-full object-cover"
                   />
+                  <button
+                    type="button"
+                    onClick={() => setFormData(prev => ({ ...prev, cover_photo_url: '' }))}
+                    className="absolute top-2 right-2 w-8 h-8 rounded-full bg-black/60 flex items-center justify-center hover:bg-black/80 transition-colors"
+                  >
+                    <X className="h-4 w-4 text-white" />
+                  </button>
                 </div>
-              </div>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => fileInputRef.current?.click()}
+                  disabled={uploadingPhoto}
+                  className="w-full h-24 rounded-xl border-2 border-dashed border-border hover:border-primary/50 transition-colors flex flex-col items-center justify-center gap-2 text-muted-foreground hover:text-foreground"
+                >
+                  {uploadingPhoto ? (
+                    <>
+                      <Loader2 className="h-6 w-6 animate-spin" />
+                      <span className="text-sm">Uploading...</span>
+                    </>
+                  ) : (
+                    <>
+                      <Upload className="h-6 w-6" />
+                      <span className="text-sm font-medium">Upload Cover Photo</span>
+                    </>
+                  )}
+                </button>
+              )}
+              
               <p className="text-xs text-muted-foreground">
                 Add a photo to make your party stand out in the feed
               </p>
