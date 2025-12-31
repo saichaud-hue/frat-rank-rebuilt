@@ -26,13 +26,14 @@ const getHasUnreadFeed = () => {
   return currentCount > lastSeenCount;
 };
 
-// Format countdown time
+// Format countdown time with days support
 const formatCountdown = (ms: number) => {
   const totalSeconds = Math.floor(ms / 1000);
-  const hours = Math.floor(totalSeconds / 3600);
+  const days = Math.floor(totalSeconds / 86400);
+  const hours = Math.floor((totalSeconds % 86400) / 3600);
   const minutes = Math.floor((totalSeconds % 3600) / 60);
   const seconds = totalSeconds % 60;
-  return { hours, minutes, seconds };
+  return { days, hours, minutes, seconds };
 };
 
 export default function Layout({ children }: LayoutProps) {
@@ -42,7 +43,7 @@ export default function Layout({ children }: LayoutProps) {
   const [hasUnreadFeed, setHasUnreadFeed] = useState(getHasUnreadFeed());
   const [nextParty, setNextParty] = useState<Party | null>(null);
   const [nextPartyFrat, setNextPartyFrat] = useState<Fraternity | null>(null);
-  const [countdown, setCountdown] = useState({ hours: 0, minutes: 0, seconds: 0 });
+  const [countdown, setCountdown] = useState({ days: 0, hours: 0, minutes: 0, seconds: 0 });
   const location = useLocation();
 
   useEffect(() => {
@@ -62,7 +63,7 @@ export default function Layout({ children }: LayoutProps) {
       if (diff > 0) {
         setCountdown(formatCountdown(diff));
       } else {
-        setCountdown({ hours: 0, minutes: 0, seconds: 0 });
+        setCountdown({ days: 0, hours: 0, minutes: 0, seconds: 0 });
       }
     };
     
@@ -155,25 +156,32 @@ export default function Layout({ children }: LayoutProps) {
               <span className="text-xl font-bold text-white">Touse</span>
             </Link>
             
-            {/* Center: Next Up Party - No box, just text */}
+            {/* Center: Next Up Party - Inline layout */}
             {nextParty && (
               <Link 
                 to={`/Party?id=${nextParty.id}`}
-                className="flex-1 min-w-0 flex items-center justify-center gap-3"
+                className="flex-1 min-w-0 flex items-center justify-center gap-2"
               >
-                <div className="min-w-0 text-center">
-                  <p className="text-[10px] text-white/70 font-medium uppercase tracking-wide leading-none">Next Up</p>
-                  <p className="text-sm font-bold text-white truncate leading-tight">{nextParty.title}</p>
-                </div>
+                <p className="text-[10px] text-white/70 font-medium uppercase tracking-wide shrink-0">Next Up</p>
+                <p className="text-sm font-semibold text-white truncate">{nextParty.title}</p>
+                <span className="text-white/50 shrink-0">•</span>
                 
-                {/* Compact Countdown */}
+                {/* Countdown with days support */}
                 <div className="flex items-center gap-0.5 text-white shrink-0">
+                  {countdown.days > 0 && (
+                    <>
+                      <span className="text-sm font-bold tabular-nums">{countdown.days}</span>
+                      <span className="text-xs opacity-60 mr-1">d</span>
+                    </>
+                  )}
                   <span className="text-sm font-bold tabular-nums">{countdown.hours.toString().padStart(2, '0')}</span>
                   <span className="text-xs opacity-60">:</span>
                   <span className="text-sm font-bold tabular-nums">{countdown.minutes.toString().padStart(2, '0')}</span>
                   <span className="text-xs opacity-60">:</span>
                   <span className="text-sm font-bold tabular-nums">{countdown.seconds.toString().padStart(2, '0')}</span>
                 </div>
+                
+                <ChevronRight className="h-4 w-4 text-white/60 shrink-0" />
               </Link>
             )}
             
