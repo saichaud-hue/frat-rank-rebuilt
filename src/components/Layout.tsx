@@ -147,22 +147,19 @@ export default function Layout({ children }: LayoutProps) {
   return (
     <>
       <div className="min-h-screen flex flex-col w-full bg-background">
-        {/* Mobile Header - Black background with inline Next Up Party */}
-        <header className="sticky top-0 z-40 bg-black pt-safe">
+        {/* Mobile Header - Gradient background with inline Next Up Party */}
+        <header className="sticky top-0 z-40 gradient-primary pt-safe">
           <div className="px-4 py-3 flex items-center justify-between gap-3">
             {/* Left: Touse text */}
             <Link to="/" className="flex items-center shrink-0">
               <span className="text-xl font-bold text-white">Touse</span>
             </Link>
             
-            {/* Center: Next Up Party Banner - Compact */}
+            {/* Center: Next Up Party Banner - Black */}
             {nextParty && (
               <Link 
                 to={`/Party?id=${nextParty.id}`}
-                className="flex-1 min-w-0 rounded-xl overflow-hidden px-3 py-1.5 flex items-center justify-between gap-2"
-                style={{
-                  background: 'linear-gradient(135deg, hsl(350 70% 55%), hsl(25 90% 55%))'
-                }}
+                className="flex-1 min-w-0 rounded-xl overflow-hidden px-3 py-1.5 flex items-center justify-between gap-2 bg-black"
               >
                 <div className="min-w-0 flex-1">
                   <p className="text-[10px] text-white/80 font-medium uppercase tracking-wide leading-none">Next Up</p>
