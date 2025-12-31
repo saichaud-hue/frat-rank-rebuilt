@@ -259,81 +259,85 @@ export default function FratBattleGame({
     };
 
     return (
-      <div className="space-y-4">
-        {/* Top action bar - Save left, Share right */}
-        <div className="flex items-center justify-between">
+      <div className="flex flex-col h-full max-h-[75vh]">
+        {/* Top action bar - Save left, Share right - below the sheet X button */}
+        <div className="flex items-center justify-between py-2 px-1 border-b border-border mb-4">
           <Button 
-            variant="ghost" 
+            variant="outline" 
             size="sm"
             onClick={handleSave}
             className="gap-2"
           >
             <Save className="h-4 w-4" />
-            Save
+            Save to Your List
           </Button>
           <Button 
-            variant="ghost" 
+            variant="outline" 
             size="sm"
             onClick={handleShare}
             className="gap-2"
           >
             <Share2 className="h-4 w-4" />
-            Share
+            Share to Feed
           </Button>
         </div>
 
-        <div className="text-center">
-          <motion.div
-            initial={{ scale: 0 }}
-            animate={{ scale: 1 }}
-            className="w-20 h-20 mx-auto mb-4 rounded-full bg-gradient-to-br from-amber-400 to-orange-500 flex items-center justify-center"
-          >
-            <Trophy className="h-10 w-10 text-white" />
-          </motion.div>
-          <h2 className="text-2xl font-bold mb-2">Your Ranking!</h2>
-          <p className="text-muted-foreground">Based on your {TOTAL_MATCHUPS} head-to-head picks</p>
+        {/* Scrollable content */}
+        <div className="flex-1 overflow-y-auto space-y-4 pr-2">
+          <div className="text-center">
+            <motion.div
+              initial={{ scale: 0 }}
+              animate={{ scale: 1 }}
+              className="w-16 h-16 mx-auto mb-3 rounded-full bg-gradient-to-br from-amber-400 to-orange-500 flex items-center justify-center"
+            >
+              <Trophy className="h-8 w-8 text-white" />
+            </motion.div>
+            <h2 className="text-xl font-bold mb-1">Your Ranking!</h2>
+            <p className="text-sm text-muted-foreground">Based on your {TOTAL_MATCHUPS} head-to-head picks</p>
+          </div>
+
+          <div className="space-y-2">
+            {sortedResults.map((elo, idx) => {
+              const frat = fraternities.find(f => f.id === elo.fratId);
+              const tier = TIERS[idx];
+              if (!frat || !tier) return null;
+
+              return (
+                <motion.div
+                  key={elo.fratId}
+                  initial={{ opacity: 0, x: -20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ delay: idx * 0.05 }}
+                  className={cn(
+                    "p-3 rounded-xl border flex items-center gap-3",
+                    idx < 3 && "bg-green-500/10 border-green-500/30",
+                    idx >= 3 && idx < 7 && "bg-yellow-500/10 border-yellow-500/30",
+                    idx >= 7 && "bg-red-500/10 border-red-500/30"
+                  )}
+                >
+                  <div className={cn(
+                    "w-9 h-9 rounded-lg flex items-center justify-center text-white font-bold text-sm bg-gradient-to-br",
+                    tier.color
+                  )}>
+                    {idx === 0 ? <Crown className="h-4 w-4" /> : idx + 1}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="font-semibold text-sm truncate">{frat.name}</p>
+                    <p className="text-xs text-muted-foreground">{tier.label.replace(/\s*\(\d+\w+\)/, '')}</p>
+                  </div>
+                  <div className="text-right flex-shrink-0">
+                    <span className="text-xs font-medium text-muted-foreground">
+                      {elo.wins} {elo.wins === 1 ? 'win' : 'wins'}
+                    </span>
+                  </div>
+                </motion.div>
+              );
+            })}
+          </div>
         </div>
 
-        <div className="space-y-2">
-          {sortedResults.map((elo, idx) => {
-            const frat = fraternities.find(f => f.id === elo.fratId);
-            const tier = TIERS[idx];
-            if (!frat || !tier) return null;
-
-            return (
-              <motion.div
-                key={elo.fratId}
-                initial={{ opacity: 0, x: -20 }}
-                animate={{ opacity: 1, x: 0 }}
-                transition={{ delay: idx * 0.1 }}
-                className={cn(
-                  "p-3 rounded-xl border flex items-center gap-3",
-                  idx < 3 && "bg-green-500/10 border-green-500/30",
-                  idx >= 3 && idx < 7 && "bg-yellow-500/10 border-yellow-500/30",
-                  idx >= 7 && "bg-red-500/10 border-red-500/30"
-                )}
-              >
-                <div className={cn(
-                  "w-10 h-10 rounded-xl flex items-center justify-center text-white font-bold bg-gradient-to-br",
-                  tier.color
-                )}>
-                  {idx === 0 ? <Crown className="h-5 w-5" /> : idx + 1}
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className="font-semibold truncate">{frat.name}</p>
-                  <p className="text-xs text-muted-foreground">{tier.label.replace(/\s*\(\d+\w+\)/, '')}</p>
-                </div>
-                <div className="text-right flex-shrink-0">
-                  <span className="text-sm font-medium text-muted-foreground">
-                    {elo.wins} {elo.wins === 1 ? 'win' : 'wins'}
-                  </span>
-                </div>
-              </motion.div>
-            );
-          })}
-        </div>
-
-        <div className="flex gap-3 pt-2">
+        {/* Fixed bottom buttons */}
+        <div className="flex gap-3 pt-4 mt-4 border-t border-border">
           <Button 
             variant="ghost" 
             onClick={onClose}
