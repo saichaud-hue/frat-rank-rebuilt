@@ -1455,6 +1455,13 @@ export default function Activity() {
               onChange={(e) => setChatText(e.target.value)}
               placeholder={Object.values(fratRanking).some(Boolean) ? "Add a comment to your ranking (optional)..." : "Share what's happening..."}
               className="min-h-[120px] text-base rounded-xl resize-none"
+              tabIndex={-1}
+              onFocus={(e) => e.target.blur()}
+              onClick={(e) => {
+                const target = e.target as HTMLTextAreaElement;
+                target.removeAttribute('tabindex');
+                target.focus();
+              }}
             />
             
             {selectedMention && !Object.values(fratRanking).some(Boolean) && (
