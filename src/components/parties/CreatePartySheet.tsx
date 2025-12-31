@@ -176,20 +176,14 @@ export default function CreatePartySheet({ open, onOpenChange, onSuccess }: Crea
       >
         <div className="overflow-y-auto pb-8 bg-background rounded-t-[10px]">
           {/* Header */}
-          <div className="gradient-primary p-5 pt-2 text-primary-foreground rounded-t-[10px]">
+          <div className="gradient-primary p-4 pt-2 text-primary-foreground rounded-t-[10px]">
             <DrawerHeader className="p-0">
-              <div className="flex items-center gap-3">
-                <div className="w-12 h-12 rounded-2xl bg-white/20 backdrop-blur-sm flex items-center justify-center">
-                  <PartyPopper className="h-6 w-6" />
-                </div>
-                <div>
-                  <DrawerTitle className="text-xl font-bold text-primary-foreground">Host a Party</DrawerTitle>
-                  <p className="text-primary-foreground/80 text-sm">Create an unforgettable event</p>
-                </div>
-              </div>
+              <DrawerTitle className="text-lg font-semibold text-primary-foreground text-center">
+                Host a Party
+              </DrawerTitle>
               
               {/* Progress */}
-              <div className="mt-4 bg-white/10 rounded-xl p-3">
+              <div className="mt-3 bg-white/10 rounded-xl p-3">
                 <div className="flex items-center justify-between mb-2">
                   <span className="text-sm font-medium">Progress</span>
                   <span className="text-sm font-bold">{completedSteps}/4</span>
