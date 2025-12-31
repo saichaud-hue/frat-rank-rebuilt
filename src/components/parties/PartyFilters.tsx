@@ -16,9 +16,9 @@ interface PartyFiltersProps {
 
 export default function PartyFilters({ filters, onFiltersChange, fraternities }: PartyFiltersProps) {
   return (
-    <div className="flex flex-wrap items-center gap-3">
-      <div className="flex items-center gap-2 text-sm font-medium text-primary">
-        <SlidersHorizontal className="h-4 w-4" />
+    <div className="flex items-center gap-2 overflow-x-auto scrollbar-hide">
+      <div className="flex items-center gap-1.5 text-xs font-medium text-primary shrink-0">
+        <SlidersHorizontal className="h-3.5 w-3.5" />
         <span className="hidden sm:inline">Filters</span>
       </div>
 
@@ -26,11 +26,11 @@ export default function PartyFilters({ filters, onFiltersChange, fraternities }:
         value={filters.fraternity} 
         onValueChange={(value) => onFiltersChange({ ...filters, fraternity: value })}
       >
-        <SelectTrigger className="w-[150px] h-10 text-sm bg-primary/10 border-primary/20 hover:bg-primary/20 hover:border-primary/40 transition-all rounded-xl">
-          <SelectValue placeholder="Fraternity" />
+        <SelectTrigger className="h-8 text-xs bg-primary/10 border-primary/20 hover:bg-primary/20 hover:border-primary/40 transition-all rounded-lg px-2 min-w-0 w-auto shrink-0">
+          <SelectValue placeholder="Frat" />
         </SelectTrigger>
         <SelectContent className="rounded-xl border-primary/20 bg-popover">
-          <SelectItem value="all">All Fraternities</SelectItem>
+          <SelectItem value="all">All Frats</SelectItem>
           {fraternities.map((frat) => (
             <SelectItem key={frat.id} value={frat.id}>
               {frat.name}
@@ -43,7 +43,7 @@ export default function PartyFilters({ filters, onFiltersChange, fraternities }:
         value={filters.type} 
         onValueChange={(value) => onFiltersChange({ ...filters, type: value })}
       >
-        <SelectTrigger className="w-[130px] h-10 text-sm bg-primary/10 border-primary/20 hover:bg-primary/20 hover:border-primary/40 transition-all rounded-xl">
+        <SelectTrigger className="h-8 text-xs bg-primary/10 border-primary/20 hover:bg-primary/20 hover:border-primary/40 transition-all rounded-lg px-2 min-w-0 w-auto shrink-0">
           <SelectValue placeholder="Type" />
         </SelectTrigger>
         <SelectContent className="rounded-xl border-primary/20 bg-popover">
@@ -58,14 +58,14 @@ export default function PartyFilters({ filters, onFiltersChange, fraternities }:
         value={filters.timeframe} 
         onValueChange={(value) => onFiltersChange({ ...filters, timeframe: value })}
       >
-        <SelectTrigger className="w-[120px] h-10 text-sm bg-primary/10 border-primary/20 hover:bg-primary/20 hover:border-primary/40 transition-all rounded-xl">
+        <SelectTrigger className="h-8 text-xs bg-primary/10 border-primary/20 hover:bg-primary/20 hover:border-primary/40 transition-all rounded-lg px-2 min-w-0 w-auto shrink-0">
           <SelectValue placeholder="Time" />
         </SelectTrigger>
         <SelectContent className="rounded-xl border-primary/20 bg-popover">
           <SelectItem value="all">All Time</SelectItem>
           <SelectItem value="today">🔥 Today</SelectItem>
-          <SelectItem value="week">📅 This Week</SelectItem>
-          <SelectItem value="month">📆 This Month</SelectItem>
+          <SelectItem value="week">📅 Week</SelectItem>
+          <SelectItem value="month">📆 Month</SelectItem>
         </SelectContent>
       </Select>
     </div>
