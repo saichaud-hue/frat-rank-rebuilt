@@ -32,8 +32,10 @@ import {
   Book,
   Moon,
   Beer,
-  Coffee
+  Coffee,
+  Swords
 } from 'lucide-react';
+import FratBattleGame from '@/components/activity/FratBattleGame';
 import { Progress } from '@/components/ui/progress';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -114,6 +116,7 @@ export default function Activity() {
   
   // Frat ranking post mode
   const [showFratRankingPicker, setShowFratRankingPicker] = useState(false);
+  const [showFratBattleGame, setShowFratBattleGame] = useState(false);
   const [fratRanking, setFratRanking] = useState<Record<string, Fraternity | null>>({
     'Upper Touse': null,
     'Touse': null,
@@ -1564,79 +1567,131 @@ export default function Activity() {
       </Sheet>
 
       {/* Frat Ranking Picker Sheet */}
-      <Sheet open={showFratRankingPicker} onOpenChange={setShowFratRankingPicker}>
-        <SheetContent side="bottom" className="h-[80vh] rounded-t-3xl">
-          <SheetHeader className="pb-4">
-            <SheetTitle className="flex items-center gap-2">
-              <Trophy className="h-5 w-5 text-amber-500" />
-              Create Frat Ranking
-            </SheetTitle>
-            <p className="text-sm text-muted-foreground">
-              Fill in your tier list - this is just for sharing, doesn't affect ratings
-            </p>
-          </SheetHeader>
-          <ScrollArea className="h-[calc(100%-120px)]">
-            <div className="space-y-3 pr-2">
-              {[
-                { tier: 'Upper Touse', label: 'Upper Touse (1st)', color: 'bg-green-500/20 border-green-500/40' },
-                { tier: 'Touse', label: 'Touse (2nd)', color: 'bg-green-500/15 border-green-500/30' },
-                { tier: 'Lower Touse', label: 'Lower Touse (3rd)', color: 'bg-green-500/10 border-green-500/20' },
-                { tier: 'Upper Mouse', label: 'Upper Mouse (4th)', color: 'bg-yellow-500/15 border-yellow-500/30' },
-                { tier: 'Mouse 1', label: 'Mouse (5th)', color: 'bg-yellow-500/10 border-yellow-500/20' },
-                { tier: 'Mouse 2', label: 'Mouse (6th)', color: 'bg-yellow-500/10 border-yellow-500/20' },
-                { tier: 'Lower Mouse', label: 'Lower Mouse (7th)', color: 'bg-orange-500/15 border-orange-500/30' },
-                { tier: 'Upper Bouse', label: 'Upper Bouse (8th)', color: 'bg-red-500/10 border-red-500/20' },
-                { tier: 'Bouse', label: 'Bouse (9th)', color: 'bg-red-500/15 border-red-500/30' },
-                { tier: 'Lower Bouse', label: 'Lower Bouse (10th)', color: 'bg-red-500/20 border-red-500/40' },
-              ].map(({ tier, label, color }) => {
-                const selectedFrat = fratRanking[tier];
-                const usedFratIds = Object.values(fratRanking).filter(Boolean).map(f => f!.id);
-                const availableFrats = fraternities.filter(f => !usedFratIds.includes(f.id) || f.id === selectedFrat?.id);
-                
-                return (
-                  <div key={tier} className={cn("p-3 rounded-xl border", color)}>
-                    <p className="text-xs font-medium text-muted-foreground mb-2">{label}</p>
-                    {selectedFrat ? (
-                      <div className="flex items-center justify-between">
-                        <p className="font-semibold">{selectedFrat.name}</p>
-                        <button 
-                          onClick={() => setFratRanking(prev => ({ ...prev, [tier]: null }))}
-                          className="p-1 hover:bg-muted rounded-full"
-                        >
-                          <X className="h-4 w-4" />
-                        </button>
-                      </div>
-                    ) : (
-                      <div className="flex gap-2 flex-wrap">
-                        {availableFrats.slice(0, 5).map(frat => (
-                          <button
-                            key={frat.id}
-                            onClick={() => setFratRanking(prev => ({ ...prev, [tier]: frat }))}
-                            className="px-3 py-1.5 text-sm rounded-lg bg-background/50 hover:bg-background border border-border transition-all"
-                          >
-                            {frat.name}
-                          </button>
-                        ))}
-                        {availableFrats.length > 5 && (
-                          <span className="text-xs text-muted-foreground self-center">+{availableFrats.length - 5} more</span>
+      <Sheet open={showFratRankingPicker} onOpenChange={(open) => {
+        setShowFratRankingPicker(open);
+        if (!open) {
+          setShowFratBattleGame(false);
+        }
+      }}>
+        <SheetContent side="bottom" className="h-[85vh] rounded-t-3xl">
+          {showFratBattleGame ? (
+            <FratBattleGame
+              fraternities={fraternities}
+              onComplete={(ranking) => {
+                // Convert the ranking object to include null for missing tiers
+                const fullRanking: Record<string, Fraternity | null> = {
+                  'Upper Touse': ranking['Upper Touse'] || null,
+                  'Touse': ranking['Touse'] || null,
+                  'Lower Touse': ranking['Lower Touse'] || null,
+                  'Upper Mouse': ranking['Upper Mouse'] || null,
+                  'Mouse 1': ranking['Mouse 1'] || null,
+                  'Mouse 2': ranking['Mouse 2'] || null,
+                  'Lower Mouse': ranking['Lower Mouse'] || null,
+                  'Upper Bouse': ranking['Upper Bouse'] || null,
+                  'Bouse': ranking['Bouse'] || null,
+                  'Lower Bouse': ranking['Lower Bouse'] || null,
+                };
+                setFratRanking(fullRanking);
+                setShowFratBattleGame(false);
+                setShowFratRankingPicker(false);
+              }}
+              onClose={() => setShowFratBattleGame(false)}
+            />
+          ) : (
+            <>
+              <SheetHeader className="pb-4">
+                <SheetTitle className="flex items-center gap-2">
+                  <Trophy className="h-5 w-5 text-amber-500" />
+                  Create Frat Ranking
+                </SheetTitle>
+                <p className="text-sm text-muted-foreground">
+                  Fill in your tier list - this is just for sharing, doesn't affect ratings
+                </p>
+              </SheetHeader>
+              
+              {/* Battle Game CTA */}
+              <button
+                onClick={() => setShowFratBattleGame(true)}
+                className="w-full mb-4 p-4 rounded-2xl bg-gradient-to-r from-amber-500/20 via-orange-500/20 to-red-500/20 border-2 border-dashed border-amber-500/50 hover:border-amber-500 transition-all group"
+              >
+                <div className="flex items-center gap-3">
+                  <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-amber-500 to-orange-500 flex items-center justify-center text-white shrink-0 group-hover:scale-110 transition-transform">
+                    <Swords className="h-6 w-6" />
+                  </div>
+                  <div className="text-left flex-1">
+                    <p className="font-bold text-base">Play Frat Battle!</p>
+                    <p className="text-xs text-muted-foreground">Pick winners in 10 head-to-head matchups to generate your ranking</p>
+                  </div>
+                  <ChevronRight className="h-5 w-5 text-muted-foreground group-hover:text-amber-500 transition-colors" />
+                </div>
+              </button>
+              
+              <p className="text-xs text-muted-foreground text-center mb-3">— or pick manually —</p>
+              
+              <ScrollArea className="h-[calc(100%-220px)]">
+                <div className="space-y-3 pr-2">
+                  {[
+                    { tier: 'Upper Touse', label: 'Upper Touse (1st)', color: 'bg-green-500/20 border-green-500/40' },
+                    { tier: 'Touse', label: 'Touse (2nd)', color: 'bg-green-500/15 border-green-500/30' },
+                    { tier: 'Lower Touse', label: 'Lower Touse (3rd)', color: 'bg-green-500/10 border-green-500/20' },
+                    { tier: 'Upper Mouse', label: 'Upper Mouse (4th)', color: 'bg-yellow-500/15 border-yellow-500/30' },
+                    { tier: 'Mouse 1', label: 'Mouse (5th)', color: 'bg-yellow-500/10 border-yellow-500/20' },
+                    { tier: 'Mouse 2', label: 'Mouse (6th)', color: 'bg-yellow-500/10 border-yellow-500/20' },
+                    { tier: 'Lower Mouse', label: 'Lower Mouse (7th)', color: 'bg-orange-500/15 border-orange-500/30' },
+                    { tier: 'Upper Bouse', label: 'Upper Bouse (8th)', color: 'bg-red-500/10 border-red-500/20' },
+                    { tier: 'Bouse', label: 'Bouse (9th)', color: 'bg-red-500/15 border-red-500/30' },
+                    { tier: 'Lower Bouse', label: 'Lower Bouse (10th)', color: 'bg-red-500/20 border-red-500/40' },
+                  ].map(({ tier, label, color }) => {
+                    const selectedFrat = fratRanking[tier];
+                    const usedFratIds = Object.values(fratRanking).filter(Boolean).map(f => f!.id);
+                    const availableFrats = fraternities.filter(f => !usedFratIds.includes(f.id) || f.id === selectedFrat?.id);
+                    
+                    return (
+                      <div key={tier} className={cn("p-3 rounded-xl border", color)}>
+                        <p className="text-xs font-medium text-muted-foreground mb-2">{label}</p>
+                        {selectedFrat ? (
+                          <div className="flex items-center justify-between">
+                            <p className="font-semibold">{selectedFrat.name}</p>
+                            <button 
+                              onClick={() => setFratRanking(prev => ({ ...prev, [tier]: null }))}
+                              className="p-1 hover:bg-muted rounded-full"
+                            >
+                              <X className="h-4 w-4" />
+                            </button>
+                          </div>
+                        ) : (
+                          <div className="flex gap-2 flex-wrap">
+                            {availableFrats.slice(0, 5).map(frat => (
+                              <button
+                                key={frat.id}
+                                onClick={() => setFratRanking(prev => ({ ...prev, [tier]: frat }))}
+                                className="px-3 py-1.5 text-sm rounded-lg bg-background/50 hover:bg-background border border-border transition-all"
+                              >
+                                {frat.name}
+                              </button>
+                            ))}
+                            {availableFrats.length > 5 && (
+                              <span className="text-xs text-muted-foreground self-center">+{availableFrats.length - 5} more</span>
+                            )}
+                          </div>
                         )}
                       </div>
-                    )}
-                  </div>
-                );
-              })}
-            </div>
-          </ScrollArea>
-          <div className="pt-4 border-t">
-            <Button 
-              onClick={() => setShowFratRankingPicker(false)}
-              className="w-full rounded-xl bg-gradient-to-r from-amber-500 to-orange-500 text-white"
-              disabled={!Object.values(fratRanking).some(Boolean)}
-            >
-              <Check className="h-5 w-5 mr-2" />
-              Continue to Post
-            </Button>
-          </div>
+                    );
+                  })}
+                </div>
+              </ScrollArea>
+              <div className="pt-4 border-t">
+                <Button 
+                  onClick={() => setShowFratRankingPicker(false)}
+                  className="w-full rounded-xl bg-gradient-to-r from-amber-500 to-orange-500 text-white"
+                  disabled={!Object.values(fratRanking).some(Boolean)}
+                >
+                  <Check className="h-5 w-5 mr-2" />
+                  Continue to Post
+                </Button>
+              </div>
+            </>
+          )}
         </SheetContent>
       </Sheet>
 
