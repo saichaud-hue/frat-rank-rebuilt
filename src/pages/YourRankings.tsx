@@ -1,11 +1,11 @@
 import { useState, useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
-import { ListOrdered, Trophy, PartyPopper, LogIn, ChevronRight, ChevronDown, Lock, Star, Users, Shield, Heart, Sparkles, Music, Zap, CheckCircle2, Crown, Gift, Loader2, Share2, Swords, Trash2 } from 'lucide-react';
+import { ListOrdered, Trophy, PartyPopper, LogIn, ChevronRight, ChevronDown, Lock, Star, Users, Shield, Heart, Sparkles, Music, Zap, CheckCircle2, Loader2, Share2, Swords, Trash2 } from 'lucide-react';
 import FratBattleGame from '@/components/activity/FratBattleGame';
 import { toast } from '@/hooks/use-toast';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Tabs } from '@/components/ui/tabs';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -462,474 +462,367 @@ export default function YourRankings() {
   const isFullyUnlocked = ratedFratCount >= allFraternities.length && ratedPartyCount >= 3;
 
   return (
-    <div className="space-y-5">
-      {/* Celebration Banner - shown when fully unlocked */}
-      {isFullyUnlocked && (
-        <div className="relative overflow-hidden rounded-3xl gradient-primary p-6 text-primary-foreground shadow-xl animate-scale-in">
-          {/* Background sparkles */}
-          <div className="absolute inset-0 opacity-30">
-            <div className="absolute top-2 left-4 w-2 h-2 bg-white rounded-full animate-pulse" />
-            <div className="absolute top-6 right-8 w-3 h-3 bg-white rounded-full animate-pulse" style={{ animationDelay: '0.3s' }} />
-            <div className="absolute bottom-4 left-12 w-2 h-2 bg-white rounded-full animate-pulse" style={{ animationDelay: '0.6s' }} />
-            <div className="absolute bottom-8 right-4 w-2 h-2 bg-white rounded-full animate-pulse" style={{ animationDelay: '0.9s' }} />
-            <div className="absolute top-1/2 left-1/4 w-1.5 h-1.5 bg-white rounded-full animate-pulse" style={{ animationDelay: '0.2s' }} />
-            <div className="absolute top-1/3 right-1/3 w-2 h-2 bg-white rounded-full animate-pulse" style={{ animationDelay: '0.5s' }} />
-          </div>
-          
-          <div className="relative flex items-center gap-4">
-            <div className="w-16 h-16 rounded-2xl bg-white/20 backdrop-blur-sm flex items-center justify-center animate-bounce-subtle">
-              <Crown className="h-8 w-8" />
-            </div>
-            <div className="flex-1">
-              <div className="flex items-center gap-2 mb-1">
-                <h2 className="text-xl font-bold">Rankings Unlocked!</h2>
-                <Gift className="h-5 w-5" />
-              </div>
-              <p className="text-primary-foreground/80 text-sm">
-                You rated all {allFraternities.length} frats & {ratedPartyCount} parties. Your personal tier list is ready!
-              </p>
-            </div>
-          </div>
-          
-          <div className="relative mt-4 flex gap-3">
-            <div className="flex-1 text-center p-3 rounded-xl bg-white/10 backdrop-blur-sm">
-              <Trophy className="h-5 w-5 mx-auto mb-1" />
-              <p className="text-lg font-bold">{rankedFrats.length}</p>
-              <p className="text-xs opacity-80">Frats Ranked</p>
-            </div>
-            <div className="flex-1 text-center p-3 rounded-xl bg-white/10 backdrop-blur-sm">
-              <PartyPopper className="h-5 w-5 mx-auto mb-1" />
-              <p className="text-lg font-bold">{rankedParties.length}</p>
-              <p className="text-xs opacity-80">Parties Ranked</p>
-            </div>
-            <div className="flex-1 text-center p-3 rounded-xl bg-white/10 backdrop-blur-sm">
-              <Sparkles className="h-5 w-5 mx-auto mb-1" />
-              <p className="text-lg font-bold">100%</p>
-              <p className="text-xs opacity-80">Complete</p>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Header */}
-      <div className="flex items-center gap-3">
-        <div className="w-10 h-10 rounded-xl gradient-primary flex items-center justify-center shadow-lg">
-          <ListOrdered className="h-5 w-5 text-primary-foreground" />
-        </div>
+    <div className="pb-28">
+      {/* Header - Mimics Leaderboard */}
+      <div className="px-4 pt-2 space-y-5">
         <div>
-          <h1 className="text-2xl font-bold">Your Rankings</h1>
-          <p className="text-xs text-muted-foreground">Your personal scores</p>
+          <h1 className="text-2xl font-bold text-foreground">
+            {isFullyUnlocked ? 'Rankings Unlocked' : 'Your Rankings'}
+          </h1>
+          <p className="text-sm text-muted-foreground mt-0.5">
+            {isFullyUnlocked 
+              ? 'Your personal tier list is ready!' 
+              : 'Your personal scores'}
+          </p>
         </div>
+
+        {/* Tabs */}
+        <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as 'frats' | 'parties' | 'battles')}>
+          <div className="flex gap-2 overflow-x-auto no-scrollbar -mx-4 px-4">
+            <button
+              onClick={() => setActiveTab('frats')}
+              className={`px-4 py-2 rounded-full text-sm font-medium transition-all whitespace-nowrap flex items-center gap-1.5 ${
+                activeTab === 'frats'
+                  ? 'bg-foreground text-background'
+                  : 'bg-muted text-muted-foreground hover:bg-muted/80'
+              }`}
+            >
+              <Trophy className="h-4 w-4" />
+              Frats
+              {rankedFrats.length > 0 && (
+                <span className="ml-0.5 text-xs opacity-80">({rankedFrats.length})</span>
+              )}
+            </button>
+            <button
+              onClick={() => setActiveTab('parties')}
+              className={`px-4 py-2 rounded-full text-sm font-medium transition-all whitespace-nowrap flex items-center gap-1.5 ${
+                activeTab === 'parties'
+                  ? 'bg-foreground text-background'
+                  : 'bg-muted text-muted-foreground hover:bg-muted/80'
+              }`}
+            >
+              <PartyPopper className="h-4 w-4" />
+              Parties
+              {rankedParties.length > 0 && (
+                <span className="ml-0.5 text-xs opacity-80">({rankedParties.length})</span>
+              )}
+            </button>
+            <button
+              onClick={() => setActiveTab('battles')}
+              className={`px-4 py-2 rounded-full text-sm font-medium transition-all whitespace-nowrap flex items-center gap-1.5 ${
+                activeTab === 'battles'
+                  ? 'bg-foreground text-background'
+                  : 'bg-muted text-muted-foreground hover:bg-muted/80'
+              }`}
+            >
+              <Swords className="h-4 w-4" />
+              Battles
+              {savedBattleRankings.length > 0 && (
+                <span className="ml-0.5 text-xs opacity-80">({savedBattleRankings.length})</span>
+              )}
+            </button>
+          </div>
+        </Tabs>
       </div>
 
-      {/* Tabs */}
-      <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as 'frats' | 'parties' | 'battles')}>
-        <TabsList className="grid w-full grid-cols-3 h-12">
-          <TabsTrigger value="frats" className="gap-1 text-xs">
-            <Trophy className="h-4 w-4" />
-            Frats
-            {rankedFrats.length > 0 && (
-              <Badge variant="secondary" className="ml-1 h-5 px-1 text-xs">
-                {rankedFrats.length}
-              </Badge>
-            )}
-          </TabsTrigger>
-          <TabsTrigger value="parties" className="gap-1 text-xs">
-            <PartyPopper className="h-4 w-4" />
-            Parties
-            {rankedParties.length > 0 && (
-              <Badge variant="secondary" className="ml-1 h-5 px-1 text-xs">
-                {rankedParties.length}
-              </Badge>
-            )}
-          </TabsTrigger>
-          <TabsTrigger value="battles" className="gap-1 text-xs">
-            <Swords className="h-4 w-4" />
-            Battles
-            {savedBattleRankings.length > 0 && (
-              <Badge variant="secondary" className="ml-1 h-5 px-1 text-xs">
-                {savedBattleRankings.length}
-              </Badge>
-            )}
-          </TabsTrigger>
-        </TabsList>
+      {/* Divider */}
+      <div className="mx-4 mt-6 border-t border-border" />
 
+      {/* Content */}
+      <div className="px-4 mt-4">
         {/* Fraternities Tab */}
-        <TabsContent value="frats" className="mt-4 space-y-3">
-          {ratedFratCount < allFraternities.length ? (
-            // Locked state - show blurred preview with overlay
-            <div className="relative min-h-[400px]">
-              {/* Blurred background items */}
-              <div className="blur-sm opacity-50 pointer-events-none space-y-3">
-                {[1, 2, 3, 4, 5].map((i) => (
-                  <Card key={i} className="glass p-4">
-                    <div className="flex items-center gap-4">
-                      <div className="w-8 text-center">
-                        <span className="text-lg font-bold text-muted-foreground">{i}.</span>
-                      </div>
-                      <div className="h-12 w-12 rounded-full bg-muted" />
-                      <div className="flex-1 space-y-2">
-                        <div className="h-4 w-32 bg-muted rounded" />
-                        <div className="h-3 w-20 bg-muted rounded" />
-                      </div>
-                      <div className="h-7 w-12 bg-muted rounded-full" />
-                    </div>
-                  </Card>
-                ))}
-              </div>
-
-              {/* Overlay - centered */}
-              <div className="absolute inset-0 flex items-center justify-center pt-8">
-                <Card className="glass p-6 text-center space-y-4 max-w-xs mx-4 shadow-xl">
-                  <div className="w-16 h-16 mx-auto rounded-full bg-amber-500/10 flex items-center justify-center">
-                    <Lock className="h-8 w-8 text-amber-500" />
-                  </div>
-                  <div className="space-y-2">
-                    <h3 className="font-bold text-lg">Unlock Your Frat List</h3>
-                    <p className="text-sm text-muted-foreground">
-                      Rate all {allFraternities.length} fraternities to see your personal rankings
-                    </p>
-                  </div>
-                  <div className="space-y-2">
-                    <div className="flex justify-between text-xs text-muted-foreground">
-                      <span>Progress</span>
-                      <span>{ratedFratCount} / {allFraternities.length}</span>
-                    </div>
-                    <Progress value={(ratedFratCount / allFraternities.length) * 100} className="h-2" />
-                  </div>
-                  <Button 
-                    onClick={() => setShowFratPicker(true)} 
-                    className="w-full bg-amber-500 hover:bg-amber-600 text-white"
-                  >
-                    <Star className="h-4 w-4 mr-2" />
-                    Rate Fraternities
-                  </Button>
-                </Card>
-              </div>
-            </div>
-          ) : rankedFrats.length === 0 ? (
-            <Card className="glass p-8 text-center space-y-4">
-              <Trophy className="h-12 w-12 mx-auto text-muted-foreground/50" />
-              <div className="space-y-1">
-                <h3 className="font-semibold">No fraternities rated yet</h3>
-                <p className="text-sm text-muted-foreground">
-                  Rate fraternities on the Leaderboard to build your personal list
+        {activeTab === 'frats' && (
+          <>
+            {ratedFratCount < allFraternities.length ? (
+              <div className="py-12 text-center">
+                <Lock className="h-8 w-8 mx-auto text-muted-foreground/50 mb-3" />
+                <p className="font-medium text-muted-foreground">Frat list locked</p>
+                <p className="text-sm text-muted-foreground/70 mt-1">
+                  Rate all {allFraternities.length} fraternities to unlock ({ratedFratCount}/{allFraternities.length})
                 </p>
-              </div>
-              <Link to="/Leaderboard">
-                <Button variant="outline" className="mt-2">
-                  Go to Leaderboard
+                <Button 
+                  onClick={() => setShowFratPicker(true)} 
+                  className="mt-4 bg-primary hover:bg-primary/90 text-primary-foreground"
+                >
+                  <Star className="h-4 w-4 mr-2" />
+                  Rate Fraternities
                 </Button>
-              </Link>
-            </Card>
-          ) : (
-            rankedFrats.map((item) => (
-              <Link key={item.fraternity.id} to={createPageUrl(`Fraternity?id=${item.fraternity.id}`)}>
-                <Card className="glass p-4 active:scale-[0.98] transition-all hover:shadow-md group">
-                  <div className="flex items-center gap-3">
-                    {/* Rank */}
-                    <div className="w-6 text-center flex-shrink-0">
-                      <span className="text-lg font-bold text-muted-foreground">
-                        {item.rank}.
-                      </span>
-                    </div>
+              </div>
+            ) : rankedFrats.length === 0 ? (
+              <div className="py-12 text-center">
+                <Trophy className="h-8 w-8 mx-auto text-muted-foreground/50 mb-3" />
+                <p className="font-medium text-muted-foreground">No fraternities rated yet</p>
+                <p className="text-sm text-muted-foreground/70 mt-1">Rate fraternities on the Leaderboard</p>
+                <Link to="/Leaderboard">
+                  <Button variant="outline" className="mt-4">
+                    Go to Leaderboard
+                  </Button>
+                </Link>
+              </div>
+            ) : (
+              rankedFrats.map((item, index) => (
+                <div key={item.fraternity.id}>
+                  <Link to={createPageUrl(`Fraternity?id=${item.fraternity.id}`)}>
+                    <div className="flex items-center gap-3 py-3 active:bg-muted/30 transition-colors">
+                      {/* Rank */}
+                      <div className="w-6 text-center flex-shrink-0">
+                        <span className="text-sm font-semibold text-muted-foreground">
+                          {item.rank}.
+                        </span>
+                      </div>
 
-                    {/* Avatar */}
-                    <Avatar className="h-11 w-11 ring-2 ring-border flex-shrink-0">
-                      <AvatarImage src={item.fraternity.logo_url} />
-                      <AvatarFallback className="bg-primary/10 text-primary font-bold text-xs">
-                        {getFratGreek(item.fraternity.name)}
-                      </AvatarFallback>
-                    </Avatar>
+                      {/* Avatar */}
+                      <Avatar className="h-10 w-10 flex-shrink-0">
+                        <AvatarImage src={item.fraternity.logo_url} />
+                        <AvatarFallback className="bg-muted text-muted-foreground font-semibold text-xs">
+                          {getFratGreek(item.fraternity.name)}
+                        </AvatarFallback>
+                      </Avatar>
 
-                    {/* Info + Category Scores */}
-                    <div className="flex-1 min-w-0">
-                      <h3 className="font-semibold text-sm truncate">{item.fraternity.name}</h3>
-                      {/* Category breakdown */}
-                      <div className="flex items-center gap-3 mt-1">
-                        <div className="flex items-center gap-1">
-                          <Users className="h-3 w-3 text-blue-500" />
-                          <span className="text-xs font-medium text-muted-foreground">{item.brotherhood.toFixed(1)}</span>
-                        </div>
-                        <div className="flex items-center gap-1">
-                          <Shield className="h-3 w-3 text-primary" />
-                          <span className="text-xs font-medium text-muted-foreground">{item.reputation.toFixed(1)}</span>
-                        </div>
-                        <div className="flex items-center gap-1">
-                          <Heart className="h-3 w-3 text-rose-500" />
-                          <span className="text-xs font-medium text-muted-foreground">{item.community.toFixed(1)}</span>
+                      {/* Info */}
+                      <div className="flex-1 min-w-0">
+                        <h3 className="font-semibold text-sm truncate">{item.fraternity.name}</h3>
+                        <div className="flex items-center gap-3 mt-0.5">
+                          <div className="flex items-center gap-1">
+                            <Users className="h-3 w-3 text-primary" />
+                            <span className="text-xs text-muted-foreground">{item.brotherhood.toFixed(1)}</span>
+                          </div>
+                          <div className="flex items-center gap-1">
+                            <Shield className="h-3 w-3 text-primary" />
+                            <span className="text-xs text-muted-foreground">{item.reputation.toFixed(1)}</span>
+                          </div>
+                          <div className="flex items-center gap-1">
+                            <Heart className="h-3 w-3 text-primary" />
+                            <span className="text-xs text-muted-foreground">{item.community.toFixed(1)}</span>
+                          </div>
                         </div>
                       </div>
-                    </div>
 
-                    {/* Overall Score */}
-                    <div className="flex items-center gap-2 flex-shrink-0">
+                      {/* Score */}
                       <Badge className={`${getScoreBgColor(item.score)} text-white text-sm px-2.5 py-1`}>
                         {item.score.toFixed(1)}
                       </Badge>
-                      <ChevronRight className="h-5 w-5 text-muted-foreground group-hover:translate-x-1 transition-transform" />
+                      <ChevronRight className="h-4 w-4 text-muted-foreground" />
                     </div>
-                  </div>
-                </Card>
-              </Link>
-            ))
-          )}
-        </TabsContent>
+                  </Link>
+                  {index < rankedFrats.length - 1 && (
+                    <div className="border-t border-border/50" />
+                  )}
+                </div>
+              ))
+            )}
+          </>
+        )}
 
         {/* Parties Tab */}
-        <TabsContent value="parties" className="mt-4 space-y-3">
-          {ratedPartyCount < 3 ? (
-            // Locked state - show blurred preview with overlay
-            <div className="relative min-h-[400px]">
-              {/* Blurred background items */}
-              <div className="blur-sm opacity-50 pointer-events-none space-y-3">
-                {[1, 2, 3, 4, 5].map((i) => (
-                  <Card key={i} className="glass p-4">
-                    <div className="flex items-center gap-4">
-                      <div className="w-8 text-center">
-                        <span className="text-lg font-bold text-muted-foreground">{i}.</span>
-                      </div>
-                      <div className="h-12 w-12 rounded-xl bg-muted" />
-                      <div className="flex-1 space-y-2">
-                        <div className="h-4 w-32 bg-muted rounded" />
-                        <div className="h-3 w-20 bg-muted rounded" />
-                      </div>
-                      <div className="h-7 w-12 bg-muted rounded-full" />
-                    </div>
-                  </Card>
-                ))}
-              </div>
-
-              {/* Overlay - centered */}
-              <div className="absolute inset-0 flex items-center justify-center pt-8">
-                <Card className="glass p-6 text-center space-y-4 max-w-xs mx-4 shadow-xl">
-                  <div className="w-16 h-16 mx-auto rounded-full bg-pink-500/10 flex items-center justify-center">
-                    <Lock className="h-8 w-8 text-pink-500" />
-                  </div>
-                  <div className="space-y-2">
-                    <h3 className="font-bold text-lg">Unlock Your Party List</h3>
-                    <p className="text-sm text-muted-foreground">
-                      Rate at least 3 parties to see your personal rankings
-                    </p>
-                  </div>
-                  <div className="space-y-2">
-                    <div className="flex justify-between text-xs text-muted-foreground">
-                      <span>Progress</span>
-                      <span>{ratedPartyCount} / 3</span>
-                    </div>
-                    <Progress value={(ratedPartyCount / 3) * 100} className="h-2" />
-                  </div>
-                  <Button 
-                    onClick={() => setShowPartyPicker(true)}
-                    className="w-full bg-pink-500 hover:bg-pink-600 text-white"
-                  >
-                    <Star className="h-4 w-4 mr-2" />
-                    Rate Parties
-                  </Button>
-                </Card>
-              </div>
-            </div>
-          ) : rankedParties.length === 0 ? (
-            <Card className="glass p-8 text-center space-y-4">
-              <PartyPopper className="h-12 w-12 mx-auto text-muted-foreground/50" />
-              <div className="space-y-1">
-                <h3 className="font-semibold">No parties rated yet</h3>
-                <p className="text-sm text-muted-foreground">
-                  Rate parties to build your personal list
+        {activeTab === 'parties' && (
+          <>
+            {ratedPartyCount < 3 ? (
+              <div className="py-12 text-center">
+                <Lock className="h-8 w-8 mx-auto text-muted-foreground/50 mb-3" />
+                <p className="font-medium text-muted-foreground">Party list locked</p>
+                <p className="text-sm text-muted-foreground/70 mt-1">
+                  Rate at least 3 parties to unlock ({ratedPartyCount}/3)
                 </p>
+                <Button 
+                  onClick={() => setShowPartyPicker(true)}
+                  className="mt-4 bg-primary hover:bg-primary/90 text-primary-foreground"
+                >
+                  <Star className="h-4 w-4 mr-2" />
+                  Rate Parties
+                </Button>
               </div>
-              <Button 
-                onClick={() => setShowPartyPicker(true)}
-                variant="outline" 
-                className="mt-2"
-              >
-                Browse Parties
-              </Button>
-            </Card>
-          ) : (
-            rankedParties.map((item) => (
-              <Link key={item.party.id} to={createPageUrl(`Party?id=${item.party.id}`)}>
-                <Card className="glass p-4 active:scale-[0.98] transition-all hover:shadow-md group">
-                  <div className="flex items-center gap-3">
-                    {/* Rank */}
-                    <div className="w-6 text-center flex-shrink-0">
-                      <span className="text-lg font-bold text-muted-foreground">
-                        {item.rank}.
-                      </span>
-                    </div>
+            ) : rankedParties.length === 0 ? (
+              <div className="py-12 text-center">
+                <PartyPopper className="h-8 w-8 mx-auto text-muted-foreground/50 mb-3" />
+                <p className="font-medium text-muted-foreground">No parties rated yet</p>
+                <p className="text-sm text-muted-foreground/70 mt-1">Rate parties to build your personal list</p>
+                <Button 
+                  onClick={() => setShowPartyPicker(true)}
+                  variant="outline" 
+                  className="mt-4"
+                >
+                  Browse Parties
+                </Button>
+              </div>
+            ) : (
+              rankedParties.map((item, index) => (
+                <div key={item.party.id}>
+                  <Link to={createPageUrl(`Party?id=${item.party.id}`)}>
+                    <div className="flex items-center gap-3 py-3 active:bg-muted/30 transition-colors">
+                      {/* Rank */}
+                      <div className="w-6 text-center flex-shrink-0">
+                        <span className="text-sm font-semibold text-muted-foreground">
+                          {item.rank}.
+                        </span>
+                      </div>
 
-                    {/* Avatar */}
-                    <div className="h-11 w-11 rounded-xl bg-gradient-to-br from-pink-500 to-rose-500 flex items-center justify-center flex-shrink-0">
-                      <PartyPopper className="h-5 w-5 text-white" />
-                    </div>
+                      {/* Icon */}
+                      <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center flex-shrink-0">
+                        <PartyPopper className="h-5 w-5 text-primary" />
+                      </div>
 
-                    {/* Info + Category Scores */}
-                    <div className="flex-1 min-w-0">
-                      <h3 className="font-semibold text-sm truncate">{item.party.title}</h3>
-                      {/* Category breakdown */}
-                      <div className="flex items-center gap-3 mt-1">
-                        <div className="flex items-center gap-1">
-                          <Sparkles className="h-3 w-3 text-purple-500" />
-                          <span className="text-xs font-medium text-muted-foreground">{item.vibe.toFixed(1)}</span>
-                        </div>
-                        <div className="flex items-center gap-1">
-                          <Music className="h-3 w-3 text-blue-500" />
-                          <span className="text-xs font-medium text-muted-foreground">{item.music.toFixed(1)}</span>
-                        </div>
-                        <div className="flex items-center gap-1">
-                          <Zap className="h-3 w-3 text-amber-500" />
-                          <span className="text-xs font-medium text-muted-foreground">{item.execution.toFixed(1)}</span>
+                      {/* Info */}
+                      <div className="flex-1 min-w-0">
+                        <h3 className="font-semibold text-sm truncate">{item.party.title}</h3>
+                        <div className="flex items-center gap-3 mt-0.5">
+                          <div className="flex items-center gap-1">
+                            <Sparkles className="h-3 w-3 text-primary" />
+                            <span className="text-xs text-muted-foreground">{item.vibe.toFixed(1)}</span>
+                          </div>
+                          <div className="flex items-center gap-1">
+                            <Music className="h-3 w-3 text-primary" />
+                            <span className="text-xs text-muted-foreground">{item.music.toFixed(1)}</span>
+                          </div>
+                          <div className="flex items-center gap-1">
+                            <Zap className="h-3 w-3 text-primary" />
+                            <span className="text-xs text-muted-foreground">{item.execution.toFixed(1)}</span>
+                          </div>
                         </div>
                       </div>
-                    </div>
 
-                    {/* Score */}
-                    <div className="flex items-center gap-2 flex-shrink-0">
+                      {/* Score */}
                       <Badge className={`${getScoreBgColor(item.score)} text-white text-sm px-2.5 py-1`}>
                         {item.score.toFixed(1)}
                       </Badge>
-                      <ChevronRight className="h-5 w-5 text-muted-foreground group-hover:translate-x-1 transition-transform" />
+                      <ChevronRight className="h-4 w-4 text-muted-foreground" />
                     </div>
-                  </div>
-                </Card>
-              </Link>
-            ))
-          )}
-        </TabsContent>
+                  </Link>
+                  {index < rankedParties.length - 1 && (
+                    <div className="border-t border-border/50" />
+                  )}
+                </div>
+              ))
+            )}
+          </>
+        )}
 
-        {/* Battles Tab - Saved Frat Battle Rankings */}
-        <TabsContent value="battles" className="mt-4 space-y-3">
-          {showFratBattleGame ? (
-            <FratBattleGame
-              fraternities={allFraternities}
-              existingRankings={rankedFrats.map(f => f.fraternity)}
-              onComplete={async () => {
-                // Game complete - handled via onSave
-                await recordUserAction();
-                setShowFratBattleGame(false);
-              }}
-              onShare={async (ranking) => {
-                const userData = await base44.auth.me();
-                if (!userData) {
-                  toast({ title: "Please sign in to share", variant: "destructive" });
-                  return;
-                }
-                const tierLines = ranking.map(r => {
-                  const displayTier = r.tier === 'Mouse 1' || r.tier === 'Mouse 2' ? 'Mouse' : r.tier;
-                  return `${displayTier}: ${r.fratName}`;
-                });
-                const message = `🎮 Frat Battle Results\n\n${tierLines.join('\n')}`;
-                await base44.entities.ChatMessage.create({
-                  user_id: userData.id,
-                  text: message,
-                  upvotes: 0,
-                  downvotes: 0,
-                });
-                toast({ title: "Shared to Feed!" });
-              }}
-              onSave={async (ranking) => {
-                const newRanking: SavedBattleRanking = {
-                  id: Date.now().toString(),
-                  date: new Date().toISOString(),
-                  ranking: ranking.map(r => ({
-                    fratId: r.fratId,
-                    fratName: r.fratName,
-                    tier: r.tier,
-                    wins: r.wins,
-                  })),
-                };
-                const updated = [newRanking, ...savedBattleRankings];
-                setSavedBattleRankings(updated);
-                localStorage.setItem('touse_saved_battle_rankings', JSON.stringify(updated));
-                await recordUserAction();
-                setShowFratBattleGame(false);
-                toast({ title: "Saved!", description: "Check 'Your Lists' to see your saved rankings" });
-              }}
-              onClose={() => setShowFratBattleGame(false)}
-            />
-          ) : savedBattleRankings.length === 0 ? (
-            <Card className="glass p-8 text-center space-y-4">
-              <Swords className="h-12 w-12 mx-auto text-muted-foreground/50" />
-              <div className="space-y-1">
-                <h3 className="font-semibold">No saved battle rankings</h3>
-                <p className="text-sm text-muted-foreground">
-                  Play Frat Battle on the Activity tab and save your results here
-                </p>
+        {/* Battles Tab */}
+        {activeTab === 'battles' && (
+          <>
+            {showFratBattleGame ? (
+              <FratBattleGame
+                fraternities={allFraternities}
+                existingRankings={rankedFrats.map(f => f.fraternity)}
+                onComplete={async () => {
+                  await recordUserAction();
+                  setShowFratBattleGame(false);
+                }}
+                onShare={async (ranking) => {
+                  const userData = await base44.auth.me();
+                  if (!userData) {
+                    toast({ title: "Please sign in to share", variant: "destructive" });
+                    return;
+                  }
+                  const tierLines = ranking.map(r => {
+                    const displayTier = r.tier === 'Mouse 1' || r.tier === 'Mouse 2' ? 'Mouse' : r.tier;
+                    return `${displayTier}: ${r.fratName}`;
+                  });
+                  const message = `🎮 Frat Battle Results\n\n${tierLines.join('\n')}`;
+                  await base44.entities.ChatMessage.create({
+                    user_id: userData.id,
+                    text: message,
+                    upvotes: 0,
+                    downvotes: 0,
+                  });
+                  toast({ title: "Shared to Feed!" });
+                }}
+                onSave={async (ranking) => {
+                  const newRanking: SavedBattleRanking = {
+                    id: Date.now().toString(),
+                    date: new Date().toISOString(),
+                    ranking: ranking.map(r => ({
+                      fratId: r.fratId,
+                      fratName: r.fratName,
+                      tier: r.tier,
+                      wins: r.wins,
+                    })),
+                  };
+                  const updated = [newRanking, ...savedBattleRankings];
+                  setSavedBattleRankings(updated);
+                  localStorage.setItem('touse_saved_battle_rankings', JSON.stringify(updated));
+                  await recordUserAction();
+                  setShowFratBattleGame(false);
+                  toast({ title: "Saved!", description: "Check 'Your Lists' to see your saved rankings" });
+                }}
+                onClose={() => setShowFratBattleGame(false)}
+              />
+            ) : savedBattleRankings.length === 0 ? (
+              <div className="py-12 text-center">
+                <Swords className="h-8 w-8 mx-auto text-muted-foreground/50 mb-3" />
+                <p className="font-medium text-muted-foreground">No saved battle rankings</p>
+                <p className="text-sm text-muted-foreground/70 mt-1">Play Frat Battle and save your results here</p>
+                <Button variant="outline" className="mt-4" onClick={() => setShowFratBattleGame(true)}>
+                  <Swords className="h-4 w-4 mr-2" />
+                  Play Frat Battle
+                </Button>
               </div>
-              <Button variant="outline" className="mt-2" onClick={() => setShowFratBattleGame(true)}>
-                <Swords className="h-4 w-4 mr-2" />
-                Play Frat Battle
-              </Button>
-            </Card>
-          ) : (
-            savedBattleRankings.map((battleRanking, index) => {
-              const isExpanded = expandedBattles[battleRanking.id];
-              const displayedRankings = isExpanded ? battleRanking.ranking : battleRanking.ranking.slice(0, 5);
-              const remainingCount = battleRanking.ranking.length - 5;
-              
-              const getTierColor = (tier: string) => {
-                if (tier.includes('Touse')) return 'bg-green-100 text-green-700';
-                if (tier.includes('Mouse')) return 'bg-amber-100 text-amber-700';
-                if (tier.includes('Bouse')) return 'bg-red-100 text-red-700';
-                return 'bg-muted';
-              };
-              
-              return (
-                <div key={battleRanking.id} className="space-y-2">
-                  {/* Header */}
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-amber-500 to-orange-500 flex items-center justify-center text-white">
-                        <Trophy className="h-5 w-5" />
+            ) : (
+              savedBattleRankings.map((battleRanking, index) => {
+                const isExpanded = expandedBattles[battleRanking.id];
+                const displayedRankings = isExpanded ? battleRanking.ranking : battleRanking.ranking.slice(0, 5);
+                
+                const getTierColor = (tier: string) => {
+                  if (tier.includes('Touse')) return 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400';
+                  if (tier.includes('Mouse')) return 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400';
+                  if (tier.includes('Bouse')) return 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400';
+                  return 'bg-muted text-muted-foreground';
+                };
+                
+                return (
+                  <div key={battleRanking.id} className="py-4">
+                    {/* Header */}
+                    <div className="flex items-center justify-between mb-3">
+                      <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center">
+                          <Trophy className="h-5 w-5 text-primary" />
+                        </div>
+                        <div>
+                          <p className="font-semibold">Battle #{savedBattleRankings.length - index}</p>
+                          <p className="text-xs text-muted-foreground">
+                            {format(new Date(battleRanking.date), 'MMM d, yyyy')}
+                          </p>
+                        </div>
                       </div>
-                      <div>
-                        <p className="font-semibold">Battle #{savedBattleRankings.length - index}</p>
-                        <p className="text-xs text-muted-foreground">
-                          {format(new Date(battleRanking.date), 'MMM d, yyyy h:mm a')}
-                        </p>
+                      <div className="flex items-center gap-1">
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8"
+                          onClick={() => {
+                            setBattleToShare(battleRanking);
+                            setShareBattleDialogOpen(true);
+                          }}
+                        >
+                          <Share2 className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8"
+                          onClick={() => {
+                            const updated = savedBattleRankings.filter(r => r.id !== battleRanking.id);
+                            setSavedBattleRankings(updated);
+                            localStorage.setItem('touse_saved_battle_rankings', JSON.stringify(updated));
+                            toast({ title: "Deleted" });
+                          }}
+                        >
+                          <Trash2 className="h-4 w-4 text-destructive" />
+                        </Button>
                       </div>
                     </div>
-                    <div className="flex items-center gap-1">
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-8 w-8"
-                        onClick={() => {
-                          setBattleToShare(battleRanking);
-                          setShareBattleDialogOpen(true);
-                        }}
-                      >
-                        <Share2 className="h-4 w-4" />
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-8 w-8"
-                        onClick={() => {
-                          const updated = savedBattleRankings.filter(r => r.id !== battleRanking.id);
-                          setSavedBattleRankings(updated);
-                          localStorage.setItem('touse_saved_battle_rankings', JSON.stringify(updated));
-                          toast({ title: "Deleted" });
-                        }}
-                      >
-                        <Trash2 className="h-4 w-4 text-destructive" />
-                      </Button>
-                    </div>
-                  </div>
-                  
-                  {/* Rankings list */}
-                  <div className="space-y-1">
+                    
+                    {/* Rankings list */}
                     {displayedRankings.map((item, idx) => {
                       const displayTier = item.tier === 'Mouse 1' || item.tier === 'Mouse 2' ? 'Mouse' : item.tier;
-                      const actualIndex = isExpanded ? idx : idx;
                       return (
                         <div 
                           key={item.fratId} 
                           className="flex items-center justify-between py-2 border-b border-border/50 last:border-0"
                         >
                           <div className="flex items-center gap-3">
-                            <span className="font-semibold text-muted-foreground w-6">{actualIndex + 1}.</span>
-                            <span className="font-medium">{item.fratName}</span>
+                            <span className="text-sm font-semibold text-muted-foreground w-6">{idx + 1}.</span>
+                            <span className="font-medium text-sm">{item.fratName}</span>
                           </div>
                           <div className="flex items-center gap-3">
                             <span className={`text-xs font-medium px-2 py-0.5 rounded ${getTierColor(item.tier)}`}>
@@ -942,24 +835,28 @@ export default function YourRankings() {
                         </div>
                       );
                     })}
+                    
+                    {/* View all button */}
+                    {battleRanking.ranking.length > 5 && (
+                      <button
+                        onClick={() => setExpandedBattles(prev => ({ ...prev, [battleRanking.id]: !prev[battleRanking.id] }))}
+                        className="w-full flex items-center justify-center gap-1 py-2 text-sm text-muted-foreground hover:text-foreground transition-colors"
+                      >
+                        <ChevronDown className={`h-4 w-4 transition-transform ${isExpanded ? 'rotate-180' : ''}`} />
+                        {isExpanded ? 'Show less' : `View all ${battleRanking.ranking.length}`}
+                      </button>
+                    )}
+                    
+                    {index < savedBattleRankings.length - 1 && (
+                      <div className="border-t border-border mt-4" />
+                    )}
                   </div>
-                  
-                  {/* View all button */}
-                  {battleRanking.ranking.length > 5 && (
-                    <button
-                      onClick={() => setExpandedBattles(prev => ({ ...prev, [battleRanking.id]: !prev[battleRanking.id] }))}
-                      className="w-full flex items-center justify-center gap-1 py-2 text-sm text-muted-foreground hover:text-foreground transition-colors"
-                    >
-                      <ChevronDown className={`h-4 w-4 transition-transform ${isExpanded ? 'rotate-180' : ''}`} />
-                      {isExpanded ? 'Show less' : `View all ${battleRanking.ranking.length} rankings`}
-                    </button>
-                  )}
-                </div>
-              );
-            })
-          )}
-        </TabsContent>
-      </Tabs>
+                );
+              })
+            )}
+          </>
+        )}
+      </div>
 
       {/* Intro Overlay */}
       {showIntro && user && (
