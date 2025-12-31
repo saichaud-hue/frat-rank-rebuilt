@@ -137,6 +137,19 @@ export default function Activity() {
   const [showSuggestionInput, setShowSuggestionInput] = useState(false);
   const [suggestionText, setSuggestionText] = useState('');
   const [customSuggestions, setCustomSuggestions] = useState<{ id: string; text: string; votes: number }[]>(() => {
+    // Check if we need to reset (daily at 5 AM)
+    const now = new Date();
+    const today5AM = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 5, 0, 0);
+    const lastReset = localStorage.getItem('touse_move_last_reset');
+    const lastResetDate = lastReset ? new Date(lastReset) : null;
+    
+    // If current time is past 5 AM and last reset was before today's 5 AM, clear suggestions
+    if (now >= today5AM && (!lastResetDate || lastResetDate < today5AM)) {
+      localStorage.removeItem('touse_custom_move_suggestions');
+      localStorage.setItem('touse_move_last_reset', now.toISOString());
+      return [];
+    }
+    
     const saved = localStorage.getItem('touse_custom_move_suggestions');
     return saved ? JSON.parse(saved) : [];
   });
