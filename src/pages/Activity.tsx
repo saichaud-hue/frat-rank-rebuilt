@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import { 
   ThumbsUp, 
@@ -26,7 +26,13 @@ import {
   Plus,
   Check,
   MapPin,
-  Radio
+  Radio,
+  Bell,
+  CheckCircle,
+  Book,
+  Moon,
+  Beer,
+  Coffee
 } from 'lucide-react';
 import { Progress } from '@/components/ui/progress';
 import { Card } from '@/components/ui/card';
@@ -134,6 +140,27 @@ export default function Activity() {
   
   // Countdown timer
   const [countdownTime, setCountdownTime] = useState<{ days: number; hours: number; minutes: number; seconds: number } | null>(null);
+  
+  // Unread notification state
+  const [hasUnread, setHasUnread] = useState(true);
+  const [lastSeenFeedCount, setLastSeenFeedCount] = useState(0);
+  
+  // "All caught up" state
+  const [showCaughtUp, setShowCaughtUp] = useState(false);
+  const [caughtUpClaimed, setCaughtUpClaimed] = useState(false);
+  const [userPoints, setUserPoints] = useState(() => {
+    const saved = localStorage.getItem('userPoints');
+    return saved ? parseInt(saved, 10) : 0;
+  });
+  const feedEndRef = useRef<HTMLDivElement>(null);
+  
+  // Default activity options for "What's the move"
+  const defaultMoveOptions = [
+    { id: 'shooters', label: 'Shooters', icon: Beer },
+    { id: 'devines', label: 'Devines', icon: Coffee },
+    { id: 'study', label: 'Study', icon: Book },
+    { id: 'sleep', label: 'Sleep', icon: Moon },
+  ];
 
   // Get live and upcoming parties for stories
   const liveParties = useMemo(() => {
@@ -590,6 +617,57 @@ export default function Activity() {
     return allItems.sort((a, b) => b.date.getTime() - a.date.getTime());
   }, [chatMessages, activities]);
 
+  // Filter feed items to last 24 hours for "caught up" feature
+  const feedItemsLast24h = useMemo(() => {
+    const now = new Date();
+    const yesterday = new Date(now.getTime() - 24 * 60 * 60 * 1000);
+    return feedItems.filter(item => item.date >= yesterday);
+  }, [feedItems]);
+  
+  // Handle "All caught up" detection via intersection observer
+  const handleFeedEndVisible = useCallback((entries: IntersectionObserverEntry[]) => {
+    const [entry] = entries;
+    if (entry.isIntersecting && feedItemsLast24h.length > 0 && !caughtUpClaimed) {
+      setShowCaughtUp(true);
+      setHasUnread(false);
+    }
+  }, [feedItemsLast24h.length, caughtUpClaimed]);
+  
+  useEffect(() => {
+    const observer = new IntersectionObserver(handleFeedEndVisible, { threshold: 0.1 });
+    if (feedEndRef.current) {
+      observer.observe(feedEndRef.current);
+    }
+    return () => observer.disconnect();
+  }, [handleFeedEndVisible]);
+  
+  // Mark unread when new items appear
+  useEffect(() => {
+    if (feedItems.length > lastSeenFeedCount && lastSeenFeedCount > 0) {
+      setHasUnread(true);
+      setShowCaughtUp(false);
+    }
+    setLastSeenFeedCount(feedItems.length);
+  }, [feedItems.length, lastSeenFeedCount]);
+  
+  // Clear unread when user clicks the notification
+  const handleClearUnread = () => {
+    setHasUnread(false);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+  
+  // Claim caught up points
+  const handleClaimPoints = () => {
+    const newPoints = userPoints + 10;
+    setUserPoints(newPoints);
+    localStorage.setItem('userPoints', newPoints.toString());
+    setCaughtUpClaimed(true);
+    toast({ 
+      title: '+10 Points!', 
+      description: "You're all caught up for today!",
+    });
+  };
+
   const getActivityIcon = (type: ActivityType) => {
     switch (type) {
       case 'party_rating':
@@ -690,143 +768,204 @@ export default function Activity() {
         </div>
       )}
 
-      {/* What's the move tonight? - Large tappable card */}
-      {(tonightsParties.length > 0 || customSuggestions.length > 0) && (
-        <div className="rounded-3xl overflow-hidden bg-gradient-to-br from-violet-600 via-purple-600 to-fuchsia-600 p-[2px]">
-          <div className="rounded-[22px] bg-card p-5">
-            <div className="flex items-center gap-3 mb-4">
-              <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-violet-500 to-fuchsia-500 flex items-center justify-center text-white">
-                <Vote className="h-6 w-6" />
-              </div>
-              <div className="flex-1">
-                <h2 className="text-lg font-bold">What's the move? 🎉</h2>
-                <p className="text-sm text-muted-foreground">
-                  {totalMoveVotes > 0 ? `${totalMoveVotes} votes` : 'Be the first to vote'}
-                </p>
-              </div>
+      {/* What's the move tonight? - Always visible poll */}
+      <div className="rounded-3xl overflow-hidden bg-gradient-to-br from-violet-600 via-purple-600 to-fuchsia-600 p-[2px]">
+        <div className="rounded-[22px] bg-card p-5">
+          <div className="flex items-center gap-3 mb-4">
+            <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-violet-500 to-fuchsia-500 flex items-center justify-center text-white animate-pulse">
+              <Vote className="h-6 w-6" />
             </div>
-            
-            <div className="space-y-3">
-              {tonightsParties.map((party) => {
-                const frat = fraternities.find(f => f.id === party.fraternity_id);
-                const votes = moveVotes[party.id] || 0;
-                const percentage = totalMoveVotes > 0 ? (votes / totalMoveVotes) * 100 : 0;
-                const isSelected = userMoveVote === party.id;
-                
-                return (
-                  <button
-                    key={party.id}
-                    onClick={() => handleMoveVote(party.id)}
-                    className={cn(
-                      "w-full min-h-[56px] p-4 rounded-2xl border-2 transition-all text-left relative overflow-hidden active:scale-[0.98]",
-                      isSelected 
-                        ? "border-violet-500 bg-violet-500/10" 
-                        : "border-border hover:border-violet-500/50"
-                    )}
-                  >
-                    <div 
-                      className="absolute inset-0 bg-gradient-to-r from-violet-500/20 to-transparent transition-all"
-                      style={{ width: `${percentage}%` }}
-                    />
-                    <div className="relative flex items-center gap-3">
-                      <div className={cn(
-                        "w-10 h-10 rounded-xl flex items-center justify-center shrink-0",
-                        isSelected 
-                          ? "bg-gradient-to-br from-violet-500 to-fuchsia-500 text-white" 
-                          : "bg-muted text-muted-foreground"
-                      )}>
-                        {isSelected ? <Check className="h-5 w-5" /> : <PartyPopper className="h-5 w-5" />}
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="font-semibold truncate">{party.title}</p>
-                        <p className="text-xs text-muted-foreground truncate">{frat?.name} · {format(new Date(party.starts_at), 'h:mm a')}</p>
-                      </div>
-                      <Badge variant={isSelected ? "default" : "secondary"} className={cn(isSelected && "bg-violet-500")}>
-                        {votes}
-                      </Badge>
-                    </div>
-                  </button>
-                );
-              })}
+            <div className="flex-1">
+              <h2 className="text-lg font-bold">What's the move tonight?</h2>
+              <p className="text-sm text-muted-foreground">
+                {totalMoveVotes > 0 ? `${totalMoveVotes} votes · See what everyone's doing` : 'Vote and see what others are up to'}
+              </p>
+            </div>
+            {userMoveVote && (
+              <div className="w-8 h-8 rounded-full bg-green-500 flex items-center justify-center text-white">
+                <Check className="h-4 w-4" />
+              </div>
+            )}
+          </div>
+          
+          <div className="space-y-2">
+            {/* Tonight's parties */}
+            {tonightsParties.map((party) => {
+              const frat = fraternities.find(f => f.id === party.fraternity_id);
+              const votes = moveVotes[party.id] || 0;
+              const percentage = totalMoveVotes > 0 ? (votes / totalMoveVotes) * 100 : 0;
+              const isSelected = userMoveVote === party.id;
               
-              {/* Custom suggestions */}
-              {customSuggestions.map((suggestion) => {
-                const votes = suggestion.votes;
-                const percentage = totalMoveVotes > 0 ? (votes / totalMoveVotes) * 100 : 0;
-                const isSelected = userMoveVote === suggestion.id;
-                
-                return (
-                  <button
-                    key={suggestion.id}
-                    onClick={() => handleCustomSuggestionVote(suggestion.id)}
-                    className={cn(
-                      "w-full min-h-[56px] p-4 rounded-2xl border-2 transition-all text-left relative overflow-hidden active:scale-[0.98]",
-                      isSelected 
-                        ? "border-fuchsia-500 bg-fuchsia-500/10" 
-                        : "border-border hover:border-fuchsia-500/50"
-                    )}
-                  >
-                    <div 
-                      className="absolute inset-0 bg-gradient-to-r from-fuchsia-500/20 to-transparent transition-all"
-                      style={{ width: `${percentage}%` }}
-                    />
-                    <div className="relative flex items-center gap-3">
-                      <div className={cn(
-                        "w-10 h-10 rounded-xl flex items-center justify-center shrink-0",
-                        isSelected 
-                          ? "bg-gradient-to-br from-fuchsia-500 to-pink-500 text-white" 
-                          : "bg-muted text-muted-foreground"
-                      )}>
-                        {isSelected ? <Check className="h-5 w-5" /> : <Sparkles className="h-5 w-5" />}
-                      </div>
-                      <p className="flex-1 font-semibold truncate">{suggestion.text}</p>
-                      <Badge variant={isSelected ? "default" : "secondary"} className={cn(isSelected && "bg-fuchsia-500")}>
-                        {votes}
-                      </Badge>
-                    </div>
-                  </button>
-                );
-              })}
-              
-              {/* Add suggestion */}
-              {showSuggestionInput ? (
-                <div className="flex gap-2">
-                  <Input
-                    value={suggestionText}
-                    onChange={(e) => setSuggestionText(e.target.value)}
-                    placeholder="Where are you going?"
-                    className="flex-1 h-12 rounded-xl text-base"
-                    onKeyDown={(e) => e.key === 'Enter' && handleAddSuggestion()}
-                    autoFocus
-                  />
-                  <Button
-                    onClick={handleAddSuggestion}
-                    disabled={!suggestionText.trim()}
-                    className="h-12 w-12 rounded-xl bg-gradient-to-r from-fuchsia-500 to-pink-500"
-                  >
-                    <Check className="h-5 w-5" />
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    onClick={() => { setShowSuggestionInput(false); setSuggestionText(''); }}
-                    className="h-12 w-12 rounded-xl"
-                  >
-                    <X className="h-5 w-5" />
-                  </Button>
-                </div>
-              ) : (
+              return (
                 <button
-                  onClick={() => setShowSuggestionInput(true)}
-                  className="w-full min-h-[56px] p-4 rounded-2xl border-2 border-dashed border-muted-foreground/30 flex items-center justify-center gap-2 text-muted-foreground hover:border-fuchsia-500 hover:text-fuchsia-500 transition-all active:scale-[0.98]"
+                  key={party.id}
+                  onClick={() => handleMoveVote(party.id)}
+                  className={cn(
+                    "w-full min-h-[52px] p-3 rounded-2xl border-2 transition-all text-left relative overflow-hidden active:scale-[0.98]",
+                    isSelected 
+                      ? "border-violet-500 bg-violet-500/10" 
+                      : "border-border hover:border-violet-500/50"
+                  )}
                 >
-                  <Plus className="h-5 w-5" />
-                  <span className="font-medium">Add your own</span>
+                  {userMoveVote && (
+                    <div 
+                      className="absolute inset-0 bg-gradient-to-r from-violet-500/20 to-transparent transition-all duration-500"
+                      style={{ width: `${percentage}%` }}
+                    />
+                  )}
+                  <div className="relative flex items-center gap-3">
+                    <div className={cn(
+                      "w-9 h-9 rounded-xl flex items-center justify-center shrink-0",
+                      isSelected 
+                        ? "bg-gradient-to-br from-violet-500 to-fuchsia-500 text-white" 
+                        : "bg-muted text-muted-foreground"
+                    )}>
+                      {isSelected ? <Check className="h-4 w-4" /> : <PartyPopper className="h-4 w-4" />}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="font-semibold text-sm truncate">{party.title}</p>
+                      <p className="text-xs text-muted-foreground truncate">{frat?.name} · {format(new Date(party.starts_at), 'h:mm a')}</p>
+                    </div>
+                    {userMoveVote && (
+                      <div className="flex items-center gap-2">
+                        <span className="text-sm font-bold">{percentage.toFixed(0)}%</span>
+                        <Badge variant="secondary" className="text-xs">{votes}</Badge>
+                      </div>
+                    )}
+                  </div>
                 </button>
-              )}
-            </div>
+              );
+            })}
+            
+            {/* Default options - Shooters, Devines, Study, Sleep */}
+            {defaultMoveOptions.map((option) => {
+              const votes = moveVotes[option.id] || 0;
+              const percentage = totalMoveVotes > 0 ? (votes / totalMoveVotes) * 100 : 0;
+              const isSelected = userMoveVote === option.id;
+              const Icon = option.icon;
+              
+              return (
+                <button
+                  key={option.id}
+                  onClick={() => handleMoveVote(option.id)}
+                  className={cn(
+                    "w-full min-h-[52px] p-3 rounded-2xl border-2 transition-all text-left relative overflow-hidden active:scale-[0.98]",
+                    isSelected 
+                      ? "border-fuchsia-500 bg-fuchsia-500/10" 
+                      : "border-border hover:border-fuchsia-500/50"
+                  )}
+                >
+                  {userMoveVote && (
+                    <div 
+                      className="absolute inset-0 bg-gradient-to-r from-fuchsia-500/20 to-transparent transition-all duration-500"
+                      style={{ width: `${percentage}%` }}
+                    />
+                  )}
+                  <div className="relative flex items-center gap-3">
+                    <div className={cn(
+                      "w-9 h-9 rounded-xl flex items-center justify-center shrink-0",
+                      isSelected 
+                        ? "bg-gradient-to-br from-fuchsia-500 to-pink-500 text-white" 
+                        : "bg-muted text-muted-foreground"
+                    )}>
+                      {isSelected ? <Check className="h-4 w-4" /> : <Icon className="h-4 w-4" />}
+                    </div>
+                    <p className="flex-1 font-semibold text-sm">{option.label}</p>
+                    {userMoveVote && (
+                      <div className="flex items-center gap-2">
+                        <span className="text-sm font-bold">{percentage.toFixed(0)}%</span>
+                        <Badge variant="secondary" className="text-xs">{votes}</Badge>
+                      </div>
+                    )}
+                  </div>
+                </button>
+              );
+            })}
+            
+            {/* Custom suggestions */}
+            {customSuggestions.map((suggestion) => {
+              const votes = suggestion.votes;
+              const percentage = totalMoveVotes > 0 ? (votes / totalMoveVotes) * 100 : 0;
+              const isSelected = userMoveVote === suggestion.id;
+              
+              return (
+                <button
+                  key={suggestion.id}
+                  onClick={() => handleCustomSuggestionVote(suggestion.id)}
+                  className={cn(
+                    "w-full min-h-[52px] p-3 rounded-2xl border-2 transition-all text-left relative overflow-hidden active:scale-[0.98]",
+                    isSelected 
+                      ? "border-pink-500 bg-pink-500/10" 
+                      : "border-border hover:border-pink-500/50"
+                  )}
+                >
+                  {userMoveVote && (
+                    <div 
+                      className="absolute inset-0 bg-gradient-to-r from-pink-500/20 to-transparent transition-all duration-500"
+                      style={{ width: `${percentage}%` }}
+                    />
+                  )}
+                  <div className="relative flex items-center gap-3">
+                    <div className={cn(
+                      "w-9 h-9 rounded-xl flex items-center justify-center shrink-0",
+                      isSelected 
+                        ? "bg-gradient-to-br from-pink-500 to-rose-500 text-white" 
+                        : "bg-muted text-muted-foreground"
+                    )}>
+                      {isSelected ? <Check className="h-4 w-4" /> : <Sparkles className="h-4 w-4" />}
+                    </div>
+                    <p className="flex-1 font-semibold text-sm truncate">{suggestion.text}</p>
+                    {userMoveVote && (
+                      <div className="flex items-center gap-2">
+                        <span className="text-sm font-bold">{percentage.toFixed(0)}%</span>
+                        <Badge variant="secondary" className="text-xs">{votes}</Badge>
+                      </div>
+                    )}
+                  </div>
+                </button>
+              );
+            })}
+            
+            {/* Add custom suggestion */}
+            {showSuggestionInput ? (
+              <div className="flex gap-2">
+                <Input
+                  value={suggestionText}
+                  onChange={(e) => setSuggestionText(e.target.value)}
+                  placeholder="Something else?"
+                  className="flex-1 h-11 rounded-xl text-sm"
+                  onKeyDown={(e) => e.key === 'Enter' && handleAddSuggestion()}
+                  autoFocus
+                />
+                <Button
+                  onClick={handleAddSuggestion}
+                  disabled={!suggestionText.trim()}
+                  size="sm"
+                  className="h-11 w-11 rounded-xl bg-gradient-to-r from-fuchsia-500 to-pink-500"
+                >
+                  <Check className="h-4 w-4" />
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => { setShowSuggestionInput(false); setSuggestionText(''); }}
+                  className="h-11 w-11 rounded-xl"
+                >
+                  <X className="h-4 w-4" />
+                </Button>
+              </div>
+            ) : (
+              <button
+                onClick={() => setShowSuggestionInput(true)}
+                className="w-full min-h-[44px] p-3 rounded-2xl border-2 border-dashed border-muted-foreground/30 flex items-center justify-center gap-2 text-muted-foreground hover:border-fuchsia-500 hover:text-fuchsia-500 transition-all active:scale-[0.98]"
+              >
+                <Plus className="h-4 w-4" />
+                <span className="font-medium text-sm">Something else</span>
+              </button>
+            )}
           </div>
         </div>
-      )}
+      </div>
 
       {/* Next party countdown - compact */}
       {nextParty && countdownTime && (
@@ -1100,7 +1239,52 @@ export default function Activity() {
             }
           })
         )}
+        
+        {/* Feed end marker for intersection observer */}
+        <div ref={feedEndRef} className="h-1" />
+        
+        {/* You're all caught up message */}
+        {showCaughtUp && feedItemsLast24h.length > 0 && (
+          <div className="text-center py-8">
+            <div className="inline-flex flex-col items-center">
+              <div className="w-16 h-16 rounded-full bg-gradient-to-br from-green-400 to-emerald-500 flex items-center justify-center mb-4 animate-scale-in">
+                <CheckCircle className="h-8 w-8 text-white" />
+              </div>
+              <h3 className="text-lg font-bold mb-1">You're all caught up!</h3>
+              <p className="text-muted-foreground text-sm mb-4">You've seen all posts from the last 24 hours</p>
+              {!caughtUpClaimed ? (
+                <button
+                  onClick={handleClaimPoints}
+                  className="px-6 py-3 rounded-full bg-gradient-to-r from-amber-400 via-yellow-400 to-amber-500 text-black font-bold text-lg shadow-lg shadow-amber-500/30 animate-pulse hover:scale-105 active:scale-95 transition-transform"
+                >
+                  <span className="flex items-center gap-2">
+                    <Sparkles className="h-5 w-5" />
+                    Claim +10 Points
+                    <Sparkles className="h-5 w-5" />
+                  </span>
+                </button>
+              ) : (
+                <div className="flex items-center gap-2 text-green-500 font-bold">
+                  <Check className="h-5 w-5" />
+                  <span>+10 Points Claimed!</span>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
       </div>
+
+      {/* Unread notification badge */}
+      {hasUnread && feedItems.length > 0 && (
+        <button
+          onClick={handleClearUnread}
+          className="fixed top-20 right-4 flex items-center gap-2 px-4 py-2 rounded-full bg-red-500 text-white font-semibold shadow-lg shadow-red-500/30 animate-scale-in z-50 hover:scale-105 active:scale-95 transition-transform"
+        >
+          <Bell className="h-4 w-4" />
+          <span>New posts</span>
+          <div className="w-2 h-2 rounded-full bg-white animate-pulse" />
+        </button>
+      )}
 
       {/* Floating compose button */}
       <button
