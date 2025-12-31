@@ -1,12 +1,19 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useCallback } from 'react';
 import { X, Upload, Image, Loader2, CheckCircle2, AlertCircle } from 'lucide-react';
-import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
+import { 
+  Sheet, 
+  SheetContent, 
+  SheetHeader, 
+  SheetTitle,
+  SheetFooter
+} from '@/components/ui/sheet';
 import { base44 } from '@/api/base44Client';
 import { recomputePartyCoverPhoto } from './photoUtils';
+import { toast } from '@/hooks/use-toast';
 
 interface GlobalPhotoUploadProps {
   partyId: string;
@@ -15,6 +22,7 @@ interface GlobalPhotoUploadProps {
 }
 
 interface PreviewFile {
+  id: string;
   file: File;
   preview: string;
   caption: string;
@@ -25,59 +33,85 @@ export default function GlobalPhotoUpload({ partyId, onClose, onUploadSuccess }:
   const [consentVerified, setConsentVerified] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [isDragOver, setIsDragOver] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const selectedFiles = Array.from(e.target.files || []);
+  const processFiles = useCallback((selectedFiles: File[]) => {
     setError(null);
+    const validFiles: PreviewFile[] = [];
 
     for (const file of selectedFiles) {
       if (!file.type.startsWith('image/')) {
         setError('Please select only image files');
-        e.target.value = '';
-        return;
+        continue;
       }
       if (file.size > 10 * 1024 * 1024) {
         setError('Each file must be less than 10MB');
-        e.target.value = '';
-        return;
+        continue;
       }
+      
+      validFiles.push({
+        id: `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+        file,
+        preview: URL.createObjectURL(file),
+        caption: '',
+      });
     }
 
-    const newFiles = selectedFiles.map((file) => ({
-      file,
-      preview: URL.createObjectURL(file),
-      caption: '',
-    }));
+    if (validFiles.length > 0) {
+      setFiles((prev) => [...prev, ...validFiles]);
+    }
+  }, []);
 
-    setFiles((prev) => [...prev, ...newFiles]);
-
-    // Critical: reset the input so selecting the same file(s) later still triggers onChange.
-    e.target.value = '';
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const selectedFiles = Array.from(e.target.files || []);
+    processFiles(selectedFiles);
+    // Reset input so same files can be selected again
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
   };
 
-  const removeFile = (index: number) => {
+  const handleDragOver = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragOver(true);
+  }, []);
+
+  const handleDragLeave = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragOver(false);
+  }, []);
+
+  const handleDrop = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragOver(false);
+    
+    const droppedFiles = Array.from(e.dataTransfer.files);
+    processFiles(droppedFiles);
+  }, [processFiles]);
+
+  const removeFile = (id: string) => {
     setFiles(prev => {
-      const newFiles = [...prev];
-      URL.revokeObjectURL(newFiles[index].preview);
-      newFiles.splice(index, 1);
-      return newFiles;
+      const fileToRemove = prev.find(f => f.id === id);
+      if (fileToRemove) {
+        URL.revokeObjectURL(fileToRemove.preview);
+      }
+      return prev.filter(f => f.id !== id);
     });
   };
 
-  const updateCaption = (index: number, caption: string) => {
-    setFiles((prev) => {
-      const newFiles = [...prev];
-      newFiles[index].caption = caption;
-      return newFiles;
-    });
+  const updateCaption = (id: string, caption: string) => {
+    setFiles((prev) => 
+      prev.map(f => f.id === id ? { ...f, caption } : f)
+    );
   };
 
   const resetSelection = () => {
-    setFiles((prev) => {
-      prev.forEach((f) => URL.revokeObjectURL(f.preview));
-      return [];
-    });
+    files.forEach((f) => URL.revokeObjectURL(f.preview));
+    setFiles([]);
     setError(null);
     setConsentVerified(false);
     if (fileInputRef.current) fileInputRef.current.value = '';
@@ -109,26 +143,45 @@ export default function GlobalPhotoUpload({ partyId, onClose, onUploadSuccess }:
         return;
       }
 
-      // Upload all files
+      let successCount = 0;
+      
+      // Upload all files sequentially to avoid race conditions
       for (const { file, caption } of files) {
-        const { url } = await base44.integrations.Core.UploadFile({ file });
+        try {
+          const { url } = await base44.integrations.Core.UploadFile({ file });
 
-        await base44.entities.PartyPhoto.create({
-          party_id: partyId,
-          user_id: user.id,
-          url,
-          caption,
-          consent_verified: true,
-          likes: 0,
-          dislikes: 0,
-          moderation_status: 'approved',
-          faces_detected: 0,
-          faces_blurred: false,
-        });
+          await base44.entities.PartyPhoto.create({
+            party_id: partyId,
+            user_id: user.id,
+            url,
+            caption,
+            consent_verified: true,
+            likes: 0,
+            dislikes: 0,
+            moderation_status: 'approved',
+            faces_detected: 0,
+            faces_blurred: false,
+          });
+          
+          successCount++;
+        } catch (fileError) {
+          console.error('Failed to upload file:', fileError);
+        }
+      }
+
+      if (successCount === 0) {
+        setError('Failed to upload photos. Please try again.');
+        setUploading(false);
+        return;
       }
 
       // Recompute cover photo (picks highest voted or newest)
       await recomputePartyCoverPhoto(partyId);
+
+      toast({
+        title: 'Photos uploaded!',
+        description: `Successfully uploaded ${successCount} photo${successCount !== 1 ? 's' : ''}.`,
+      });
 
       onUploadSuccess();
       handleClose();
@@ -140,32 +193,39 @@ export default function GlobalPhotoUpload({ partyId, onClose, onUploadSuccess }:
     }
   };
 
+  const handleClickDropZone = () => {
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+      fileInputRef.current.click();
+    }
+  };
+
   return (
-    <div className="fixed inset-0 z-50 bg-black/70 flex items-center justify-center p-4">
-      <Card className="w-full max-w-3xl max-h-[90vh] flex flex-col">
-        {/* Header */}
-        <div className="sticky top-0 bg-card p-4 border-b flex items-center justify-between">
-          <h2 className="text-xl font-bold flex items-center gap-2">
+    <Sheet open={true} onOpenChange={(open) => !open && handleClose()}>
+      <SheetContent side="bottom" className="h-[85vh] flex flex-col rounded-t-3xl">
+        <SheetHeader className="pb-4 border-b">
+          <SheetTitle className="flex items-center gap-2">
             <Upload className="h-5 w-5 text-primary" />
             Upload Photos
-          </h2>
-          <Button variant="ghost" size="icon" onClick={handleClose}>
-            <X className="h-5 w-5" />
-          </Button>
-        </div>
+          </SheetTitle>
+        </SheetHeader>
 
         {/* Content */}
-        <div className="flex-1 overflow-y-auto p-4 space-y-4">
-          {/* File Input */}
+        <div className="flex-1 overflow-y-auto py-4 space-y-4">
+          {/* File Input / Drop Zone */}
           <div 
-            className="border-2 border-dashed border-muted-foreground/25 rounded-xl p-8 text-center cursor-pointer hover:border-primary/50 transition-colors"
-            onClick={() => {
-              if (fileInputRef.current) fileInputRef.current.value = '';
-              fileInputRef.current?.click();
-            }}
+            className={`border-2 border-dashed rounded-xl p-8 text-center cursor-pointer transition-all ${
+              isDragOver 
+                ? 'border-primary bg-primary/10' 
+                : 'border-muted-foreground/25 hover:border-primary/50'
+            }`}
+            onClick={handleClickDropZone}
+            onDragOver={handleDragOver}
+            onDragLeave={handleDragLeave}
+            onDrop={handleDrop}
           >
             <Image className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-            <p className="text-muted-foreground">Click to select photos or drag and drop</p>
+            <p className="font-medium text-foreground">Click to select photos or drag and drop</p>
             <p className="text-xs text-muted-foreground mt-2">Max 10MB per file</p>
             <input
               ref={fileInputRef}
@@ -180,19 +240,22 @@ export default function GlobalPhotoUpload({ partyId, onClose, onUploadSuccess }:
           {/* Previews */}
           {files.length > 0 && (
             <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
-              {files.map((file, index) => (
-                <div key={index} className="relative space-y-2">
+              {files.map((file) => (
+                <div key={file.id} className="relative space-y-2">
                   <div className="relative aspect-square rounded-lg overflow-hidden">
                     <img 
                       src={file.preview} 
-                      alt={`Preview ${index + 1}`}
+                      alt="Preview"
                       className="w-full h-full object-cover"
                     />
                     <Button
                       variant="destructive"
                       size="icon"
                       className="absolute top-2 right-2 h-6 w-6"
-                      onClick={() => removeFile(index)}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        removeFile(file.id);
+                      }}
                     >
                       <X className="h-4 w-4" />
                     </Button>
@@ -200,7 +263,7 @@ export default function GlobalPhotoUpload({ partyId, onClose, onUploadSuccess }:
                   <Input
                     placeholder="Add caption..."
                     value={file.caption}
-                    onChange={(e) => updateCaption(index, e.target.value)}
+                    onChange={(e) => updateCaption(file.id, e.target.value)}
                     className="text-sm"
                   />
                 </div>
@@ -218,8 +281,8 @@ export default function GlobalPhotoUpload({ partyId, onClose, onUploadSuccess }:
         </div>
 
         {/* Footer */}
-        <div className="sticky bottom-0 bg-card p-4 border-t space-y-4">
-          <div className="flex items-start gap-2">
+        <SheetFooter className="pt-4 border-t flex-col gap-4 sm:flex-col">
+          <div className="flex items-start gap-2 w-full">
             <Checkbox
               id="consent"
               checked={consentVerified}
@@ -230,13 +293,13 @@ export default function GlobalPhotoUpload({ partyId, onClose, onUploadSuccess }:
             </Label>
           </div>
 
-          <div className="flex gap-2">
+          <div className="flex gap-2 w-full">
             <Button variant="outline" onClick={handleClose} className="flex-1">
               Cancel
             </Button>
             <Button 
               onClick={handleUpload}
-              disabled={uploading || files.length === 0}
+              disabled={uploading || files.length === 0 || !consentVerified}
               className="flex-1 gradient-primary text-white"
             >
               {uploading ? (
@@ -252,8 +315,8 @@ export default function GlobalPhotoUpload({ partyId, onClose, onUploadSuccess }:
               )}
             </Button>
           </div>
-        </div>
-      </Card>
-    </div>
+        </SheetFooter>
+      </SheetContent>
+    </Sheet>
   );
 }
