@@ -1,14 +1,11 @@
 import { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
-import { PartyPopper, Plus, Flame, Calendar, Trophy, Sparkles, TrendingUp, Clock } from 'lucide-react';
+import { PartyPopper, Plus, Flame, Calendar, Clock, ArrowUpDown, Search } from 'lucide-react';
 import { base44, seedInitialData, type Party, type Fraternity, type PartyRating } from '@/api/base44Client';
-import PartyCard from '@/components/parties/PartyCard';
+import PartyRow from '@/components/parties/PartyRow';
 import PartyFilters from '@/components/parties/PartyFilters';
 import PartiesIntro from '@/components/onboarding/PartiesIntro';
 import CreatePartySheet from '@/components/parties/CreatePartySheet';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Badge } from '@/components/ui/badge';
-import { Card } from '@/components/ui/card';
 import { subDays, addDays, startOfDay, endOfDay } from 'date-fns';
 import { computeRawPartyQuality } from '@/utils/scoring';
 
@@ -25,7 +22,6 @@ export default function Parties() {
   const [partyRatingCounts, setPartyRatingCounts] = useState<Map<string, number>>(new Map());
   const [loading, setLoading] = useState(true);
   const [showIntro, setShowIntro] = useState(() => {
-    // Only show if not permanently dismissed
     return !localStorage.getItem('fratrank_parties_intro_never_show');
   });
   const [introShownThisVisit, setIntroShownThisVisit] = useState(false);
@@ -57,7 +53,6 @@ export default function Parties() {
       setParties(partiesData);
       setFraternities(fraternityData);
 
-      // Group ratings by party and track counts
       const partyRatingsMap = new Map<string, PartyRating[]>();
       const ratingCountsMap = new Map<string, number>();
       for (const rating of allPartyRatings) {
@@ -70,7 +65,6 @@ export default function Parties() {
       }
       setPartyRatingCounts(ratingCountsMap);
 
-      // Compute per-party RAW quality Q_p for display (no baseline blending)
       const perPartyScores = new Map<string, number>();
       for (const party of partiesData) {
         const ratings = partyRatingsMap.get(party.id) || [];
@@ -90,11 +84,9 @@ export default function Parties() {
     return frat ? frat.name : 'Unknown';
   };
 
-  // Determine party status based on current time, not stored status
   const getPartyStatus = (party: Party): 'live' | 'upcoming' | 'completed' => {
     const now = new Date();
     const start = new Date(party.starts_at);
-    // Default party duration: 5 hours if no end time specified
     const end = party.ends_at ? new Date(party.ends_at) : new Date(start.getTime() + 5 * 60 * 60 * 1000);
     
     if (now >= start && now <= end) {
@@ -108,36 +100,30 @@ export default function Parties() {
 
   const filterParties = (partiesList: Party[]) => {
     return partiesList.filter(party => {
-      // Fraternity filter
       if (filters.fraternity !== 'all' && party.fraternity_id !== filters.fraternity) {
         return false;
       }
 
-      // Type filter
       if (filters.type !== 'all' && party.theme?.toLowerCase() !== filters.type.toLowerCase()) {
         return false;
       }
 
-      // Timeframe filter - rolling window around today (includes past + future)
       if (filters.timeframe !== 'all') {
         const partyDate = new Date(party.starts_at);
         const now = new Date();
 
         switch (filters.timeframe) {
           case 'today':
-            // Today = within current local day
             const dayStart = startOfDay(now);
             const dayEnd = endOfDay(now);
             if (partyDate < dayStart || partyDate > dayEnd) return false;
             break;
           case 'week':
-            // Week = ±7 days from now
             const weekStart = subDays(now, 7);
             const weekEnd = addDays(now, 7);
             if (partyDate < weekStart || partyDate > weekEnd) return false;
             break;
           case 'month':
-            // Month = ±30 days from now
             const monthStart = subDays(now, 30);
             const monthEnd = addDays(now, 30);
             if (partyDate < monthStart || partyDate > monthEnd) return false;
@@ -152,12 +138,10 @@ export default function Parties() {
   const filteredParties = filterParties(parties);
   const liveParties = filteredParties.filter(p => getPartyStatus(p) === 'live');
   const upcomingParties = filteredParties.filter(p => getPartyStatus(p) === 'upcoming');
-  // Sort completed parties by Overall Party Quality (confidence-adjusted) descending
   const completedParties = filteredParties
     .filter(p => getPartyStatus(p) === 'completed')
     .sort((a, b) => (partyScores.get(b.id) ?? 0) - (partyScores.get(a.id) ?? 0));
 
-  // Stats
   const totalRatings = Array.from(partyRatingCounts.values()).reduce((a, b) => a + b, 0);
   const avgScore = partyScores.size > 0 
     ? Array.from(partyScores.values()).reduce((a, b) => a + b, 0) / partyScores.size 
@@ -165,84 +149,84 @@ export default function Parties() {
 
   if (loading) {
     return (
-      <div className="max-w-2xl mx-auto space-y-6">
-        <Skeleton className="h-48 w-full rounded-3xl" />
-        <Skeleton className="h-10 w-full rounded-lg" />
-        {[1, 2, 3, 4].map((i) => (
-          <Skeleton key={i} className="h-32 rounded-xl" />
-        ))}
+      <div className="space-y-6 px-4">
+        <div className="space-y-2">
+          <Skeleton className="h-8 w-32" />
+          <Skeleton className="h-4 w-24" />
+        </div>
+        <div className="flex gap-2">
+          {[1, 2, 3, 4].map((i) => (
+            <Skeleton key={i} className="h-9 w-16 rounded-full" />
+          ))}
+        </div>
+        <div className="space-y-1">
+          {[1, 2, 3, 4, 5, 6].map((i) => (
+            <div key={i} className="flex items-center gap-4 py-4">
+              <Skeleton className="h-12 w-12 rounded-lg" />
+              <div className="flex-1 space-y-2">
+                <Skeleton className="h-4 w-40" />
+                <Skeleton className="h-3 w-24" />
+              </div>
+              <Skeleton className="h-11 w-11 rounded-full" />
+            </div>
+          ))}
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="max-w-2xl mx-auto space-y-5 pb-20">
-      {/* HERO HEADER - Compact */}
-      <div className="relative overflow-hidden rounded-2xl gradient-primary p-4 text-primary-foreground shadow-lg">
-        {/* Background Effects */}
-        <div className="absolute inset-0 opacity-20">
-          <div className="absolute top-0 right-0 w-24 h-24 bg-white/30 rounded-full blur-2xl translate-x-6 -translate-y-6" />
-          <div className="absolute bottom-0 left-0 w-20 h-20 bg-white/30 rounded-full blur-2xl -translate-x-6 translate-y-6" />
-        </div>
-        
-        <div className="relative">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-white/20 backdrop-blur-sm flex items-center justify-center shrink-0">
-              <PartyPopper className="h-5 w-5" />
-            </div>
-            <div className="flex-1 min-w-0">
-              <h1 className="text-lg font-bold">Campus Parties</h1>
-              <p className="text-primary-foreground/80 text-xs">Discover and rate events</p>
-            </div>
-            {/* Inline Stats */}
-            <div className="flex gap-3 text-center">
-              <div className="px-2">
-                <p className="text-lg font-bold">{parties.length}</p>
-                <p className="text-[10px] opacity-70">Events</p>
-              </div>
-              <div className="px-2 border-l border-white/20">
-                <p className="text-lg font-bold">{totalRatings}</p>
-                <p className="text-[10px] opacity-70">Ratings</p>
-              </div>
-              <div className="px-2 border-l border-white/20">
-                <p className="text-lg font-bold">{avgScore > 0 ? avgScore.toFixed(1) : '—'}</p>
-                <p className="text-[10px] opacity-70">Avg</p>
-              </div>
-            </div>
+    <div className="pb-28">
+      {/* Header */}
+      <div className="px-4 pt-2">
+        <div className="flex items-center justify-between mb-1">
+          <div className="flex items-center gap-2">
+            <PartyPopper className="h-5 w-5 text-primary" />
+            <h1 className="text-xl font-bold">Campus Parties</h1>
+          </div>
+          <div className="flex gap-4 text-xs text-muted-foreground">
+            <span><strong className="text-foreground">{parties.length}</strong> events</span>
+            <span><strong className="text-foreground">{totalRatings}</strong> ratings</span>
+            <span><strong className="text-foreground">{avgScore > 0 ? avgScore.toFixed(1) : '—'}</strong> avg</span>
           </div>
         </div>
+        <p className="text-sm text-muted-foreground">Discover and rate events</p>
       </div>
 
-      {/* FILTERS - Styled Card */}
-      <Card className="bg-card border-border p-4">
+      {/* Filters */}
+      <div className="px-4 mt-4">
         <PartyFilters
           filters={filters}
           onFiltersChange={setFilters}
           fraternities={fraternities}
         />
-      </Card>
+      </div>
 
-      {/* LIVE PARTIES - Urgent Section */}
+      {/* Sort indicator */}
+      <div className="flex items-center justify-between px-4 mt-6 mb-2">
+        <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
+          <ArrowUpDown className="h-3.5 w-3.5" />
+          <span>Score</span>
+        </div>
+        <button className="p-2 -mr-2 text-muted-foreground hover:text-foreground transition-colors">
+          <Search className="h-4 w-4" />
+        </button>
+      </div>
+
+      {/* Divider */}
+      <div className="mx-4 border-t border-border" />
+
+      {/* LIVE PARTIES */}
       {liveParties.length > 0 && (
-        <Card className="bg-card border-border overflow-hidden">
-          <div className="gradient-primary p-4 flex items-center justify-between text-primary-foreground">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-white/20 flex items-center justify-center animate-pulse">
-                <Flame className="h-5 w-5" />
-              </div>
-              <div>
-                <h2 className="font-semibold flex items-center gap-2">
-                  LIVE NOW
-                  <span className="w-2 h-2 bg-white rounded-full animate-pulse" />
-                </h2>
-                <p className="text-xs opacity-80">Happening right now!</p>
-              </div>
-            </div>
+        <div className="px-4">
+          <div className="flex items-center gap-2 py-3">
+            <Flame className="h-4 w-4 text-red-500" />
+            <span className="text-sm font-semibold text-red-500">LIVE NOW</span>
+            <span className="w-2 h-2 bg-red-500 rounded-full animate-pulse" />
           </div>
-          <div className="p-4 space-y-3 bg-card">
-            {liveParties.map(party => (
-              <PartyCard
-                key={party.id}
+          {liveParties.map((party, index) => (
+            <div key={party.id}>
+              <PartyRow
                 party={party}
                 fraternityName={getFraternityName(party.fraternity_id)}
                 isLive
@@ -250,90 +234,83 @@ export default function Parties() {
                 overallPartyQuality={partyScores.get(party.id)}
                 ratingCount={partyRatingCounts.get(party.id) ?? 0}
               />
-            ))}
-          </div>
-        </Card>
+              {index < liveParties.length - 1 && (
+                <div className="border-t border-border/50" />
+              )}
+            </div>
+          ))}
+          <div className="border-t border-border mt-2" />
+        </div>
       )}
 
       {/* UPCOMING PARTIES */}
       {upcomingParties.length > 0 && (
-        <Card className="bg-card border-border overflow-hidden">
-          <div className="gradient-secondary p-4 flex items-center gap-3 text-primary-foreground">
-            <div className="w-10 h-10 rounded-xl bg-white/20 flex items-center justify-center">
-              <Calendar className="h-5 w-5" />
-            </div>
-            <div>
-              <h2 className="font-semibold">Upcoming Events</h2>
-              <p className="text-xs opacity-80">{upcomingParties.length} {upcomingParties.length === 1 ? 'party' : 'parties'} scheduled</p>
-            </div>
+        <div className="px-4">
+          <div className="flex items-center gap-2 py-3">
+            <Calendar className="h-4 w-4 text-primary" />
+            <span className="text-sm font-semibold">Upcoming</span>
+            <span className="text-xs text-muted-foreground">({upcomingParties.length})</span>
           </div>
-          <div className="p-4 space-y-3 bg-card">
-            {upcomingParties.map(party => (
-              <PartyCard
-                key={party.id}
+          {upcomingParties.map((party, index) => (
+            <div key={party.id}>
+              <PartyRow
                 party={party}
                 fraternityName={getFraternityName(party.fraternity_id)}
                 computedStatus="upcoming"
                 overallPartyQuality={partyScores.get(party.id)}
                 ratingCount={partyRatingCounts.get(party.id) ?? 0}
               />
-            ))}
-          </div>
-        </Card>
+              {index < upcomingParties.length - 1 && (
+                <div className="border-t border-border/50" />
+              )}
+            </div>
+          ))}
+          <div className="border-t border-border mt-2" />
+        </div>
       )}
 
-      {/* COMPLETED/PAST PARTIES */}
+      {/* COMPLETED PARTIES */}
       {completedParties.length > 0 && (
-        <Card className="bg-card border-border overflow-hidden">
-          <div className="bg-secondary p-4 flex items-center justify-between text-secondary-foreground">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-white/20 flex items-center justify-center">
-                <Clock className="h-5 w-5" />
-              </div>
-              <div>
-                <h2 className="font-semibold">Party History</h2>
-                <p className="text-xs opacity-80">{completedParties.length} completed {completedParties.length === 1 ? 'event' : 'events'}</p>
-              </div>
-            </div>
-            <div className="text-right">
-              <p className="text-lg font-bold">{partyScores.size}</p>
-              <p className="text-xs opacity-80">Rated</p>
-            </div>
+        <div className="px-4">
+          <div className="flex items-center gap-2 py-3">
+            <Clock className="h-4 w-4 text-muted-foreground" />
+            <span className="text-sm font-semibold">Past Events</span>
+            <span className="text-xs text-muted-foreground">({completedParties.length})</span>
           </div>
-          <div className="p-4 space-y-3 bg-card">
-            {completedParties.map(party => (
-              <PartyCard
-                key={party.id}
+          {completedParties.map((party, index) => (
+            <div key={party.id}>
+              <PartyRow
                 party={party}
                 fraternityName={getFraternityName(party.fraternity_id)}
                 computedStatus="completed"
                 overallPartyQuality={partyScores.get(party.id)}
                 ratingCount={partyRatingCounts.get(party.id) ?? 0}
               />
-            ))}
-          </div>
-        </Card>
+              {index < completedParties.length - 1 && (
+                <div className="border-t border-border/50" />
+              )}
+            </div>
+          ))}
+        </div>
       )}
 
       {filteredParties.length === 0 && (
-        <Card className="bg-card border-border p-8 text-center">
-          <div className="w-16 h-16 mx-auto mb-4 rounded-2xl bg-muted flex items-center justify-center">
-            <PartyPopper className="h-8 w-8 text-muted-foreground/50" />
-          </div>
+        <div className="px-4 py-12 text-center">
+          <PartyPopper className="h-8 w-8 mx-auto text-muted-foreground/50 mb-3" />
           <p className="font-medium text-muted-foreground">No parties found</p>
           <p className="text-sm text-muted-foreground/70 mt-1">Try adjusting your filters</p>
-        </Card>
+        </div>
       )}
 
       {/* Floating Host Button */}
       {!(showIntro && !introShownThisVisit) && (
         <button
           onClick={() => setShowCreateSheet(true)}
-          className="fixed bottom-24 right-4 z-50 flex items-center gap-2 px-5 py-3 rounded-full gradient-primary text-primary-foreground shadow-lg active:scale-95 transition-transform hover:shadow-xl"
+          className="fixed bottom-24 right-4 z-50 flex items-center gap-2 px-5 py-3 rounded-full bg-foreground text-background shadow-lg active:scale-95 transition-transform hover:shadow-xl"
           style={{ marginBottom: 'env(safe-area-inset-bottom)' }}
         >
           <Plus className="h-5 w-5" />
-          <span className="font-semibold">Host</span>
+          <span className="font-bold">Host</span>
         </button>
       )}
 
@@ -348,7 +325,6 @@ export default function Parties() {
       {showIntro && !introShownThisVisit && (
         <PartiesIntro 
           onComplete={(neverShowAgain) => {
-            // Mark as shown this visit (so it won't reappear if they go to CreateParty and back)
             setIntroShownThisVisit(true);
             if (neverShowAgain) {
               localStorage.setItem('fratrank_parties_intro_never_show', 'true');
