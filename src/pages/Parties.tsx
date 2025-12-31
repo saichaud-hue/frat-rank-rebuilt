@@ -358,7 +358,11 @@ export default function Parties() {
               localStorage.setItem('fratrank_parties_intro_never_show', 'true');
               setShowIntro(false);
             }
-          }} 
+          }}
+          onSubmitParty={() => {
+            setIntroShownThisVisit(true);
+            setShowCreateSheet(true);
+          }}
         />
       )}
     </div>
