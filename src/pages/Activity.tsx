@@ -217,14 +217,6 @@ export default function Activity() {
     return saved ? parseInt(saved, 10) : 0;
   });
   
-  // DEMO: Toggle new posts every 5 seconds to show animation
-  useEffect(() => {
-    const interval = setInterval(() => {
-      setNewPostsCount(prev => prev >= 3 ? 0 : 5);
-    }, 5000);
-    return () => clearInterval(interval);
-  }, []);
-  
   // "All caught up" state
   const [showCaughtUp, setShowCaughtUp] = useState(false);
   const [caughtUpClaimed, setCaughtUpClaimed] = useState(false);
