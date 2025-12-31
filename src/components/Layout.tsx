@@ -159,7 +159,7 @@ export default function Layout({ children }: LayoutProps) {
             {nextParty && (
               <Link 
                 to={`/Party?id=${nextParty.id}`}
-                className="flex-1 min-w-0 rounded-xl overflow-hidden px-3 py-1.5 flex items-center justify-between gap-2 bg-amber-900"
+                className="flex-1 min-w-0 rounded-xl overflow-hidden px-3 py-1.5 flex items-center justify-between gap-2 bg-secondary"
               >
                 <div className="min-w-0 flex-1">
                   <p className="text-[10px] text-white/80 font-medium uppercase tracking-wide leading-none">Next Up</p>
