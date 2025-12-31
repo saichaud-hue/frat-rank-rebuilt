@@ -1560,8 +1560,8 @@ export default function Activity() {
         </DialogContent>
       </Dialog>
 
-      {/* Frat Ranking Picker Sheet */}
-      <Sheet open={showFratRankingPicker} onOpenChange={(open) => {
+      {/* Frat Ranking Picker Dialog */}
+      <Dialog open={showFratRankingPicker} onOpenChange={(open) => {
         setShowFratRankingPicker(open);
         if (!open) {
           setShowFratBattleGame(false);
@@ -1569,7 +1569,7 @@ export default function Activity() {
           setExpandedTiers({});
         }
       }}>
-        <SheetContent side="bottom" className="h-auto max-h-[85vh] rounded-t-3xl">
+        <DialogContent className="max-w-lg mx-auto rounded-2xl max-h-[85vh] overflow-y-auto">
           {showFratBattleGame ? (
             <FratBattleGame
               fraternities={fraternities}
@@ -1905,15 +1905,15 @@ export default function Activity() {
               );
             })()
           )}
-        </SheetContent>
-      </Sheet>
+        </DialogContent>
+      </Dialog>
 
-      {/* Mention Picker Sheet */}
-      <Sheet open={showMentionPicker} onOpenChange={setShowMentionPicker}>
-        <SheetContent side="bottom" className="h-[60vh] rounded-t-3xl">
-          <SheetHeader className="pb-4">
-            <SheetTitle>Tag something</SheetTitle>
-          </SheetHeader>
+      {/* Mention Picker Dialog */}
+      <Dialog open={showMentionPicker} onOpenChange={setShowMentionPicker}>
+        <DialogContent className="max-w-md mx-auto rounded-2xl max-h-[60vh] flex flex-col">
+          <DialogHeader className="pb-4">
+            <DialogTitle>Tag something</DialogTitle>
+          </DialogHeader>
           <div className="flex gap-2 mb-4">
             <Button
               variant={mentionType === 'frat' ? 'default' : 'outline'}
@@ -2000,26 +2000,26 @@ export default function Activity() {
               })()}
             </div>
           </ScrollArea>
-        </SheetContent>
-      </Sheet>
+        </DialogContent>
+      </Dialog>
 
-      {/* Comments Sheet */}
-      <Sheet open={!!commentsSheetItem} onOpenChange={(open) => {
+      {/* Comments Dialog */}
+      <Dialog open={!!commentsSheetItem} onOpenChange={(open) => {
         if (!open) {
           setCommentsSheetItem(null);
           setReplyText('');
         }
       }}>
-        <SheetContent side="bottom" className="h-[70vh] rounded-t-3xl flex flex-col">
-          <SheetHeader className="pb-4 shrink-0">
-            <SheetTitle className="flex items-center gap-2">
+        <DialogContent className="max-w-md mx-auto rounded-2xl max-h-[70vh] flex flex-col">
+          <DialogHeader className="pb-4 shrink-0">
+            <DialogTitle className="flex items-center gap-2">
               <MessageCircle className="h-5 w-5" />
               Comments
               {commentsSheetItem?.replies && commentsSheetItem.replies.length > 0 && (
                 <Badge variant="secondary">{commentsSheetItem.replies.length}</Badge>
               )}
-            </SheetTitle>
-          </SheetHeader>
+            </DialogTitle>
+          </DialogHeader>
           
           {/* Original message preview */}
           {commentsSheetItem && (
@@ -2093,8 +2093,8 @@ export default function Activity() {
               )}
             </Button>
           </div>
-        </SheetContent>
-      </Sheet>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
