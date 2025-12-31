@@ -1745,142 +1745,119 @@ export default function Activity() {
               
               return (
                 <>
-                  <DialogHeader className="pb-3 space-y-1">
-                    <DialogTitle className="flex items-center gap-2 text-base">
-                      <Trophy className="h-4 w-4 text-amber-500" />
-                      Create Frat Ranking
-                    </DialogTitle>
-                    <DialogDescription className="text-xs">
+                  <DialogHeader className="pb-4 border-b border-border">
+                    <DialogTitle className="text-lg font-semibold">Create Frat Ranking</DialogTitle>
+                    <DialogDescription className="text-sm text-muted-foreground">
                       Fill in your tier list - this is just for sharing, doesn't affect ratings
                     </DialogDescription>
                   </DialogHeader>
                   
-                  <div className="space-y-3">
-                    {/* Battle Game CTA */}
+                  <div className="divide-y divide-border">
+                    {/* Battle Game Row */}
                     <button
                       onClick={() => setShowFratBattleGame(true)}
-                      className="w-full p-3 rounded-xl bg-gradient-to-r from-amber-500/20 via-orange-500/20 to-red-500/20 border border-amber-500/40 hover:border-amber-500 transition-all group"
+                      className="w-full py-4 flex items-center gap-4 text-left hover:bg-muted/50 transition-colors active:bg-muted"
                     >
-                      <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-amber-500 to-orange-500 flex items-center justify-center text-white shrink-0 group-hover:scale-105 transition-transform">
-                          <Swords className="h-5 w-5" />
-                        </div>
-                        <div className="text-left flex-1">
-                          <p className="font-semibold text-sm">Play Frat Battle!</p>
-                          <p className="text-xs text-muted-foreground leading-tight">Pick winners in 10 head-to-head matchups to generate your ranking</p>
-                        </div>
+                      <div className="w-10 h-10 rounded-full bg-amber-500 flex items-center justify-center text-white shrink-0">
+                        <Swords className="h-5 w-5" />
                       </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="font-semibold text-foreground">Play Frat Battle</p>
+                        <p className="text-sm text-muted-foreground">10 head-to-head matchups generate your ranking</p>
+                      </div>
+                      <ChevronRight className="h-5 w-5 text-muted-foreground shrink-0" />
                     </button>
                     
-                    {/* Share Past Battles */}
-                    {savedBattleRankings.length > 0 && (
-                      <div className="p-3 rounded-xl bg-amber-500/10 border border-amber-500/20">
-                        <div className="flex items-center gap-2 mb-2">
-                          <Swords className="h-3.5 w-3.5 text-amber-500" />
-                          <p className="font-medium text-xs">Share Past Battles</p>
+                    {/* Past Battles - as simple list rows */}
+                    {savedBattleRankings.slice(0, 3).map((saved: { id: string; date: string; ranking: { tier: string; fratName: string; wins: number }[] }) => (
+                      <div key={saved.id} className="py-3 flex items-center gap-3">
+                        <div className="w-8 h-8 rounded-full bg-amber-500/10 flex items-center justify-center shrink-0">
+                          <Swords className="h-4 w-4 text-amber-500" />
                         </div>
-                        <div className="space-y-1.5">
-                          {savedBattleRankings.slice(0, 3).map((saved: { id: string; date: string; ranking: { tier: string; fratName: string; wins: number }[] }) => (
-                            <div key={saved.id} className="flex items-center gap-2 p-2 rounded-lg bg-background/50 border border-border">
-                              <div className="flex-1 min-w-0">
-                                <p className="text-[10px] text-muted-foreground">{format(new Date(saved.date), 'MMM d, h:mm a')}</p>
-                                <p className="text-xs font-medium truncate">
-                                  {saved.ranking.slice(0, 3).map(r => r.fratName).join(' → ')}...
-                                </p>
-                              </div>
-                              <Button
-                                size="sm"
-                                variant="outline"
-                                className="shrink-0 rounded-md text-[10px] h-7 px-2 border-amber-500/50 text-amber-600 hover:bg-amber-500/10"
-                                onClick={() => {
-                                  const fullRanking: Record<string, Fraternity | null> = {
-                                    'Upper Touse': null, 'Touse': null, 'Lower Touse': null,
-                                    'Upper Mouse': null, 'Mouse 1': null, 'Mouse 2': null, 'Lower Mouse': null,
-                                    'Upper Bouse': null, 'Bouse': null, 'Lower Bouse': null,
-                                  };
-                                  saved.ranking.forEach((r: { tier: string; fratName: string }) => {
-                                    const frat = fraternities.find(f => f.name === r.fratName);
-                                    if (frat && r.tier in fullRanking) {
-                                      fullRanking[r.tier] = frat;
-                                    }
-                                  });
-                                  setFratRanking(fullRanking);
-                                  setShowFratRankingPicker(false);
-                                  setShowChatComposer(true);
-                                }}
-                              >
-                                <Send className="h-3 w-3 mr-1" />
-                                Share
-                              </Button>
-                            </div>
-                          ))}
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-medium text-foreground truncate">
+                            {saved.ranking.slice(0, 3).map(r => r.fratName).join(' → ')}...
+                          </p>
+                          <p className="text-xs text-muted-foreground">{format(new Date(saved.date), 'MMM d, h:mm a')}</p>
                         </div>
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          className="shrink-0 text-amber-600 hover:text-amber-700 hover:bg-amber-500/10"
+                          onClick={() => {
+                            const fullRanking: Record<string, Fraternity | null> = {
+                              'Upper Touse': null, 'Touse': null, 'Lower Touse': null,
+                              'Upper Mouse': null, 'Mouse 1': null, 'Mouse 2': null, 'Lower Mouse': null,
+                              'Upper Bouse': null, 'Bouse': null, 'Lower Bouse': null,
+                            };
+                            saved.ranking.forEach((r: { tier: string; fratName: string }) => {
+                              const frat = fraternities.find(f => f.name === r.fratName);
+                              if (frat && r.tier in fullRanking) {
+                                fullRanking[r.tier] = frat;
+                              }
+                            });
+                            setFratRanking(fullRanking);
+                            setShowFratRankingPicker(false);
+                            setShowChatComposer(true);
+                          }}
+                        >
+                          <Send className="h-4 w-4" />
+                        </Button>
                       </div>
-                    )}
+                    ))}
                     
-                    <p className="text-xs text-muted-foreground text-center py-1">— or —</p>
-                    
-                    {/* Pick Manually CTA */}
+                    {/* Pick Manually Row */}
                     <button
                       onClick={() => setShowManualPicker(true)}
-                      className="w-full p-3 rounded-xl bg-gradient-to-r from-green-500/20 via-emerald-500/20 to-teal-500/20 border border-green-500/40 hover:border-green-500 transition-all group"
+                      className="w-full py-4 flex items-center gap-4 text-left hover:bg-muted/50 transition-colors active:bg-muted"
                     >
-                      <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-green-500 to-emerald-500 flex items-center justify-center text-white shrink-0 group-hover:scale-105 transition-transform">
-                          <Trophy className="h-5 w-5" />
-                        </div>
-                        <div className="text-left flex-1">
-                          <p className="font-semibold text-sm">Pick Manually</p>
-                          <p className="text-xs text-muted-foreground leading-tight">Select a frat for each tier position yourself</p>
-                        </div>
+                      <div className="w-10 h-10 rounded-full bg-emerald-500 flex items-center justify-center text-white shrink-0">
+                        <Trophy className="h-5 w-5" />
                       </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="font-semibold text-foreground">Pick Manually</p>
+                        <p className="text-sm text-muted-foreground">Select a frat for each tier position</p>
+                      </div>
+                      <ChevronRight className="h-5 w-5 text-muted-foreground shrink-0" />
                     </button>
                     
-                    {/* Share Past Manual Choices */}
-                    {savedManualRankings.length > 0 && (
-                      <div className="p-3 rounded-xl bg-green-500/10 border border-green-500/20">
-                        <div className="flex items-center gap-2 mb-2">
-                          <Trophy className="h-3.5 w-3.5 text-green-500" />
-                          <p className="font-medium text-xs">Share Past Manual Choices</p>
+                    {/* Past Manual Choices - as simple list rows */}
+                    {savedManualRankings.slice(0, 3).map((saved: { id: string; date: string; ranking: { tier: string; fratName: string }[] }) => (
+                      <div key={saved.id} className="py-3 flex items-center gap-3">
+                        <div className="w-8 h-8 rounded-full bg-emerald-500/10 flex items-center justify-center shrink-0">
+                          <Trophy className="h-4 w-4 text-emerald-500" />
                         </div>
-                        <div className="space-y-1.5">
-                          {savedManualRankings.slice(0, 3).map((saved: { id: string; date: string; ranking: { tier: string; fratName: string }[] }) => (
-                            <div key={saved.id} className="flex items-center gap-2 p-2 rounded-lg bg-background/50 border border-border">
-                              <div className="flex-1 min-w-0">
-                                <p className="text-[10px] text-muted-foreground">{format(new Date(saved.date), 'MMM d, h:mm a')}</p>
-                                <p className="text-xs font-medium truncate">
-                                  {saved.ranking.slice(0, 3).map(r => r.fratName).join(' → ')}...
-                                </p>
-                              </div>
-                              <Button
-                                size="sm"
-                                variant="outline"
-                                className="shrink-0 rounded-md text-[10px] h-7 px-2 border-green-500/50 text-green-600 hover:bg-green-500/10"
-                                onClick={() => {
-                                  const fullRanking: Record<string, Fraternity | null> = {
-                                    'Upper Touse': null, 'Touse': null, 'Lower Touse': null,
-                                    'Upper Mouse': null, 'Mouse 1': null, 'Mouse 2': null, 'Lower Mouse': null,
-                                    'Upper Bouse': null, 'Bouse': null, 'Lower Bouse': null,
-                                  };
-                                  saved.ranking.forEach((r: { tier: string; fratName: string }) => {
-                                    const frat = fraternities.find(f => f.name === r.fratName);
-                                    if (frat && r.tier in fullRanking) {
-                                      fullRanking[r.tier] = frat;
-                                    }
-                                  });
-                                  setFratRanking(fullRanking);
-                                  setShowFratRankingPicker(false);
-                                  setShowChatComposer(true);
-                                }}
-                              >
-                                <Send className="h-3 w-3 mr-1" />
-                                Share
-                              </Button>
-                            </div>
-                          ))}
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-medium text-foreground truncate">
+                            {saved.ranking.slice(0, 3).map(r => r.fratName).join(' → ')}...
+                          </p>
+                          <p className="text-xs text-muted-foreground">{format(new Date(saved.date), 'MMM d, h:mm a')}</p>
                         </div>
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          className="shrink-0 text-emerald-600 hover:text-emerald-700 hover:bg-emerald-500/10"
+                          onClick={() => {
+                            const fullRanking: Record<string, Fraternity | null> = {
+                              'Upper Touse': null, 'Touse': null, 'Lower Touse': null,
+                              'Upper Mouse': null, 'Mouse 1': null, 'Mouse 2': null, 'Lower Mouse': null,
+                              'Upper Bouse': null, 'Bouse': null, 'Lower Bouse': null,
+                            };
+                            saved.ranking.forEach((r: { tier: string; fratName: string }) => {
+                              const frat = fraternities.find(f => f.name === r.fratName);
+                              if (frat && r.tier in fullRanking) {
+                                fullRanking[r.tier] = frat;
+                              }
+                            });
+                            setFratRanking(fullRanking);
+                            setShowFratRankingPicker(false);
+                            setShowChatComposer(true);
+                          }}
+                        >
+                          <Send className="h-4 w-4" />
+                        </Button>
                       </div>
-                    )}
+                    ))}
                   </div>
                 </>
               );
