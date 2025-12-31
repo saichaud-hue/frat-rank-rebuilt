@@ -331,22 +331,21 @@ export default function Profile() {
             </div>
           </div>
 
-          {/* Quick Stats */}
-          <div className="grid grid-cols-3 gap-3 mt-4">
-            <div className="text-center p-3 rounded-xl bg-white/10 backdrop-blur-sm">
-              <PartyPopper className="h-5 w-5 mx-auto mb-1 opacity-80" />
-              <p className="text-xl font-bold">{stats.partyRatings}</p>
-              <p className="text-xs opacity-80">Parties</p>
+          {/* Streak & Rank Stats */}
+          <div className="grid grid-cols-2 gap-3 mt-4">
+            <div className="p-4 rounded-xl bg-white/10 backdrop-blur-sm">
+              <div className="flex items-center gap-2 mb-1">
+                <Trophy className="h-4 w-4 opacity-80" />
+                <span className="text-xs opacity-80">Rank on Touse</span>
+              </div>
+              <p className="text-2xl font-bold">#{user.rank || '—'}</p>
             </div>
-            <div className="text-center p-3 rounded-xl bg-white/10 backdrop-blur-sm">
-              <Trophy className="h-5 w-5 mx-auto mb-1 opacity-80" />
-              <p className="text-xl font-bold">{stats.fratRatings}</p>
-              <p className="text-xs opacity-80">Frats</p>
-            </div>
-            <div className="text-center p-3 rounded-xl bg-white/10 backdrop-blur-sm">
-              <MessageCircle className="h-5 w-5 mx-auto mb-1 opacity-80" />
-              <p className="text-xl font-bold">{stats.comments}</p>
-              <p className="text-xs opacity-80">Comments</p>
+            <div className="p-4 rounded-xl bg-white/10 backdrop-blur-sm">
+              <div className="flex items-center gap-2 mb-1">
+                <Flame className="h-4 w-4 opacity-80" />
+                <span className="text-xs opacity-80">Current Streak</span>
+              </div>
+              <p className="text-2xl font-bold">{user.streak || 0} <span className="text-sm font-normal opacity-80">days</span></p>
             </div>
           </div>
         </div>
