@@ -166,19 +166,16 @@ export default function Layout({ children }: LayoutProps) {
                 <p className="text-sm font-semibold text-white truncate">{nextParty.title}</p>
                 <span className="text-white/50 shrink-0">•</span>
                 
-                {/* Countdown with days support */}
-                <div className="flex items-center gap-0.5 text-white shrink-0">
+                {/* Simple countdown - days and hours only */}
+                <div className="flex items-center gap-1 text-white shrink-0">
                   {countdown.days > 0 && (
                     <>
                       <span className="text-sm font-bold tabular-nums">{countdown.days}</span>
-                      <span className="text-xs opacity-60 mr-1">d</span>
+                      <span className="text-xs opacity-70">d</span>
                     </>
                   )}
-                  <span className="text-sm font-bold tabular-nums">{countdown.hours.toString().padStart(2, '0')}</span>
-                  <span className="text-xs opacity-60">:</span>
-                  <span className="text-sm font-bold tabular-nums">{countdown.minutes.toString().padStart(2, '0')}</span>
-                  <span className="text-xs opacity-60">:</span>
-                  <span className="text-sm font-bold tabular-nums">{countdown.seconds.toString().padStart(2, '0')}</span>
+                  <span className="text-sm font-bold tabular-nums">{countdown.hours}</span>
+                  <span className="text-xs opacity-70">h</span>
                 </div>
                 
                 <ChevronRight className="h-4 w-4 text-white/60 shrink-0" />
