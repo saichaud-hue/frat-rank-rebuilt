@@ -113,6 +113,7 @@ export default function Activity() {
   const [showMentionPicker, setShowMentionPicker] = useState(false);
   const [mentionType, setMentionType] = useState<'frat' | 'party' | null>(null);
   const [selectedMention, setSelectedMention] = useState<{ type: 'frat' | 'party'; id: string; name: string } | null>(null);
+  const [chatInputEnabled, setChatInputEnabled] = useState(false);
   
   // Frat ranking post mode
   const [showFratRankingPicker, setShowFratRankingPicker] = useState(false);
@@ -1387,7 +1388,8 @@ export default function Activity() {
       <Sheet open={showChatComposer} onOpenChange={(open) => {
         setShowChatComposer(open);
         if (!open) {
-          // Reset frat ranking when closing
+          // Reset states when closing
+          setChatInputEnabled(false);
           setFratRanking({
             'Upper Touse': null,
             'Touse': null,
@@ -1455,12 +1457,11 @@ export default function Activity() {
               onChange={(e) => setChatText(e.target.value)}
               placeholder={Object.values(fratRanking).some(Boolean) ? "Add a comment to your ranking (optional)..." : "Share what's happening..."}
               className="min-h-[120px] text-base rounded-xl resize-none"
-              tabIndex={-1}
-              onFocus={(e) => e.target.blur()}
-              onClick={(e) => {
-                const target = e.target as HTMLTextAreaElement;
-                target.removeAttribute('tabindex');
-                target.focus();
+              readOnly={!chatInputEnabled}
+              onClick={() => {
+                if (!chatInputEnabled) {
+                  setChatInputEnabled(true);
+                }
               }}
             />
             
