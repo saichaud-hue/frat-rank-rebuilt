@@ -1008,12 +1008,12 @@ export default function Activity() {
 
       {/* All Move Options Sheet */}
       <Sheet open={showAllMoveOptions} onOpenChange={setShowAllMoveOptions}>
-        <SheetContent side="bottom" className="rounded-t-3xl max-h-[85vh]" style={{ paddingBottom: 'max(env(safe-area-inset-bottom), 16px)' }}>
-          <SheetHeader className="pb-4 text-left">
+        <SheetContent side="bottom" className="rounded-t-3xl h-[85vh] flex flex-col" style={{ paddingBottom: 'max(env(safe-area-inset-bottom), 16px)' }}>
+          <SheetHeader className="pb-4 text-left shrink-0">
             <SheetTitle>What's the move tonight?</SheetTitle>
           </SheetHeader>
           
-          <ScrollArea className="flex-1 -mx-6 px-6" style={{ maxHeight: 'calc(85vh - 120px)' }}>
+          <ScrollArea className="flex-1 -mx-6 px-6 overflow-y-auto">
             <div className="space-y-2 pb-4">
               {/* Tonight's parties */}
               {tonightsParties.map((party) => {
