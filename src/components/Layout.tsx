@@ -155,14 +155,14 @@ export default function Layout({ children }: LayoutProps) {
               <span className="text-xl font-bold text-white">Touse</span>
             </Link>
             
-            {/* Center: Next Up Party Banner - Black */}
+            {/* Center: Next Up Party - No box, just text */}
             {nextParty && (
               <Link 
                 to={`/Party?id=${nextParty.id}`}
-                className="flex-1 min-w-0 rounded-xl overflow-hidden px-3 py-1.5 flex items-center justify-between gap-2 bg-primary"
+                className="flex-1 min-w-0 flex items-center justify-center gap-3"
               >
-                <div className="min-w-0 flex-1">
-                  <p className="text-[10px] text-white/80 font-medium uppercase tracking-wide leading-none">Next Up</p>
+                <div className="min-w-0 text-center">
+                  <p className="text-[10px] text-white/70 font-medium uppercase tracking-wide leading-none">Next Up</p>
                   <p className="text-sm font-bold text-white truncate leading-tight">{nextParty.title}</p>
                 </div>
                 
