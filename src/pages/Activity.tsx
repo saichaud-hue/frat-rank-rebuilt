@@ -131,12 +131,36 @@ export default function Activity() {
   const [fraternities, setFraternities] = useState<Fraternity[]>([]);
   const [parties, setParties] = useState<Party[]>([]);
 
-  // What's the move tonight - voting
-  const [moveVotes, setMoveVotes] = useState<Record<string, number>>({});
-  const [userMoveVote, setUserMoveVote] = useState<string | null>(null);
+  // Generate/retrieve unique user ID for individual voting
+  const [userId] = useState<string>(() => {
+    const existing = localStorage.getItem('touse_user_id');
+    if (existing) return existing;
+    const newId = `user-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+    localStorage.setItem('touse_user_id', newId);
+    return newId;
+  });
+
+  // What's the move tonight - voting (stores all user votes)
+  const [allUserVotes, setAllUserVotes] = useState<Record<string, string>>(() => {
+    // Check if we need to reset (daily at 5 AM)
+    const now = new Date();
+    const today5AM = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 5, 0, 0);
+    const lastReset = localStorage.getItem('touse_move_last_reset');
+    const lastResetDate = lastReset ? new Date(lastReset) : null;
+    
+    if (now >= today5AM && (!lastResetDate || lastResetDate < today5AM)) {
+      localStorage.removeItem('touse_all_user_votes');
+      localStorage.setItem('touse_move_last_reset', now.toISOString());
+      return {};
+    }
+    
+    const saved = localStorage.getItem('touse_all_user_votes');
+    return saved ? JSON.parse(saved) : {};
+  });
+  
   const [showSuggestionInput, setShowSuggestionInput] = useState(false);
   const [suggestionText, setSuggestionText] = useState('');
-  const [customSuggestions, setCustomSuggestions] = useState<{ id: string; text: string; votes: number }[]>(() => {
+  const [customSuggestions, setCustomSuggestions] = useState<{ id: string; text: string }[]>(() => {
     // Check if we need to reset (daily at 5 AM)
     const now = new Date();
     const today5AM = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 5, 0, 0);
@@ -153,6 +177,18 @@ export default function Activity() {
     const saved = localStorage.getItem('touse_custom_move_suggestions');
     return saved ? JSON.parse(saved) : [];
   });
+  
+  // Derive current user's vote from allUserVotes
+  const userMoveVote = allUserVotes[userId] || null;
+  
+  // Calculate vote counts from all user votes
+  const moveVotes = useMemo(() => {
+    const counts: Record<string, number> = {};
+    Object.values(allUserVotes).forEach(optionId => {
+      counts[optionId] = (counts[optionId] || 0) + 1;
+    });
+    return counts;
+  }, [allUserVotes]);
   
   // Countdown timer
   const [countdownTime, setCountdownTime] = useState<{ days: number; hours: number; minutes: number; seconds: number } | null>(null);
@@ -565,36 +601,41 @@ export default function Activity() {
   };
 
   // Handle voting for "What's the move"
-  const handleMoveVote = async (partyId: string) => {
+  // Helper to update votes and persist to localStorage
+  const updateUserVote = (optionId: string | null) => {
+    const newVotes = { ...allUserVotes };
+    if (optionId === null) {
+      delete newVotes[userId];
+    } else {
+      newVotes[userId] = optionId;
+    }
+    setAllUserVotes(newVotes);
+    localStorage.setItem('touse_all_user_votes', JSON.stringify(newVotes));
+  };
+
+  const handleMoveVote = async (optionId: string) => {
     const user = await base44.auth.me();
     if (!user) {
       toast({ title: 'Please sign in to vote', variant: 'destructive' });
       return;
     }
 
-    if (userMoveVote === partyId) {
-      setUserMoveVote(null);
-      setMoveVotes(prev => ({ ...prev, [partyId]: Math.max(0, (prev[partyId] || 1) - 1) }));
+    if (userMoveVote === optionId) {
+      // Unvote
+      updateUserVote(null);
     } else {
-      if (userMoveVote) {
-        setMoveVotes(prev => ({ ...prev, [userMoveVote!]: Math.max(0, (prev[userMoveVote!] || 1) - 1) }));
-      }
-      setUserMoveVote(partyId);
-      setMoveVotes(prev => ({ ...prev, [partyId]: (prev[partyId] || 0) + 1 }));
+      // Vote for this option
+      updateUserVote(optionId);
     }
   };
 
   const handleCustomSuggestionVote = (suggestionId: string) => {
     if (userMoveVote === suggestionId) {
-      setUserMoveVote(null);
-      setCustomSuggestions(prev => prev.map(s => s.id === suggestionId ? { ...s, votes: Math.max(0, s.votes - 1) } : s));
+      // Unvote
+      updateUserVote(null);
     } else {
-      if (userMoveVote) {
-        setMoveVotes(prev => ({ ...prev, [userMoveVote!]: Math.max(0, (prev[userMoveVote!] || 1) - 1) }));
-        setCustomSuggestions(prev => prev.map(s => s.id === userMoveVote ? { ...s, votes: Math.max(0, s.votes - 1) } : s));
-      }
-      setUserMoveVote(suggestionId);
-      setCustomSuggestions(prev => prev.map(s => s.id === suggestionId ? { ...s, votes: s.votes + 1 } : s));
+      // Vote for this suggestion
+      updateUserVote(suggestionId);
     }
   };
 
@@ -619,18 +660,15 @@ export default function Activity() {
     let selectedId: string;
     
     if (existingIndex !== -1) {
-      // Merge with existing - add a vote to the existing suggestion
-      updatedSuggestions = customSuggestions.map((s, i) => 
-        i === existingIndex ? { ...s, votes: s.votes + 1 } : s
-      );
+      // Merge with existing - vote for the existing suggestion
       selectedId = customSuggestions[existingIndex].id;
+      updatedSuggestions = customSuggestions;
       toast({ title: 'Vote added to existing suggestion!' });
     } else {
       // Create new suggestion
       const newSuggestion = {
         id: `custom-${Date.now()}`,
-        text: suggestionText.trim(),
-        votes: 1
+        text: suggestionText.trim()
       };
       updatedSuggestions = [...customSuggestions, newSuggestion];
       selectedId = newSuggestion.id;
@@ -639,16 +677,14 @@ export default function Activity() {
     
     setCustomSuggestions(updatedSuggestions);
     localStorage.setItem('touse_custom_move_suggestions', JSON.stringify(updatedSuggestions));
-    setUserMoveVote(selectedId);
+    updateUserVote(selectedId);
     setSuggestionText('');
     setShowSuggestionInput(false);
   };
 
   const totalMoveVotes = useMemo(() => {
-    const partyVotes = Object.values(moveVotes).reduce((a, b) => a + b, 0);
-    const suggestionVotes = customSuggestions.reduce((a, s) => a + s.votes, 0);
-    return partyVotes + suggestionVotes;
-  }, [moveVotes, customSuggestions]);
+    return Object.keys(allUserVotes).length;
+  }, [allUserVotes]);
 
   // Combine all feed items (chat + activities) sorted by date
   const feedItems = useMemo(() => {
@@ -932,7 +968,7 @@ export default function Activity() {
             
             {/* Custom suggestions */}
             {customSuggestions.map((suggestion) => {
-              const votes = suggestion.votes;
+              const votes = moveVotes[suggestion.id] || 0;
               const percentage = totalMoveVotes > 0 ? (votes / totalMoveVotes) * 100 : 0;
               const isSelected = userMoveVote === suggestion.id;
               
