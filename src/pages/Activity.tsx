@@ -36,6 +36,7 @@ import {
   Swords
 } from 'lucide-react';
 import FratBattleGame from '@/components/activity/FratBattleGame';
+import RankingPostCard, { parseRankingFromText } from '@/components/activity/RankingPostCard';
 import { Progress } from '@/components/ui/progress';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -1147,7 +1148,21 @@ export default function Activity() {
                           </Badge>
                         )}
                       </div>
-                      <p className="text-base leading-relaxed mb-3">{chatItem.text}</p>
+                      {/* Check if this is a ranking post */}
+                      {(() => {
+                        const parsedRanking = parseRankingFromText(chatItem.text);
+                        if (parsedRanking && parsedRanking.rankings.length >= 3) {
+                          return (
+                            <div className="mb-3">
+                              <RankingPostCard 
+                                rankings={parsedRanking.rankings} 
+                                comment={parsedRanking.comment} 
+                              />
+                            </div>
+                          );
+                        }
+                        return <p className="text-base leading-relaxed mb-3">{chatItem.text}</p>;
+                      })()}
                       
                       {(chatItem.mentionedFraternity || chatItem.mentionedParty) && (
                         <Link 
