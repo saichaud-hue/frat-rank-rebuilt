@@ -1595,6 +1595,47 @@ export default function Activity() {
                 setShowFratBattleGame(false);
                 setShowFratRankingPicker(false);
               }}
+              onShare={async (rankingData) => {
+                const user = await base44.auth.me();
+                if (!user) {
+                  toast({ title: "Please sign in to share", variant: "destructive" });
+                  return;
+                }
+                
+                // Build tier message
+                const tierLines = rankingData.map(r => {
+                  const displayTier = r.tier === 'Mouse 1' || r.tier === 'Mouse 2' ? 'Mouse' : r.tier;
+                  return `${displayTier}: ${r.fratName}`;
+                });
+                
+                const message = `🎮 Frat Battle Results\n\n${tierLines.join('\n')}`;
+                
+                await base44.entities.ChatMessage.create({
+                  user_id: user.id,
+                  text: message,
+                  upvotes: 0,
+                  downvotes: 0,
+                });
+                
+                setShowFratBattleGame(false);
+                setShowFratRankingPicker(false);
+                await loadChat();
+                
+                toast({ title: "Shared to Feed!", description: "Your Frat Battle ranking is now visible to everyone" });
+              }}
+              onSave={(rankingData) => {
+                // Save to localStorage (max 3 recent rankings)
+                const savedRankings = JSON.parse(localStorage.getItem('touse_saved_battle_rankings') || '[]');
+                const newRanking = {
+                  id: `battle-${Date.now()}`,
+                  date: new Date().toISOString(),
+                  ranking: rankingData,
+                };
+                const updated = [newRanking, ...savedRankings].slice(0, 3);
+                localStorage.setItem('touse_saved_battle_rankings', JSON.stringify(updated));
+                
+                toast({ title: "Saved!", description: "Check 'Your Lists' to see your saved rankings" });
+              }}
               onClose={() => setShowFratBattleGame(false)}
             />
           ) : (

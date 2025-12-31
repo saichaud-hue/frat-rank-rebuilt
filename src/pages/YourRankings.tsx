@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
-import { ListOrdered, Trophy, PartyPopper, LogIn, ChevronRight, Lock, Star, Users, Shield, Heart, Sparkles, Music, Zap, CheckCircle2, Crown, Gift, Loader2, Share2 } from 'lucide-react';
+import { ListOrdered, Trophy, PartyPopper, LogIn, ChevronRight, Lock, Star, Users, Shield, Heart, Sparkles, Music, Zap, CheckCircle2, Crown, Gift, Loader2, Share2, Swords, Trash2 } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -19,6 +19,13 @@ import RateFratSheet from '@/components/leaderboard/RateFratSheet';
 import PartyRatingForm from '@/components/rate/PartyRatingForm';
 import { Confetti } from '@/components/ui/confetti';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
+import { format } from 'date-fns';
+
+interface SavedBattleRanking {
+  id: string;
+  date: string;
+  ranking: Array<{ fratId: string; fratName: string; tier: string; wins: number }>;
+}
 
 interface RankedFrat {
   fraternity: Fraternity;
@@ -42,9 +49,10 @@ interface RankedParty {
 export default function YourRankings() {
   const [user, setUser] = useState<any>(null);
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState<'frats' | 'parties'>('frats');
+  const [activeTab, setActiveTab] = useState<'frats' | 'parties' | 'battles'>('frats');
   const [rankedFrats, setRankedFrats] = useState<RankedFrat[]>([]);
   const [rankedParties, setRankedParties] = useState<RankedParty[]>([]);
+  const [savedBattleRankings, setSavedBattleRankings] = useState<SavedBattleRanking[]>([]);
   
   // All data for intro
   const [allFraternities, setAllFraternities] = useState<Fraternity[]>([]);
@@ -80,6 +88,11 @@ export default function YourRankings() {
 
   useEffect(() => {
     loadData();
+    // Load saved battle rankings from localStorage
+    const saved = localStorage.getItem('touse_saved_battle_rankings');
+    if (saved) {
+      setSavedBattleRankings(JSON.parse(saved));
+    }
   }, []);
 
   // Show intro on every visit unless permanently dismissed
@@ -496,23 +509,32 @@ export default function YourRankings() {
       </div>
 
       {/* Tabs */}
-      <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as 'frats' | 'parties')}>
-        <TabsList className="grid w-full grid-cols-2 h-12">
-          <TabsTrigger value="frats" className="gap-2 text-sm">
+      <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as 'frats' | 'parties' | 'battles')}>
+        <TabsList className="grid w-full grid-cols-3 h-12">
+          <TabsTrigger value="frats" className="gap-1 text-xs">
             <Trophy className="h-4 w-4" />
-            Fraternities
+            Frats
             {rankedFrats.length > 0 && (
-              <Badge variant="secondary" className="ml-1 h-5 px-1.5 text-xs">
+              <Badge variant="secondary" className="ml-1 h-5 px-1 text-xs">
                 {rankedFrats.length}
               </Badge>
             )}
           </TabsTrigger>
-          <TabsTrigger value="parties" className="gap-2 text-sm">
+          <TabsTrigger value="parties" className="gap-1 text-xs">
             <PartyPopper className="h-4 w-4" />
             Parties
             {rankedParties.length > 0 && (
-              <Badge variant="secondary" className="ml-1 h-5 px-1.5 text-xs">
+              <Badge variant="secondary" className="ml-1 h-5 px-1 text-xs">
                 {rankedParties.length}
+              </Badge>
+            )}
+          </TabsTrigger>
+          <TabsTrigger value="battles" className="gap-1 text-xs">
+            <Swords className="h-4 w-4" />
+            Battles
+            {savedBattleRankings.length > 0 && (
+              <Badge variant="secondary" className="ml-1 h-5 px-1 text-xs">
+                {savedBattleRankings.length}
               </Badge>
             )}
           </TabsTrigger>
@@ -757,6 +779,110 @@ export default function YourRankings() {
                   </div>
                 </Card>
               </Link>
+            ))
+          )}
+        </TabsContent>
+
+        {/* Battles Tab - Saved Frat Battle Rankings */}
+        <TabsContent value="battles" className="mt-4 space-y-3">
+          {savedBattleRankings.length === 0 ? (
+            <Card className="glass p-8 text-center space-y-4">
+              <Swords className="h-12 w-12 mx-auto text-muted-foreground/50" />
+              <div className="space-y-1">
+                <h3 className="font-semibold">No saved battle rankings</h3>
+                <p className="text-sm text-muted-foreground">
+                  Play Frat Battle on the Activity tab and save your results here
+                </p>
+              </div>
+              <Link to="/Activity">
+                <Button variant="outline" className="mt-2">
+                  <Swords className="h-4 w-4 mr-2" />
+                  Play Frat Battle
+                </Button>
+              </Link>
+            </Card>
+          ) : (
+            savedBattleRankings.map((battleRanking, index) => (
+              <Card key={battleRanking.id} className="glass p-4 space-y-3">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-amber-500 to-orange-500 flex items-center justify-center text-white">
+                      <Swords className="h-5 w-5" />
+                    </div>
+                    <div>
+                      <p className="font-semibold">Battle #{savedBattleRankings.length - index}</p>
+                      <p className="text-xs text-muted-foreground">
+                        {format(new Date(battleRanking.date), 'MMM d, yyyy h:mm a')}
+                      </p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={async () => {
+                        const user = await base44.auth.me();
+                        if (!user) {
+                          toast({ title: "Please sign in to share", variant: "destructive" });
+                          return;
+                        }
+                        
+                        const tierLines = battleRanking.ranking.map(r => {
+                          const displayTier = r.tier === 'Mouse 1' || r.tier === 'Mouse 2' ? 'Mouse' : r.tier;
+                          return `${displayTier}: ${r.fratName}`;
+                        });
+                        
+                        const message = `🎮 Frat Battle Results\n\n${tierLines.join('\n')}`;
+                        
+                        await base44.entities.ChatMessage.create({
+                          user_id: user.id,
+                          text: message,
+                          upvotes: 0,
+                          downvotes: 0,
+                        });
+                        
+                        toast({ title: "Shared to Feed!" });
+                      }}
+                    >
+                      <Share2 className="h-4 w-4" />
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => {
+                        const updated = savedBattleRankings.filter(r => r.id !== battleRanking.id);
+                        setSavedBattleRankings(updated);
+                        localStorage.setItem('touse_saved_battle_rankings', JSON.stringify(updated));
+                        toast({ title: "Deleted" });
+                      }}
+                    >
+                      <Trash2 className="h-4 w-4 text-destructive" />
+                    </Button>
+                  </div>
+                </div>
+                
+                <div className="space-y-1.5">
+                  {battleRanking.ranking.slice(0, 5).map((item, idx) => {
+                    const displayTier = item.tier === 'Mouse 1' || item.tier === 'Mouse 2' ? 'Mouse' : item.tier;
+                    return (
+                      <div 
+                        key={item.fratId} 
+                        className="flex items-center gap-2 text-sm py-1 px-2 rounded-lg bg-muted/50"
+                      >
+                        <span className="font-bold text-muted-foreground w-5">{idx + 1}.</span>
+                        <span className="flex-1 font-medium truncate">{item.fratName}</span>
+                        <span className="text-xs text-muted-foreground">{displayTier}</span>
+                        <span className="text-xs text-muted-foreground">{item.wins} {item.wins === 1 ? 'win' : 'wins'}</span>
+                      </div>
+                    );
+                  })}
+                  {battleRanking.ranking.length > 5 && (
+                    <p className="text-xs text-muted-foreground text-center pt-1">
+                      +{battleRanking.ranking.length - 5} more
+                    </p>
+                  )}
+                </div>
+              </Card>
             ))
           )}
         </TabsContent>
