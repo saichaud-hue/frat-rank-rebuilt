@@ -37,10 +37,13 @@ export default function PhotoBulletin({ partyId, partyStatus = 'completed' }: Ph
 
   const loadPhotos = async (userId?: string | null) => {
     try {
-      const data = await base44.entities.PartyPhoto.filter(
+      const allPhotos = await base44.entities.PartyPhoto.filter(
         { party_id: partyId, moderation_status: 'approved' },
         '-created_date'
       );
+      
+      // Only show public photos in the bulletin
+      const publicPhotos = allPhotos.filter(p => p.visibility !== 'private');
 
       // Get user's votes for these photos
       let userVotes: PartyPhotoVote[] = [];
@@ -52,7 +55,7 @@ export default function PhotoBulletin({ partyId, partyStatus = 'completed' }: Ph
       }
 
       // Merge user votes into photos
-      const photosWithVotes: PhotoWithVote[] = data.map(photo => ({
+      const photosWithVotes: PhotoWithVote[] = publicPhotos.map(photo => ({
         ...photo,
         userVote: userVotes.find(v => v.party_photo_id === photo.id)?.value || null,
       }));

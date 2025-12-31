@@ -1,5 +1,5 @@
 import { useState, useRef, useCallback } from 'react';
-import { X, Upload, Image, Loader2, CheckCircle2, AlertCircle } from 'lucide-react';
+import { X, Upload, Image, Loader2, CheckCircle2, AlertCircle, Lock, Globe, Share2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -14,6 +14,7 @@ import {
 import { base44 } from '@/api/base44Client';
 import { recomputePartyCoverPhoto } from './photoUtils';
 import { toast } from '@/hooks/use-toast';
+import { cn } from '@/lib/utils';
 
 interface GlobalPhotoUploadProps {
   partyId: string;
@@ -28,9 +29,13 @@ interface PreviewFile {
   caption: string;
 }
 
+type UploadMode = 'select' | 'private' | 'public';
+
 export default function GlobalPhotoUpload({ partyId, onClose, onUploadSuccess }: GlobalPhotoUploadProps) {
+  const [mode, setMode] = useState<UploadMode>('select');
   const [files, setFiles] = useState<PreviewFile[]>([]);
   const [consentVerified, setConsentVerified] = useState(false);
+  const [shareToFeed, setShareToFeed] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isDragOver, setIsDragOver] = useState(false);
@@ -66,7 +71,6 @@ export default function GlobalPhotoUpload({ partyId, onClose, onUploadSuccess }:
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const selectedFiles = Array.from(e.target.files || []);
     processFiles(selectedFiles);
-    // Reset input so same files can be selected again
     if (fileInputRef.current) {
       fileInputRef.current.value = '';
     }
@@ -114,6 +118,8 @@ export default function GlobalPhotoUpload({ partyId, onClose, onUploadSuccess }:
     setFiles([]);
     setError(null);
     setConsentVerified(false);
+    setShareToFeed(false);
+    setMode('select');
     if (fileInputRef.current) fileInputRef.current.value = '';
   };
 
@@ -123,7 +129,7 @@ export default function GlobalPhotoUpload({ partyId, onClose, onUploadSuccess }:
   };
 
   const handleUpload = async () => {
-    if (!consentVerified) {
+    if (mode === 'public' && !consentVerified) {
       setError('Please verify consent before uploading');
       return;
     }
@@ -146,7 +152,6 @@ export default function GlobalPhotoUpload({ partyId, onClose, onUploadSuccess }:
       let successCount = 0;
       let storageError = false;
       
-      // Upload all files sequentially to avoid race conditions
       for (const { file, caption } of files) {
         try {
           const { url } = await base44.integrations.Core.UploadFile({ file });
@@ -156,18 +161,19 @@ export default function GlobalPhotoUpload({ partyId, onClose, onUploadSuccess }:
             user_id: user.id,
             url,
             caption,
-            consent_verified: true,
+            consent_verified: mode === 'public',
             likes: 0,
             dislikes: 0,
             moderation_status: 'approved',
             faces_detected: 0,
             faces_blurred: false,
+            visibility: mode === 'private' ? 'private' : 'public',
+            shared_to_feed: mode === 'public' && shareToFeed,
           });
           
           successCount++;
         } catch (fileError: any) {
           console.error('Failed to upload file:', fileError);
-          // Check for storage quota error
           if (fileError?.name === 'QuotaExceededError' || fileError?.message?.includes('quota')) {
             storageError = true;
             break;
@@ -187,12 +193,14 @@ export default function GlobalPhotoUpload({ partyId, onClose, onUploadSuccess }:
         return;
       }
 
-      // Recompute cover photo (picks highest voted or newest)
-      await recomputePartyCoverPhoto(partyId);
+      if (mode === 'public') {
+        await recomputePartyCoverPhoto(partyId);
+      }
 
+      const locationText = mode === 'private' ? 'Your Profile' : 'party photos';
       toast({
         title: 'Photos uploaded!',
-        description: `Successfully uploaded ${successCount} photo${successCount !== 1 ? 's' : ''}.`,
+        description: `${successCount} photo${successCount !== 1 ? 's' : ''} saved to ${locationText}.`,
       });
 
       onUploadSuccess();
@@ -212,18 +220,112 @@ export default function GlobalPhotoUpload({ partyId, onClose, onUploadSuccess }:
     }
   };
 
+  // Mode selection screen
+  if (mode === 'select') {
+    return (
+      <Sheet open={true} onOpenChange={(open) => !open && handleClose()}>
+        <SheetContent side="bottom" className="h-auto max-h-[85vh] flex flex-col rounded-t-3xl">
+          <SheetHeader className="pb-4 border-b">
+            <SheetTitle className="flex items-center gap-2">
+              <Upload className="h-5 w-5 text-primary" />
+              Upload Photos
+            </SheetTitle>
+          </SheetHeader>
+
+          <div className="py-6 space-y-4">
+            <p className="text-sm text-muted-foreground text-center mb-6">
+              How would you like to save these photos?
+            </p>
+
+            {/* Private option */}
+            <button
+              onClick={() => setMode('private')}
+              className="w-full p-4 rounded-2xl border-2 border-border hover:border-primary/50 transition-all text-left group"
+            >
+              <div className="flex items-start gap-4">
+                <div className="w-12 h-12 rounded-xl bg-muted flex items-center justify-center group-hover:bg-primary/10 transition-colors">
+                  <Lock className="h-6 w-6 text-muted-foreground group-hover:text-primary" />
+                </div>
+                <div className="flex-1">
+                  <h3 className="font-semibold mb-1">Save for Yourself</h3>
+                  <p className="text-sm text-muted-foreground">
+                    Private photos only you can see. Access them anytime in your Profile.
+                  </p>
+                </div>
+              </div>
+            </button>
+
+            {/* Public option */}
+            <button
+              onClick={() => setMode('public')}
+              className="w-full p-4 rounded-2xl border-2 border-border hover:border-primary/50 transition-all text-left group"
+            >
+              <div className="flex items-start gap-4">
+                <div className="w-12 h-12 rounded-xl bg-muted flex items-center justify-center group-hover:bg-primary/10 transition-colors">
+                  <Globe className="h-6 w-6 text-muted-foreground group-hover:text-primary" />
+                </div>
+                <div className="flex-1">
+                  <h3 className="font-semibold mb-1">Share with Everyone</h3>
+                  <p className="text-sm text-muted-foreground">
+                    Add to the party's photo collection. Others can view and vote on your photos.
+                  </p>
+                </div>
+              </div>
+            </button>
+          </div>
+
+          <SheetFooter className="pt-4 border-t">
+            <Button variant="outline" onClick={handleClose} className="w-full">
+              Cancel
+            </Button>
+          </SheetFooter>
+        </SheetContent>
+      </Sheet>
+    );
+  }
+
+  // Upload screen (private or public)
   return (
     <Sheet open={true} onOpenChange={(open) => !open && handleClose()}>
       <SheetContent side="bottom" className="h-[85vh] flex flex-col rounded-t-3xl">
         <SheetHeader className="pb-4 border-b">
           <SheetTitle className="flex items-center gap-2">
-            <Upload className="h-5 w-5 text-primary" />
-            Upload Photos
+            {mode === 'private' ? (
+              <>
+                <Lock className="h-5 w-5 text-primary" />
+                Save Private Photos
+              </>
+            ) : (
+              <>
+                <Globe className="h-5 w-5 text-primary" />
+                Share Photos
+              </>
+            )}
           </SheetTitle>
         </SheetHeader>
 
         {/* Content */}
         <div className="flex-1 overflow-y-auto py-4 space-y-4">
+          {/* Mode indicator */}
+          <div className={cn(
+            "p-3 rounded-xl text-sm flex items-center gap-2",
+            mode === 'private' 
+              ? "bg-muted text-muted-foreground" 
+              : "bg-primary/10 text-primary"
+          )}>
+            {mode === 'private' ? (
+              <>
+                <Lock className="h-4 w-4" />
+                These photos will only be visible to you in your Profile
+              </>
+            ) : (
+              <>
+                <Globe className="h-4 w-4" />
+                These photos will be visible to everyone on this party's page
+              </>
+            )}
+          </div>
+
           {/* File Input / Drop Zone */}
           <div 
             className={`border-2 border-dashed rounded-xl p-8 text-center cursor-pointer transition-all ${
@@ -294,24 +396,45 @@ export default function GlobalPhotoUpload({ partyId, onClose, onUploadSuccess }:
 
         {/* Footer */}
         <SheetFooter className="pt-4 border-t flex-col gap-4 sm:flex-col">
-          <div className="flex items-start gap-2 w-full">
-            <Checkbox
-              id="consent"
-              checked={consentVerified}
-              onCheckedChange={(checked) => setConsentVerified(checked === true)}
-            />
-            <Label htmlFor="consent" className="text-sm leading-relaxed cursor-pointer">
-              I confirm that I have consent from all individuals in these photos and that the content is appropriate.
-            </Label>
-          </div>
+          {mode === 'public' && (
+            <>
+              <div className="flex items-start gap-2 w-full">
+                <Checkbox
+                  id="consent"
+                  checked={consentVerified}
+                  onCheckedChange={(checked) => setConsentVerified(checked === true)}
+                />
+                <Label htmlFor="consent" className="text-sm leading-relaxed cursor-pointer">
+                  I confirm that I have consent from all individuals in these photos and that the content is appropriate.
+                </Label>
+              </div>
+
+              <div className="flex items-start gap-2 w-full p-3 rounded-xl bg-muted/50">
+                <Checkbox
+                  id="shareToFeed"
+                  checked={shareToFeed}
+                  onCheckedChange={(checked) => setShareToFeed(checked === true)}
+                />
+                <Label htmlFor="shareToFeed" className="text-sm leading-relaxed cursor-pointer">
+                  <span className="flex items-center gap-1">
+                    <Share2 className="h-3.5 w-3.5" />
+                    Also share to the main Feed
+                  </span>
+                  <span className="text-xs text-muted-foreground block mt-0.5">
+                    Your photo will appear in everyone's activity feed
+                  </span>
+                </Label>
+              </div>
+            </>
+          )}
 
           <div className="flex gap-2 w-full">
-            <Button variant="outline" onClick={handleClose} className="flex-1">
-              Cancel
+            <Button variant="outline" onClick={() => setMode('select')} className="flex-1">
+              Back
             </Button>
             <Button 
               onClick={handleUpload}
-              disabled={uploading || files.length === 0 || !consentVerified}
+              disabled={uploading || files.length === 0 || (mode === 'public' && !consentVerified)}
               className="flex-1 gradient-primary text-white"
             >
               {uploading ? (
@@ -322,7 +445,7 @@ export default function GlobalPhotoUpload({ partyId, onClose, onUploadSuccess }:
               ) : (
                 <>
                   <CheckCircle2 className="h-4 w-4 mr-2" />
-                  Upload {files.length} Photo{files.length !== 1 ? 's' : ''}
+                  {mode === 'private' ? 'Save' : 'Upload'} {files.length} Photo{files.length !== 1 ? 's' : ''}
                 </>
               )}
             </Button>

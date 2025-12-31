@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
-import { User, PartyPopper, Star, LogIn, Award, ChevronDown, ChevronUp, Pencil, Trash2, Zap, Music, Settings, Trophy, Users, Shield, Heart, Sparkles, TrendingUp, Crown, MessageCircle, Flame } from 'lucide-react';
+import { Link } from 'react-router-dom';
+import { User, PartyPopper, Star, LogIn, Award, ChevronDown, ChevronUp, Pencil, Trash2, Zap, Music, Settings, Trophy, Users, Shield, Heart, Sparkles, TrendingUp, Crown, MessageCircle, Flame, Image, Lock, X, Loader2 } from 'lucide-react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -7,7 +8,7 @@ import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
-import { base44, type PartyRating, type ReputationRating, type Party, type Fraternity } from '@/api/base44Client';
+import { base44, type PartyRating, type ReputationRating, type Party, type Fraternity, type PartyPhoto } from '@/api/base44Client';
 import { format } from 'date-fns';
 import { formatTimeAgo, getScoreBgColor, getScoreColor } from '@/utils';
 import PartyRatingForm from '@/components/rate/PartyRatingForm';
@@ -15,15 +16,19 @@ import RateFratSheet from '@/components/leaderboard/RateFratSheet';
 
 type EnrichedPartyRating = PartyRating & { party?: Party; fraternity?: Fraternity };
 type EnrichedRepRating = ReputationRating & { fraternity?: Fraternity };
+type EnrichedPhoto = PartyPhoto & { party?: Party; fraternity?: Fraternity };
 
 export default function Profile() {
   const [user, setUser] = useState<any>(null);
   const [loading, setLoading] = useState(true);
-  const [stats, setStats] = useState({ partyRatings: 0, fratRatings: 0, comments: 0 });
+  const [stats, setStats] = useState({ partyRatings: 0, fratRatings: 0, comments: 0, privatePhotos: 0 });
   const [partyRatingsData, setPartyRatingsData] = useState<EnrichedPartyRating[]>([]);
   const [fratRatingsData, setFratRatingsData] = useState<EnrichedRepRating[]>([]);
   const [commentsData, setCommentsData] = useState<any[]>([]);
+  const [privatePhotos, setPrivatePhotos] = useState<EnrichedPhoto[]>([]);
   const [expandedSection, setExpandedSection] = useState<string | null>(null);
+  const [viewingPhoto, setViewingPhoto] = useState<EnrichedPhoto | null>(null);
+  const [deletingPhotoId, setDeletingPhotoId] = useState<string | null>(null);
   
   // Edit/Delete state for party ratings
   const [editingPartyRating, setEditingPartyRating] = useState<EnrichedPartyRating | null>(null);
@@ -46,7 +51,7 @@ export default function Profile() {
       setUser(userData);
 
       if (userData) {
-        const [partyRatings, repRatings, partyComments, fratComments, chatMessages, parties, fraternities] = await Promise.all([
+        const [partyRatings, repRatings, partyComments, fratComments, chatMessages, parties, fraternities, allPhotos] = await Promise.all([
           base44.entities.PartyRating.filter({ user_id: userData.id }, '-created_date'),
           base44.entities.ReputationRating.filter({ user_id: userData.id }, '-created_date'),
           base44.entities.PartyComment.filter({ user_id: userData.id }),
@@ -54,7 +59,17 @@ export default function Profile() {
           base44.entities.ChatMessage.filter({ user_id: userData.id }),
           base44.entities.Party.list(),
           base44.entities.Fraternity.list(),
+          base44.entities.PartyPhoto.filter({ user_id: userData.id }, '-created_date'),
         ]);
+
+        // Get user's private photos
+        const userPrivatePhotos = allPhotos.filter((p: any) => p.visibility === 'private');
+        const enrichedPrivatePhotos = userPrivatePhotos.map((photo: any) => {
+          const party = parties.find((p: any) => p.id === photo.party_id);
+          const fraternity = party ? fraternities.find((f: any) => f.id === party.fraternity_id) : null;
+          return { ...photo, party: party ?? undefined, fraternity: fraternity ?? undefined };
+        });
+        setPrivatePhotos(enrichedPrivatePhotos);
 
         // Enrich party ratings with party/fraternity data
         const enrichedPartyRatings = partyRatings.map((r: any) => {
@@ -95,6 +110,7 @@ export default function Profile() {
           partyRatings: partyRatings.length,
           fratRatings: repRatings.length,
           comments: partyComments.length + fratComments.length + chatMessages.length,
+          privatePhotos: enrichedPrivatePhotos.length,
         });
       }
     } catch (error) {
@@ -708,7 +724,156 @@ export default function Profile() {
             </Card>
           </CollapsibleContent>
         </Collapsible>
+        {/* My Photos Section */}
+        <Collapsible open={expandedSection === 'myPhotos'} onOpenChange={(open) => setExpandedSection(open ? 'myPhotos' : null)}>
+          <CollapsibleTrigger asChild>
+            <Card className="glass overflow-hidden cursor-pointer hover:shadow-md transition-all">
+              <div className="bg-gradient-to-r from-slate-600 to-zinc-700 p-4 flex items-center justify-between text-white">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-xl bg-white/20 flex items-center justify-center">
+                    <Lock className="h-5 w-5" />
+                  </div>
+                  <div>
+                    <p className="text-2xl font-bold">{stats.privatePhotos}</p>
+                    <p className="text-xs opacity-80">My Private Photos</p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Badge className="bg-white/20 text-white border-white/30">📷 Just for you</Badge>
+                  {expandedSection === 'myPhotos' ? <ChevronUp className="h-5 w-5" /> : <ChevronDown className="h-5 w-5" />}
+                </div>
+              </div>
+            </Card>
+          </CollapsibleTrigger>
+          <CollapsibleContent>
+            <Card className="glass mt-2 overflow-hidden">
+              {privatePhotos.length === 0 ? (
+                <div className="p-8 text-center space-y-3">
+                  <div className="w-16 h-16 mx-auto rounded-2xl bg-slate-100 flex items-center justify-center">
+                    <Image className="h-8 w-8 text-slate-400" />
+                  </div>
+                  <p className="text-muted-foreground font-medium">No private photos yet</p>
+                  <p className="text-sm text-muted-foreground/70">Save photos just for yourself from party pages!</p>
+                </div>
+              ) : (
+                <div className="p-4">
+                  <div className="grid grid-cols-3 gap-2">
+                    {privatePhotos.map((photo) => (
+                      <div key={photo.id} className="relative aspect-square group">
+                        <img 
+                          src={photo.url} 
+                          alt={photo.caption || 'Private photo'}
+                          className="w-full h-full object-cover rounded-lg cursor-pointer"
+                          onClick={() => setViewingPhoto(photo)}
+                        />
+                        <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 rounded-lg transition-colors pointer-events-none" />
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="absolute top-1 right-1 h-6 w-6 bg-black/50 text-white hover:bg-red-500/80 opacity-0 group-hover:opacity-100 transition-opacity"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setDeletingPhotoId(photo.id);
+                          }}
+                        >
+                          <Trash2 className="h-3 w-3" />
+                        </Button>
+                        <div className="absolute bottom-0 left-0 right-0 p-1.5 bg-gradient-to-t from-black/70 to-transparent rounded-b-lg">
+                          <p className="text-[10px] text-white truncate">{photo.party?.title || 'Party'}</p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </Card>
+          </CollapsibleContent>
+        </Collapsible>
       </div>
+
+      {/* Photo Viewer Modal */}
+      {viewingPhoto && (
+        <div 
+          className="fixed inset-0 z-50 bg-black/90 flex items-center justify-center p-4"
+          onClick={() => setViewingPhoto(null)}
+        >
+          <Button
+            variant="ghost"
+            size="icon"
+            className="absolute top-4 right-4 text-white hover:bg-white/20"
+            onClick={() => setViewingPhoto(null)}
+          >
+            <X className="h-6 w-6" />
+          </Button>
+          <div className="flex flex-col items-center max-w-full max-h-full" onClick={(e) => e.stopPropagation()}>
+            <img 
+              src={viewingPhoto.url} 
+              alt={viewingPhoto.caption || 'Photo'}
+              className="max-w-full max-h-[70vh] object-contain rounded-lg"
+            />
+            <div className="mt-4 text-center text-white">
+              <Link 
+                to={`/Party?id=${viewingPhoto.party_id}`}
+                className="font-semibold hover:underline"
+                onClick={() => setViewingPhoto(null)}
+              >
+                {viewingPhoto.party?.title || 'Party'}
+              </Link>
+              {viewingPhoto.fraternity && (
+                <p className="text-sm text-white/70">{viewingPhoto.fraternity.name}</p>
+              )}
+              {viewingPhoto.caption && <p className="text-sm mt-2">{viewingPhoto.caption}</p>}
+              <p className="text-xs text-white/50 mt-2">{formatTimeAgo(viewingPhoto.created_date)}</p>
+            </div>
+            <Button
+              variant="outline"
+              size="sm"
+              className="mt-4 text-red-400 border-red-400/50 hover:bg-red-500/20"
+              onClick={() => {
+                setDeletingPhotoId(viewingPhoto.id);
+              }}
+            >
+              <Trash2 className="h-4 w-4 mr-2" />
+              Delete Photo
+            </Button>
+          </div>
+        </div>
+      )}
+
+      {/* Delete Photo Confirmation */}
+      <AlertDialog open={!!deletingPhotoId} onOpenChange={(open) => !open && setDeletingPhotoId(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Photo?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This photo will be permanently deleted. This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              onClick={async () => {
+                if (deletingPhotoId) {
+                  try {
+                    await base44.entities.PartyPhoto.delete(deletingPhotoId);
+                    setPrivatePhotos(prev => prev.filter(p => p.id !== deletingPhotoId));
+                    setStats(prev => ({ ...prev, privatePhotos: prev.privatePhotos - 1 }));
+                    if (viewingPhoto?.id === deletingPhotoId) {
+                      setViewingPhoto(null);
+                    }
+                  } catch (error) {
+                    console.error('Failed to delete photo:', error);
+                  }
+                }
+                setDeletingPhotoId(null);
+              }}
+            >
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       {/* Party Rating Edit Modal */}
       {editingPartyRating && editingPartyRating.party && (
