@@ -6,6 +6,7 @@ import { Progress } from '@/components/ui/progress';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 import { type Fraternity } from '@/api/base44Client';
+import { getFratGreek } from '@/utils';
 
 interface SavedBattleRanking {
   id: string;
@@ -258,7 +259,29 @@ export default function FratBattleGame({
     };
 
     return (
-      <div className="space-y-6">
+      <div className="space-y-4">
+        {/* Top action bar - Save left, Share right */}
+        <div className="flex items-center justify-between">
+          <Button 
+            variant="ghost" 
+            size="sm"
+            onClick={handleSave}
+            className="gap-2"
+          >
+            <Save className="h-4 w-4" />
+            Save
+          </Button>
+          <Button 
+            variant="ghost" 
+            size="sm"
+            onClick={handleShare}
+            className="gap-2"
+          >
+            <Share2 className="h-4 w-4" />
+            Share
+          </Button>
+        </div>
+
         <div className="text-center">
           <motion.div
             initial={{ scale: 0 }}
@@ -310,27 +333,7 @@ export default function FratBattleGame({
           })}
         </div>
 
-        {/* Share and Save buttons */}
-        <div className="flex gap-3">
-          <Button 
-            variant="outline" 
-            onClick={handleShare}
-            className="flex-1 rounded-xl"
-          >
-            <Share2 className="h-4 w-4 mr-2" />
-            Share to Feed
-          </Button>
-          <Button 
-            variant="outline"
-            onClick={handleSave}
-            className="flex-1 rounded-xl"
-          >
-            <Save className="h-4 w-4 mr-2" />
-            Save
-          </Button>
-        </div>
-
-        <div className="flex gap-3">
+        <div className="flex gap-3 pt-2">
           <Button 
             variant="ghost" 
             onClick={onClose}
@@ -408,8 +411,8 @@ export default function FratBattleGame({
                   <Crown className="h-6 w-6 text-green-500" />
                 </motion.div>
               )}
-              <div className="w-14 h-14 rounded-full bg-gradient-to-br from-violet-500 to-purple-500 flex items-center justify-center text-white font-bold text-xl mb-3">
-                {currentMatchup.left.name.charAt(0)}
+              <div className="w-14 h-14 rounded-full bg-gradient-to-br from-violet-500 to-purple-500 flex items-center justify-center text-white font-bold text-lg mb-3">
+                {getFratGreek(currentMatchup.left.name)}
               </div>
               <p className="font-bold text-lg">{currentMatchup.left.name}</p>
             </motion.button>
@@ -445,8 +448,8 @@ export default function FratBattleGame({
                   <Crown className="h-6 w-6 text-green-500" />
                 </motion.div>
               )}
-              <div className="w-14 h-14 rounded-full bg-gradient-to-br from-pink-500 to-rose-500 flex items-center justify-center text-white font-bold text-xl mb-3">
-                {currentMatchup.right.name.charAt(0)}
+              <div className="w-14 h-14 rounded-full bg-gradient-to-br from-pink-500 to-rose-500 flex items-center justify-center text-white font-bold text-lg mb-3">
+                {getFratGreek(currentMatchup.right.name)}
               </div>
               <p className="font-bold text-lg">{currentMatchup.right.name}</p>
             </motion.button>
