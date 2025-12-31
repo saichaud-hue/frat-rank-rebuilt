@@ -136,7 +136,10 @@ export default function Activity() {
   const [userMoveVote, setUserMoveVote] = useState<string | null>(null);
   const [showSuggestionInput, setShowSuggestionInput] = useState(false);
   const [suggestionText, setSuggestionText] = useState('');
-  const [customSuggestions, setCustomSuggestions] = useState<{ id: string; text: string; votes: number }[]>([]);
+  const [customSuggestions, setCustomSuggestions] = useState<{ id: string; text: string; votes: number }[]>(() => {
+    const saved = localStorage.getItem('touse_custom_move_suggestions');
+    return saved ? JSON.parse(saved) : [];
+  });
   
   // Countdown timer
   const [countdownTime, setCountdownTime] = useState<{ days: number; hours: number; minutes: number; seconds: number } | null>(null);
@@ -589,7 +592,9 @@ export default function Activity() {
       text: suggestionText.trim(),
       votes: 1
     };
-    setCustomSuggestions(prev => [...prev, newSuggestion]);
+    const updatedSuggestions = [...customSuggestions, newSuggestion];
+    setCustomSuggestions(updatedSuggestions);
+    localStorage.setItem('touse_custom_move_suggestions', JSON.stringify(updatedSuggestions));
     setUserMoveVote(newSuggestion.id);
     setSuggestionText('');
     setShowSuggestionInput(false);
