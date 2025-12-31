@@ -6,105 +6,105 @@
 
 @layer base {
   :root {
-    /* Brand colors: Pink/Rose/Orange gradient theme */
-    --background: 330 30% 97%;
-    --foreground: 340 50% 20%;
+    /* Brand colors: Burgundy #411D2B, Dark Purple #211720, White */
+    --background: 0 0% 100%;
+    --foreground: 330 30% 14%;
 
     --card: 0 0% 100%;
-    --card-foreground: 340 50% 20%;
+    --card-foreground: 330 30% 14%;
 
     --popover: 0 0% 100%;
-    --popover-foreground: 340 50% 20%;
+    --popover-foreground: 330 30% 14%;
 
-    --primary: 340 82% 52%;
+    --primary: 340 36% 18%;
     --primary-foreground: 0 0% 100%;
 
-    --secondary: 350 70% 60%;
+    --secondary: 320 22% 11%;
     --secondary-foreground: 0 0% 100%;
 
-    --muted: 330 20% 94%;
-    --muted-foreground: 340 30% 45%;
+    --muted: 330 10% 96%;
+    --muted-foreground: 330 15% 40%;
 
-    --accent: 25 95% 53%;
+    --accent: 340 36% 22%;
     --accent-foreground: 0 0% 100%;
 
     --destructive: 0 84% 60%;
     --destructive-foreground: 0 0% 100%;
 
-    --border: 330 20% 88%;
-    --input: 330 20% 88%;
-    --ring: 340 82% 52%;
+    --border: 330 10% 90%;
+    --input: 330 10% 90%;
+    --ring: 340 36% 18%;
 
     --radius: 0.75rem;
 
-    /* Custom gradient tokens - Pink to Rose to Orange */
-    --gradient-primary: linear-gradient(to right, hsl(330 82% 60%), hsl(350 70% 60%), hsl(25 95% 53%));
-    --gradient-secondary: linear-gradient(135deg, hsl(350 70% 60%), hsl(340 82% 52%));
-    --gradient-accent: linear-gradient(135deg, hsl(25 95% 53%), hsl(350 70% 60%));
-    --gradient-background: linear-gradient(to bottom right, hsl(330 30% 97%), hsl(340 25% 95%));
+    /* Custom Frapp tokens - Burgundy to Dark Purple */
+    --gradient-primary: linear-gradient(135deg, hsl(340 36% 18%), hsl(320 22% 11%));
+    --gradient-secondary: linear-gradient(135deg, hsl(320 22% 11%), hsl(340 36% 18%));
+    --gradient-accent: linear-gradient(135deg, hsl(340 36% 22%), hsl(320 22% 14%));
+    --gradient-background: linear-gradient(to bottom right, hsl(0 0% 100%), hsl(330 10% 98%));
     
     --gold: 45 93% 47%;
     --silver: 210 14% 66%;
     --bronze: 30 55% 45%;
     
     --positive: 142 76% 36%;
-    --neutral: 340 30% 45%;
+    --neutral: 330 15% 40%;
     --critical: 0 84% 60%;
 
     --glass-bg: 0 0% 100% / 0.9;
-    --glass-border: 330 20% 88% / 0.5;
+    --glass-border: 330 10% 90% / 0.5;
 
     --sidebar-background: 0 0% 100%;
-    --sidebar-foreground: 340 50% 20%;
-    --sidebar-primary: 340 82% 52%;
+    --sidebar-foreground: 330 30% 14%;
+    --sidebar-primary: 340 36% 18%;
     --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 330 20% 94%;
-    --sidebar-accent-foreground: 340 50% 20%;
-    --sidebar-border: 330 20% 88%;
-    --sidebar-ring: 340 82% 52%;
+    --sidebar-accent: 330 10% 96%;
+    --sidebar-accent-foreground: 330 30% 14%;
+    --sidebar-border: 330 10% 90%;
+    --sidebar-ring: 340 36% 18%;
   }
 
   .dark {
-    /* Dark mode: Deep pink/rose backgrounds */
-    --background: 340 40% 12%;
+    /* Dark mode: Dark Purple backgrounds, Burgundy accents, White text */
+    --background: 320 22% 11%;
     --foreground: 0 0% 98%;
 
-    --card: 340 35% 18%;
+    --card: 340 36% 18%;
     --card-foreground: 0 0% 98%;
 
-    --popover: 340 35% 18%;
+    --popover: 340 36% 18%;
     --popover-foreground: 0 0% 98%;
 
-    --primary: 340 82% 60%;
+    --primary: 340 36% 28%;
     --primary-foreground: 0 0% 100%;
 
-    --secondary: 350 70% 55%;
-    --secondary-foreground: 0 0% 100%;
+    --secondary: 320 22% 16%;
+    --secondary-foreground: 0 0% 98%;
 
-    --muted: 340 30% 16%;
-    --muted-foreground: 330 15% 70%;
+    --muted: 320 22% 14%;
+    --muted-foreground: 330 10% 70%;
 
-    --accent: 25 95% 55%;
+    --accent: 340 36% 24%;
     --accent-foreground: 0 0% 100%;
 
     --destructive: 0 63% 31%;
     --destructive-foreground: 0 0% 98%;
 
-    --border: 340 30% 25%;
-    --input: 340 30% 25%;
-    --ring: 340 82% 60%;
+    --border: 340 30% 22%;
+    --input: 340 30% 22%;
+    --ring: 340 36% 28%;
 
-    --glass-bg: 340 40% 12% / 0.8;
-    --glass-border: 340 30% 25% / 0.5;
+    --glass-bg: 320 22% 11% / 0.8;
+    --glass-border: 340 30% 22% / 0.5;
 
-    --sidebar-background: 340 40% 12%;
+    --sidebar-background: 320 22% 11%;
     --sidebar-foreground: 0 0% 98%;
-    --sidebar-primary: 340 82% 60%;
+    --sidebar-primary: 340 36% 28%;
     --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 340 30% 16%;
+    --sidebar-accent: 320 22% 14%;
     --sidebar-accent-foreground: 0 0% 98%;
-    --sidebar-border: 340 30% 25%;
-    --sidebar-ring: 340 82% 60%;
+    --sidebar-border: 340 30% 22%;
+    --sidebar-ring: 340 36% 28%;
   }
 }
 
@@ -153,20 +153,20 @@
   }
 
   .gradient-primary {
-    background: linear-gradient(to right, hsl(330 82% 60%), hsl(350 70% 60%), hsl(25 95% 53%));
+    background: linear-gradient(135deg, hsl(340 36% 18%), hsl(320 22% 11%));
   }
 
   .gradient-secondary {
-    background: linear-gradient(135deg, hsl(350 70% 60%), hsl(340 82% 52%));
+    background: linear-gradient(135deg, hsl(320 22% 11%), hsl(340 36% 18%));
   }
 
   .gradient-text {
     @apply bg-clip-text text-transparent;
-    background: linear-gradient(to right, hsl(330 82% 60%), hsl(350 70% 60%), hsl(25 95% 53%));
+    background: linear-gradient(135deg, hsl(340 36% 18%), hsl(320 22% 11%));
   }
 
   .gradient-background {
-    background: linear-gradient(to bottom right, hsl(330 30% 97%), hsl(340 25% 95%));
+    background: linear-gradient(to bottom right, hsl(0 0% 100%), hsl(330 10% 98%));
   }
 
   .score-excellent {
