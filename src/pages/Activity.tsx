@@ -243,11 +243,11 @@ export default function Activity() {
       .slice(0, 6);
   }, [parties]);
 
-  // Get next upcoming party
+  // Get next upcoming party - based on time, not stored status
   const nextParty = useMemo(() => {
     const now = new Date();
     const upcomingParties = parties
-      .filter(p => p.status === 'upcoming' && new Date(p.starts_at) > now)
+      .filter(p => new Date(p.starts_at) > now && p.status !== 'cancelled')
       .sort((a, b) => new Date(a.starts_at).getTime() - new Date(b.starts_at).getTime());
     return upcomingParties[0] || null;
   }, [parties]);
