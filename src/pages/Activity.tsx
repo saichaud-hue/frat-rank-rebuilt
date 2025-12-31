@@ -598,20 +598,46 @@ export default function Activity() {
     }
   };
 
+  // Normalize text for comparison (lowercase, trim, remove extra spaces)
+  const normalizeText = (text: string) => {
+    return text.toLowerCase().trim().replace(/\s+/g, ' ');
+  };
+
   const handleAddSuggestion = () => {
     if (!suggestionText.trim()) return;
-    const newSuggestion = {
-      id: `custom-${Date.now()}`,
-      text: suggestionText.trim(),
-      votes: 1
-    };
-    const updatedSuggestions = [...customSuggestions, newSuggestion];
+    
+    const normalizedInput = normalizeText(suggestionText);
+    
+    // Check if a similar suggestion already exists
+    const existingIndex = customSuggestions.findIndex(s => normalizeText(s.text) === normalizedInput);
+    
+    let updatedSuggestions: typeof customSuggestions;
+    let selectedId: string;
+    
+    if (existingIndex !== -1) {
+      // Merge with existing - add a vote to the existing suggestion
+      updatedSuggestions = customSuggestions.map((s, i) => 
+        i === existingIndex ? { ...s, votes: s.votes + 1 } : s
+      );
+      selectedId = customSuggestions[existingIndex].id;
+      toast({ title: 'Vote added to existing suggestion!' });
+    } else {
+      // Create new suggestion
+      const newSuggestion = {
+        id: `custom-${Date.now()}`,
+        text: suggestionText.trim(),
+        votes: 1
+      };
+      updatedSuggestions = [...customSuggestions, newSuggestion];
+      selectedId = newSuggestion.id;
+      toast({ title: 'Suggestion added!' });
+    }
+    
     setCustomSuggestions(updatedSuggestions);
     localStorage.setItem('touse_custom_move_suggestions', JSON.stringify(updatedSuggestions));
-    setUserMoveVote(newSuggestion.id);
+    setUserMoveVote(selectedId);
     setSuggestionText('');
     setShowSuggestionInput(false);
-    toast({ title: 'Suggestion added!' });
   };
 
   const totalMoveVotes = useMemo(() => {
