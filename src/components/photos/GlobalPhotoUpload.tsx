@@ -144,6 +144,7 @@ export default function GlobalPhotoUpload({ partyId, onClose, onUploadSuccess }:
       }
 
       let successCount = 0;
+      let storageError = false;
       
       // Upload all files sequentially to avoid race conditions
       for (const { file, caption } of files) {
@@ -164,9 +165,20 @@ export default function GlobalPhotoUpload({ partyId, onClose, onUploadSuccess }:
           });
           
           successCount++;
-        } catch (fileError) {
+        } catch (fileError: any) {
           console.error('Failed to upload file:', fileError);
+          // Check for storage quota error
+          if (fileError?.name === 'QuotaExceededError' || fileError?.message?.includes('quota')) {
+            storageError = true;
+            break;
+          }
         }
+      }
+
+      if (storageError) {
+        setError('Storage limit reached. Please clear some browser data or try again later.');
+        setUploading(false);
+        return;
       }
 
       if (successCount === 0) {
