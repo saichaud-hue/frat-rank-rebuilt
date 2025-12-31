@@ -34,9 +34,36 @@ class EntityClient<T extends EntityRecord> {
   }
 
   private saveAll(records: T[]): void {
-    localStorage.setItem(this.storageKey, JSON.stringify(records));
-  }
+    // localStorage has a small quota (~5MB). PartyPhoto records can include large base64 URLs.
+    // To make uploads reliable, we trim oldest records and retry on quota errors.
+    try {
+      localStorage.setItem(this.storageKey, JSON.stringify(records));
+      return;
+    } catch (err: any) {
+      const isQuota = err?.name === 'QuotaExceededError' || String(err?.message || '').toLowerCase().includes('quota');
+      if (!isQuota) throw err;
 
+      // Best-effort: drop oldest records until it fits.
+      let trimmed = records;
+      while (trimmed.length > 0) {
+        trimmed = trimmed.slice(Math.ceil(trimmed.length * 0.85)); // keep newest ~85%
+        try {
+          localStorage.setItem(this.storageKey, JSON.stringify(trimmed));
+          // eslint-disable-next-line no-console
+          console.warn(`[base44Client] Storage quota hit for ${this.storageKey}; trimmed records to ${trimmed.length}.`);
+          return;
+        } catch (e2: any) {
+          const isQuota2 = e2?.name === 'QuotaExceededError' || String(e2?.message || '').toLowerCase().includes('quota');
+          if (!isQuota2) throw e2;
+        }
+      }
+
+      // If we still can't save anything, clear the key to unblock the app.
+      localStorage.removeItem(this.storageKey);
+      // eslint-disable-next-line no-console
+      console.warn(`[base44Client] Storage quota hit for ${this.storageKey}; cleared storage key to recover.`);
+    }
+  }
   async list(sortBy?: string): Promise<T[]> {
     let records = this.getAll();
     if (sortBy) {
@@ -162,13 +189,55 @@ class AuthClient {
 class IntegrationsClient {
   Core = {
     async UploadFile({ file }: { file: File }): Promise<{ url: string }> {
-      // Simulate file upload by creating a data URL
+      // Simulate file upload by creating a *compressed* data URL.
+      // This prevents localStorage quota errors when persisting PartyPhoto records.
       return new Promise((resolve, reject) => {
         const reader = new FileReader();
-        reader.onload = () => {
-          resolve({ url: reader.result as string });
-        };
         reader.onerror = reject;
+        reader.onload = () => {
+          try {
+            const dataUrl = reader.result as string;
+            const img = new window.Image();
+            img.onload = () => {
+              try {
+                const maxDim = 720;
+                const scale = Math.min(1, maxDim / Math.max(img.width, img.height));
+                const w = Math.max(1, Math.round(img.width * scale));
+                const h = Math.max(1, Math.round(img.height * scale));
+
+                const canvas = document.createElement('canvas');
+                canvas.width = w;
+                canvas.height = h;
+                const ctx = canvas.getContext('2d');
+                if (!ctx) {
+                  resolve({ url: dataUrl });
+                  return;
+                }
+
+                ctx.drawImage(img, 0, 0, w, h);
+
+                // Prefer webp for size if supported.
+                let compressed = '';
+                try {
+                  compressed = canvas.toDataURL('image/webp', 0.65);
+                } catch {
+                  compressed = '';
+                }
+                if (!compressed || compressed.startsWith('data:image/png')) {
+                  compressed = canvas.toDataURL('image/jpeg', 0.65);
+                }
+
+                resolve({ url: compressed });
+              } catch {
+                resolve({ url: dataUrl });
+              }
+            };
+            img.onerror = () => resolve({ url: dataUrl });
+            img.src = dataUrl;
+          } catch (err) {
+            reject(err);
+          }
+        };
         reader.readAsDataURL(file);
       });
     },
