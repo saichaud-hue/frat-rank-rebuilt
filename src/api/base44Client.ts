@@ -372,6 +372,8 @@ export interface PartyPhoto {
   faces_blurred: boolean;
   moderation_status: 'pending' | 'approved' | 'rejected';
   caption: string;
+  visibility: 'private' | 'public';
+  shared_to_feed: boolean;
   created_date: string;
 }
 
