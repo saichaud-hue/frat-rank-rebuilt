@@ -814,9 +814,7 @@ export default function Activity() {
                 <div className="relative w-20 h-28 rounded-2xl overflow-hidden ring-[3px] ring-red-500 ring-offset-2 ring-offset-background">
                   <div className="absolute inset-0 bg-primary" />
                   <div className="absolute inset-0 flex flex-col items-center justify-center p-2 text-white">
-                    <div className="w-10 h-10 rounded-full bg-white flex items-center justify-center mb-1">
-                      <Radio className="h-5 w-5 text-primary animate-pulse" />
-                    </div>
+                    <Radio className="h-8 w-8 text-white animate-pulse mb-1" />
                     <span className="text-[10px] font-bold uppercase tracking-wide">LIVE</span>
                   </div>
                   <div className="absolute bottom-0 inset-x-0 p-1.5 bg-black/60 backdrop-blur-sm">
@@ -843,9 +841,7 @@ export default function Activity() {
                 <div className="relative w-20 h-28 rounded-2xl overflow-hidden ring-2 ring-border hover:ring-primary/50 transition-all">
                   <div className="absolute inset-0 bg-primary" />
                   <div className="absolute inset-0 flex flex-col items-center justify-center p-2 text-white">
-                    <div className="w-10 h-10 rounded-full bg-white flex items-center justify-center mb-1">
-                      <PartyPopper className="h-5 w-5 text-primary" />
-                    </div>
+                    <PartyPopper className="h-8 w-8 text-white mb-1" />
                     <span className="text-[10px] font-semibold text-center">
                       {isPartyToday ? 'Tonight' : isPartyTomorrow ? 'Tomorrow' : format(partyDate, 'EEE')}
                     </span>
