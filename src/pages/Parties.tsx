@@ -177,41 +177,37 @@ export default function Parties() {
 
   return (
     <div className="max-w-2xl mx-auto space-y-5 pb-20">
-      {/* HERO HEADER */}
-      <div className="relative overflow-hidden rounded-3xl gradient-primary p-6 text-primary-foreground shadow-xl">
+      {/* HERO HEADER - Compact */}
+      <div className="relative overflow-hidden rounded-2xl gradient-primary p-4 text-primary-foreground shadow-lg">
         {/* Background Effects */}
         <div className="absolute inset-0 opacity-20">
-          <div className="absolute top-0 right-0 w-40 h-40 bg-white/30 rounded-full blur-3xl translate-x-10 -translate-y-10" />
-          <div className="absolute bottom-0 left-0 w-32 h-32 bg-white/30 rounded-full blur-3xl -translate-x-10 translate-y-10" />
+          <div className="absolute top-0 right-0 w-24 h-24 bg-white/30 rounded-full blur-2xl translate-x-6 -translate-y-6" />
+          <div className="absolute bottom-0 left-0 w-20 h-20 bg-white/30 rounded-full blur-2xl -translate-x-6 translate-y-6" />
         </div>
         
         <div className="relative">
-          <div className="flex items-center gap-3 mb-4">
-            <div className="w-14 h-14 rounded-2xl bg-white/20 backdrop-blur-sm flex items-center justify-center">
-              <PartyPopper className="h-7 w-7" />
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-white/20 backdrop-blur-sm flex items-center justify-center shrink-0">
+              <PartyPopper className="h-5 w-5" />
             </div>
-            <div>
-              <h1 className="text-2xl font-bold">Campus Parties</h1>
-              <p className="text-primary-foreground/80 text-sm">Discover and rate the best events</p>
+            <div className="flex-1 min-w-0">
+              <h1 className="text-lg font-bold">Campus Parties</h1>
+              <p className="text-primary-foreground/80 text-xs">Discover and rate events</p>
             </div>
-          </div>
-
-          {/* Quick Stats */}
-          <div className="grid grid-cols-3 gap-3 mt-4">
-            <div className="text-center p-3 rounded-xl bg-white/10 backdrop-blur-sm">
-              <Sparkles className="h-5 w-5 mx-auto mb-1 opacity-80" />
-              <p className="text-2xl font-bold">{parties.length}</p>
-              <p className="text-xs opacity-80">Total Events</p>
-            </div>
-            <div className="text-center p-3 rounded-xl bg-white/10 backdrop-blur-sm">
-              <TrendingUp className="h-5 w-5 mx-auto mb-1 opacity-80" />
-              <p className="text-2xl font-bold">{totalRatings}</p>
-              <p className="text-xs opacity-80">Ratings</p>
-            </div>
-            <div className="text-center p-3 rounded-xl bg-white/10 backdrop-blur-sm">
-              <Trophy className="h-5 w-5 mx-auto mb-1 opacity-80" />
-              <p className="text-2xl font-bold">{avgScore > 0 ? avgScore.toFixed(1) : '—'}</p>
-              <p className="text-xs opacity-80">Avg Score</p>
+            {/* Inline Stats */}
+            <div className="flex gap-3 text-center">
+              <div className="px-2">
+                <p className="text-lg font-bold">{parties.length}</p>
+                <p className="text-[10px] opacity-70">Events</p>
+              </div>
+              <div className="px-2 border-l border-white/20">
+                <p className="text-lg font-bold">{totalRatings}</p>
+                <p className="text-[10px] opacity-70">Ratings</p>
+              </div>
+              <div className="px-2 border-l border-white/20">
+                <p className="text-lg font-bold">{avgScore > 0 ? avgScore.toFixed(1) : '—'}</p>
+                <p className="text-[10px] opacity-70">Avg</p>
+              </div>
             </div>
           </div>
         </div>
