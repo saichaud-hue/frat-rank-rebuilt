@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import {
   Dialog,
   DialogContent,
@@ -47,21 +47,24 @@ const getTierColor = (tier: string) => {
 };
 
 export default function ShareBattleDialog({ isOpen, onClose, ranking }: ShareBattleDialogProps) {
-  const [showConfirm, setShowConfirm] = useState(true);
-  const [showShareForm, setShowShareForm] = useState(false);
+  const [step, setStep] = useState<'confirm' | 'form'>('confirm');
   const [comment, setComment] = useState('');
   const [isPosting, setIsPosting] = useState(false);
   const { toast } = useToast();
 
+  // Reset state when dialog opens
+  useEffect(() => {
+    if (isOpen) {
+      setStep('confirm');
+      setComment('');
+    }
+  }, [isOpen]);
+
   const handleConfirmShare = () => {
-    setShowConfirm(false);
-    setShowShareForm(true);
+    setStep('form');
   };
 
   const handleCancel = () => {
-    setShowConfirm(true);
-    setShowShareForm(false);
-    setComment('');
     onClose();
   };
 
@@ -92,7 +95,7 @@ export default function ShareBattleDialog({ isOpen, onClose, ranking }: ShareBat
       });
 
       toast({ title: "Shared to Feed!" });
-      handleCancel();
+      onClose();
     } catch (error) {
       toast({ title: "Failed to share", variant: "destructive" });
     } finally {
@@ -115,7 +118,7 @@ export default function ShareBattleDialog({ isOpen, onClose, ranking }: ShareBat
   return (
     <>
       {/* Confirmation Dialog */}
-      <AlertDialog open={isOpen && showConfirm} onOpenChange={(open) => !open && handleCancel()}>
+      <AlertDialog open={isOpen && step === 'confirm'} onOpenChange={(open) => !open && handleCancel()}>
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Share to Feed?</AlertDialogTitle>
@@ -131,7 +134,7 @@ export default function ShareBattleDialog({ isOpen, onClose, ranking }: ShareBat
       </AlertDialog>
 
       {/* Share Form Dialog */}
-      <Dialog open={isOpen && showShareForm} onOpenChange={(open) => !open && handleCancel()}>
+      <Dialog open={isOpen && step === 'form'} onOpenChange={(open) => !open && handleCancel()}>
         <DialogContent className="max-w-lg">
           <DialogHeader>
             <DialogTitle>Share Frat Ranking</DialogTitle>
