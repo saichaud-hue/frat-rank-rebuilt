@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { base44, seedInitialData, type Fraternity, type Party, type PartyRating, type ReputationRating, type PartyComment, type FraternityComment } from '@/api/base44Client';
+import { recordUserAction } from '@/utils/streak';
 import { 
   computeFullFraternityScores, 
   computeCampusRepAvg, 
@@ -233,6 +234,7 @@ export default function Leaderboard() {
       reputation_score: clamp(reputationScore, 0, 10),
     });
 
+    await recordUserAction();
     await loadFraternities();
   };
 

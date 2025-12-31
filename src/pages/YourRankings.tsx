@@ -21,6 +21,7 @@ import PartyRatingForm from '@/components/rate/PartyRatingForm';
 import { Confetti } from '@/components/ui/confetti';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { format } from 'date-fns';
+import { recordUserAction } from '@/utils/streak';
 
 interface SavedBattleRanking {
   id: string;
@@ -290,6 +291,9 @@ export default function YourRankings() {
     await base44.entities.Fraternity.update(selectedFrat.id, {
       reputation_score: clamp(reputationScore, 0, 10),
     });
+
+    // Record action for streak tracking
+    await recordUserAction();
 
     setSelectedFrat(null);
     await loadData();
@@ -794,8 +798,9 @@ export default function YourRankings() {
             <FratBattleGame
               fraternities={allFraternities}
               existingRankings={rankedFrats.map(f => f.fraternity)}
-              onComplete={() => {
+              onComplete={async () => {
                 // Game complete - handled via onSave
+                await recordUserAction();
                 setShowFratBattleGame(false);
               }}
               onShare={async (ranking) => {
@@ -817,7 +822,7 @@ export default function YourRankings() {
                 });
                 toast({ title: "Shared to Feed!" });
               }}
-              onSave={(ranking) => {
+              onSave={async (ranking) => {
                 const newRanking: SavedBattleRanking = {
                   id: Date.now().toString(),
                   date: new Date().toISOString(),
@@ -831,6 +836,7 @@ export default function YourRankings() {
                 const updated = [newRanking, ...savedBattleRankings];
                 setSavedBattleRankings(updated);
                 localStorage.setItem('touse_saved_battle_rankings', JSON.stringify(updated));
+                await recordUserAction();
                 setShowFratBattleGame(false);
                 toast({ title: "Saved!", description: "Check 'Your Lists' to see your saved rankings" });
               }}

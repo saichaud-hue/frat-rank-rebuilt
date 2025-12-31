@@ -37,6 +37,7 @@ import {
 } from 'lucide-react';
 import FratBattleGame from '@/components/activity/FratBattleGame';
 import RankingPostCard, { parseRankingFromText } from '@/components/activity/RankingPostCard';
+import { recordUserAction } from '@/utils/streak';
 import { Progress } from '@/components/ui/progress';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -574,6 +575,7 @@ export default function Activity() {
         upvotes: 0,
         downvotes: 0,
       });
+      await recordUserAction();
       setReplyText('');
       setReplyingTo(null);
       await loadChat();
@@ -604,6 +606,7 @@ export default function Activity() {
         upvotes: 0,
         downvotes: 0,
       });
+      await recordUserAction();
       setChatText('');
       setSelectedMention(null);
       setShowChatComposer(false);

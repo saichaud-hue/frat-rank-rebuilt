@@ -7,6 +7,7 @@ import { Badge } from '@/components/ui/badge';
 import { base44, type Party, type Fraternity, type PartyRating } from '@/api/base44Client';
 import { clamp, getScoreColor } from '@/utils';
 import { computePartyQuality } from '@/utils/scoring';
+import { recordUserAction } from '@/utils/streak';
 
 interface PartyRatingFormProps {
   party: Party;
@@ -77,6 +78,9 @@ export default function PartyRatingForm({ party, fraternity, onClose, onSubmit }
       } else {
         await base44.entities.PartyRating.create(ratingData);
       }
+      
+      // Record action for streak tracking
+      await recordUserAction();
 
       // Recalculate party total ratings (keep PartyRating.party_quality_score as raw user score)
       const allRatings = await base44.entities.PartyRating.filter({ party_id: party.id });
