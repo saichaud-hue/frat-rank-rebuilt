@@ -328,10 +328,10 @@ export default function Parties() {
       )}
 
       {/* Floating Host Button */}
-      {!showIntro && (
+      {!(showIntro && !introShownThisVisit) && (
         <Link
           to="/CreateParty"
-          className="fixed bottom-24 right-4 z-50 flex items-center gap-2 px-5 py-3 rounded-full gradient-primary text-primary-foreground shadow-lg active:scale-95 transition-transform"
+          className="fixed bottom-24 right-4 z-50 flex items-center gap-2 px-5 py-3 rounded-full gradient-primary text-primary-foreground shadow-lg active:scale-95 transition-transform hover:shadow-xl"
           style={{ marginBottom: 'env(safe-area-inset-bottom)' }}
         >
           <Plus className="h-5 w-5" />
