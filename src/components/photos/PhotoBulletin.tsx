@@ -9,13 +9,14 @@ import { recomputePartyCoverPhoto, recalculatePhotoVotes } from './photoUtils';
 import { toast } from '@/hooks/use-toast';
 interface PhotoBulletinProps {
   partyId: string;
+  partyStatus?: 'upcoming' | 'live' | 'completed';
 }
 
 interface PhotoWithVote extends PartyPhoto {
   userVote?: 1 | -1 | null;
 }
 
-export default function PhotoBulletin({ partyId }: PhotoBulletinProps) {
+export default function PhotoBulletin({ partyId, partyStatus = 'completed' }: PhotoBulletinProps) {
   const [photos, setPhotos] = useState<PhotoWithVote[]>([]);
   const [loading, setLoading] = useState(true);
   const [showUpload, setShowUpload] = useState(false);
@@ -168,25 +169,41 @@ export default function PhotoBulletin({ partyId }: PhotoBulletinProps) {
     return currentUserId && photo.user_id === currentUserId;
   };
 
+  const isUpcoming = partyStatus === 'upcoming';
+
   return (
     <>
       <Card className="glass p-4 space-y-4">
         <div className="flex items-center justify-between">
           <h3 className="font-semibold flex items-center gap-2">
             <Image className="h-5 w-5 text-primary" />
-            Photos ({photos.length})
+            Photos {!isUpcoming && `(${photos.length})`}
           </h3>
-          <Button 
-            size="sm"
-            onClick={() => setShowUpload(true)}
-            className="gradient-primary text-white"
-          >
-            <Plus className="h-4 w-4 mr-1" />
-            Add Photos
-          </Button>
+          {!isUpcoming && (
+            <Button 
+              size="sm"
+              onClick={() => setShowUpload(true)}
+              className="gradient-primary text-white"
+            >
+              <Plus className="h-4 w-4 mr-1" />
+              Add Photos
+            </Button>
+          )}
         </div>
 
-        {loading ? (
+        {isUpcoming ? (
+          <div className="text-center py-12 space-y-4">
+            <div className="w-16 h-16 mx-auto rounded-full bg-muted flex items-center justify-center">
+              <Image className="h-8 w-8 text-muted-foreground" />
+            </div>
+            <div className="space-y-2">
+              <p className="font-medium text-foreground">Photos coming soon!</p>
+              <p className="text-sm text-muted-foreground max-w-xs mx-auto">
+                Check back after the party to upload and see all your favorite moments in one spot.
+              </p>
+            </div>
+          </div>
+        ) : loading ? (
           <div className="flex items-center justify-center py-12">
             <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
           </div>
