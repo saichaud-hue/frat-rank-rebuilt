@@ -174,6 +174,7 @@ export default function Activity() {
   });
   
   const [showSuggestionInput, setShowSuggestionInput] = useState(false);
+  const [showAllMoveOptions, setShowAllMoveOptions] = useState(false);
   const [suggestionText, setSuggestionText] = useState('');
   const [customSuggestions, setCustomSuggestions] = useState<{ id: string; text: string }[]>(() => {
     // Check if we need to reset (daily at 5 AM)
@@ -867,7 +868,7 @@ export default function Activity() {
         </div>
       )}
 
-      {/* What's the move tonight? - Always visible poll */}
+      {/* What's the move tonight? - Shows top 3 options */}
       <div className="rounded-3xl overflow-hidden bg-gradient-to-br from-violet-600 via-purple-600 to-fuchsia-600 p-[2px]">
         <div className="rounded-[22px] bg-card p-5">
           <div className="flex items-center gap-3 mb-4">
@@ -887,184 +888,311 @@ export default function Activity() {
             )}
           </div>
           
-          <div className="space-y-2">
-            {/* Tonight's parties */}
-            {tonightsParties.map((party) => {
-              const frat = fraternities.find(f => f.id === party.fraternity_id);
-              const votes = moveVotes[party.id] || 0;
-              const percentage = totalMoveVotes > 0 ? (votes / totalMoveVotes) * 100 : 0;
-              const isSelected = userMoveVote === party.id;
-              
-              return (
-                <button
-                  key={party.id}
-                  onClick={() => handleMoveVote(party.id)}
-                  className={cn(
-                    "w-full min-h-[52px] p-3 rounded-2xl border-2 transition-all text-left relative overflow-hidden active:scale-[0.98]",
-                    isSelected 
-                      ? "border-violet-500 bg-violet-500/10" 
-                      : "border-border hover:border-violet-500/50"
-                  )}
-                >
-                  {userMoveVote && (
-                    <div 
-                      className="absolute inset-0 bg-gradient-to-r from-violet-500/20 to-transparent transition-all duration-500"
-                      style={{ width: `${percentage}%` }}
-                    />
-                  )}
-                  <div className="relative flex items-center gap-3">
-                    <div className={cn(
-                      "w-9 h-9 rounded-xl flex items-center justify-center shrink-0",
-                      isSelected 
-                        ? "bg-gradient-to-br from-violet-500 to-fuchsia-500 text-white" 
-                        : "bg-muted text-muted-foreground"
-                    )}>
-                      {isSelected ? <Check className="h-4 w-4" /> : <PartyPopper className="h-4 w-4" />}
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="font-semibold text-sm truncate">{party.title}</p>
-                      <p className="text-xs text-muted-foreground truncate">{frat?.name} · {format(new Date(party.starts_at), 'h:mm a')}</p>
-                    </div>
-                    {userMoveVote && (
-                      <div className="flex items-center gap-2">
-                        <span className="text-sm font-bold">{percentage.toFixed(0)}%</span>
-                        <Badge variant="secondary" className="text-xs">{votes}</Badge>
-                      </div>
-                    )}
-                  </div>
-                </button>
-              );
-            })}
+          {/* Build sorted options list */}
+          {(() => {
+            // Combine all options with their vote counts
+            const allOptions: { id: string; type: 'party' | 'default' | 'custom'; label: string; subLabel?: string; votes: number; icon?: any; party?: typeof tonightsParties[0] }[] = [];
             
-            {/* Default options - Shooters, Devines, Study, Sleep */}
-            {defaultMoveOptions.map((option) => {
-              const votes = moveVotes[option.id] || 0;
-              const percentage = totalMoveVotes > 0 ? (votes / totalMoveVotes) * 100 : 0;
+            // Add tonight's parties
+            tonightsParties.forEach(party => {
+              const frat = fraternities.find(f => f.id === party.fraternity_id);
+              allOptions.push({
+                id: party.id,
+                type: 'party',
+                label: party.title,
+                subLabel: `${frat?.name} · ${format(new Date(party.starts_at), 'h:mm a')}`,
+                votes: moveVotes[party.id] || 0,
+                party
+              });
+            });
+            
+            // Add default options
+            defaultMoveOptions.forEach(option => {
+              allOptions.push({
+                id: option.id,
+                type: 'default',
+                label: option.label,
+                votes: moveVotes[option.id] || 0,
+                icon: option.icon
+              });
+            });
+            
+            // Add custom suggestions
+            customSuggestions.forEach(suggestion => {
+              allOptions.push({
+                id: suggestion.id,
+                type: 'custom',
+                label: suggestion.text,
+                votes: moveVotes[suggestion.id] || 0
+              });
+            });
+            
+            // Sort by votes descending
+            allOptions.sort((a, b) => b.votes - a.votes);
+            
+            // Get top 3
+            const top3 = allOptions.slice(0, 3);
+            const hasMore = allOptions.length > 3;
+            
+            const renderOption = (option: typeof allOptions[0], index: number) => {
+              const percentage = totalMoveVotes > 0 ? (option.votes / totalMoveVotes) * 100 : 0;
               const isSelected = userMoveVote === option.id;
-              const Icon = option.icon;
+              const Icon = option.icon || (option.type === 'custom' ? Sparkles : PartyPopper);
+              
+              const borderColor = option.type === 'party' ? 'violet' : option.type === 'default' ? 'fuchsia' : 'pink';
+              const bgColor = option.type === 'party' ? 'from-violet-500 to-fuchsia-500' : option.type === 'default' ? 'from-fuchsia-500 to-pink-500' : 'from-pink-500 to-rose-500';
               
               return (
                 <button
                   key={option.id}
-                  onClick={() => handleMoveVote(option.id)}
+                  onClick={() => option.type === 'custom' ? handleCustomSuggestionVote(option.id) : handleMoveVote(option.id)}
                   className={cn(
                     "w-full min-h-[52px] p-3 rounded-2xl border-2 transition-all text-left relative overflow-hidden active:scale-[0.98]",
                     isSelected 
-                      ? "border-fuchsia-500 bg-fuchsia-500/10" 
-                      : "border-border hover:border-fuchsia-500/50"
+                      ? `border-${borderColor}-500 bg-${borderColor}-500/10` 
+                      : `border-border hover:border-${borderColor}-500/50`
                   )}
+                  style={isSelected ? { borderColor: `hsl(var(--${borderColor === 'violet' ? 'primary' : 'accent'}))`, backgroundColor: `hsl(var(--${borderColor === 'violet' ? 'primary' : 'accent'}) / 0.1)` } : {}}
                 >
                   {userMoveVote && (
                     <div 
-                      className="absolute inset-0 bg-gradient-to-r from-fuchsia-500/20 to-transparent transition-all duration-500"
-                      style={{ width: `${percentage}%` }}
+                      className={`absolute inset-0 bg-gradient-to-r ${bgColor.replace('from-', 'from-').replace('to-', 'to-')}/20 to-transparent transition-all duration-500`}
+                      style={{ width: `${percentage}%`, background: `linear-gradient(to right, hsl(280 70% 50% / 0.2), transparent)` }}
                     />
                   )}
                   <div className="relative flex items-center gap-3">
                     <div className={cn(
                       "w-9 h-9 rounded-xl flex items-center justify-center shrink-0",
                       isSelected 
-                        ? "bg-gradient-to-br from-fuchsia-500 to-pink-500 text-white" 
+                        ? `bg-gradient-to-br ${bgColor} text-white` 
                         : "bg-muted text-muted-foreground"
                     )}>
                       {isSelected ? <Check className="h-4 w-4" /> : <Icon className="h-4 w-4" />}
                     </div>
-                    <p className="flex-1 font-semibold text-sm">{option.label}</p>
-                    {userMoveVote && (
-                      <div className="flex items-center gap-2">
-                        <span className="text-sm font-bold">{percentage.toFixed(0)}%</span>
-                        <Badge variant="secondary" className="text-xs">{votes}</Badge>
-                      </div>
-                    )}
-                  </div>
-                </button>
-              );
-            })}
-            
-            {/* Custom suggestions */}
-            {customSuggestions.map((suggestion) => {
-              const votes = moveVotes[suggestion.id] || 0;
-              const percentage = totalMoveVotes > 0 ? (votes / totalMoveVotes) * 100 : 0;
-              const isSelected = userMoveVote === suggestion.id;
-              
-              return (
-                <button
-                  key={suggestion.id}
-                  onClick={() => handleCustomSuggestionVote(suggestion.id)}
-                  className={cn(
-                    "w-full min-h-[52px] p-3 rounded-2xl border-2 transition-all text-left relative overflow-hidden active:scale-[0.98]",
-                    isSelected 
-                      ? "border-pink-500 bg-pink-500/10" 
-                      : "border-border hover:border-pink-500/50"
-                  )}
-                >
-                  {userMoveVote && (
-                    <div 
-                      className="absolute inset-0 bg-gradient-to-r from-pink-500/20 to-transparent transition-all duration-500"
-                      style={{ width: `${percentage}%` }}
-                    />
-                  )}
-                  <div className="relative flex items-center gap-3">
-                    <div className={cn(
-                      "w-9 h-9 rounded-xl flex items-center justify-center shrink-0",
-                      isSelected 
-                        ? "bg-gradient-to-br from-pink-500 to-rose-500 text-white" 
-                        : "bg-muted text-muted-foreground"
-                    )}>
-                      {isSelected ? <Check className="h-4 w-4" /> : <Sparkles className="h-4 w-4" />}
+                    <div className="flex-1 min-w-0">
+                      <p className="font-semibold text-sm truncate">{option.label}</p>
+                      {option.subLabel && (
+                        <p className="text-xs text-muted-foreground truncate">{option.subLabel}</p>
+                      )}
                     </div>
-                    <p className="flex-1 font-semibold text-sm truncate">{suggestion.text}</p>
                     {userMoveVote && (
                       <div className="flex items-center gap-2">
                         <span className="text-sm font-bold">{percentage.toFixed(0)}%</span>
-                        <Badge variant="secondary" className="text-xs">{votes}</Badge>
+                        <Badge variant="secondary" className="text-xs">{option.votes}</Badge>
                       </div>
                     )}
                   </div>
                 </button>
               );
-            })}
+            };
             
-            {/* Add custom suggestion */}
-            {showSuggestionInput ? (
-              <div className="flex gap-2">
-                <Input
-                  value={suggestionText}
-                  onChange={(e) => setSuggestionText(e.target.value)}
-                  placeholder="Something else?"
-                  className="flex-1 h-11 rounded-xl text-sm"
-                  onKeyDown={(e) => e.key === 'Enter' && handleAddSuggestion()}
-                  autoFocus
-                />
-                <Button
-                  onClick={handleAddSuggestion}
-                  disabled={!suggestionText.trim()}
-                  size="sm"
-                  className="h-11 w-11 rounded-xl bg-gradient-to-r from-fuchsia-500 to-pink-500"
+            return (
+              <div className="space-y-2">
+                {top3.map((option, index) => renderOption(option, index))}
+                
+                {/* Something else / View all button */}
+                <button
+                  onClick={() => setShowAllMoveOptions(true)}
+                  className="w-full min-h-[44px] p-3 rounded-2xl border-2 border-dashed border-muted-foreground/30 flex items-center justify-center gap-2 text-muted-foreground hover:border-fuchsia-500 hover:text-fuchsia-500 transition-all active:scale-[0.98]"
                 >
-                  <Check className="h-4 w-4" />
-                </Button>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => { setShowSuggestionInput(false); setSuggestionText(''); }}
-                  className="h-11 w-11 rounded-xl"
-                >
-                  <X className="h-4 w-4" />
-                </Button>
+                  <Plus className="h-4 w-4" />
+                  <span className="font-medium text-sm">
+                    {hasMore ? `View all options (${allOptions.length})` : 'Something else'}
+                  </span>
+                </button>
               </div>
-            ) : (
-              <button
-                onClick={() => setShowSuggestionInput(true)}
-                className="w-full min-h-[44px] p-3 rounded-2xl border-2 border-dashed border-muted-foreground/30 flex items-center justify-center gap-2 text-muted-foreground hover:border-fuchsia-500 hover:text-fuchsia-500 transition-all active:scale-[0.98]"
-              >
-                <Plus className="h-4 w-4" />
-                <span className="font-medium text-sm">Something else</span>
-              </button>
-            )}
-          </div>
+            );
+          })()}
         </div>
       </div>
+
+      {/* All Move Options Sheet */}
+      <Sheet open={showAllMoveOptions} onOpenChange={setShowAllMoveOptions}>
+        <SheetContent side="bottom" className="rounded-t-3xl max-h-[85vh]" style={{ paddingBottom: 'max(env(safe-area-inset-bottom), 16px)' }}>
+          <SheetHeader className="pb-4 text-left">
+            <SheetTitle>What's the move tonight?</SheetTitle>
+          </SheetHeader>
+          
+          <ScrollArea className="flex-1 -mx-6 px-6" style={{ maxHeight: 'calc(85vh - 120px)' }}>
+            <div className="space-y-2 pb-4">
+              {/* Tonight's parties */}
+              {tonightsParties.map((party) => {
+                const frat = fraternities.find(f => f.id === party.fraternity_id);
+                const votes = moveVotes[party.id] || 0;
+                const percentage = totalMoveVotes > 0 ? (votes / totalMoveVotes) * 100 : 0;
+                const isSelected = userMoveVote === party.id;
+                
+                return (
+                  <button
+                    key={party.id}
+                    onClick={() => { handleMoveVote(party.id); setShowAllMoveOptions(false); }}
+                    className={cn(
+                      "w-full min-h-[52px] p-3 rounded-2xl border-2 transition-all text-left relative overflow-hidden active:scale-[0.98]",
+                      isSelected 
+                        ? "border-violet-500 bg-violet-500/10" 
+                        : "border-border hover:border-violet-500/50"
+                    )}
+                  >
+                    {userMoveVote && (
+                      <div 
+                        className="absolute inset-0 bg-gradient-to-r from-violet-500/20 to-transparent transition-all duration-500"
+                        style={{ width: `${percentage}%` }}
+                      />
+                    )}
+                    <div className="relative flex items-center gap-3">
+                      <div className={cn(
+                        "w-9 h-9 rounded-xl flex items-center justify-center shrink-0",
+                        isSelected 
+                          ? "bg-gradient-to-br from-violet-500 to-fuchsia-500 text-white" 
+                          : "bg-muted text-muted-foreground"
+                      )}>
+                        {isSelected ? <Check className="h-4 w-4" /> : <PartyPopper className="h-4 w-4" />}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="font-semibold text-sm truncate">{party.title}</p>
+                        <p className="text-xs text-muted-foreground truncate">{frat?.name} · {format(new Date(party.starts_at), 'h:mm a')}</p>
+                      </div>
+                      {userMoveVote && (
+                        <div className="flex items-center gap-2">
+                          <span className="text-sm font-bold">{percentage.toFixed(0)}%</span>
+                          <Badge variant="secondary" className="text-xs">{votes}</Badge>
+                        </div>
+                      )}
+                    </div>
+                  </button>
+                );
+              })}
+              
+              {/* Default options */}
+              {defaultMoveOptions.map((option) => {
+                const votes = moveVotes[option.id] || 0;
+                const percentage = totalMoveVotes > 0 ? (votes / totalMoveVotes) * 100 : 0;
+                const isSelected = userMoveVote === option.id;
+                const Icon = option.icon;
+                
+                return (
+                  <button
+                    key={option.id}
+                    onClick={() => { handleMoveVote(option.id); setShowAllMoveOptions(false); }}
+                    className={cn(
+                      "w-full min-h-[52px] p-3 rounded-2xl border-2 transition-all text-left relative overflow-hidden active:scale-[0.98]",
+                      isSelected 
+                        ? "border-fuchsia-500 bg-fuchsia-500/10" 
+                        : "border-border hover:border-fuchsia-500/50"
+                    )}
+                  >
+                    {userMoveVote && (
+                      <div 
+                        className="absolute inset-0 bg-gradient-to-r from-fuchsia-500/20 to-transparent transition-all duration-500"
+                        style={{ width: `${percentage}%` }}
+                      />
+                    )}
+                    <div className="relative flex items-center gap-3">
+                      <div className={cn(
+                        "w-9 h-9 rounded-xl flex items-center justify-center shrink-0",
+                        isSelected 
+                          ? "bg-gradient-to-br from-fuchsia-500 to-pink-500 text-white" 
+                          : "bg-muted text-muted-foreground"
+                      )}>
+                        {isSelected ? <Check className="h-4 w-4" /> : <Icon className="h-4 w-4" />}
+                      </div>
+                      <p className="flex-1 font-semibold text-sm">{option.label}</p>
+                      {userMoveVote && (
+                        <div className="flex items-center gap-2">
+                          <span className="text-sm font-bold">{percentage.toFixed(0)}%</span>
+                          <Badge variant="secondary" className="text-xs">{votes}</Badge>
+                        </div>
+                      )}
+                    </div>
+                  </button>
+                );
+              })}
+              
+              {/* Custom suggestions */}
+              {customSuggestions.map((suggestion) => {
+                const votes = moveVotes[suggestion.id] || 0;
+                const percentage = totalMoveVotes > 0 ? (votes / totalMoveVotes) * 100 : 0;
+                const isSelected = userMoveVote === suggestion.id;
+                
+                return (
+                  <button
+                    key={suggestion.id}
+                    onClick={() => { handleCustomSuggestionVote(suggestion.id); setShowAllMoveOptions(false); }}
+                    className={cn(
+                      "w-full min-h-[52px] p-3 rounded-2xl border-2 transition-all text-left relative overflow-hidden active:scale-[0.98]",
+                      isSelected 
+                        ? "border-pink-500 bg-pink-500/10" 
+                        : "border-border hover:border-pink-500/50"
+                    )}
+                  >
+                    {userMoveVote && (
+                      <div 
+                        className="absolute inset-0 bg-gradient-to-r from-pink-500/20 to-transparent transition-all duration-500"
+                        style={{ width: `${percentage}%` }}
+                      />
+                    )}
+                    <div className="relative flex items-center gap-3">
+                      <div className={cn(
+                        "w-9 h-9 rounded-xl flex items-center justify-center shrink-0",
+                        isSelected 
+                          ? "bg-gradient-to-br from-pink-500 to-rose-500 text-white" 
+                          : "bg-muted text-muted-foreground"
+                      )}>
+                        {isSelected ? <Check className="h-4 w-4" /> : <Sparkles className="h-4 w-4" />}
+                      </div>
+                      <p className="flex-1 font-semibold text-sm truncate">{suggestion.text}</p>
+                      {userMoveVote && (
+                        <div className="flex items-center gap-2">
+                          <span className="text-sm font-bold">{percentage.toFixed(0)}%</span>
+                          <Badge variant="secondary" className="text-xs">{votes}</Badge>
+                        </div>
+                      )}
+                    </div>
+                  </button>
+                );
+              })}
+              
+              {/* Add custom suggestion */}
+              {showSuggestionInput ? (
+                <div className="flex gap-2">
+                  <Input
+                    value={suggestionText}
+                    onChange={(e) => setSuggestionText(e.target.value)}
+                    placeholder="Something else?"
+                    className="flex-1 h-11 rounded-xl text-sm"
+                    onKeyDown={(e) => e.key === 'Enter' && handleAddSuggestion()}
+                    autoFocus
+                  />
+                  <Button
+                    onClick={handleAddSuggestion}
+                    disabled={!suggestionText.trim()}
+                    size="sm"
+                    className="h-11 w-11 rounded-xl bg-gradient-to-r from-fuchsia-500 to-pink-500"
+                  >
+                    <Check className="h-4 w-4" />
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => { setShowSuggestionInput(false); setSuggestionText(''); }}
+                    className="h-11 w-11 rounded-xl"
+                  >
+                    <X className="h-4 w-4" />
+                  </Button>
+                </div>
+              ) : (
+                <button
+                  onClick={() => setShowSuggestionInput(true)}
+                  className="w-full min-h-[44px] p-3 rounded-2xl border-2 border-dashed border-muted-foreground/30 flex items-center justify-center gap-2 text-muted-foreground hover:border-fuchsia-500 hover:text-fuchsia-500 transition-all active:scale-[0.98]"
+                >
+                  <Plus className="h-4 w-4" />
+                  <span className="font-medium text-sm">Something else</span>
+                </button>
+              )}
+            </div>
+          </ScrollArea>
+        </SheetContent>
+      </Sheet>
 
       {/* Next party countdown - compact */}
       {nextParty && countdownTime && (
