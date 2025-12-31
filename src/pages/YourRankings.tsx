@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
-import { ListOrdered, Trophy, PartyPopper, LogIn, ChevronRight, Lock, Star, Users, Shield, Heart, Sparkles, Music, Zap, CheckCircle2, Crown, Gift, Loader2 } from 'lucide-react';
+import { ListOrdered, Trophy, PartyPopper, LogIn, ChevronRight, Lock, Star, Users, Shield, Heart, Sparkles, Music, Zap, CheckCircle2, Crown, Gift, Loader2, Share2 } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -17,6 +17,8 @@ import { ensureAuthed } from '@/utils/auth';
 import YourListsIntro from '@/components/onboarding/YourListsIntro';
 import RateFratSheet from '@/components/leaderboard/RateFratSheet';
 import PartyRatingForm from '@/components/rate/PartyRatingForm';
+import { Confetti } from '@/components/ui/confetti';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 
 interface RankedFrat {
   fraternity: Fraternity;
@@ -68,6 +70,13 @@ export default function YourRankings() {
   
   // Track if completion post was already sent
   const completionPostedRef = useRef(false);
+  const partyCompletionPostedRef = useRef(false);
+  
+  // Confetti and share popup state
+  const [showConfetti, setShowConfetti] = useState(false);
+  const [showShareDialog, setShowShareDialog] = useState(false);
+  const [shareType, setShareType] = useState<'frats' | 'parties'>('frats');
+  const [pendingShareUserId, setPendingShareUserId] = useState<string | null>(null);
 
   useEffect(() => {
     loadData();
@@ -270,9 +279,12 @@ export default function YourRankings() {
     // Check if user just completed all frat ratings
     const newRatedCount = isNewRating ? ratedFratCount + 1 : ratedFratCount;
     if (isNewRating && newRatedCount >= allFraternities.length && !completionPostedRef.current) {
-      // Post gamified completion message to feed
       completionPostedRef.current = true;
-      await postCompletionToFeed(user.id);
+      // Show confetti and share popup
+      setShowConfetti(true);
+      setShareType('frats');
+      setPendingShareUserId(user.id);
+      setShowShareDialog(true);
     }
 
     // If rating was initiated from intro, re-show the intro
@@ -330,8 +342,8 @@ export default function YourRankings() {
       });
       
       toast({
-        title: "Achievement Unlocked",
-        description: "Your ranking was shared to the feed",
+        title: "Shared to Feed",
+        description: "Your tier list is now visible to everyone!",
       });
     } catch (error) {
       console.error('Failed to post completion:', error);
@@ -347,7 +359,23 @@ export default function YourRankings() {
 
   const handlePartyRatingSubmit = async () => {
     setSelectedParty(null);
+    
+    // Get user for party completion check
+    const user = await base44.auth.me();
+    const prevPartyCount = ratedPartyCount;
+    
     await loadData();
+    
+    // Check if user just completed party rating requirements (3+ parties)
+    // We trigger on reaching exactly 3 for the first time
+    if (user && prevPartyCount < 3 && ratedPartyCount + 1 >= 3 && !partyCompletionPostedRef.current) {
+      partyCompletionPostedRef.current = true;
+      setShowConfetti(true);
+      toast({
+        title: "Party Rankings Complete",
+        description: "You've rated enough parties to unlock your party list!",
+      });
+    }
 
     // If rating was initiated from intro, re-show the intro
     if (ratingFromIntro) {
@@ -875,6 +903,61 @@ export default function YourRankings() {
           </ScrollArea>
         </SheetContent>
       </Sheet>
+      
+      {/* Confetti Animation */}
+      <Confetti 
+        active={showConfetti} 
+        onComplete={() => setShowConfetti(false)} 
+      />
+      
+      {/* Share to Feed Dialog */}
+      <Dialog open={showShareDialog} onOpenChange={setShowShareDialog}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <div className="mx-auto w-16 h-16 rounded-full gradient-primary flex items-center justify-center mb-2">
+              <Trophy className="h-8 w-8 text-primary-foreground" />
+            </div>
+            <DialogTitle className="text-center text-xl">
+              {shareType === 'frats' ? 'Frat Rankings Complete!' : 'Party Rankings Complete!'}
+            </DialogTitle>
+            <DialogDescription className="text-center">
+              {shareType === 'frats' 
+                ? `You've ranked all ${allFraternities.length} fraternities! Share your tier list with the community?`
+                : `You've completed your party rankings! Share with the community?`
+              }
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="flex-col gap-2 sm:flex-col">
+            <Button 
+              className="w-full gradient-primary text-primary-foreground"
+              onClick={async () => {
+                if (pendingShareUserId) {
+                  await postCompletionToFeed(pendingShareUserId);
+                }
+                setShowShareDialog(false);
+                setPendingShareUserId(null);
+              }}
+            >
+              <Share2 className="h-4 w-4 mr-2" />
+              Share to Feed
+            </Button>
+            <Button 
+              variant="outline" 
+              className="w-full"
+              onClick={() => {
+                setShowShareDialog(false);
+                setPendingShareUserId(null);
+                toast({
+                  title: "Rankings Saved",
+                  description: "Your rankings are saved. You can share them anytime from the Activity feed.",
+                });
+              }}
+            >
+              Maybe Later
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
