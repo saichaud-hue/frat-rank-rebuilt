@@ -886,10 +886,10 @@ export default function Activity() {
       )}
 
       {/* What's the move tonight? - Shows top 3 options */}
-      <div className="rounded-3xl overflow-hidden bg-gradient-to-br from-violet-600 via-purple-600 to-fuchsia-600 p-[2px]">
+      <div className="rounded-3xl overflow-hidden gradient-primary p-[2px]">
         <div className="rounded-[22px] bg-card p-5">
           <div className="flex items-center gap-3 mb-4">
-            <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-violet-500 to-fuchsia-500 flex items-center justify-center text-white animate-pulse">
+            <div className="w-12 h-12 rounded-2xl gradient-primary flex items-center justify-center text-white animate-pulse">
               <Vote className="h-6 w-6" />
             </div>
             <div className="flex-1">
@@ -956,9 +956,6 @@ export default function Activity() {
               const isSelected = userMoveVote === option.id;
               const Icon = option.icon || (option.type === 'custom' ? Sparkles : PartyPopper);
               
-              const borderColor = option.type === 'party' ? 'violet' : option.type === 'default' ? 'fuchsia' : 'pink';
-              const bgColor = option.type === 'party' ? 'from-violet-500 to-fuchsia-500' : option.type === 'default' ? 'from-fuchsia-500 to-pink-500' : 'from-pink-500 to-rose-500';
-              
               return (
                 <button
                   key={option.id}
@@ -966,22 +963,21 @@ export default function Activity() {
                   className={cn(
                     "w-full min-h-[52px] p-3 rounded-2xl border-2 transition-all text-left relative overflow-hidden active:scale-[0.98]",
                     isSelected 
-                      ? `border-${borderColor}-500 bg-${borderColor}-500/10` 
-                      : `border-border hover:border-${borderColor}-500/50`
+                      ? "border-primary bg-primary/10" 
+                      : "border-border hover:border-primary/50"
                   )}
-                  style={isSelected ? { borderColor: `hsl(var(--${borderColor === 'violet' ? 'primary' : 'accent'}))`, backgroundColor: `hsl(var(--${borderColor === 'violet' ? 'primary' : 'accent'}) / 0.1)` } : {}}
                 >
                   {userMoveVote && (
                     <div 
-                      className={`absolute inset-0 bg-gradient-to-r ${bgColor.replace('from-', 'from-').replace('to-', 'to-')}/20 to-transparent transition-all duration-500`}
-                      style={{ width: `${percentage}%`, background: `linear-gradient(to right, hsl(280 70% 50% / 0.2), transparent)` }}
+                      className="absolute inset-0 bg-gradient-to-r from-primary/20 to-transparent transition-all duration-500"
+                      style={{ width: `${percentage}%` }}
                     />
                   )}
                   <div className="relative flex items-center gap-3">
                     <div className={cn(
                       "w-9 h-9 rounded-xl flex items-center justify-center shrink-0",
                       isSelected 
-                        ? `bg-gradient-to-br ${bgColor} text-white` 
+                        ? "gradient-primary text-white" 
                         : "bg-muted text-muted-foreground"
                     )}>
                       {isSelected ? <Check className="h-4 w-4" /> : <Icon className="h-4 w-4" />}
@@ -1046,13 +1042,13 @@ export default function Activity() {
                     className={cn(
                       "w-full min-h-[52px] p-3 rounded-2xl border-2 transition-all text-left relative overflow-hidden active:scale-[0.98]",
                       isSelected 
-                        ? "border-violet-500 bg-violet-500/10" 
-                        : "border-border hover:border-violet-500/50"
+                        ? "border-primary bg-primary/10" 
+                        : "border-border hover:border-primary/50"
                     )}
                   >
                     {userMoveVote && (
                       <div 
-                        className="absolute inset-0 bg-gradient-to-r from-violet-500/20 to-transparent transition-all duration-500"
+                        className="absolute inset-0 bg-gradient-to-r from-primary/20 to-transparent transition-all duration-500"
                         style={{ width: `${percentage}%` }}
                       />
                     )}
@@ -1060,7 +1056,7 @@ export default function Activity() {
                       <div className={cn(
                         "w-9 h-9 rounded-xl flex items-center justify-center shrink-0",
                         isSelected 
-                          ? "bg-gradient-to-br from-violet-500 to-fuchsia-500 text-white" 
+                          ? "gradient-primary text-white" 
                           : "bg-muted text-muted-foreground"
                       )}>
                         {isSelected ? <Check className="h-4 w-4" /> : <PartyPopper className="h-4 w-4" />}
@@ -1224,7 +1220,7 @@ export default function Activity() {
             <Button 
               onClick={() => setShowChatComposer(true)}
               size="lg"
-              className="rounded-full px-8 bg-gradient-to-r from-violet-500 to-purple-500"
+              className="rounded-full px-8 gradient-primary"
             >
               <Send className="h-5 w-5 mr-2" />
               Start the convo
@@ -1254,7 +1250,7 @@ export default function Activity() {
                         "text-white font-bold",
                         isHot 
                           ? "bg-gradient-to-br from-orange-500 to-red-500" 
-                          : "bg-gradient-to-br from-violet-500 to-purple-500"
+                          : "gradient-primary"
                       )}>
                         {isHot ? <Flame className="h-5 w-5" /> : <MessagesSquare className="h-5 w-5" />}
                       </AvatarFallback>
@@ -1358,7 +1354,7 @@ export default function Activity() {
                         "w-11 h-11 rounded-xl flex items-center justify-center text-white shrink-0",
                         activityItem.type === 'party_rating' && "bg-gradient-to-br from-pink-500 to-rose-500",
                         activityItem.type === 'frat_rating' && "bg-gradient-to-br from-amber-500 to-orange-500",
-                        activityItem.type === 'party_comment' && "bg-gradient-to-br from-violet-500 to-purple-500",
+                        activityItem.type === 'party_comment' && "gradient-primary",
                         activityItem.type === 'frat_comment' && "bg-gradient-to-br from-cyan-500 to-blue-500"
                       )}>
                         {getActivityIcon(activityItem.type)}
@@ -1395,7 +1391,7 @@ export default function Activity() {
                               <span className="font-semibold">{activityItem.vibe?.toFixed(1)}</span>
                             </div>
                             <div className="flex items-center gap-1">
-                              <Star className="h-4 w-4 text-violet-500" />
+                              <Star className="h-4 w-4 text-primary" />
                               <span className="font-semibold">{activityItem.music?.toFixed(1)}</span>
                             </div>
                             <div className="flex items-center gap-1">
@@ -1469,7 +1465,7 @@ export default function Activity() {
       {/* Floating compose button */}
       <button
         onClick={() => setShowChatComposer(true)}
-        className="fixed bottom-24 right-4 w-14 h-14 rounded-full bg-gradient-to-r from-violet-500 to-purple-500 text-white shadow-lg shadow-violet-500/30 flex items-center justify-center hover:scale-105 active:scale-95 transition-transform z-40"
+        className="fixed bottom-24 right-4 w-14 h-14 rounded-full gradient-primary text-white shadow-lg shadow-primary/30 flex items-center justify-center hover:scale-105 active:scale-95 transition-transform z-40"
       >
         <Send className="h-6 w-6" />
       </button>
@@ -1649,7 +1645,7 @@ export default function Activity() {
                   }
                 }}
                 disabled={submittingChat || (!chatText.trim() && !Object.values(fratRanking).some(Boolean))}
-                className="flex-1 rounded-xl bg-gradient-to-r from-violet-500 to-purple-500 text-white"
+                className="flex-1 rounded-xl gradient-primary text-white"
               >
                 {submittingChat ? (
                   <Loader2 className="h-5 w-5 animate-spin" />
