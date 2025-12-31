@@ -106,6 +106,10 @@ export default function Activity() {
   const [mentionType, setMentionType] = useState<'frat' | 'party' | null>(null);
   const [selectedMention, setSelectedMention] = useState<{ type: 'frat' | 'party'; id: string; name: string } | null>(null);
   
+  // Frat opinion mode
+  const [showFratOpinionPicker, setShowFratOpinionPicker] = useState(false);
+  const [opinionFrat, setOpinionFrat] = useState<Fraternity | null>(null);
+  
   // Data for mentions
   const [fraternities, setFraternities] = useState<Fraternity[]>([]);
   const [parties, setParties] = useState<Party[]>([]);
@@ -1096,21 +1100,45 @@ export default function Activity() {
       </button>
 
       {/* Chat Composer Sheet */}
-      <Sheet open={showChatComposer} onOpenChange={setShowChatComposer}>
+      <Sheet open={showChatComposer} onOpenChange={(open) => {
+        setShowChatComposer(open);
+        if (!open) {
+          setOpinionFrat(null);
+        }
+      }}>
         <SheetContent side="bottom" className="h-auto max-h-[80vh] rounded-t-3xl">
           <SheetHeader className="pb-4">
-            <SheetTitle className="text-xl">What's on your mind?</SheetTitle>
+            <SheetTitle className="text-xl">
+              {opinionFrat ? `Share about ${opinionFrat.name}` : "What's on your mind?"}
+            </SheetTitle>
           </SheetHeader>
           <div className="space-y-4">
+            {/* Frat opinion badge */}
+            {opinionFrat && (
+              <div className="flex items-center gap-2 p-3 rounded-xl bg-amber-500/10 border border-amber-500/20">
+                <Trophy className="h-5 w-5 text-amber-500" />
+                <div className="flex-1">
+                  <p className="font-medium text-sm">{opinionFrat.name}</p>
+                  <p className="text-xs text-muted-foreground">Opinion post (doesn't affect ratings)</p>
+                </div>
+                <button 
+                  onClick={() => setOpinionFrat(null)} 
+                  className="p-1 hover:bg-muted rounded-full"
+                >
+                  <X className="h-4 w-4 text-muted-foreground" />
+                </button>
+              </div>
+            )}
+            
             <Textarea
               value={chatText}
               onChange={(e) => setChatText(e.target.value)}
-              placeholder="Share what's happening..."
+              placeholder={opinionFrat ? `Share your thoughts on ${opinionFrat.name}...` : "Share what's happening..."}
               className="min-h-[120px] text-base rounded-xl resize-none"
               autoFocus
             />
             
-            {selectedMention && (
+            {selectedMention && !opinionFrat && (
               <div className="flex items-center gap-2">
                 <Badge className="flex items-center gap-1 px-3 py-1.5">
                   <AtSign className="h-3 w-3" />
@@ -1122,15 +1150,27 @@ export default function Activity() {
               </div>
             )}
             
-            <div className="flex gap-2">
-              <Button
-                variant="outline"
-                onClick={() => { setMentionType('frat'); setShowMentionPicker(true); }}
-                className="rounded-xl"
-              >
-                <AtSign className="h-4 w-4 mr-2" />
-                Mention
-              </Button>
+            <div className="flex gap-2 flex-wrap">
+              {!opinionFrat && (
+                <>
+                  <Button
+                    variant="outline"
+                    onClick={() => { setMentionType('frat'); setShowMentionPicker(true); }}
+                    className="rounded-xl"
+                  >
+                    <AtSign className="h-4 w-4 mr-2" />
+                    Mention
+                  </Button>
+                  <Button
+                    variant="outline"
+                    onClick={() => setShowFratOpinionPicker(true)}
+                    className="rounded-xl border-amber-500/50 text-amber-600 hover:bg-amber-500/10"
+                  >
+                    <Trophy className="h-4 w-4 mr-2" />
+                    Frat Opinion
+                  </Button>
+                </>
+              )}
               <Button
                 onClick={handleSubmitChat}
                 disabled={submittingChat || !chatText.trim()}
@@ -1147,6 +1187,39 @@ export default function Activity() {
               </Button>
             </div>
           </div>
+        </SheetContent>
+      </Sheet>
+
+      {/* Frat Opinion Picker Sheet */}
+      <Sheet open={showFratOpinionPicker} onOpenChange={setShowFratOpinionPicker}>
+        <SheetContent side="bottom" className="h-[60vh] rounded-t-3xl">
+          <SheetHeader className="pb-4">
+            <SheetTitle className="flex items-center gap-2">
+              <Trophy className="h-5 w-5 text-amber-500" />
+              Share a Frat Opinion
+            </SheetTitle>
+            <p className="text-sm text-muted-foreground">
+              Post your thoughts about a frat - this won't affect any ratings
+            </p>
+          </SheetHeader>
+          <ScrollArea className="h-[calc(100%-100px)]">
+            <div className="space-y-2">
+              {fraternities.map((frat) => (
+                <button
+                  key={frat.id}
+                  onClick={() => {
+                    setOpinionFrat(frat);
+                    setSelectedMention({ type: 'frat', id: frat.id, name: frat.name });
+                    setShowFratOpinionPicker(false);
+                  }}
+                  className="w-full p-4 rounded-xl bg-muted/50 hover:bg-amber-500/10 hover:border-amber-500/30 border border-transparent text-left transition-all active:scale-[0.98]"
+                >
+                  <p className="font-semibold">{frat.name}</p>
+                  {frat.chapter && <p className="text-sm text-muted-foreground">{frat.chapter}</p>}
+                </button>
+              ))}
+            </div>
+          </ScrollArea>
         </SheetContent>
       </Sheet>
 

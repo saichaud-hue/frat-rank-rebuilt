@@ -1,6 +1,7 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
-import { ListOrdered, Trophy, PartyPopper, LogIn, ChevronRight, Lock, Star, Users, Shield, Heart, Sparkles, Music, Zap, CheckCircle2, Crown, Gift } from 'lucide-react';
+import { ListOrdered, Trophy, PartyPopper, LogIn, ChevronRight, Lock, Star, Users, Shield, Heart, Sparkles, Music, Zap, CheckCircle2, Crown, Gift, Loader2 } from 'lucide-react';
+import { toast } from '@/hooks/use-toast';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -64,6 +65,9 @@ export default function YourRankings() {
   const [selectedParty, setSelectedParty] = useState<Party | null>(null);
   const [ratingFromIntro, setRatingFromIntro] = useState(false);
   const [showPartyPicker, setShowPartyPicker] = useState(false);
+  
+  // Track if completion post was already sent
+  const completionPostedRef = useRef(false);
 
   useEffect(() => {
     loadData();
@@ -230,6 +234,8 @@ export default function YourRankings() {
       combined_score: scores.combined,
     };
 
+    const isNewRating = existingRatings.length === 0;
+
     if (existingRatings.length > 0) {
       await base44.entities.ReputationRating.update(existingRatings[0].id, {
         ...ratingData,
@@ -261,10 +267,44 @@ export default function YourRankings() {
     setSelectedFrat(null);
     await loadData();
 
+    // Check if user just completed all frat ratings
+    const newRatedCount = isNewRating ? ratedFratCount + 1 : ratedFratCount;
+    if (isNewRating && newRatedCount >= allFraternities.length && !completionPostedRef.current) {
+      // Post gamified completion message to feed
+      completionPostedRef.current = true;
+      await postCompletionToFeed(user.id);
+    }
+
     // If rating was initiated from intro, re-show the intro
     if (ratingFromIntro) {
       setShowIntro(true);
       setRatingFromIntro(false);
+    }
+  };
+
+  const postCompletionToFeed = async (userId: string) => {
+    try {
+      const topFrats = rankedFrats.slice(0, 3);
+      const topNames = topFrats.map((f, i) => `${i + 1}. ${f.fraternity.name}`).join(', ');
+      
+      const celebrationEmojis = ['🏆', '🎉', '👑', '🔥', '⭐'];
+      const randomEmoji = celebrationEmojis[Math.floor(Math.random() * celebrationEmojis.length)];
+      
+      const message = `${randomEmoji} Just completed ranking ALL ${allFraternities.length} fraternities! My top picks: ${topNames || 'Check my list!'} 🎊`;
+      
+      await base44.entities.ChatMessage.create({
+        user_id: userId,
+        text: message,
+        upvotes: 0,
+        downvotes: 0,
+      });
+      
+      toast({
+        title: "🎉 Achievement Unlocked!",
+        description: "Your ranking completion was shared to the feed!",
+      });
+    } catch (error) {
+      console.error('Failed to post completion:', error);
     }
   };
 
