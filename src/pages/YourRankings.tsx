@@ -51,7 +51,7 @@ export default function YourRankings() {
   const [ratedFratIds, setRatedFratIds] = useState<string[]>([]);
   const [ratedPartyIds, setRatedPartyIds] = useState<string[]>([]);
   
-  // Intro state - only show on first visit and if not permanently dismissed
+  // Intro state - show on every visit unless permanently dismissed with "Don't show again"
   const [showIntro, setShowIntro] = useState(false);
   const [introChecked, setIntroChecked] = useState(false);
   
@@ -69,12 +69,11 @@ export default function YourRankings() {
     loadData();
   }, []);
 
-  // Show intro only on mount if not dismissed (session or permanent)
+  // Show intro on every visit unless permanently dismissed
   useEffect(() => {
     if (!introChecked && !loading && user) {
-      const sessionDismissed = sessionStorage.getItem('touse_yourlists_intro_dismissed');
       const permanentDismissed = localStorage.getItem('touse_yourlists_intro_never_show');
-      if (!sessionDismissed && !permanentDismissed) {
+      if (!permanentDismissed) {
         setShowIntro(true);
       }
       setIntroChecked(true);
@@ -183,8 +182,6 @@ export default function YourRankings() {
   };
 
   const handleIntroComplete = (neverShowAgain: boolean) => {
-    // Always dismiss for this session
-    sessionStorage.setItem('touse_yourlists_intro_dismissed', 'true');
     if (neverShowAgain) {
       localStorage.setItem('touse_yourlists_intro_never_show', 'true');
     }
