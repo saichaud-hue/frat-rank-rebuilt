@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { User, PartyPopper, Star, LogIn, Award, ChevronDown, ChevronUp, Pencil, Trash2, Zap, Music, Settings, Trophy, Users, Shield, Heart, Sparkles, TrendingUp, Crown, MessageCircle, Flame, Image, Lock, X, Loader2 } from 'lucide-react';
+import { User, PartyPopper, Star, LogIn, Award, ChevronDown, ChevronUp, ChevronRight, Pencil, Trash2, Zap, Music, Settings, Trophy, Users, Shield, Heart, Sparkles, TrendingUp, Crown, MessageCircle, Flame, Image, Lock, X, Loader2 } from 'lucide-react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -756,34 +756,67 @@ export default function Profile() {
                   <p className="text-sm text-muted-foreground/70">Save photos just for yourself from party pages!</p>
                 </div>
               ) : (
-                <div className="p-4">
-                  <div className="grid grid-cols-3 gap-2">
-                    {privatePhotos.map((photo) => (
-                      <div key={photo.id} className="relative aspect-square group">
-                        <img 
-                          src={photo.url} 
-                          alt={photo.caption || 'Private photo'}
-                          className="w-full h-full object-cover rounded-lg cursor-pointer"
-                          onClick={() => setViewingPhoto(photo)}
-                        />
-                        <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 rounded-lg transition-colors pointer-events-none" />
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="absolute top-1 right-1 h-6 w-6 bg-black/50 text-white hover:bg-red-500/80 opacity-0 group-hover:opacity-100 transition-opacity"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            setDeletingPhotoId(photo.id);
-                          }}
-                        >
-                          <Trash2 className="h-3 w-3" />
-                        </Button>
-                        <div className="absolute bottom-0 left-0 right-0 p-1.5 bg-gradient-to-t from-black/70 to-transparent rounded-b-lg">
-                          <p className="text-[10px] text-white truncate">{photo.party?.title || 'Party'}</p>
+                <div className="p-4 space-y-4">
+                  {/* Group photos by party */}
+                  {Object.entries(
+                    privatePhotos.reduce((acc, photo) => {
+                      const partyId = photo.party_id;
+                      if (!acc[partyId]) {
+                        acc[partyId] = {
+                          party: photo.party,
+                          fraternity: photo.fraternity,
+                          photos: []
+                        };
+                      }
+                      acc[partyId].photos.push(photo);
+                      return acc;
+                    }, {} as Record<string, { party: any; fraternity: any; photos: typeof privatePhotos }>)
+                  ).map(([partyId, group]) => (
+                    <div key={partyId} className="space-y-2">
+                      {/* Party Banner */}
+                      <Link 
+                        to={`/Party?id=${partyId}`}
+                        className="block"
+                      >
+                        <div className="flex items-center gap-3 p-3 rounded-xl bg-gradient-to-r from-primary/10 to-accent/10 hover:from-primary/20 hover:to-accent/20 transition-colors border border-border/50">
+                          <div className="w-10 h-10 rounded-lg bg-primary/20 flex items-center justify-center">
+                            <Image className="h-5 w-5 text-primary" />
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <p className="font-semibold text-foreground truncate">{group.party?.title || 'Party'}</p>
+                            <p className="text-xs text-muted-foreground">{group.fraternity?.name || 'Unknown'} • {group.photos.length} photo{group.photos.length !== 1 ? 's' : ''}</p>
+                          </div>
+                          <ChevronRight className="h-5 w-5 text-muted-foreground" />
                         </div>
+                      </Link>
+                      
+                      {/* Photos Grid */}
+                      <div className="grid grid-cols-3 gap-2 pl-2">
+                        {group.photos.map((photo) => (
+                          <div key={photo.id} className="relative aspect-square group">
+                            <img 
+                              src={photo.url} 
+                              alt={photo.caption || 'Private photo'}
+                              className="w-full h-full object-cover rounded-lg cursor-pointer"
+                              onClick={() => setViewingPhoto(photo)}
+                            />
+                            <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 rounded-lg transition-colors pointer-events-none" />
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="absolute top-1 right-1 h-6 w-6 bg-black/50 text-white hover:bg-red-500/80 opacity-0 group-hover:opacity-100 transition-opacity"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setDeletingPhotoId(photo.id);
+                              }}
+                            >
+                              <Trash2 className="h-3 w-3" />
+                            </Button>
+                          </div>
+                        ))}
                       </div>
-                    ))}
-                  </div>
+                    </div>
+                  ))}
                 </div>
               )}
             </Card>
