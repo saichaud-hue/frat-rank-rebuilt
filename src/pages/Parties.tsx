@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { PartyPopper, Plus, Flame, Calendar, Clock, ArrowUpDown, Search } from 'lucide-react';
+import { PartyPopper, Plus, Flame, Calendar, Clock } from 'lucide-react';
 import { base44, seedInitialData, type Party, type Fraternity, type PartyRating } from '@/api/base44Client';
 import PartyRow from '@/components/parties/PartyRow';
 import PartyFilters from '@/components/parties/PartyFilters';
@@ -177,24 +177,14 @@ export default function Parties() {
 
   return (
     <div className="pb-28">
-      {/* Header */}
-      <div className="px-4 pt-2">
-        <div className="flex items-center justify-between mb-1">
-          <div className="flex items-center gap-2">
-            <PartyPopper className="h-5 w-5 text-primary" />
-            <h1 className="text-xl font-bold">Campus Parties</h1>
-          </div>
-          <div className="flex gap-4 text-xs text-muted-foreground">
-            <span><strong className="text-foreground">{parties.length}</strong> events</span>
-            <span><strong className="text-foreground">{totalRatings}</strong> ratings</span>
-            <span><strong className="text-foreground">{avgScore > 0 ? avgScore.toFixed(1) : '—'}</strong> avg</span>
-          </div>
+      {/* Header - Mimics Leaderboard */}
+      <div className="px-4 pt-2 space-y-5">
+        <div>
+          <h1 className="text-2xl font-bold text-foreground">Campus Parties</h1>
+          <p className="text-sm text-muted-foreground mt-0.5">Duke University</p>
         </div>
-        <p className="text-sm text-muted-foreground">Discover and rate events</p>
-      </div>
 
-      {/* Filters */}
-      <div className="px-4 mt-4">
+        {/* Filters */}
         <PartyFilters
           filters={filters}
           onFiltersChange={setFilters}
@@ -202,19 +192,8 @@ export default function Parties() {
         />
       </div>
 
-      {/* Sort indicator */}
-      <div className="flex items-center justify-between px-4 mt-6 mb-2">
-        <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
-          <ArrowUpDown className="h-3.5 w-3.5" />
-          <span>Score</span>
-        </div>
-        <button className="p-2 -mr-2 text-muted-foreground hover:text-foreground transition-colors">
-          <Search className="h-4 w-4" />
-        </button>
-      </div>
-
       {/* Divider */}
-      <div className="mx-4 border-t border-border" />
+      <div className="mx-4 mt-6 border-t border-border" />
 
       {/* LIVE PARTIES */}
       {liveParties.length > 0 && (

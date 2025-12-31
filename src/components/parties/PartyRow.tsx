@@ -86,24 +86,39 @@ export default function PartyRow({
           )}
         </div>
 
-        {/* Score Badge or Status */}
-        {hasScore ? (
-          <div className={cn(
-            "flex items-center justify-center w-11 h-11 rounded-full border-2 font-bold text-sm",
-            getScoreColorClass(overallPartyQuality ?? null)
-          )}>
-            {overallPartyQuality?.toFixed(1)}
-          </div>
-        ) : (
-          <span className={cn(
-            "text-[10px] font-medium px-2 py-1 rounded-full",
-            isLive ? "bg-red-500/10 text-red-500" :
-            computedStatus === 'upcoming' ? "bg-primary/10 text-primary" :
-            "bg-muted text-muted-foreground"
-          )}>
-            {isLive ? 'Live' : computedStatus === 'upcoming' ? 'Soon' : 'Past'}
+        {/* Type & Access Bubbles + Status */}
+        <div className="flex items-center gap-1.5 shrink-0">
+          {/* Party Type */}
+          {party.theme && (
+            <span className="text-[10px] font-medium px-2 py-1 rounded-full bg-muted text-muted-foreground">
+              {party.theme}
+            </span>
+          )}
+          
+          {/* Access Type - placeholder since not in Party type */}
+          <span className="text-[10px] font-medium px-2 py-1 rounded-full bg-muted text-muted-foreground">
+            Open
           </span>
-        )}
+
+          {/* Score Badge or Status */}
+          {hasScore ? (
+            <div className={cn(
+              "flex items-center justify-center w-11 h-11 rounded-full border-2 font-bold text-sm ml-1",
+              getScoreColorClass(overallPartyQuality ?? null)
+            )}>
+              {overallPartyQuality?.toFixed(1)}
+            </div>
+          ) : (
+            <span className={cn(
+              "text-[10px] font-medium px-2 py-1 rounded-full",
+              isLive ? "bg-red-500/10 text-red-500" :
+              computedStatus === 'upcoming' ? "bg-primary/10 text-primary" :
+              "bg-muted text-muted-foreground"
+            )}>
+              {isLive ? 'Live' : computedStatus === 'upcoming' ? 'Soon' : 'Past'}
+            </span>
+          )}
+        </div>
       </div>
     </Link>
   );
