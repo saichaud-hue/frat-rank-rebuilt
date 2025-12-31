@@ -598,9 +598,13 @@ export default function Activity() {
     }
   };
 
-  // Normalize text for comparison (lowercase, trim, remove extra spaces)
+  // Normalize text for comparison (lowercase, trim, remove extra spaces, limit repeated chars to 3)
   const normalizeText = (text: string) => {
-    return text.toLowerCase().trim().replace(/\s+/g, ' ');
+    return text
+      .toLowerCase()
+      .trim()
+      .replace(/\s+/g, ' ')
+      .replace(/(.)\1{2,}/g, '$1$1$1'); // Collapse 3+ repeated chars to max 3
   };
 
   const handleAddSuggestion = () => {
