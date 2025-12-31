@@ -1,16 +1,24 @@
 import { useState, useMemo, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Trophy, Swords, Crown, ArrowRight, Sparkles, Flame, ChevronLeft } from 'lucide-react';
+import { Trophy, Swords, Crown, ArrowRight, Sparkles, Flame, ChevronLeft, Share2, Save, RotateCcw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 import { type Fraternity } from '@/api/base44Client';
 
+interface SavedBattleRanking {
+  id: string;
+  date: string;
+  ranking: Array<{ fratId: string; fratName: string; tier: string; wins: number }>;
+}
+
 interface FratBattleGameProps {
   fraternities: Fraternity[];
   onComplete: (ranking: Record<string, Fraternity>) => void;
   onClose: () => void;
+  onShare?: (ranking: Array<{ fratId: string; fratName: string; tier: string; wins: number }>) => void;
+  onSave?: (ranking: Array<{ fratId: string; fratName: string; tier: string; wins: number }>) => void;
   existingRankings?: Fraternity[]; // User's existing ranking from YourRankings page
 }
 
@@ -42,6 +50,8 @@ export default function FratBattleGame({
   fraternities, 
   onComplete, 
   onClose,
+  onShare,
+  onSave,
   existingRankings 
 }: FratBattleGameProps) {
   const [currentMatchupIndex, setCurrentMatchupIndex] = useState(0);
@@ -223,6 +233,30 @@ export default function FratBattleGame({
       .sort((a, b) => b.score - a.score)
       .slice(0, 10);
 
+    // Build ranking data for share/save
+    const rankingData = sortedResults.map((elo, idx) => {
+      const frat = fraternities.find(f => f.id === elo.fratId);
+      const tier = TIERS[idx];
+      return {
+        fratId: elo.fratId,
+        fratName: frat?.name || '',
+        tier: tier?.key || '',
+        wins: elo.wins,
+      };
+    }).filter(r => r.fratName);
+
+    const handleShare = () => {
+      if (onShare) {
+        onShare(rankingData);
+      }
+    };
+
+    const handleSave = () => {
+      if (onSave) {
+        onSave(rankingData);
+      }
+    };
+
     return (
       <div className="space-y-6">
         <div className="text-center">
@@ -262,23 +296,43 @@ export default function FratBattleGame({
                 )}>
                   {idx === 0 ? <Crown className="h-5 w-5" /> : idx + 1}
                 </div>
-                <div className="flex-1">
-                  <p className="font-semibold">{frat.name}</p>
+                <div className="flex-1 min-w-0">
+                  <p className="font-semibold truncate">{frat.name}</p>
                   <p className="text-xs text-muted-foreground">{tier.label.replace(/\s*\(\d+\w+\)/, '')}</p>
                 </div>
-                <div className="text-right">
-                  <Badge variant="secondary" className="text-xs">
-                    {elo.wins}W
-                  </Badge>
+                <div className="text-right flex-shrink-0">
+                  <span className="text-sm font-medium text-muted-foreground">
+                    {elo.wins} {elo.wins === 1 ? 'win' : 'wins'}
+                  </span>
                 </div>
               </motion.div>
             );
           })}
         </div>
 
+        {/* Share and Save buttons */}
         <div className="flex gap-3">
           <Button 
             variant="outline" 
+            onClick={handleShare}
+            className="flex-1 rounded-xl"
+          >
+            <Share2 className="h-4 w-4 mr-2" />
+            Share to Feed
+          </Button>
+          <Button 
+            variant="outline"
+            onClick={handleSave}
+            className="flex-1 rounded-xl"
+          >
+            <Save className="h-4 w-4 mr-2" />
+            Save
+          </Button>
+        </div>
+
+        <div className="flex gap-3">
+          <Button 
+            variant="ghost" 
             onClick={onClose}
             className="flex-1 rounded-xl"
           >
