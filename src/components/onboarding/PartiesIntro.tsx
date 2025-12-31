@@ -1,33 +1,23 @@
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
 import { PartyPopper, Megaphone, Users } from 'lucide-react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
-import { base44 } from '@/api/base44Client';
 
 interface PartiesIntroProps {
   onComplete: (neverShowAgain: boolean) => void;
+  onSubmitParty: () => void;
 }
 
-export default function PartiesIntro({ onComplete }: PartiesIntroProps) {
+export default function PartiesIntro({ onComplete, onSubmitParty }: PartiesIntroProps) {
   const [neverShowAgain, setNeverShowAgain] = useState(false);
-  const navigate = useNavigate();
 
-  const handleSubmitParty = async () => {
-    try {
-      // Check if user is authenticated
-      await base44.auth.me();
-      // If authenticated, save preference and go to create party
-      if (neverShowAgain) {
-        localStorage.setItem('fratrank_parties_intro_never_show', 'true');
-      }
-      navigate('/CreateParty');
-    } catch {
-      // Not authenticated, redirect to login
-      base44.auth.redirectToLogin(window.location.href);
+  const handleSubmitParty = () => {
+    if (neverShowAgain) {
+      localStorage.setItem('fratrank_parties_intro_never_show', 'true');
     }
+    onSubmitParty();
   };
 
   const handleBrowse = () => {
