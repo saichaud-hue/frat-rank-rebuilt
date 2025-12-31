@@ -97,8 +97,8 @@ export default function YourListsIntro({
         {step === 'main' && (
           <div className="space-y-6">
             {/* Icon */}
-            <div className="mx-auto w-20 h-20 rounded-2xl bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center">
-              <ListOrdered className="h-10 w-10 text-white" />
+            <div className="mx-auto w-20 h-20 rounded-2xl bg-primary flex items-center justify-center">
+              <ListOrdered className="h-10 w-10 text-primary-foreground" />
             </div>
 
             {/* Content */}
@@ -115,8 +115,8 @@ export default function YourListsIntro({
                 onClick={handleViewFrats}
                 className="w-full flex items-center gap-4 p-4 rounded-xl bg-muted/50 hover:bg-muted active:scale-[0.98] transition-all text-left"
               >
-                <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-amber-400 to-amber-600 flex items-center justify-center">
-                  <Trophy className="h-6 w-6 text-white" />
+                <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center">
+                  <Trophy className="h-6 w-6 text-primary" />
                 </div>
                 <div className="flex-1">
                   <p className="font-semibold">Your Fraternities</p>
@@ -137,8 +137,8 @@ export default function YourListsIntro({
                 onClick={handleViewParties}
                 className="w-full flex items-center gap-4 p-4 rounded-xl bg-muted/50 hover:bg-muted active:scale-[0.98] transition-all text-left"
               >
-                <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-pink-500 to-rose-600 flex items-center justify-center">
-                  <PartyPopper className="h-6 w-6 text-white" />
+                <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center">
+                  <PartyPopper className="h-6 w-6 text-primary" />
                 </div>
                 <div className="flex-1">
                   <p className="font-semibold">Your Parties</p>
@@ -172,7 +172,7 @@ export default function YourListsIntro({
             {fratUnlocked && partyUnlocked ? (
               <Button 
                 onClick={() => onComplete(neverShowAgain)} 
-                className="w-full min-h-[52px] text-base font-semibold bg-gradient-to-r from-amber-500 via-pink-500 to-purple-600 hover:from-amber-600 hover:via-pink-600 hover:to-purple-700 text-white active:scale-[0.98] transition-all shadow-lg"
+                className="w-full min-h-[52px] text-base font-semibold bg-primary hover:bg-primary/90 text-primary-foreground active:scale-[0.98] transition-all shadow-lg"
               >
                 <Sparkles className="h-5 w-5 mr-2" />
                 View Your Rankings!
@@ -220,8 +220,8 @@ export default function YourListsIntro({
             </div>
 
             {/* Icon */}
-            <div className="mx-auto w-16 h-16 rounded-full bg-amber-500/10 flex items-center justify-center">
-              <Lock className="h-8 w-8 text-amber-500" />
+            <div className="mx-auto w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center">
+              <Lock className="h-8 w-8 text-primary" />
             </div>
 
             {/* Message */}
@@ -232,7 +232,7 @@ export default function YourListsIntro({
             {/* Action */}
             <Button 
               onClick={() => setStep('frat-list')} 
-              className="w-full min-h-[52px] text-base font-semibold bg-amber-500 hover:bg-amber-600 text-white active:scale-[0.98] transition-transform"
+              className="w-full min-h-[52px] text-base font-semibold bg-primary hover:bg-primary/90 text-primary-foreground active:scale-[0.98] transition-transform"
             >
               <Star className="h-5 w-5 mr-2" />
               Rate a Fraternity
@@ -273,8 +273,8 @@ export default function YourListsIntro({
             </div>
 
             {/* Icon */}
-            <div className="mx-auto w-16 h-16 rounded-full bg-pink-500/10 flex items-center justify-center">
-              <Lock className="h-8 w-8 text-pink-500" />
+            <div className="mx-auto w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center">
+              <Lock className="h-8 w-8 text-primary" />
             </div>
 
             {/* Message */}
@@ -286,7 +286,7 @@ export default function YourListsIntro({
             <div className="space-y-3">
               <Button 
                 onClick={() => setStep('party-list')} 
-                className="w-full min-h-[52px] text-base font-semibold bg-pink-500 hover:bg-pink-600 text-white active:scale-[0.98] transition-transform"
+                className="w-full min-h-[52px] text-base font-semibold bg-primary hover:bg-primary/90 text-primary-foreground active:scale-[0.98] transition-transform"
               >
                 <Star className="h-5 w-5 mr-2" />
                 Rate a Party
@@ -355,7 +355,7 @@ export default function YourListsIntro({
                       {isRated ? (
                         <CheckCircle2 className="h-5 w-5 text-green-500" />
                       ) : (
-                        <Star className="h-5 w-5 text-amber-500" />
+                        <Star className="h-5 w-5 text-primary" />
                       )}
                     </button>
                   );
@@ -407,9 +407,9 @@ export default function YourListsIntro({
                         <div className={`h-12 w-12 rounded-xl flex items-center justify-center ${
                           isRated 
                             ? 'bg-green-500/20' 
-                            : 'bg-gradient-to-br from-pink-500 to-rose-500'
+                            : 'bg-primary/10'
                         }`}>
-                          <PartyPopper className={`h-6 w-6 ${isRated ? 'text-green-600' : 'text-white'}`} />
+                          <PartyPopper className={`h-6 w-6 ${isRated ? 'text-green-600' : 'text-primary'}`} />
                         </div>
                         <div className="flex-1 min-w-0">
                           <p className="font-semibold truncate">{party.title}</p>
@@ -417,7 +417,7 @@ export default function YourListsIntro({
                         {isRated ? (
                           <CheckCircle2 className="h-5 w-5 text-green-500" />
                         ) : (
-                          <Star className="h-5 w-5 text-pink-500" />
+                          <Star className="h-5 w-5 text-primary" />
                         )}
                       </button>
                     );
