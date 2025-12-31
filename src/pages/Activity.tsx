@@ -1390,7 +1390,7 @@ export default function Activity() {
           });
         }
       }}>
-        <SheetContent side="bottom" className="rounded-t-3xl" style={{ paddingBottom: 'max(env(safe-area-inset-bottom), 24px)' }}>
+        <SheetContent side="bottom" className="rounded-t-3xl" style={{ paddingBottom: 'max(env(safe-area-inset-bottom), 16px)' }}>
           <SheetHeader className="pb-4 text-left">
             <SheetTitle className="text-lg">
               {Object.values(fratRanking).some(Boolean) ? "Share Frat Ranking" : "What's on your mind?"}
@@ -1570,7 +1570,7 @@ export default function Activity() {
           setExpandedTiers({});
         }
       }}>
-        <SheetContent side="bottom" className="rounded-t-3xl h-[85vh]" style={{ paddingBottom: 'max(env(safe-area-inset-bottom), 24px)' }}>
+        <SheetContent side="bottom" className="rounded-t-3xl max-h-[85vh]" style={{ paddingBottom: 'max(env(safe-area-inset-bottom), 16px)' }}>
           {showFratBattleGame ? (
             <FratBattleGame
               fraternities={fraternities}
@@ -1860,7 +1860,7 @@ export default function Activity() {
 
       {/* Mention Picker Sheet */}
       <Sheet open={showMentionPicker} onOpenChange={setShowMentionPicker}>
-        <SheetContent side="bottom" className="rounded-t-3xl h-[70vh]" style={{ paddingBottom: 'max(env(safe-area-inset-bottom), 24px)' }}>
+        <SheetContent side="bottom" className="rounded-t-3xl max-h-[70vh]" style={{ paddingBottom: 'max(env(safe-area-inset-bottom), 16px)' }}>
           <SheetHeader className="pb-4 text-left">
             <SheetTitle>Tag something</SheetTitle>
           </SheetHeader>
@@ -1960,7 +1960,7 @@ export default function Activity() {
           setReplyText('');
         }
       }}>
-        <SheetContent side="bottom" className="rounded-t-3xl h-[75vh]" style={{ paddingBottom: 'max(env(safe-area-inset-bottom), 24px)' }}>
+        <SheetContent side="bottom" className="rounded-t-3xl max-h-[75vh]" style={{ paddingBottom: 'max(env(safe-area-inset-bottom), 16px)' }}>
           <SheetHeader className="pb-4 shrink-0 text-left">
             <SheetTitle className="flex items-center gap-2">
               <MessageCircle className="h-5 w-5" />
