@@ -323,7 +323,7 @@ export default function PartyPage() {
           </Badge>
         </div>
         <div className="p-4">
-          <PhotoBulletin partyId={party.id} />
+          <PhotoBulletin partyId={party.id} partyStatus={getPartyStatus()} />
         </div>
       </Card>
 
