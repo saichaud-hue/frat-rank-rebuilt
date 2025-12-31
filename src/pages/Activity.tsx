@@ -1454,7 +1454,6 @@ export default function Activity() {
               onChange={(e) => setChatText(e.target.value)}
               placeholder={Object.values(fratRanking).some(Boolean) ? "Add a comment to your ranking (optional)..." : "Share what's happening..."}
               className="min-h-[120px] text-base rounded-xl resize-none"
-              autoFocus
             />
             
             {selectedMention && !Object.values(fratRanking).some(Boolean) && (
@@ -1575,7 +1574,7 @@ export default function Activity() {
           setShowManualPicker(false);
         }
       }}>
-        <SheetContent side="bottom" className="h-[85vh] rounded-t-3xl">
+        <SheetContent side="bottom" className="h-auto max-h-[85vh] rounded-t-3xl">
           {showFratBattleGame ? (
             <FratBattleGame
               fraternities={fraternities}
@@ -1725,7 +1724,8 @@ export default function Activity() {
             </>
           ) : (
             (() => {
-              const savedRankings = JSON.parse(localStorage.getItem('touse_saved_battle_rankings') || '[]');
+              const savedBattleRankings = JSON.parse(localStorage.getItem('touse_saved_battle_rankings') || '[]');
+              const savedManualRankings = JSON.parse(localStorage.getItem('touse_saved_manual_rankings') || '[]');
               
               return (
                 <>
@@ -1739,101 +1739,155 @@ export default function Activity() {
                     </p>
                   </SheetHeader>
                   
-                  <ScrollArea className="h-[calc(100%-100px)]">
-                    <div className="space-y-3">
-                      {/* Battle Game CTA */}
-                      <button
-                        onClick={() => setShowFratBattleGame(true)}
-                        className="w-full p-4 rounded-2xl bg-gradient-to-r from-amber-500/20 via-orange-500/20 to-red-500/20 border-2 border-dashed border-amber-500/50 hover:border-amber-500 transition-all group"
-                      >
-                        <div className="flex items-center gap-3">
-                          <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-amber-500 to-orange-500 flex items-center justify-center text-white shrink-0 group-hover:scale-110 transition-transform">
-                            <Swords className="h-6 w-6" />
-                          </div>
-                          <div className="text-left flex-1">
-                            <p className="font-bold text-base">Play Frat Battle!</p>
-                            <p className="text-xs text-muted-foreground">Pick winners in 10 head-to-head matchups to generate your ranking</p>
-                          </div>
-                          <ChevronRight className="h-5 w-5 text-muted-foreground group-hover:text-amber-500 transition-colors" />
+                  <div className="space-y-3 pb-4">
+                    {/* Battle Game CTA */}
+                    <button
+                      onClick={() => setShowFratBattleGame(true)}
+                      className="w-full p-4 rounded-2xl bg-gradient-to-r from-amber-500/20 via-orange-500/20 to-red-500/20 border-2 border-dashed border-amber-500/50 hover:border-amber-500 transition-all group"
+                    >
+                      <div className="flex items-center gap-3">
+                        <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-amber-500 to-orange-500 flex items-center justify-center text-white shrink-0 group-hover:scale-110 transition-transform">
+                          <Swords className="h-6 w-6" />
                         </div>
-                      </button>
-                      
-                      {/* Share Past Ratings */}
-                      {savedRankings.length > 0 && (
-                        <div className="p-4 rounded-2xl bg-violet-500/10 border border-violet-500/20">
-                          <div className="flex items-center gap-2 mb-3">
-                            <Clock className="h-4 w-4 text-violet-500" />
-                            <p className="font-semibold text-sm">Share Past Ratings</p>
-                          </div>
-                          <div className="space-y-2">
-                            {savedRankings.slice(0, 3).map((saved: { id: string; date: string; ranking: { tier: string; fratName: string; wins: number }[] }) => (
-                              <div key={saved.id} className="flex items-center gap-3 p-3 rounded-xl bg-background/50 border border-border">
-                                <div className="flex-1 min-w-0">
-                                  <p className="text-xs text-muted-foreground">{format(new Date(saved.date), 'MMM d, h:mm a')}</p>
-                                  <p className="text-sm font-medium truncate">
-                                    {saved.ranking.slice(0, 3).map(r => r.fratName).join(' → ')}...
-                                  </p>
-                                </div>
-                                <Button
-                                  size="sm"
-                                  variant="outline"
-                                  className="shrink-0 rounded-lg text-xs border-violet-500/50 text-violet-600 hover:bg-violet-500/10"
-                                  onClick={async () => {
-                                    const user = await base44.auth.me();
-                                    if (!user) {
-                                      toast({ title: "Please sign in to share", variant: "destructive" });
-                                      return;
-                                    }
-                                    
-                                    const tierLines = saved.ranking.map((r: { tier: string; fratName: string }) => {
-                                      const displayTier = r.tier === 'Mouse 1' || r.tier === 'Mouse 2' ? 'Mouse' : r.tier;
-                                      return `${displayTier}: ${r.fratName}`;
-                                    });
-                                    
-                                    const message = `🎮 Frat Battle Results\n\n${tierLines.join('\n')}`;
-                                    
-                                    await base44.entities.ChatMessage.create({
-                                      user_id: user.id,
-                                      text: message,
-                                      upvotes: 0,
-                                      downvotes: 0,
-                                    });
-                                    
-                                    setShowFratRankingPicker(false);
-                                    await loadChat();
-                                    
-                                    toast({ title: "Shared to Feed!" });
-                                  }}
-                                >
-                                  <Send className="h-3 w-3 mr-1" />
-                                  Share
-                                </Button>
+                        <div className="text-left flex-1">
+                          <p className="font-bold text-base">Play Frat Battle!</p>
+                          <p className="text-xs text-muted-foreground">Pick winners in 10 head-to-head matchups to generate your ranking</p>
+                        </div>
+                        <ChevronRight className="h-5 w-5 text-muted-foreground group-hover:text-amber-500 transition-colors" />
+                      </div>
+                    </button>
+                    
+                    {/* Share Past Battles */}
+                    {savedBattleRankings.length > 0 && (
+                      <div className="p-4 rounded-2xl bg-amber-500/10 border border-amber-500/20">
+                        <div className="flex items-center gap-2 mb-3">
+                          <Swords className="h-4 w-4 text-amber-500" />
+                          <p className="font-semibold text-sm">Share Past Battles</p>
+                        </div>
+                        <div className="space-y-2">
+                          {savedBattleRankings.slice(0, 3).map((saved: { id: string; date: string; ranking: { tier: string; fratName: string; wins: number }[] }) => (
+                            <div key={saved.id} className="flex items-center gap-3 p-3 rounded-xl bg-background/50 border border-border">
+                              <div className="flex-1 min-w-0">
+                                <p className="text-xs text-muted-foreground">{format(new Date(saved.date), 'MMM d, h:mm a')}</p>
+                                <p className="text-sm font-medium truncate">
+                                  {saved.ranking.slice(0, 3).map(r => r.fratName).join(' → ')}...
+                                </p>
                               </div>
-                            ))}
-                          </div>
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                className="shrink-0 rounded-lg text-xs border-amber-500/50 text-amber-600 hover:bg-amber-500/10"
+                                onClick={async () => {
+                                  const user = await base44.auth.me();
+                                  if (!user) {
+                                    toast({ title: "Please sign in to share", variant: "destructive" });
+                                    return;
+                                  }
+                                  
+                                  const tierLines = saved.ranking.map((r: { tier: string; fratName: string }) => {
+                                    const displayTier = r.tier === 'Mouse 1' || r.tier === 'Mouse 2' ? 'Mouse' : r.tier;
+                                    return `${displayTier}: ${r.fratName}`;
+                                  });
+                                  
+                                  const message = `🎮 Frat Battle Results\n\n${tierLines.join('\n')}`;
+                                  
+                                  await base44.entities.ChatMessage.create({
+                                    user_id: user.id,
+                                    text: message,
+                                    upvotes: 0,
+                                    downvotes: 0,
+                                  });
+                                  
+                                  setShowFratRankingPicker(false);
+                                  await loadChat();
+                                  
+                                  toast({ title: "Shared to Feed!" });
+                                }}
+                              >
+                                <Send className="h-3 w-3 mr-1" />
+                                Share
+                              </Button>
+                            </div>
+                          ))}
                         </div>
-                      )}
-                      
-                      <p className="text-xs text-muted-foreground text-center py-2">— or —</p>
-                      
-                      {/* Pick Manually CTA */}
-                      <button
-                        onClick={() => setShowManualPicker(true)}
-                        className="w-full p-4 rounded-2xl bg-gradient-to-r from-green-500/20 via-emerald-500/20 to-teal-500/20 border-2 border-dashed border-green-500/50 hover:border-green-500 transition-all group"
-                      >
-                        <div className="flex items-center gap-3">
-                          <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-green-500 to-emerald-500 flex items-center justify-center text-white shrink-0 group-hover:scale-110 transition-transform">
-                            <Trophy className="h-6 w-6" />
-                          </div>
-                          <div className="text-left flex-1">
-                            <p className="font-bold text-base">Pick Manually</p>
-                            <p className="text-xs text-muted-foreground">Select a frat for each tier position yourself</p>
-                          </div>
-                          <ChevronRight className="h-5 w-5 text-muted-foreground group-hover:text-green-500 transition-colors" />
+                      </div>
+                    )}
+                    
+                    <p className="text-xs text-muted-foreground text-center py-2">— or —</p>
+                    
+                    {/* Pick Manually CTA */}
+                    <button
+                      onClick={() => setShowManualPicker(true)}
+                      className="w-full p-4 rounded-2xl bg-gradient-to-r from-green-500/20 via-emerald-500/20 to-teal-500/20 border-2 border-dashed border-green-500/50 hover:border-green-500 transition-all group"
+                    >
+                      <div className="flex items-center gap-3">
+                        <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-green-500 to-emerald-500 flex items-center justify-center text-white shrink-0 group-hover:scale-110 transition-transform">
+                          <Trophy className="h-6 w-6" />
                         </div>
-                      </button>
-                    </div>
-                  </ScrollArea>
+                        <div className="text-left flex-1">
+                          <p className="font-bold text-base">Pick Manually</p>
+                          <p className="text-xs text-muted-foreground">Select a frat for each tier position yourself</p>
+                        </div>
+                        <ChevronRight className="h-5 w-5 text-muted-foreground group-hover:text-green-500 transition-colors" />
+                      </div>
+                    </button>
+                    
+                    {/* Share Past Manual Choices */}
+                    {savedManualRankings.length > 0 && (
+                      <div className="p-4 rounded-2xl bg-green-500/10 border border-green-500/20">
+                        <div className="flex items-center gap-2 mb-3">
+                          <Trophy className="h-4 w-4 text-green-500" />
+                          <p className="font-semibold text-sm">Share Past Manual Choices</p>
+                        </div>
+                        <div className="space-y-2">
+                          {savedManualRankings.slice(0, 3).map((saved: { id: string; date: string; ranking: { tier: string; fratName: string }[] }) => (
+                            <div key={saved.id} className="flex items-center gap-3 p-3 rounded-xl bg-background/50 border border-border">
+                              <div className="flex-1 min-w-0">
+                                <p className="text-xs text-muted-foreground">{format(new Date(saved.date), 'MMM d, h:mm a')}</p>
+                                <p className="text-sm font-medium truncate">
+                                  {saved.ranking.slice(0, 3).map(r => r.fratName).join(' → ')}...
+                                </p>
+                              </div>
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                className="shrink-0 rounded-lg text-xs border-green-500/50 text-green-600 hover:bg-green-500/10"
+                                onClick={async () => {
+                                  const user = await base44.auth.me();
+                                  if (!user) {
+                                    toast({ title: "Please sign in to share", variant: "destructive" });
+                                    return;
+                                  }
+                                  
+                                  const tierLines = saved.ranking.map((r: { tier: string; fratName: string }) => {
+                                    const displayTier = r.tier === 'Mouse 1' || r.tier === 'Mouse 2' ? 'Mouse' : r.tier;
+                                    return `${displayTier}: ${r.fratName}`;
+                                  });
+                                  
+                                  const message = `🏆 My Frat Ranking\n\n${tierLines.join('\n')}`;
+                                  
+                                  await base44.entities.ChatMessage.create({
+                                    user_id: user.id,
+                                    text: message,
+                                    upvotes: 0,
+                                    downvotes: 0,
+                                  });
+                                  
+                                  setShowFratRankingPicker(false);
+                                  await loadChat();
+                                  
+                                  toast({ title: "Shared to Feed!" });
+                                }}
+                              >
+                                <Send className="h-3 w-3 mr-1" />
+                                Share
+                              </Button>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
                 </>
               );
             })()
