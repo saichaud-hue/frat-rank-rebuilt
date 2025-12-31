@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import { ListOrdered, Trophy, PartyPopper, LogIn, ChevronRight, Lock, Star, Users, Shield, Heart, Sparkles, Music, Zap, CheckCircle2, Crown, Gift, Loader2, Share2, Swords, Trash2 } from 'lucide-react';
+import FratBattleGame from '@/components/activity/FratBattleGame';
 import { toast } from '@/hooks/use-toast';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -85,6 +86,9 @@ export default function YourRankings() {
   const [showShareDialog, setShowShareDialog] = useState(false);
   const [shareType, setShareType] = useState<'frats' | 'parties'>('frats');
   const [pendingShareUserId, setPendingShareUserId] = useState<string | null>(null);
+  
+  // Frat Battle game state
+  const [showFratBattleGame, setShowFratBattleGame] = useState(false);
 
   useEffect(() => {
     loadData();
@@ -785,7 +789,53 @@ export default function YourRankings() {
 
         {/* Battles Tab - Saved Frat Battle Rankings */}
         <TabsContent value="battles" className="mt-4 space-y-3">
-          {savedBattleRankings.length === 0 ? (
+          {showFratBattleGame ? (
+            <FratBattleGame
+              fraternities={allFraternities}
+              existingRankings={rankedFrats.map(f => f.fraternity)}
+              onComplete={() => {
+                // Game complete - handled via onSave
+                setShowFratBattleGame(false);
+              }}
+              onShare={async (ranking) => {
+                const userData = await base44.auth.me();
+                if (!userData) {
+                  toast({ title: "Please sign in to share", variant: "destructive" });
+                  return;
+                }
+                const tierLines = ranking.map(r => {
+                  const displayTier = r.tier === 'Mouse 1' || r.tier === 'Mouse 2' ? 'Mouse' : r.tier;
+                  return `${displayTier}: ${r.fratName}`;
+                });
+                const message = `🎮 Frat Battle Results\n\n${tierLines.join('\n')}`;
+                await base44.entities.ChatMessage.create({
+                  user_id: userData.id,
+                  text: message,
+                  upvotes: 0,
+                  downvotes: 0,
+                });
+                toast({ title: "Shared to Feed!" });
+              }}
+              onSave={(ranking) => {
+                const newRanking: SavedBattleRanking = {
+                  id: Date.now().toString(),
+                  date: new Date().toISOString(),
+                  ranking: ranking.map(r => ({
+                    fratId: r.fratId,
+                    fratName: r.fratName,
+                    tier: r.tier,
+                    wins: r.wins,
+                  })),
+                };
+                const updated = [newRanking, ...savedBattleRankings];
+                setSavedBattleRankings(updated);
+                localStorage.setItem('touse_saved_battle_rankings', JSON.stringify(updated));
+                setShowFratBattleGame(false);
+                toast({ title: "Saved!", description: "Check 'Your Lists' to see your saved rankings" });
+              }}
+              onClose={() => setShowFratBattleGame(false)}
+            />
+          ) : savedBattleRankings.length === 0 ? (
             <Card className="glass p-8 text-center space-y-4">
               <Swords className="h-12 w-12 mx-auto text-muted-foreground/50" />
               <div className="space-y-1">
@@ -794,12 +844,10 @@ export default function YourRankings() {
                   Play Frat Battle on the Activity tab and save your results here
                 </p>
               </div>
-              <Link to="/Activity">
-                <Button variant="outline" className="mt-2">
-                  <Swords className="h-4 w-4 mr-2" />
-                  Play Frat Battle
-                </Button>
-              </Link>
+              <Button variant="outline" className="mt-2" onClick={() => setShowFratBattleGame(true)}>
+                <Swords className="h-4 w-4 mr-2" />
+                Play Frat Battle
+              </Button>
             </Card>
           ) : (
             savedBattleRankings.map((battleRanking, index) => (
