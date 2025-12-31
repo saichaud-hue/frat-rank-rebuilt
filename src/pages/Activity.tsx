@@ -117,6 +117,7 @@ export default function Activity() {
   // Frat ranking post mode
   const [showFratRankingPicker, setShowFratRankingPicker] = useState(false);
   const [showFratBattleGame, setShowFratBattleGame] = useState(false);
+  const [showManualPicker, setShowManualPicker] = useState(false);
   const [fratRanking, setFratRanking] = useState<Record<string, Fraternity | null>>({
     'Upper Touse': null,
     'Touse': null,
@@ -1571,6 +1572,7 @@ export default function Activity() {
         setShowFratRankingPicker(open);
         if (!open) {
           setShowFratBattleGame(false);
+          setShowManualPicker(false);
         }
       }}>
         <SheetContent side="bottom" className="h-[85vh] rounded-t-3xl">
@@ -1638,38 +1640,27 @@ export default function Activity() {
               }}
               onClose={() => setShowFratBattleGame(false)}
             />
-          ) : (
+          ) : showManualPicker ? (
             <>
               <SheetHeader className="pb-4">
-                <SheetTitle className="flex items-center gap-2">
-                  <Trophy className="h-5 w-5 text-amber-500" />
-                  Create Frat Ranking
-                </SheetTitle>
+                <div className="flex items-center gap-2">
+                  <button 
+                    onClick={() => setShowManualPicker(false)}
+                    className="p-1 hover:bg-muted rounded-full"
+                  >
+                    <ChevronRight className="h-5 w-5 rotate-180" />
+                  </button>
+                  <SheetTitle className="flex items-center gap-2">
+                    <Trophy className="h-5 w-5 text-amber-500" />
+                    Pick Manually
+                  </SheetTitle>
+                </div>
                 <p className="text-sm text-muted-foreground">
-                  Fill in your tier list - this is just for sharing, doesn't affect ratings
+                  Select a frat for each tier position
                 </p>
               </SheetHeader>
               
-              {/* Battle Game CTA */}
-              <button
-                onClick={() => setShowFratBattleGame(true)}
-                className="w-full mb-4 p-4 rounded-2xl bg-gradient-to-r from-amber-500/20 via-orange-500/20 to-red-500/20 border-2 border-dashed border-amber-500/50 hover:border-amber-500 transition-all group"
-              >
-                <div className="flex items-center gap-3">
-                  <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-amber-500 to-orange-500 flex items-center justify-center text-white shrink-0 group-hover:scale-110 transition-transform">
-                    <Swords className="h-6 w-6" />
-                  </div>
-                  <div className="text-left flex-1">
-                    <p className="font-bold text-base">Play Frat Battle!</p>
-                    <p className="text-xs text-muted-foreground">Pick winners in 10 head-to-head matchups to generate your ranking</p>
-                  </div>
-                  <ChevronRight className="h-5 w-5 text-muted-foreground group-hover:text-amber-500 transition-colors" />
-                </div>
-              </button>
-              
-              <p className="text-xs text-muted-foreground text-center mb-3">— or pick manually —</p>
-              
-              <ScrollArea className="h-[calc(100%-220px)]">
+              <ScrollArea className="h-[calc(100%-180px)]">
                 <div className="space-y-3 pr-2">
                   {[
                     { tier: 'Upper Touse', label: 'Upper Touse (1st)', color: 'bg-green-500/20 border-green-500/40' },
@@ -1732,6 +1723,120 @@ export default function Activity() {
                 </Button>
               </div>
             </>
+          ) : (
+            (() => {
+              const savedRankings = JSON.parse(localStorage.getItem('touse_saved_battle_rankings') || '[]');
+              
+              return (
+                <>
+                  <SheetHeader className="pb-4">
+                    <SheetTitle className="flex items-center gap-2">
+                      <Trophy className="h-5 w-5 text-amber-500" />
+                      Create Frat Ranking
+                    </SheetTitle>
+                    <p className="text-sm text-muted-foreground">
+                      Fill in your tier list - this is just for sharing, doesn't affect ratings
+                    </p>
+                  </SheetHeader>
+                  
+                  <ScrollArea className="h-[calc(100%-100px)]">
+                    <div className="space-y-3">
+                      {/* Battle Game CTA */}
+                      <button
+                        onClick={() => setShowFratBattleGame(true)}
+                        className="w-full p-4 rounded-2xl bg-gradient-to-r from-amber-500/20 via-orange-500/20 to-red-500/20 border-2 border-dashed border-amber-500/50 hover:border-amber-500 transition-all group"
+                      >
+                        <div className="flex items-center gap-3">
+                          <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-amber-500 to-orange-500 flex items-center justify-center text-white shrink-0 group-hover:scale-110 transition-transform">
+                            <Swords className="h-6 w-6" />
+                          </div>
+                          <div className="text-left flex-1">
+                            <p className="font-bold text-base">Play Frat Battle!</p>
+                            <p className="text-xs text-muted-foreground">Pick winners in 10 head-to-head matchups to generate your ranking</p>
+                          </div>
+                          <ChevronRight className="h-5 w-5 text-muted-foreground group-hover:text-amber-500 transition-colors" />
+                        </div>
+                      </button>
+                      
+                      {/* Share Past Ratings */}
+                      {savedRankings.length > 0 && (
+                        <div className="p-4 rounded-2xl bg-violet-500/10 border border-violet-500/20">
+                          <div className="flex items-center gap-2 mb-3">
+                            <Clock className="h-4 w-4 text-violet-500" />
+                            <p className="font-semibold text-sm">Share Past Ratings</p>
+                          </div>
+                          <div className="space-y-2">
+                            {savedRankings.slice(0, 3).map((saved: { id: string; date: string; ranking: { tier: string; fratName: string; wins: number }[] }) => (
+                              <div key={saved.id} className="flex items-center gap-3 p-3 rounded-xl bg-background/50 border border-border">
+                                <div className="flex-1 min-w-0">
+                                  <p className="text-xs text-muted-foreground">{format(new Date(saved.date), 'MMM d, h:mm a')}</p>
+                                  <p className="text-sm font-medium truncate">
+                                    {saved.ranking.slice(0, 3).map(r => r.fratName).join(' → ')}...
+                                  </p>
+                                </div>
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  className="shrink-0 rounded-lg text-xs border-violet-500/50 text-violet-600 hover:bg-violet-500/10"
+                                  onClick={async () => {
+                                    const user = await base44.auth.me();
+                                    if (!user) {
+                                      toast({ title: "Please sign in to share", variant: "destructive" });
+                                      return;
+                                    }
+                                    
+                                    const tierLines = saved.ranking.map((r: { tier: string; fratName: string }) => {
+                                      const displayTier = r.tier === 'Mouse 1' || r.tier === 'Mouse 2' ? 'Mouse' : r.tier;
+                                      return `${displayTier}: ${r.fratName}`;
+                                    });
+                                    
+                                    const message = `🎮 Frat Battle Results\n\n${tierLines.join('\n')}`;
+                                    
+                                    await base44.entities.ChatMessage.create({
+                                      user_id: user.id,
+                                      text: message,
+                                      upvotes: 0,
+                                      downvotes: 0,
+                                    });
+                                    
+                                    setShowFratRankingPicker(false);
+                                    await loadChat();
+                                    
+                                    toast({ title: "Shared to Feed!" });
+                                  }}
+                                >
+                                  <Send className="h-3 w-3 mr-1" />
+                                  Share
+                                </Button>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                      
+                      <p className="text-xs text-muted-foreground text-center py-2">— or —</p>
+                      
+                      {/* Pick Manually CTA */}
+                      <button
+                        onClick={() => setShowManualPicker(true)}
+                        className="w-full p-4 rounded-2xl bg-gradient-to-r from-green-500/20 via-emerald-500/20 to-teal-500/20 border-2 border-dashed border-green-500/50 hover:border-green-500 transition-all group"
+                      >
+                        <div className="flex items-center gap-3">
+                          <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-green-500 to-emerald-500 flex items-center justify-center text-white shrink-0 group-hover:scale-110 transition-transform">
+                            <Trophy className="h-6 w-6" />
+                          </div>
+                          <div className="text-left flex-1">
+                            <p className="font-bold text-base">Pick Manually</p>
+                            <p className="text-xs text-muted-foreground">Select a frat for each tier position yourself</p>
+                          </div>
+                          <ChevronRight className="h-5 w-5 text-muted-foreground group-hover:text-green-500 transition-colors" />
+                        </div>
+                      </button>
+                    </div>
+                  </ScrollArea>
+                </>
+              );
+            })()
           )}
         </SheetContent>
       </Sheet>
