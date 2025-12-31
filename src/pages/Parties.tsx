@@ -24,11 +24,10 @@ export default function Parties() {
   const [partyRatingCounts, setPartyRatingCounts] = useState<Map<string, number>>(new Map());
   const [loading, setLoading] = useState(true);
   const [showIntro, setShowIntro] = useState(() => {
-    // Only show if: not permanently dismissed AND not already shown this session
-    const permanentOptOut = localStorage.getItem('fratrank_parties_intro_never_show');
-    const shownThisSession = sessionStorage.getItem('fratrank_parties_intro_shown_session');
-    return !permanentOptOut && !shownThisSession;
+    // Only show if not permanently dismissed
+    return !localStorage.getItem('fratrank_parties_intro_never_show');
   });
+  const [introShownThisVisit, setIntroShownThisVisit] = useState(false);
   const [filters, setFilters] = useState<Filters>({
     fraternity: 'all',
     type: 'all',
@@ -341,15 +340,15 @@ export default function Parties() {
       )}
 
       {/* Intro Modal */}
-      {showIntro && (
+      {showIntro && !introShownThisVisit && (
         <PartiesIntro 
           onComplete={(neverShowAgain) => {
-            // Mark as shown this session
-            sessionStorage.setItem('fratrank_parties_intro_shown_session', 'true');
+            // Mark as shown this visit (so it won't reappear if they go to CreateParty and back)
+            setIntroShownThisVisit(true);
             if (neverShowAgain) {
               localStorage.setItem('fratrank_parties_intro_never_show', 'true');
+              setShowIntro(false);
             }
-            setShowIntro(false);
           }} 
         />
       )}
