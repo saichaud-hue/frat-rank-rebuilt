@@ -1194,36 +1194,6 @@ export default function Activity() {
         </SheetContent>
       </Sheet>
 
-      {/* Next party countdown - compact */}
-      {nextParty && countdownTime && (
-        <Link to={createPageUrl(`Party?id=${nextParty.id}`)}>
-          <div className="rounded-2xl bg-gradient-to-r from-pink-500 via-rose-500 to-orange-500 p-4 text-white active:scale-[0.99] transition-transform">
-            <div className="flex items-center gap-4">
-              <div className="flex-1 min-w-0">
-                <p className="text-xs uppercase tracking-wider text-white/80 mb-1">Next up</p>
-                <p className="font-bold text-lg truncate">{nextParty.title}</p>
-                <p className="text-sm text-white/80 truncate">{fraternities.find(f => f.id === nextParty.fraternity_id)?.name}</p>
-              </div>
-              <div className="flex items-center gap-2 text-right">
-                <div className="text-center">
-                  <p className="text-2xl font-black tabular-nums">{countdownTime.hours.toString().padStart(2, '0')}</p>
-                  <p className="text-[10px] uppercase text-white/60">hr</p>
-                </div>
-                <span className="text-xl font-bold">:</span>
-                <div className="text-center">
-                  <p className="text-2xl font-black tabular-nums">{countdownTime.minutes.toString().padStart(2, '0')}</p>
-                  <p className="text-[10px] uppercase text-white/60">min</p>
-                </div>
-                <span className="text-xl font-bold">:</span>
-                <div className="text-center">
-                  <p className="text-2xl font-black tabular-nums">{countdownTime.seconds.toString().padStart(2, '0')}</p>
-                  <p className="text-[10px] uppercase text-white/60">sec</p>
-                </div>
-              </div>
-            </div>
-          </div>
-        </Link>
-      )}
 
       {/* Unified Feed */}
       <div className="space-y-4">
