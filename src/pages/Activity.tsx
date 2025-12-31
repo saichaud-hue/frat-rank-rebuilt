@@ -210,9 +210,12 @@ export default function Activity() {
   // Countdown timer
   const [countdownTime, setCountdownTime] = useState<{ days: number; hours: number; minutes: number; seconds: number } | null>(null);
   
-  // Unread notification state
-  const [hasUnread, setHasUnread] = useState(true);
-  const [lastSeenFeedCount, setLastSeenFeedCount] = useState(0);
+  // Unread notification state - track count of new items
+  const [newPostsCount, setNewPostsCount] = useState(0);
+  const [lastSeenFeedCount, setLastSeenFeedCount] = useState(() => {
+    const saved = localStorage.getItem('touse_last_seen_feed_count');
+    return saved ? parseInt(saved, 10) : 0;
+  });
   
   // "All caught up" state
   const [showCaughtUp, setShowCaughtUp] = useState(false);
@@ -732,7 +735,9 @@ export default function Activity() {
     const [entry] = entries;
     if (entry.isIntersecting && feedItemsLast24h.length > 0 && !caughtUpClaimed) {
       setShowCaughtUp(true);
-      setHasUnread(false);
+      setNewPostsCount(0);
+      setLastSeenFeedCount(feedItems.length);
+      localStorage.setItem('touse_last_seen_feed_count', feedItems.length.toString());
     }
   }, [feedItemsLast24h.length, caughtUpClaimed]);
   
@@ -744,20 +749,29 @@ export default function Activity() {
     return () => observer.disconnect();
   }, [handleFeedEndVisible]);
   
-  // Mark unread when new items appear
+  // Track new posts count when feed items change
   useEffect(() => {
     if (feedItems.length > lastSeenFeedCount && lastSeenFeedCount > 0) {
-      setHasUnread(true);
+      setNewPostsCount(feedItems.length - lastSeenFeedCount);
       setShowCaughtUp(false);
     }
-    setLastSeenFeedCount(feedItems.length);
   }, [feedItems.length, lastSeenFeedCount]);
   
   // Clear unread when user clicks the notification
   const handleClearUnread = () => {
-    setHasUnread(false);
+    setNewPostsCount(0);
+    setLastSeenFeedCount(feedItems.length);
+    localStorage.setItem('touse_last_seen_feed_count', feedItems.length.toString());
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
+  
+  // Update last seen count when user scrolls to top or on initial load
+  useEffect(() => {
+    if (!loading && feedItems.length > 0 && lastSeenFeedCount === 0) {
+      setLastSeenFeedCount(feedItems.length);
+      localStorage.setItem('touse_last_seen_feed_count', feedItems.length.toString());
+    }
+  }, [loading, feedItems.length, lastSeenFeedCount]);
   
   // Claim caught up points
   const handleClaimPoints = () => {
@@ -1447,15 +1461,14 @@ export default function Activity() {
         )}
       </div>
 
-      {/* Unread notification badge */}
-      {hasUnread && feedItems.length > 0 && (
+      {/* New posts popup - appears above Feed button when 3+ new posts */}
+      {newPostsCount >= 3 && (
         <button
           onClick={handleClearUnread}
-          className="fixed top-20 right-4 flex items-center gap-2 px-4 py-2 rounded-full bg-red-500 text-white font-semibold shadow-lg shadow-red-500/30 animate-scale-in z-50 hover:scale-105 active:scale-95 transition-transform"
+          className="fixed bottom-[calc(68px+max(env(safe-area-inset-bottom),8px))] left-1/2 -translate-x-1/2 flex items-center gap-2 px-4 py-2.5 rounded-full bg-primary text-primary-foreground font-semibold shadow-lg shadow-primary/30 z-50 hover:scale-105 active:scale-95 transition-transform animate-bounce-in"
         >
           <Bell className="h-4 w-4" />
-          <span>New posts</span>
-          <div className="w-2 h-2 rounded-full bg-white animate-pulse" />
+          <span>{newPostsCount} new posts</span>
         </button>
       )}
 
