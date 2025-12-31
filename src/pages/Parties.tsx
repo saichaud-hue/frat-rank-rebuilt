@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { PartyPopper, Plus, Flame, Calendar, Trophy, Sparkles, TrendingUp, Clock } from 'lucide-react';
 import { base44, seedInitialData, type Party, type Fraternity, type PartyRating } from '@/api/base44Client';
 import PartyCard from '@/components/parties/PartyCard';
+import PartyStories from '@/components/parties/PartyStories';
 import PartyFilters from '@/components/parties/PartyFilters';
 import PartiesIntro from '@/components/onboarding/PartiesIntro';
 import CreatePartySheet from '@/components/parties/CreatePartySheet';
@@ -216,6 +217,14 @@ export default function Parties() {
           </div>
         </div>
       </div>
+
+      {/* PARTY STORIES - Horizontal scroll of upcoming parties with photos */}
+      {parties.some(p => p.display_photo_url) && (
+        <PartyStories 
+          parties={[...upcomingParties, ...liveParties]} 
+          fraternities={fraternities}
+        />
+      )}
 
       {/* FILTERS - Styled Card */}
       <Card className="bg-card border-border p-4">
