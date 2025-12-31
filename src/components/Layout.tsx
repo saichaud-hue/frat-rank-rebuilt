@@ -161,38 +161,16 @@ export default function Layout({ children }: LayoutProps) {
                   }`}
                 >
                   <div className="relative">
-                    {item.title === 'Leaderboard' ? (
-                      <svg
-                        xmlns="http://www.w3.org/2000/svg"
-                        width="24"
-                        height="24"
-                        viewBox="0 0 24 24"
-                        fill={active ? 'currentColor' : 'none'}
-                        stroke="currentColor"
-                        strokeWidth={active ? 1.5 : 2}
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        className={`h-6 w-6 transition-all duration-200 ${active ? 'scale-110' : 'scale-100'}`}
-                      >
-                        <path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6" />
-                        <path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18" />
-                        <path d="M4 22h16" />
-                        <path d="M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 22" />
-                        <path d="M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22" />
-                        <path d="M18 2H6v7a6 6 0 0 0 12 0V2Z" />
-                      </svg>
-                    ) : (
-                      <item.icon 
-                        className={`h-6 w-6 transition-all duration-200 ${active ? 'scale-110' : 'scale-100'}`} 
-                        fill={active ? 'currentColor' : 'none'} 
-                        strokeWidth={active ? 1.5 : 2} 
-                      />
-                    )}
+                    <item.icon 
+                      className="h-6 w-6 transition-all duration-200" 
+                      fill="none" 
+                      strokeWidth={active ? 2.75 : 1.75} 
+                    />
                     {showBadge && (
                       <span className="absolute -top-1 -right-1 h-2.5 w-2.5 bg-red-500 rounded-full animate-pulse" />
                     )}
                   </div>
-                  <span className="text-xs font-medium">{item.title}</span>
+                  <span className={`text-xs ${active ? 'font-semibold' : 'font-medium'}`}>{item.title}</span>
                 </Link>
               );
             })}
