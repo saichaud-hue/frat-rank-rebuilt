@@ -1,27 +1,11 @@
 import { useState, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { Home, Trophy, ListOrdered, PartyPopper, User } from 'lucide-react';
-import touseLogo from '@/assets/touse-logo.png';
+import { Home, Trophy, ListOrdered, PartyPopper, User, ChevronRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Card } from '@/components/ui/card';
-import {
-  Sidebar,
-  SidebarContent,
-  SidebarFooter,
-  SidebarGroup,
-  SidebarGroupContent,
-  SidebarHeader,
-  SidebarMenu,
-  SidebarMenuButton,
-  SidebarMenuItem,
-  SidebarProvider,
-  SidebarTrigger,
-} from '@/components/ui/sidebar';
-import { base44 } from '@/api/base44Client';
+import { base44, type Party, type Fraternity } from '@/api/base44Client';
 import Tutorial from '@/components/onboarding/Tutorial';
-import { createPageUrl } from '@/utils';
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -42,16 +26,50 @@ const getHasUnreadFeed = () => {
   return currentCount > lastSeenCount;
 };
 
+// Format countdown time
+const formatCountdown = (ms: number) => {
+  const totalSeconds = Math.floor(ms / 1000);
+  const hours = Math.floor(totalSeconds / 3600);
+  const minutes = Math.floor((totalSeconds % 3600) / 60);
+  const seconds = totalSeconds % 60;
+  return { hours, minutes, seconds };
+};
+
 export default function Layout({ children }: LayoutProps) {
   const [user, setUser] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [showTutorial, setShowTutorial] = useState(false);
   const [hasUnreadFeed, setHasUnreadFeed] = useState(getHasUnreadFeed());
+  const [nextParty, setNextParty] = useState<Party | null>(null);
+  const [nextPartyFrat, setNextPartyFrat] = useState<Fraternity | null>(null);
+  const [countdown, setCountdown] = useState({ hours: 0, minutes: 0, seconds: 0 });
   const location = useLocation();
 
   useEffect(() => {
     loadUser();
+    loadNextParty();
   }, []);
+
+  // Update countdown every second
+  useEffect(() => {
+    if (!nextParty) return;
+    
+    const updateCountdown = () => {
+      const now = new Date().getTime();
+      const partyTime = new Date(nextParty.starts_at).getTime();
+      const diff = partyTime - now;
+      
+      if (diff > 0) {
+        setCountdown(formatCountdown(diff));
+      } else {
+        setCountdown({ hours: 0, minutes: 0, seconds: 0 });
+      }
+    };
+    
+    updateCountdown();
+    const interval = setInterval(updateCountdown, 1000);
+    return () => clearInterval(interval);
+  }, [nextParty]);
 
   // Check for unread feed items whenever route changes
   useEffect(() => {
@@ -64,7 +82,6 @@ export default function Layout({ children }: LayoutProps) {
       setHasUnreadFeed(getHasUnreadFeed());
     };
     window.addEventListener('storage', handleStorageChange);
-    // Also check periodically for same-tab updates
     const interval = setInterval(handleStorageChange, 1000);
     return () => {
       window.removeEventListener('storage', handleStorageChange);
@@ -77,7 +94,6 @@ export default function Layout({ children }: LayoutProps) {
       const userData = await base44.auth.me();
       setUser(userData);
       
-      // Show tutorial if: not permanently opted out AND not already shown this session
       const permanentOptOut = localStorage.getItem('touse_tutorial_never_show');
       const shownThisSession = sessionStorage.getItem('touse_tutorial_shown_this_session');
       
@@ -91,21 +107,34 @@ export default function Layout({ children }: LayoutProps) {
     }
   };
 
+  const loadNextParty = async () => {
+    try {
+      const [parties, fraternities] = await Promise.all([
+        base44.entities.Party.list('starts_at'),
+        base44.entities.Fraternity.list(),
+      ]);
+      
+      const now = new Date();
+      const upcoming = parties.filter(p => new Date(p.starts_at) > now);
+      
+      if (upcoming.length > 0) {
+        const next = upcoming[0];
+        setNextParty(next);
+        const frat = fraternities.find(f => f.id === next.fraternity_id);
+        setNextPartyFrat(frat || null);
+      }
+    } catch (error) {
+      console.error('Failed to load next party:', error);
+    }
+  };
+
   const handleLogin = () => {
     base44.auth.redirectToLogin(window.location.href);
   };
 
-  const handleLogout = () => {
-    base44.auth.logout();
-    setUser(null);
-    window.location.reload();
-  };
-
   const handleTutorialComplete = (neverShowAgain: boolean) => {
-    // Always mark as shown for this session
     sessionStorage.setItem('touse_tutorial_shown_this_session', 'true');
     
-    // If user checked "Don't show again", set permanent opt-out
     if (neverShowAgain) {
       localStorage.setItem('touse_tutorial_never_show', 'true');
     }
@@ -116,35 +145,80 @@ export default function Layout({ children }: LayoutProps) {
   const isActive = (path: string) => location.pathname === path;
 
   return (
-    <SidebarProvider>
+    <>
       <div className="min-h-screen flex flex-col w-full bg-background">
-        {/* Mobile Header - iPhone optimized */}
-        <header className="sticky top-0 z-40 bg-background/95 backdrop-blur-md border-b border-border/50 px-4 py-3 pt-safe flex items-center justify-between">
-          <Link to="/" className="flex items-center">
-            <img src={touseLogo} alt="Frapp" className="h-8 object-contain" />
-          </Link>
-          {loading ? (
-            <Skeleton className="h-9 w-9 rounded-full" />
-          ) : user ? (
-            <Avatar className="h-9 w-9">
-              <AvatarImage src={user.avatar_url} />
-              <AvatarFallback className="gradient-primary text-primary-foreground text-sm">
-                {user.name?.charAt(0) || 'U'}
-              </AvatarFallback>
-            </Avatar>
-          ) : (
-            <Button onClick={handleLogin} size="sm" className="gradient-primary text-primary-foreground h-9 px-3 text-sm">
-              Sign in
-            </Button>
+        {/* Mobile Header - Dark themed with Next Up Party */}
+        <header className="sticky top-0 z-40 gradient-primary pt-safe">
+          <div className="px-4 py-3 flex items-center justify-between">
+            {/* Left: Touse text */}
+            <Link to="/" className="flex items-center">
+              <span className="text-xl font-bold text-primary-foreground">Touse</span>
+            </Link>
+            
+            {/* Right: Profile button */}
+            {loading ? (
+              <Skeleton className="h-9 w-9 rounded-full bg-white/20" />
+            ) : user ? (
+              <Link to="/Profile">
+                <Avatar className="h-9 w-9 border-2 border-white/30">
+                  <AvatarImage src={user.avatar_url} />
+                  <AvatarFallback className="bg-white/20 text-primary-foreground text-sm">
+                    {user.name?.charAt(0) || 'U'}
+                  </AvatarFallback>
+                </Avatar>
+              </Link>
+            ) : (
+              <Button onClick={handleLogin} size="sm" className="bg-white/20 hover:bg-white/30 text-primary-foreground h-9 px-3 text-sm">
+                Sign in
+              </Button>
+            )}
+          </div>
+          
+          {/* Next Up Party Banner */}
+          {nextParty && (
+            <Link 
+              to={`/Party?id=${nextParty.id}`}
+              className="block mx-3 mb-3 rounded-2xl overflow-hidden"
+              style={{
+                background: 'linear-gradient(135deg, hsl(350 70% 55%), hsl(25 90% 55%))'
+              }}
+            >
+              <div className="px-4 py-3 flex items-center justify-between">
+                <div className="flex-1 min-w-0">
+                  <p className="text-xs text-white/80 font-medium uppercase tracking-wide">Next Up</p>
+                  <p className="text-lg font-bold text-white truncate">{nextParty.title}</p>
+                  <p className="text-sm text-white/80 truncate">{nextPartyFrat?.name || 'TBA'}</p>
+                </div>
+                
+                {/* Countdown */}
+                <div className="flex items-center gap-1 text-white">
+                  <div className="text-right">
+                    <div className="flex items-baseline gap-0.5">
+                      <span className="text-2xl font-bold tabular-nums">{countdown.hours.toString().padStart(2, '0')}</span>
+                      <span className="text-lg opacity-60">:</span>
+                      <span className="text-2xl font-bold tabular-nums">{countdown.minutes.toString().padStart(2, '0')}</span>
+                      <span className="text-lg opacity-60">:</span>
+                      <span className="text-2xl font-bold tabular-nums">{countdown.seconds.toString().padStart(2, '0')}</span>
+                    </div>
+                    <div className="flex gap-3 text-[10px] text-white/60 uppercase tracking-wider">
+                      <span className="w-6 text-center">HR</span>
+                      <span className="w-6 text-center">MIN</span>
+                      <span className="w-6 text-center">SEC</span>
+                    </div>
+                  </div>
+                  <ChevronRight className="h-5 w-5 opacity-60 ml-1" />
+                </div>
+              </div>
+            </Link>
           )}
         </header>
 
-        {/* Main Content - iPhone optimized with generous spacing */}
+        {/* Main Content */}
         <main className="flex-1 px-4 py-5 pb-28 overflow-y-auto">
           {children}
         </main>
 
-        {/* Mobile Bottom Nav - iPhone safe area */}
+        {/* Mobile Bottom Nav */}
         <nav className="fixed bottom-0 left-0 right-0 bg-background/95 backdrop-blur-md border-t border-border/50 z-40" style={{ paddingBottom: 'max(env(safe-area-inset-bottom), 8px)' }}>
           <div className="grid grid-cols-5 gap-1 px-2 pt-2">
             {navItems.map((item) => {
@@ -182,6 +256,6 @@ export default function Layout({ children }: LayoutProps) {
       {showTutorial && (
         <Tutorial onComplete={handleTutorialComplete} />
       )}
-    </SidebarProvider>
+    </>
   );
 }
