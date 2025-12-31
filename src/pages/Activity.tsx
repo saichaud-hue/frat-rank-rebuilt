@@ -812,10 +812,10 @@ export default function Activity() {
                 className="shrink-0 group"
               >
                 <div className="relative w-20 h-28 rounded-2xl overflow-hidden ring-[3px] ring-red-500 ring-offset-2 ring-offset-background">
-                  <div className="absolute inset-0 bg-gradient-to-br from-red-500 via-pink-500 to-purple-600" />
+                  <div className="absolute inset-0 bg-primary" />
                   <div className="absolute inset-0 flex flex-col items-center justify-center p-2 text-white">
-                    <div className="w-10 h-10 rounded-full bg-white/20 backdrop-blur flex items-center justify-center mb-1">
-                      <Radio className="h-5 w-5 animate-pulse" />
+                    <div className="w-10 h-10 rounded-full bg-white flex items-center justify-center mb-1">
+                      <Radio className="h-5 w-5 text-primary animate-pulse" />
                     </div>
                     <span className="text-[10px] font-bold uppercase tracking-wide">LIVE</span>
                   </div>
@@ -841,10 +841,10 @@ export default function Activity() {
                 className="shrink-0 group"
               >
                 <div className="relative w-20 h-28 rounded-2xl overflow-hidden ring-2 ring-border hover:ring-primary/50 transition-all">
-                  <div className="absolute inset-0 bg-gradient-to-br from-violet-500 via-purple-500 to-fuchsia-500 opacity-80" />
+                  <div className="absolute inset-0 bg-primary" />
                   <div className="absolute inset-0 flex flex-col items-center justify-center p-2 text-white">
-                    <div className="w-10 h-10 rounded-full bg-white/20 backdrop-blur flex items-center justify-center mb-1">
-                      <PartyPopper className="h-5 w-5" />
+                    <div className="w-10 h-10 rounded-full bg-white flex items-center justify-center mb-1">
+                      <PartyPopper className="h-5 w-5 text-primary" />
                     </div>
                     <span className="text-[10px] font-semibold text-center">
                       {isPartyToday ? 'Tonight' : isPartyTomorrow ? 'Tomorrow' : format(partyDate, 'EEE')}
