@@ -5,6 +5,7 @@ import { base44, seedInitialData, type Party, type Fraternity, type PartyRating 
 import PartyCard from '@/components/parties/PartyCard';
 import PartyFilters from '@/components/parties/PartyFilters';
 import PartiesIntro from '@/components/onboarding/PartiesIntro';
+import CreatePartySheet from '@/components/parties/CreatePartySheet';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Badge } from '@/components/ui/badge';
 import { Card } from '@/components/ui/card';
@@ -28,6 +29,7 @@ export default function Parties() {
     return !localStorage.getItem('fratrank_parties_intro_never_show');
   });
   const [introShownThisVisit, setIntroShownThisVisit] = useState(false);
+  const [showCreateSheet, setShowCreateSheet] = useState(false);
   const [filters, setFilters] = useState<Filters>({
     fraternity: 'all',
     type: 'all',
@@ -329,15 +331,22 @@ export default function Parties() {
 
       {/* Floating Host Button */}
       {!(showIntro && !introShownThisVisit) && (
-        <Link
-          to="/CreateParty"
+        <button
+          onClick={() => setShowCreateSheet(true)}
           className="fixed bottom-24 right-4 z-50 flex items-center gap-2 px-5 py-3 rounded-full gradient-primary text-primary-foreground shadow-lg active:scale-95 transition-transform hover:shadow-xl"
           style={{ marginBottom: 'env(safe-area-inset-bottom)' }}
         >
           <Plus className="h-5 w-5" />
           <span className="font-semibold">Host</span>
-        </Link>
+        </button>
       )}
+
+      {/* Create Party Sheet */}
+      <CreatePartySheet 
+        open={showCreateSheet} 
+        onOpenChange={setShowCreateSheet}
+        onSuccess={loadData}
+      />
 
       {/* Intro Modal */}
       {showIntro && !introShownThisVisit && (
