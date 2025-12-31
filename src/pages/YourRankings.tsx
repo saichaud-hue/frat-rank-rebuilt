@@ -51,10 +51,12 @@ export default function YourRankings() {
   const [ratedFratIds, setRatedFratIds] = useState<string[]>([]);
   const [ratedPartyIds, setRatedPartyIds] = useState<string[]>([]);
   
-  // Intro state
-  const [showIntro, setShowIntro] = useState(() => {
-    return !localStorage.getItem('touse_yourlists_intro_never_show');
-  });
+  // Intro state - only show on first visit and if not permanently dismissed
+  const [showIntro, setShowIntro] = useState(false);
+  const [introChecked, setIntroChecked] = useState(false);
+  
+  // Frat picker for direct rating (bypasses intro modal)
+  const [showFratPicker, setShowFratPicker] = useState(false);
   
   // Rating sheets
   const [selectedFrat, setSelectedFrat] = useState<Fraternity | null>(null);
@@ -66,6 +68,18 @@ export default function YourRankings() {
   useEffect(() => {
     loadData();
   }, []);
+
+  // Show intro only on mount if not dismissed (session or permanent)
+  useEffect(() => {
+    if (!introChecked && !loading && user) {
+      const sessionDismissed = sessionStorage.getItem('touse_yourlists_intro_dismissed');
+      const permanentDismissed = localStorage.getItem('touse_yourlists_intro_never_show');
+      if (!sessionDismissed && !permanentDismissed) {
+        setShowIntro(true);
+      }
+      setIntroChecked(true);
+    }
+  }, [loading, user, introChecked]);
 
   const loadData = async () => {
     try {
@@ -169,6 +183,8 @@ export default function YourRankings() {
   };
 
   const handleIntroComplete = (neverShowAgain: boolean) => {
+    // Always dismiss for this session
+    sessionStorage.setItem('touse_yourlists_intro_dismissed', 'true');
     if (neverShowAgain) {
       localStorage.setItem('touse_yourlists_intro_never_show', 'true');
     }
@@ -451,7 +467,7 @@ export default function YourRankings() {
                     <Progress value={(ratedFratCount / allFraternities.length) * 100} className="h-2" />
                   </div>
                   <Button 
-                    onClick={() => setShowIntro(true)} 
+                    onClick={() => setShowFratPicker(true)} 
                     className="w-full bg-amber-500 hover:bg-amber-600 text-white"
                   >
                     <Star className="h-4 w-4 mr-2" />
@@ -740,6 +756,54 @@ export default function YourRankings() {
                   );
                 })
               )}
+            </div>
+          </ScrollArea>
+        </SheetContent>
+      </Sheet>
+
+      {/* Frat Picker Sheet (direct rating - bypasses intro) */}
+      <Sheet open={showFratPicker} onOpenChange={setShowFratPicker}>
+        <SheetContent side="bottom" className="h-[70vh] rounded-t-3xl">
+          <SheetHeader className="pb-4">
+            <SheetTitle>Choose a Fraternity to Rate</SheetTitle>
+          </SheetHeader>
+          <ScrollArea className="h-[calc(100%-60px)]">
+            <div className="space-y-2 pr-4">
+              {allFraternities.map((frat) => {
+                const isRated = ratedFratIds.includes(frat.id);
+                return (
+                  <button
+                    key={frat.id}
+                    onClick={() => {
+                      setShowFratPicker(false);
+                      handleRateFrat(frat, false);
+                    }}
+                    className={`w-full flex items-center gap-3 p-3 rounded-xl active:scale-[0.98] transition-all text-left ${
+                      isRated 
+                        ? 'bg-green-500/10 border border-green-500/30 hover:bg-green-500/20' 
+                        : 'bg-muted/50 hover:bg-muted'
+                    }`}
+                  >
+                    <Avatar className="h-12 w-12 rounded-xl">
+                      <AvatarImage src={frat.logo_url} alt={frat.name} />
+                      <AvatarFallback className={`rounded-xl font-bold text-xs ${
+                        isRated ? 'bg-green-500/20 text-green-600' : 'bg-primary/10 text-primary'
+                      }`}>
+                        {getFratGreek(frat.name)}
+                      </AvatarFallback>
+                    </Avatar>
+                    <div className="flex-1 min-w-0">
+                      <p className="font-semibold truncate">{frat.name}</p>
+                      <p className="text-sm text-muted-foreground">{getFratShorthand(frat.name)}</p>
+                    </div>
+                    {isRated ? (
+                      <CheckCircle2 className="h-5 w-5 text-green-500" />
+                    ) : (
+                      <Star className="h-5 w-5 text-amber-500" />
+                    )}
+                  </button>
+                );
+              })}
             </div>
           </ScrollArea>
         </SheetContent>

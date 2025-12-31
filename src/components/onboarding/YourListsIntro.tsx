@@ -179,7 +179,11 @@ export default function YourListsIntro({
               </Button>
             ) : (
               <Button 
-                onClick={() => onComplete(neverShowAgain)} 
+                onClick={() => {
+                  // Always dismiss for session
+                  sessionStorage.setItem('touse_yourlists_intro_dismissed', 'true');
+                  onComplete(neverShowAgain);
+                }} 
                 variant="outline"
                 className="w-full min-h-[52px] text-base font-medium active:scale-[0.98] transition-transform"
               >
