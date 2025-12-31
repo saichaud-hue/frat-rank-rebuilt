@@ -6,6 +6,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Skeleton } from '@/components/ui/skeleton';
 import { base44, type Party, type Fraternity } from '@/api/base44Client';
 import Tutorial from '@/components/onboarding/Tutorial';
+import NewPostsPopup from '@/components/NewPostsPopup';
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -26,6 +27,13 @@ const getHasUnreadFeed = () => {
   return currentCount > lastSeenCount;
 };
 
+// Get the count of new posts
+const getNewPostsCount = () => {
+  const lastSeenCount = parseInt(localStorage.getItem('touse_last_seen_feed_count') || '0');
+  const currentCount = parseInt(localStorage.getItem('touse_current_feed_count') || '0');
+  return Math.max(0, currentCount - lastSeenCount);
+};
+
 // Format countdown time with days support
 const formatCountdown = (ms: number) => {
   const totalSeconds = Math.floor(ms / 1000);
@@ -44,6 +52,7 @@ export default function Layout({ children }: LayoutProps) {
   const [nextParty, setNextParty] = useState<Party | null>(null);
   const [nextPartyFrat, setNextPartyFrat] = useState<Fraternity | null>(null);
   const [countdown, setCountdown] = useState({ days: 0, hours: 0, minutes: 0, seconds: 0 });
+  const [newPostsCount, setNewPostsCount] = useState(getNewPostsCount());
   const location = useLocation();
 
   useEffect(() => {
@@ -81,6 +90,7 @@ export default function Layout({ children }: LayoutProps) {
   useEffect(() => {
     const handleStorageChange = () => {
       setHasUnreadFeed(getHasUnreadFeed());
+      setNewPostsCount(getNewPostsCount());
     };
     window.addEventListener('storage', handleStorageChange);
     const interval = setInterval(handleStorageChange, 1000);
@@ -239,6 +249,16 @@ export default function Layout({ children }: LayoutProps) {
             })}
           </div>
         </nav>
+        
+        {/* Global New Posts Popup */}
+        <NewPostsPopup 
+          count={newPostsCount} 
+          onClear={() => {
+            const currentCount = parseInt(localStorage.getItem('touse_current_feed_count') || '0');
+            localStorage.setItem('touse_last_seen_feed_count', currentCount.toString());
+            setNewPostsCount(0);
+          }} 
+        />
       </div>
 
       {/* Tutorial Overlay */}

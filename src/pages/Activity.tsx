@@ -749,15 +749,18 @@ export default function Activity() {
     return () => observer.disconnect();
   }, [handleFeedEndVisible]);
   
-  // Track new posts count when feed items change
+  // Track new posts count when feed items change and store current count for Layout
   useEffect(() => {
+    // Always store current feed count so Layout can calculate new posts
+    localStorage.setItem('touse_current_feed_count', feedItems.length.toString());
+    
     if (feedItems.length > lastSeenFeedCount && lastSeenFeedCount > 0) {
       setNewPostsCount(feedItems.length - lastSeenFeedCount);
       setShowCaughtUp(false);
     }
   }, [feedItems.length, lastSeenFeedCount]);
   
-  // Clear unread when user clicks the notification
+  // Clear unread when user clicks the notification (called from Layout via storage event)
   const handleClearUnread = () => {
     setNewPostsCount(0);
     setLastSeenFeedCount(feedItems.length);
@@ -770,6 +773,7 @@ export default function Activity() {
     if (!loading && feedItems.length > 0 && lastSeenFeedCount === 0) {
       setLastSeenFeedCount(feedItems.length);
       localStorage.setItem('touse_last_seen_feed_count', feedItems.length.toString());
+      localStorage.setItem('touse_current_feed_count', feedItems.length.toString());
     }
   }, [loading, feedItems.length, lastSeenFeedCount]);
   
@@ -1461,16 +1465,6 @@ export default function Activity() {
         )}
       </div>
 
-      {/* New posts popup - appears above Feed button when 3+ new posts */}
-      {newPostsCount >= 3 && (
-        <button
-          onClick={handleClearUnread}
-          className="fixed bottom-[calc(68px+max(env(safe-area-inset-bottom),8px))] left-1/2 -translate-x-1/2 flex items-center gap-2 px-4 py-2.5 rounded-full bg-primary text-primary-foreground font-semibold shadow-lg shadow-primary/30 z-50 hover:scale-105 active:scale-95 transition-transform animate-bounce-in"
-        >
-          <Bell className="h-4 w-4" />
-          <span>{newPostsCount} new posts</span>
-        </button>
-      )}
 
       {/* Floating compose button */}
       <button
