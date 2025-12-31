@@ -160,7 +160,7 @@ export default function CreateParty() {
       </Button>
 
       {/* HERO HEADER */}
-      <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-pink-500 via-rose-500 to-orange-500 p-6 text-white shadow-xl">
+      <div className="relative overflow-hidden rounded-3xl gradient-primary p-6 text-primary-foreground shadow-xl">
         {/* Background Effects */}
         <div className="absolute inset-0 opacity-20">
           <div className="absolute top-0 right-0 w-40 h-40 bg-white/30 rounded-full blur-3xl translate-x-10 -translate-y-10" />
@@ -174,7 +174,7 @@ export default function CreateParty() {
             </div>
             <div>
               <h1 className="text-2xl font-bold">Host a Party</h1>
-              <p className="text-white/80 text-sm">Create an unforgettable event</p>
+              <p className="text-primary-foreground/80 text-sm">Create an unforgettable event</p>
             </div>
           </div>
 
@@ -196,7 +196,7 @@ export default function CreateParty() {
 
       {/* LIVE PREVIEW CARD */}
       <Card className="glass overflow-hidden">
-        <div className="bg-gradient-to-r from-violet-600 to-purple-600 p-4 flex items-center gap-3 text-white">
+        <div className="gradient-secondary p-4 flex items-center gap-3 text-primary-foreground">
           <div className="w-10 h-10 rounded-xl bg-white/20 flex items-center justify-center">
             <Sparkles className="h-5 w-5" />
           </div>
@@ -265,7 +265,7 @@ export default function CreateParty() {
       <form onSubmit={handleSubmit} className="space-y-4">
         {/* Section 1: Host */}
         <Card className="glass overflow-hidden">
-          <div className="bg-gradient-to-r from-blue-500 to-cyan-500 p-4 flex items-center gap-3 text-white">
+          <div className="gradient-primary p-4 flex items-center gap-3 text-primary-foreground">
             <div className="w-10 h-10 rounded-xl bg-white/20 flex items-center justify-center">
               <Users className="h-5 w-5" />
             </div>
@@ -274,7 +274,7 @@ export default function CreateParty() {
               <p className="text-xs opacity-80">Select the hosting fraternity</p>
             </div>
             {formData.fraternity_id && (
-              <Badge className="ml-auto bg-white/20 text-white border-white/30">✓</Badge>
+              <Badge className="ml-auto bg-white/20 text-primary-foreground border-white/30">✓</Badge>
             )}
           </div>
           <div className="p-5">
@@ -301,7 +301,7 @@ export default function CreateParty() {
 
         {/* Section 2: Event Details */}
         <Card className="glass overflow-hidden">
-          <div className="bg-gradient-to-r from-amber-500 to-orange-500 p-4 flex items-center gap-3 text-white">
+          <div className="gradient-secondary p-4 flex items-center gap-3 text-primary-foreground">
             <div className="w-10 h-10 rounded-xl bg-white/20 flex items-center justify-center">
               <Music className="h-5 w-5" />
             </div>
@@ -310,7 +310,7 @@ export default function CreateParty() {
               <p className="text-xs opacity-80">Name and describe your party</p>
             </div>
             {formData.title.trim() && (
-              <Badge className="ml-auto bg-white/20 text-white border-white/30">✓</Badge>
+              <Badge className="ml-auto bg-white/20 text-primary-foreground border-white/30">✓</Badge>
             )}
           </div>
           <div className="p-5 space-y-4">
@@ -347,7 +347,7 @@ export default function CreateParty() {
 
         {/* Section 3: Date & Time */}
         <Card className="glass overflow-hidden">
-          <div className="bg-gradient-to-r from-emerald-500 to-teal-500 p-4 flex items-center gap-3 text-white">
+          <div className="gradient-primary p-4 flex items-center gap-3 text-primary-foreground">
             <div className="w-10 h-10 rounded-xl bg-white/20 flex items-center justify-center">
               <CalendarDays className="h-5 w-5" />
             </div>
@@ -356,7 +356,7 @@ export default function CreateParty() {
               <p className="text-xs opacity-80">When is the party?</p>
             </div>
             {startDate && endDate && isEndValid && (
-              <Badge className="ml-auto bg-white/20 text-white border-white/30">✓</Badge>
+              <Badge className="ml-auto bg-white/20 text-primary-foreground border-white/30">✓</Badge>
             )}
           </div>
           <div className="p-5 space-y-4">
@@ -463,7 +463,7 @@ export default function CreateParty() {
 
         {/* Section 4: Party Style */}
         <Card className="glass overflow-hidden">
-          <div className="bg-gradient-to-r from-violet-500 to-purple-500 p-4 flex items-center gap-3 text-white">
+          <div className="gradient-secondary p-4 flex items-center gap-3 text-primary-foreground">
             <div className="w-10 h-10 rounded-xl bg-white/20 flex items-center justify-center">
               <Sparkles className="h-5 w-5" />
             </div>
@@ -557,7 +557,7 @@ export default function CreateParty() {
           <div className={cn(
             "p-4 transition-all",
             isFormValid 
-              ? "bg-gradient-to-r from-pink-500 via-rose-500 to-orange-500" 
+              ? "gradient-primary" 
               : "bg-muted"
           )}>
             <Button 
@@ -566,7 +566,7 @@ export default function CreateParty() {
               className={cn(
                 "w-full h-14 text-lg font-semibold rounded-xl transition-all",
                 isFormValid 
-                  ? "bg-white text-rose-600 hover:bg-white/90 shadow-lg" 
+                  ? "bg-white text-primary hover:bg-white/90 shadow-lg" 
                   : "bg-muted-foreground/20 text-muted-foreground"
               )}
             >
