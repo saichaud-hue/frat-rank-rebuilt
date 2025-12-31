@@ -24,15 +24,10 @@ export default function Parties() {
   const [partyRatingCounts, setPartyRatingCounts] = useState<Map<string, number>>(new Map());
   const [loading, setLoading] = useState(true);
   const [showIntro, setShowIntro] = useState(() => {
-    // Don't show if permanently dismissed OR if coming back from CreateParty
-    const permanentOptOut = localStorage.getItem('fratrank_parties_intro_never_show');
-    const cameFromCreateParty = sessionStorage.getItem('fratrank_came_from_create_party');
-    // Clear the flag after checking
-    if (cameFromCreateParty) {
-      sessionStorage.removeItem('fratrank_came_from_create_party');
-    }
-    return !permanentOptOut && !cameFromCreateParty;
+    // Only show if not permanently dismissed
+    return !localStorage.getItem('fratrank_parties_intro_never_show');
   });
+  const [introShownThisVisit, setIntroShownThisVisit] = useState(false);
   const [filters, setFilters] = useState<Filters>({
     fraternity: 'all',
     type: 'all',
@@ -345,12 +340,14 @@ export default function Parties() {
       )}
 
       {/* Intro Modal */}
-      {showIntro && (
+      {showIntro && !introShownThisVisit && (
         <PartiesIntro 
           onComplete={(neverShowAgain) => {
-            setShowIntro(false);
+            // Mark as shown this visit (so it won't reappear if they go to CreateParty and back)
+            setIntroShownThisVisit(true);
             if (neverShowAgain) {
               localStorage.setItem('fratrank_parties_intro_never_show', 'true');
+              setShowIntro(false);
             }
           }} 
         />

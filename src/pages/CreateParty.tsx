@@ -153,10 +153,7 @@ export default function CreateParty() {
     <div className="max-w-2xl mx-auto space-y-5 pb-20">
       {/* Back Button */}
       <Button asChild variant="ghost" className="px-0 -mb-2">
-        <Link 
-          to={createPageUrl('Parties')}
-          onClick={() => sessionStorage.setItem('fratrank_came_from_create_party', 'true')}
-        >
+        <Link to={createPageUrl('Parties')}>
           <ArrowLeft className="h-4 w-4 mr-2" />
           Back to Parties
         </Link>
