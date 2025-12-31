@@ -106,6 +106,7 @@ export default function Activity() {
   const [replyingTo, setReplyingTo] = useState<string | null>(null);
   const [replyText, setReplyText] = useState('');
   const [submittingReply, setSubmittingReply] = useState(false);
+  const [commentsSheetItem, setCommentsSheetItem] = useState<ChatItem | null>(null);
   
   // Chat composer
   const [showChatComposer, setShowChatComposer] = useState(false);
@@ -1204,7 +1205,7 @@ export default function Activity() {
                           {chatItem.downvotes > 0 && <span>{chatItem.downvotes}</span>}
                         </button>
                         <button
-                          onClick={() => setReplyingTo(replyingTo === chatItem.id ? null : chatItem.id)}
+                          onClick={() => setCommentsSheetItem(chatItem)}
                           className="min-h-[44px] min-w-[44px] flex items-center justify-center gap-2 px-4 rounded-full text-sm font-medium bg-muted hover:bg-primary/20 text-muted-foreground hover:text-primary transition-all active:scale-95 ml-auto"
                         >
                           <MessageCircle className="h-5 w-5" />
@@ -1213,43 +1214,6 @@ export default function Activity() {
                           )}
                         </button>
                       </div>
-                      
-                      {/* Reply input */}
-                      {replyingTo === chatItem.id && (
-                        <div className="mt-4 flex gap-2">
-                          <Textarea
-                            value={replyText}
-                            onChange={(e) => setReplyText(e.target.value)}
-                            placeholder="Write a reply..."
-                            className="min-h-[60px] text-base rounded-xl"
-                          />
-                          <Button
-                            onClick={() => handleChatReply(chatItem.id)}
-                            disabled={submittingReply || !replyText.trim()}
-                            className="h-auto rounded-xl bg-gradient-to-r from-violet-500 to-purple-500"
-                          >
-                            {submittingReply ? (
-                              <Loader2 className="h-5 w-5 animate-spin" />
-                            ) : (
-                              <Send className="h-5 w-5" />
-                            )}
-                          </Button>
-                        </div>
-                      )}
-                      
-                      {/* Replies */}
-                      {chatItem.replies && chatItem.replies.length > 0 && (
-                        <div className="mt-4 pl-4 border-l-2 border-violet-500/30 space-y-3">
-                          {chatItem.replies.map((reply) => (
-                            <div key={reply.id} className="py-2">
-                              <p className="text-sm text-muted-foreground mb-1">
-                                {formatDistanceToNow(new Date(reply.created_date), { addSuffix: true })}
-                              </p>
-                              <p className="text-sm p-3 bg-muted/50 rounded-xl">{reply.text}</p>
-                            </div>
-                          ))}
-                        </div>
-                      )}
                     </div>
                   </div>
                 </div>
@@ -2030,6 +1994,99 @@ export default function Activity() {
               })()}
             </div>
           </ScrollArea>
+        </SheetContent>
+      </Sheet>
+
+      {/* Comments Sheet */}
+      <Sheet open={!!commentsSheetItem} onOpenChange={(open) => {
+        if (!open) {
+          setCommentsSheetItem(null);
+          setReplyText('');
+        }
+      }}>
+        <SheetContent side="bottom" className="h-[70vh] rounded-t-3xl flex flex-col">
+          <SheetHeader className="pb-4 shrink-0">
+            <SheetTitle className="flex items-center gap-2">
+              <MessageCircle className="h-5 w-5" />
+              Comments
+              {commentsSheetItem?.replies && commentsSheetItem.replies.length > 0 && (
+                <Badge variant="secondary">{commentsSheetItem.replies.length}</Badge>
+              )}
+            </SheetTitle>
+          </SheetHeader>
+          
+          {/* Original message preview */}
+          {commentsSheetItem && (
+            <div className="px-4 py-3 rounded-xl bg-muted/50 border mb-4 shrink-0">
+              <p className="text-sm text-muted-foreground mb-1">
+                {formatDistanceToNow(new Date(commentsSheetItem.created_date), { addSuffix: true })}
+              </p>
+              <p className="text-sm line-clamp-2">{commentsSheetItem.text}</p>
+            </div>
+          )}
+          
+          {/* Comments list */}
+          <ScrollArea className="flex-1 -mx-6 px-6">
+            <div className="space-y-3 pb-4">
+              {commentsSheetItem?.replies && commentsSheetItem.replies.length > 0 ? (
+                commentsSheetItem.replies.map((reply) => (
+                  <div key={reply.id} className="p-4 rounded-xl bg-card border">
+                    <div className="flex items-start gap-3">
+                      <Avatar className="h-8 w-8 shrink-0">
+                        <AvatarFallback className="bg-gradient-to-br from-violet-500 to-purple-500 text-white text-xs">
+                          <MessagesSquare className="h-4 w-4" />
+                        </AvatarFallback>
+                      </Avatar>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-xs text-muted-foreground mb-1">
+                          {formatDistanceToNow(new Date(reply.created_date), { addSuffix: true })}
+                        </p>
+                        <p className="text-sm">{reply.text}</p>
+                      </div>
+                    </div>
+                  </div>
+                ))
+              ) : (
+                <div className="text-center py-8">
+                  <div className="w-12 h-12 mx-auto rounded-full bg-muted flex items-center justify-center mb-3">
+                    <MessageCircle className="h-6 w-6 text-muted-foreground" />
+                  </div>
+                  <p className="text-sm text-muted-foreground">No comments yet</p>
+                  <p className="text-xs text-muted-foreground mt-1">Be the first to comment!</p>
+                </div>
+              )}
+            </div>
+          </ScrollArea>
+          
+          {/* Reply input */}
+          <div className="pt-4 border-t shrink-0 flex gap-2">
+            <Textarea
+              value={replyText}
+              onChange={(e) => setReplyText(e.target.value)}
+              placeholder="Write a comment..."
+              className="min-h-[50px] max-h-[100px] text-base rounded-xl resize-none flex-1"
+            />
+            <Button
+              onClick={async () => {
+                if (commentsSheetItem) {
+                  await handleChatReply(commentsSheetItem.id);
+                  // Refresh the comments sheet item with updated replies
+                  const updatedMessage = chatMessages.find(m => m.id === commentsSheetItem.id);
+                  if (updatedMessage) {
+                    setCommentsSheetItem(updatedMessage);
+                  }
+                }
+              }}
+              disabled={submittingReply || !replyText.trim()}
+              className="h-auto rounded-xl bg-gradient-to-r from-violet-500 to-purple-500 px-4"
+            >
+              {submittingReply ? (
+                <Loader2 className="h-5 w-5 animate-spin" />
+              ) : (
+                <Send className="h-5 w-5" />
+              )}
+            </Button>
+          </div>
         </SheetContent>
       </Sheet>
     </div>
