@@ -1069,7 +1069,7 @@ export default function Activity() {
                 {/* Something else / View all button */}
                 <button
                   onClick={() => setShowAllMoveOptions(true)}
-                  className="w-full min-h-[44px] p-3 rounded-2xl border-2 border-dashed border-muted-foreground/30 flex items-center justify-center gap-2 text-muted-foreground hover:border-fuchsia-500 hover:text-fuchsia-500 transition-all active:scale-[0.98]"
+                  className="w-full min-h-[44px] p-3 rounded-2xl border-2 border-dashed border-muted-foreground/30 flex items-center justify-center gap-2 text-muted-foreground hover:border-primary hover:text-primary transition-all active:scale-[0.98]"
                 >
                   <Plus className="h-4 w-4" />
                   <span className="font-medium text-sm">
@@ -1153,13 +1153,13 @@ export default function Activity() {
                     className={cn(
                       "w-full min-h-[52px] p-3 rounded-2xl border-2 transition-all text-left relative overflow-hidden active:scale-[0.98]",
                       isSelected 
-                        ? "border-fuchsia-500 bg-fuchsia-500/10" 
-                        : "border-border hover:border-fuchsia-500/50"
+                        ? "border-primary bg-primary/10" 
+                        : "border-border hover:border-primary/50"
                     )}
                   >
                     {userMoveVote && (
                       <div 
-                        className="absolute inset-0 bg-gradient-to-r from-fuchsia-500/20 to-transparent transition-all duration-500"
+                        className="absolute inset-0 bg-gradient-to-r from-primary/20 to-transparent transition-all duration-500"
                         style={{ width: `${percentage}%` }}
                       />
                     )}
@@ -1167,7 +1167,7 @@ export default function Activity() {
                       <div className={cn(
                         "w-9 h-9 rounded-xl flex items-center justify-center shrink-0",
                         isSelected 
-                          ? "bg-gradient-to-br from-fuchsia-500 to-pink-500 text-white" 
+                          ? "gradient-primary text-white" 
                           : "bg-muted text-muted-foreground"
                       )}>
                         {isSelected ? <Check className="h-4 w-4" /> : <Icon className="h-4 w-4" />}
@@ -1197,13 +1197,13 @@ export default function Activity() {
                     className={cn(
                       "w-full min-h-[52px] p-3 rounded-2xl border-2 transition-all text-left relative overflow-hidden active:scale-[0.98]",
                       isSelected 
-                        ? "border-pink-500 bg-pink-500/10" 
-                        : "border-border hover:border-pink-500/50"
+                        ? "border-primary bg-primary/10" 
+                        : "border-border hover:border-primary/50"
                     )}
                   >
                     {userMoveVote && (
                       <div 
-                        className="absolute inset-0 bg-gradient-to-r from-pink-500/20 to-transparent transition-all duration-500"
+                        className="absolute inset-0 bg-gradient-to-r from-primary/20 to-transparent transition-all duration-500"
                         style={{ width: `${percentage}%` }}
                       />
                     )}
@@ -1211,7 +1211,7 @@ export default function Activity() {
                       <div className={cn(
                         "w-9 h-9 rounded-xl flex items-center justify-center shrink-0",
                         isSelected 
-                          ? "bg-gradient-to-br from-pink-500 to-rose-500 text-white" 
+                          ? "gradient-primary text-white" 
                           : "bg-muted text-muted-foreground"
                       )}>
                         {isSelected ? <Check className="h-4 w-4" /> : <Sparkles className="h-4 w-4" />}
@@ -1243,7 +1243,7 @@ export default function Activity() {
                     onClick={handleAddSuggestion}
                     disabled={!suggestionText.trim()}
                     size="sm"
-                    className="h-11 w-11 rounded-xl bg-gradient-to-r from-fuchsia-500 to-pink-500"
+                    className="h-11 w-11 rounded-xl gradient-primary"
                   >
                     <Check className="h-4 w-4" />
                   </Button>
@@ -1259,7 +1259,7 @@ export default function Activity() {
               ) : (
                 <button
                   onClick={() => setShowSuggestionInput(true)}
-                  className="w-full min-h-[44px] p-3 rounded-2xl border-2 border-dashed border-muted-foreground/30 flex items-center justify-center gap-2 text-muted-foreground hover:border-fuchsia-500 hover:text-fuchsia-500 transition-all active:scale-[0.98]"
+                  className="w-full min-h-[44px] p-3 rounded-2xl border-2 border-dashed border-muted-foreground/30 flex items-center justify-center gap-2 text-muted-foreground hover:border-primary hover:text-primary transition-all active:scale-[0.98]"
                 >
                   <Plus className="h-4 w-4" />
                   <span className="font-medium text-sm">Something else</span>
