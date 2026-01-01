@@ -365,12 +365,12 @@ export default function FraternityPage() {
       </div>
 
       {/* Content Area */}
-      <div className="rounded-2xl bg-muted/30 overflow-hidden">
+      <div className="rounded-2xl bg-muted/30 overflow-hidden border border-primary/20">
         {/* Overview Tab */}
         {activeTab === 'overview' && computedScores && (
           <div className="p-4 space-y-4">
             {/* Overall Score */}
-            <div className="flex items-center gap-4 p-4 rounded-xl bg-background border border-border">
+            <div className="flex items-center gap-4 p-4 rounded-xl bg-background border border-primary/30">
               <div className="relative w-16 h-16">
                 <svg className="w-16 h-16 -rotate-90">
                   <circle cx="32" cy="32" r="28" stroke="currentColor" strokeWidth="4" fill="none" className="text-muted" />
@@ -403,21 +403,21 @@ export default function FraternityPage() {
 
             {/* Score Grid */}
             <div className="grid grid-cols-3 gap-3">
-              <div className="p-3 rounded-xl bg-background text-center">
+              <div className="p-3 rounded-xl bg-background border border-primary/30 text-center">
                 <Star className="h-4 w-4 mx-auto mb-1 text-violet-500" />
                 <p className={`text-xl font-bold ${computedScores.hasRepData ? getScoreColor(computedScores.repAdj) : 'text-muted-foreground'}`}>
                   {computedScores.hasRepData ? computedScores.repAdj.toFixed(1) : '—'}
                 </p>
                 <p className="text-xs text-muted-foreground">Frat Rating</p>
               </div>
-              <div className="p-3 rounded-xl bg-background text-center">
+              <div className="p-3 rounded-xl bg-background border border-primary/30 text-center">
                 <PartyPopper className="h-4 w-4 mx-auto mb-1 text-pink-500" />
                 <p className={`text-xl font-bold ${headerPartyQuality !== null ? getScoreColor(headerPartyQuality) : 'text-muted-foreground'}`}>
                   {headerPartyQuality !== null ? headerPartyQuality.toFixed(1) : '—'}
                 </p>
                 <p className="text-xs text-muted-foreground">Party Score</p>
               </div>
-              <div className="p-3 rounded-xl bg-background text-center">
+              <div className="p-3 rounded-xl bg-background border border-primary/30 text-center">
                 <Zap className="h-4 w-4 mx-auto mb-1 text-emerald-500" />
                 <p className={`text-xl font-bold ${computedScores.activityTrending > 0 ? 'text-emerald-600' : 'text-muted-foreground'}`}>
                   {computedScores.activityTrending > 0 ? '+' : ''}{computedScores.activityTrending.toFixed(1)}
@@ -428,7 +428,7 @@ export default function FraternityPage() {
 
             {/* Category Breakdown */}
             {computedScores.hasRepData && (
-              <div className="p-4 rounded-xl bg-background space-y-4">
+              <div className="p-4 rounded-xl bg-background border border-primary/30 space-y-4">
                 <p className="font-medium text-sm">Rating Breakdown</p>
                 {[
                   { label: 'Brotherhood', icon: Users, value: computedScores.avgBrotherhood, color: 'bg-blue-500' },
@@ -452,7 +452,7 @@ export default function FraternityPage() {
             )}
 
             {/* Your Rating */}
-            <div className="p-4 rounded-xl bg-background border border-border">
+            <div className="p-4 rounded-xl bg-background border border-primary/30">
               <div className="flex items-center justify-between mb-3">
                 <p className="font-medium text-sm">Your Rating</p>
                 <Button onClick={handleRate} variant="outline" size="sm">
@@ -470,7 +470,7 @@ export default function FraternityPage() {
             </div>
 
             {/* Confidence */}
-            <div className="p-4 rounded-xl bg-background border border-border">
+            <div className="p-4 rounded-xl bg-background border border-primary/30">
               <div className="flex items-center justify-between mb-2">
                 <p className="font-medium text-sm">Data Confidence</p>
                 <Badge className={
