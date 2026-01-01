@@ -174,7 +174,6 @@ export default function YourListsIntro({
                 onClick={() => onComplete(neverShowAgain)} 
                 className="w-full min-h-[52px] text-base font-semibold bg-primary hover:bg-primary/90 text-primary-foreground active:scale-[0.98] transition-all shadow-lg"
               >
-                <Sparkles className="h-5 w-5 mr-2" />
                 View Your Rankings!
               </Button>
             ) : (
