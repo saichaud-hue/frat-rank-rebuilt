@@ -147,6 +147,7 @@ export default function CreatePartySheet({ open, onOpenChange, onSuccess }: Crea
         ends_at: formData.ends_at,
         venue: formData.venue,
         theme: formData.type,
+        access_type: formData.invite_only ? 'invite_only' : 'open',
         tags: [formData.type, formData.invite_only ? 'invite_only' : 'open'].filter(Boolean),
         display_photo_url: formData.cover_photo_url,
         performance_score: 0,
