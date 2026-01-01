@@ -175,7 +175,14 @@ export default function CreatePartySheet({ open, onOpenChange, onSuccess }: Crea
         className="max-h-[90vh] border-0 bg-transparent"
         handleClassName="bg-white/40"
       >
-        <div className="overflow-y-auto pb-8 bg-background rounded-t-[10px]">
+        <div 
+          className="overflow-y-auto overflow-x-hidden pb-8 bg-background rounded-t-[10px]"
+          style={{ 
+            touchAction: 'pan-y', 
+            overscrollBehavior: 'contain',
+            WebkitOverflowScrolling: 'touch'
+          }}
+        >
           {/* Header */}
           <div className="gradient-primary p-4 pt-2 text-primary-foreground rounded-t-[10px]">
             <DrawerHeader className="p-0">
