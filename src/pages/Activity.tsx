@@ -273,8 +273,7 @@ export default function Activity() {
   const defaultMoveOptions = [
     { id: 'shooters', label: 'Shooters', icon: Beer },
     { id: 'devines', label: 'Devines', icon: Coffee },
-    { id: 'study', label: 'Study', icon: Book },
-    { id: 'sleep', label: 'Sleep', icon: Moon },
+    { id: 'stay_in', label: 'Stay In', icon: Moon },
   ];
 
   // Get live and upcoming parties for stories
