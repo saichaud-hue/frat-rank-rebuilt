@@ -8,8 +8,9 @@ type DisplayMode = 'score' | 'vibes';
 
 interface TierInfo {
   name: string;
-  emoji: string;
+  abbrev: string;
   color: string;
+  bgColor: string;
 }
 
 interface LeaderboardRowProps {
@@ -53,14 +54,6 @@ export default function LeaderboardRow({
     return 'text-muted-foreground border-muted bg-muted/50';
   };
 
-  // Get tier badge colors for vibes mode
-  const getTierBgColor = (tierName: string): string => {
-    if (tierName.includes('Touse')) return 'bg-gradient-to-br from-amber-400 to-orange-500';
-    if (tierName.includes('Mouse')) return 'bg-gradient-to-br from-emerald-400 to-teal-500';
-    if (tierName.includes('Bouse')) return 'bg-gradient-to-br from-blue-400 to-indigo-500';
-    return 'bg-gradient-to-br from-gray-400 to-gray-500';
-  };
-
   return (
     <Link 
       to={createPageUrl(`Fraternity?id=${fraternity.id}`)}
@@ -84,24 +77,18 @@ export default function LeaderboardRow({
             "text-sm mt-0.5 truncate",
             displayMode === 'vibes' && tierInfo ? tierInfo.color : "text-muted-foreground"
           )}>
-            {displayMode === 'vibes' && tierInfo ? (
-              <span className="flex items-center gap-1">
-                <span>{tierInfo.emoji}</span>
-                <span className="font-medium">{tierInfo.name}</span>
-              </span>
-            ) : (
-              fraternity.chapter
-            )}
+            {displayMode === 'vibes' && tierInfo ? tierInfo.name : fraternity.chapter}
           </p>
         </div>
 
-        {/* Score Badge or Vibes Badge */}
+        {/* Score Badge or Tier Badge */}
         {displayMode === 'vibes' && tierInfo ? (
           <div className={cn(
-            "flex items-center justify-center w-12 h-12 rounded-full text-white text-xl",
-            getTierBgColor(tierInfo.name)
+            "flex items-center justify-center w-12 h-12 rounded-full border text-sm font-bold",
+            tierInfo.bgColor,
+            tierInfo.color
           )}>
-            {tierInfo.emoji}
+            {tierInfo.abbrev}
           </div>
         ) : (
           <div className={cn(
