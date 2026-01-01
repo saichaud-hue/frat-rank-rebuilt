@@ -321,8 +321,9 @@ export default function AnonymousFeed() {
       <div className="absolute bottom-20 right-4">
         <Button
           onClick={() => setShowComposer(true)}
-          className="rounded-full px-6 h-12 gradient-primary shadow-xl shadow-primary/30 font-bold"
+          className="rounded-full px-5 h-11 bg-foreground text-background shadow-xl font-semibold hover:bg-foreground/90"
         >
+          <Plus className="h-4 w-4" />
           Post
         </Button>
       </div>
