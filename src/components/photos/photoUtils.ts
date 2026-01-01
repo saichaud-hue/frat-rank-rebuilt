@@ -1,44 +1,23 @@
 import { base44, type PartyPhoto } from '@/api/base44Client';
 
 /**
- * Recomputes the party cover photo based on the highest net score (likes - dislikes).
- * Ties are broken by newest photo (most recent created_date).
+ * Recomputes the party cover photo - but only if the party doesn't already have one.
+ * Cover photos set during party creation are preserved and never overwritten by user uploads.
  */
 export async function recomputePartyCoverPhoto(partyId: string): Promise<void> {
   try {
-    // Get all approved photos for this party
-    const photos = await base44.entities.PartyPhoto.filter(
-      { party_id: partyId, moderation_status: 'approved' },
-      '-created_date'
-    );
-
-    if (photos.length === 0) {
-      // Clear cover photo if no approved photos remain
-      await base44.entities.Party.update(partyId, {
-        display_photo_url: null,
-      });
+    // Check if party already has a cover photo set at creation
+    const party = await base44.entities.Party.get(partyId);
+    
+    // If party already has a cover photo, don't override it with user uploads
+    if (party?.display_photo_url) {
       return;
     }
-
-    // Find photo with highest net score (likes - dislikes)
-    let bestPhoto: PartyPhoto = photos[0];
-    let bestScore = (bestPhoto.likes || 0) - (bestPhoto.dislikes || 0);
-
-    for (const photo of photos) {
-      const netScore = (photo.likes || 0) - (photo.dislikes || 0);
-      // Higher score wins, or if tie, newer photo wins (photos are already sorted by -created_date)
-      if (netScore > bestScore) {
-        bestScore = netScore;
-        bestPhoto = photo;
-      }
-    }
-
-    // Update party cover photo
-    await base44.entities.Party.update(partyId, {
-      display_photo_url: bestPhoto.url,
-    });
+    
+    // Party has no cover photo - we won't auto-set one from user uploads
+    // Cover photos should only come from party creation
   } catch (error) {
-    console.error('Failed to recompute party cover photo:', error);
+    console.error('Failed to check party cover photo:', error);
   }
 }
 
