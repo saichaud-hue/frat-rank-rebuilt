@@ -58,7 +58,7 @@ export default function LeaderboardRow({
 
   return (
     <Link 
-      to={createPageUrl(`Fraternity?id=${fraternity.id}`)}
+      to={`/Fraternity/${fraternity.id}`}
       className="block"
     >
       <div className={cn(
