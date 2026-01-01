@@ -1235,6 +1235,103 @@ export default function Activity() {
         </div>
       </div>
 
+      {/* Trending Summary - Parties & Frats */}
+      <div className="space-y-3">
+        {/* Quick glance header */}
+        <div className="flex items-center justify-between">
+          <h3 className="text-sm font-bold text-muted-foreground uppercase tracking-wide flex items-center gap-2">
+            <Flame className="h-4 w-4 text-primary" />
+            Trending Now
+          </h3>
+        </div>
+        
+        {/* Horizontal scroll cards */}
+        <div className="flex gap-3 overflow-x-auto pb-2 -mx-4 px-4 scrollbar-hide">
+          {/* Top Frats */}
+          {fraternities
+            .filter(f => f.display_score && f.display_score > 0)
+            .sort((a, b) => (b.display_score || 0) - (a.display_score || 0))
+            .slice(0, 3)
+            .map((frat, index) => (
+              <Link
+                key={frat.id}
+                to={`/Fraternity/${frat.id}`}
+                className="shrink-0 w-32 p-3 rounded-2xl bg-gradient-to-br from-muted/50 to-muted/30 border border-border/50 hover:border-primary/50 transition-all active:scale-[0.98]"
+              >
+                <div className="flex items-center gap-2 mb-2">
+                  <div className={cn(
+                    "w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold",
+                    index === 0 ? "bg-amber-500 text-white" : index === 1 ? "bg-slate-400 text-white" : "bg-amber-700 text-white"
+                  )}>
+                    {index + 1}
+                  </div>
+                  <Crown className={cn(
+                    "h-3.5 w-3.5",
+                    index === 0 ? "text-amber-500" : "text-muted-foreground"
+                  )} />
+                </div>
+                <p className="font-bold text-sm truncate">{frat.chapter}</p>
+                <p className="text-xs text-muted-foreground truncate">{frat.name}</p>
+                <div className="mt-2 flex items-center gap-1">
+                  <Trophy className="h-3 w-3 text-primary" />
+                  <span className="text-xs font-bold text-primary">{frat.display_score?.toFixed(1)}</span>
+                </div>
+              </Link>
+            ))}
+          
+          {/* View all frats */}
+          <Link
+            to="/Leaderboard"
+            className="shrink-0 w-24 p-3 rounded-2xl border-2 border-dashed border-muted-foreground/30 flex flex-col items-center justify-center text-muted-foreground hover:border-primary hover:text-primary transition-all"
+          >
+            <Trophy className="h-5 w-5 mb-1" />
+            <span className="text-[10px] font-medium text-center">Rankings</span>
+          </Link>
+        </div>
+        
+        {/* Upcoming parties quick list */}
+        {upcomingParties.length > 0 && (
+          <div className="rounded-2xl bg-muted/30 border border-border/50 p-3 space-y-2">
+            <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide flex items-center gap-2">
+              <Clock className="h-3 w-3" />
+              Coming Up
+            </p>
+            <div className="space-y-1.5">
+              {upcomingParties.slice(0, 3).map((party) => {
+                const frat = fraternities.find(f => f.id === party.fraternity_id);
+                const partyDate = new Date(party.starts_at);
+                const dayLabel = isToday(partyDate) ? 'Today' : isTomorrow(partyDate) ? 'Tomorrow' : format(partyDate, 'EEE');
+                
+                return (
+                  <Link
+                    key={party.id}
+                    to={`/Party/${party.id}`}
+                    className="flex items-center gap-3 p-2 rounded-xl hover:bg-muted/50 transition-colors group"
+                  >
+                    <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center shrink-0 group-hover:bg-primary/20 transition-colors">
+                      <PartyPopper className="h-4 w-4 text-primary" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="font-semibold text-sm truncate">{party.title}</p>
+                      <p className="text-xs text-muted-foreground truncate">
+                        {frat?.chapter} · {dayLabel} {format(partyDate, 'h:mm a')}
+                      </p>
+                    </div>
+                    <ChevronRight className="h-4 w-4 text-muted-foreground shrink-0" />
+                  </Link>
+                );
+              })}
+            </div>
+            <Link
+              to="/Parties"
+              className="block text-center text-xs font-bold text-primary hover:underline pt-1"
+            >
+              See all parties →
+            </Link>
+          </div>
+        )}
+      </div>
+
       {/* All Move Options Sheet */}
       <Sheet open={showAllMoveOptions} onOpenChange={setShowAllMoveOptions}>
         <SheetContent side="bottom" className="rounded-t-3xl h-[85vh] flex flex-col" style={{ paddingBottom: 'max(env(safe-area-inset-bottom), 16px)' }}>
