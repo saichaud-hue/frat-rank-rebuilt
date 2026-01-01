@@ -26,6 +26,23 @@ import { ensureAuthed } from '@/utils/auth';
 import { Star, PartyPopper, X, Plus, ArrowUpDown, Search } from 'lucide-react';
 
 type FilterType = 'overall' | 'reputation' | 'party' | 'trending';
+type DisplayMode = 'score' | 'vibes';
+
+// Tier classifications based on rank (1-10 tiers)
+const getTierFromRank = (rank: number, total: number): { name: string; emoji: string; color: string } => {
+  const percentile = (rank - 1) / Math.max(total - 1, 1);
+  
+  if (percentile < 0.1) return { name: 'Upper Touse', emoji: '👑', color: 'text-amber-500' };
+  if (percentile < 0.2) return { name: 'Touse', emoji: '🔥', color: 'text-orange-500' };
+  if (percentile < 0.3) return { name: 'Lower Touse', emoji: '✨', color: 'text-yellow-500' };
+  if (percentile < 0.4) return { name: 'Upper Mouse', emoji: '💪', color: 'text-emerald-500' };
+  if (percentile < 0.5) return { name: 'Mouse', emoji: '😎', color: 'text-green-500' };
+  if (percentile < 0.6) return { name: 'Lower Mouse', emoji: '👍', color: 'text-teal-500' };
+  if (percentile < 0.7) return { name: 'Upper Bouse', emoji: '🤷', color: 'text-blue-500' };
+  if (percentile < 0.8) return { name: 'Bouse', emoji: '😬', color: 'text-indigo-500' };
+  if (percentile < 0.9) return { name: 'Lower Bouse', emoji: '💀', color: 'text-violet-500' };
+  return { name: 'The Pit', emoji: '🪦', color: 'text-muted-foreground' };
+};
 
 export default function Leaderboard() {
   const [allFraternities, setAllFraternities] = useState<FraternityWithScores[]>([]);
@@ -39,6 +56,7 @@ export default function Leaderboard() {
   const [rateExpanded, setRateExpanded] = useState(false);
   const [selectedParty, setSelectedParty] = useState<Party | null>(null);
   const [filter, setFilter] = useState<FilterType>('overall');
+  const [displayMode, setDisplayMode] = useState<DisplayMode>('score');
 
   const handleIntroComplete = (neverShowAgain: boolean) => {
     if (neverShowAgain) {
@@ -302,12 +320,16 @@ export default function Leaderboard() {
         />
       </div>
 
-      {/* Sort indicator */}
+      {/* Sort indicator / Display mode toggle */}
       <div className="flex items-center justify-between px-4 mt-6 mb-2">
-        <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
+        <button 
+          onClick={() => setDisplayMode(prev => prev === 'score' ? 'vibes' : 'score')}
+          className="flex items-center gap-1.5 text-sm font-medium text-muted-foreground hover:text-foreground transition-all active:scale-95"
+        >
           <ArrowUpDown className="h-3.5 w-3.5" />
-          <span>Score</span>
-        </div>
+          <span>{displayMode === 'score' ? 'Score' : 'Vibes'}</span>
+          {displayMode === 'vibes' && <span className="text-xs">✨</span>}
+        </button>
         <button className="p-2 -mr-2 text-muted-foreground hover:text-foreground transition-colors">
           <Search className="h-4 w-4" />
         </button>
@@ -324,6 +346,8 @@ export default function Leaderboard() {
               fraternity={frat}
               rank={index + 1}
               filter={filter}
+              displayMode={displayMode}
+              tierInfo={displayMode === 'vibes' ? getTierFromRank(index + 1, sortedFraternities.length) : undefined}
             />
             {index < sortedFraternities.length - 1 && (
               <div className="border-t border-border/50" />

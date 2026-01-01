@@ -4,15 +4,31 @@ import { type FraternityWithScores } from '@/utils/scoring';
 import { cn } from '@/lib/utils';
 
 type FilterType = 'overall' | 'reputation' | 'party' | 'trending';
+type DisplayMode = 'score' | 'vibes';
+
+interface TierInfo {
+  name: string;
+  emoji: string;
+  color: string;
+}
 
 interface LeaderboardRowProps {
   fraternity: FraternityWithScores;
   rank: number;
   filter?: FilterType;
   isTied?: boolean;
+  displayMode?: DisplayMode;
+  tierInfo?: TierInfo;
 }
 
-export default function LeaderboardRow({ fraternity, rank, filter = 'overall', isTied = false }: LeaderboardRowProps) {
+export default function LeaderboardRow({ 
+  fraternity, 
+  rank, 
+  filter = 'overall', 
+  isTied = false,
+  displayMode = 'score',
+  tierInfo 
+}: LeaderboardRowProps) {
   const scores = fraternity.computedScores;
 
   const getDisplayScore = (): number | null => {
@@ -37,6 +53,14 @@ export default function LeaderboardRow({ fraternity, rank, filter = 'overall', i
     return 'text-muted-foreground border-muted bg-muted/50';
   };
 
+  // Get tier badge colors for vibes mode
+  const getTierBgColor = (tierName: string): string => {
+    if (tierName.includes('Touse')) return 'bg-gradient-to-br from-amber-400 to-orange-500';
+    if (tierName.includes('Mouse')) return 'bg-gradient-to-br from-emerald-400 to-teal-500';
+    if (tierName.includes('Bouse')) return 'bg-gradient-to-br from-blue-400 to-indigo-500';
+    return 'bg-gradient-to-br from-gray-400 to-gray-500';
+  };
+
   return (
     <Link 
       to={createPageUrl(`Fraternity?id=${fraternity.id}`)}
@@ -56,18 +80,37 @@ export default function LeaderboardRow({ fraternity, rank, filter = 'overall', i
           <h3 className="font-semibold text-base text-foreground leading-tight truncate">
             {fraternity.name}
           </h3>
-          <p className="text-sm text-muted-foreground mt-0.5 truncate">
-            {fraternity.chapter}
+          <p className={cn(
+            "text-sm mt-0.5 truncate",
+            displayMode === 'vibes' && tierInfo ? tierInfo.color : "text-muted-foreground"
+          )}>
+            {displayMode === 'vibes' && tierInfo ? (
+              <span className="flex items-center gap-1">
+                <span>{tierInfo.emoji}</span>
+                <span className="font-medium">{tierInfo.name}</span>
+              </span>
+            ) : (
+              fraternity.chapter
+            )}
           </p>
         </div>
 
-        {/* Score Badge */}
-        <div className={cn(
-          "flex items-center justify-center w-12 h-12 rounded-full border-2 font-bold text-base",
-          getScoreColorClass(score)
-        )}>
-          {score !== null ? score.toFixed(1) : '—'}
-        </div>
+        {/* Score Badge or Vibes Badge */}
+        {displayMode === 'vibes' && tierInfo ? (
+          <div className={cn(
+            "flex items-center justify-center w-12 h-12 rounded-full text-white text-xl",
+            getTierBgColor(tierInfo.name)
+          )}>
+            {tierInfo.emoji}
+          </div>
+        ) : (
+          <div className={cn(
+            "flex items-center justify-center w-12 h-12 rounded-full border-2 font-bold text-base",
+            getScoreColorClass(score)
+          )}>
+            {score !== null ? score.toFixed(1) : '—'}
+          </div>
+        )}
       </div>
     </Link>
   );
