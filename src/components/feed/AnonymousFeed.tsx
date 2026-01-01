@@ -318,12 +318,12 @@ export default function AnonymousFeed() {
       </ScrollArea>
 
       {/* Floating compose button */}
-      <div className="fixed bottom-24 right-4 z-50">
+      <div className="fixed bottom-20 right-4 z-50">
         <Button
           onClick={() => setShowComposer(true)}
-          className="rounded-full px-4 h-10 bg-foreground text-background shadow-lg font-medium text-sm hover:bg-foreground/90 gap-1"
+          className="rounded-full px-5 h-12 bg-foreground text-background shadow-xl font-semibold text-base hover:bg-foreground/90 gap-1.5"
         >
-          <Plus className="h-4 w-4" />
+          <Plus className="h-5 w-5" />
           Post
         </Button>
       </div>
