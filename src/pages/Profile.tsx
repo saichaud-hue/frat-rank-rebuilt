@@ -1,16 +1,14 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { User, PartyPopper, Star, LogIn, Award, ChevronDown, ChevronUp, ChevronRight, Pencil, Trash2, Zap, Music, Settings, Trophy, Users, Shield, Heart, Sparkles, TrendingUp, Crown, MessageCircle, Flame, Image, Lock, X, Loader2 } from 'lucide-react';
-import { Card } from '@/components/ui/card';
+import { User, PartyPopper, LogIn, Award, ChevronRight, Pencil, Trash2, Trophy, MessageCircle, Flame, Image, Lock, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { base44, type PartyRating, type ReputationRating, type Party, type Fraternity, type PartyPhoto } from '@/api/base44Client';
 import { format } from 'date-fns';
-import { formatTimeAgo, getScoreBgColor, getScoreColor } from '@/utils';
+import { formatTimeAgo, getScoreBgColor } from '@/utils';
 import PartyRatingForm from '@/components/rate/PartyRatingForm';
 import RateFratSheet from '@/components/leaderboard/RateFratSheet';
 
@@ -26,19 +24,14 @@ export default function Profile() {
   const [fratRatingsData, setFratRatingsData] = useState<EnrichedRepRating[]>([]);
   const [commentsData, setCommentsData] = useState<any[]>([]);
   const [privatePhotos, setPrivatePhotos] = useState<EnrichedPhoto[]>([]);
-  const [expandedSection, setExpandedSection] = useState<string | null>(null);
+  const [activeTab, setActiveTab] = useState<'parties' | 'frats' | 'comments' | 'photos'>('parties');
   const [viewingPhoto, setViewingPhoto] = useState<EnrichedPhoto | null>(null);
   const [deletingPhotoId, setDeletingPhotoId] = useState<string | null>(null);
   
-  // Edit/Delete state for party ratings
   const [editingPartyRating, setEditingPartyRating] = useState<EnrichedPartyRating | null>(null);
   const [deletingPartyRatingId, setDeletingPartyRatingId] = useState<string | null>(null);
-  
-  // Edit/Delete state for frat ratings
   const [editingFratRating, setEditingFratRating] = useState<EnrichedRepRating | null>(null);
   const [deletingFratRatingId, setDeletingFratRatingId] = useState<string | null>(null);
-  
-  // Delete state for comments
   const [deletingCommentId, setDeletingCommentId] = useState<string | null>(null);
 
   useEffect(() => {
@@ -62,7 +55,6 @@ export default function Profile() {
           base44.entities.PartyPhoto.filter({ user_id: userData.id }, '-created_date'),
         ]);
 
-        // Get user's private photos
         const userPrivatePhotos = allPhotos.filter((p: any) => p.visibility === 'private');
         const enrichedPrivatePhotos = userPrivatePhotos.map((photo: any) => {
           const party = parties.find((p: any) => p.id === photo.party_id);
@@ -71,20 +63,17 @@ export default function Profile() {
         });
         setPrivatePhotos(enrichedPrivatePhotos);
 
-        // Enrich party ratings with party/fraternity data
         const enrichedPartyRatings = partyRatings.map((r: any) => {
           const party = parties.find((p: any) => p.id === r.party_id);
           const fraternity = party ? fraternities.find((f: any) => f.id === party.fraternity_id) : null;
           return { ...r, party: party ?? undefined, fraternity: fraternity ?? undefined };
         });
 
-        // Enrich frat ratings with fraternity data
         const enrichedFratRatings = repRatings.map((r: any) => {
           const fraternity = fraternities.find((f: any) => f.id === r.fraternity_id);
           return { ...r, fraternity: fraternity ?? undefined };
         });
 
-        // Enrich comments with entity names
         const enrichedPartyComments = partyComments.map((c: any) => {
           const party = parties.find((p: any) => p.id === c.party_id);
           return { ...c, entityName: party?.title || 'Unknown Party', type: 'party' };
@@ -150,7 +139,6 @@ export default function Profile() {
         combined_score: scores.combined,
       });
       
-      // Recalculate fraternity reputation score
       if (editingFratRating.fraternity_id) {
         const allRepRatings = await base44.entities.ReputationRating.filter({
           fraternity_id: editingFratRating.fraternity_id
@@ -176,7 +164,6 @@ export default function Profile() {
     try {
       await base44.entities.ReputationRating.delete(ratingId);
       
-      // Recalculate fraternity reputation score after deletion
       if (fraternityId) {
         const allRepRatings = await base44.entities.ReputationRating.filter({
           fraternity_id: fraternityId
@@ -215,73 +202,58 @@ export default function Profile() {
     setDeletingCommentId(null);
   };
 
-  // Calculate level from points
   const getLevel = (points: number) => {
-    if (points >= 500) return { level: 5, title: 'Legend', color: 'from-amber-400 to-yellow-500', next: null };
-    if (points >= 200) return { level: 4, title: 'Expert', color: 'from-purple-500 to-violet-600', next: 500 };
-    if (points >= 100) return { level: 3, title: 'Regular', color: 'from-blue-500 to-cyan-500', next: 200 };
-    if (points >= 25) return { level: 2, title: 'Active', color: 'from-emerald-500 to-teal-500', next: 100 };
-    return { level: 1, title: 'Newbie', color: 'from-slate-400 to-slate-500', next: 25 };
+    if (points >= 500) return { level: 5, title: 'Legend', next: null };
+    if (points >= 200) return { level: 4, title: 'Expert', next: 500 };
+    if (points >= 100) return { level: 3, title: 'Regular', next: 200 };
+    if (points >= 25) return { level: 2, title: 'Active', next: 100 };
+    return { level: 1, title: 'Newbie', next: 25 };
   };
 
   if (loading) {
     return (
-      <div className="max-w-2xl mx-auto space-y-6">
-        <Skeleton className="h-64 rounded-3xl" />
-        <div className="grid grid-cols-3 gap-4">
-          {[1, 2, 3].map((i) => (
-            <Skeleton key={i} className="h-24 rounded-xl" />
+      <div className="max-w-2xl mx-auto space-y-4 p-4">
+        <Skeleton className="h-40 rounded-2xl" />
+        <div className="grid grid-cols-4 gap-2">
+          {[1, 2, 3, 4].map((i) => (
+            <Skeleton key={i} className="h-16 rounded-xl" />
           ))}
         </div>
+        <Skeleton className="h-64 rounded-2xl" />
       </div>
     );
   }
 
   if (!user) {
     return (
-      <div className="max-w-2xl mx-auto space-y-5 pb-20">
-        {/* Hero for logged out users */}
-        <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-violet-600 via-purple-600 to-indigo-700 p-8 text-white shadow-xl">
-          <div className="absolute inset-0 opacity-20">
-            <div className="absolute top-0 right-0 w-40 h-40 bg-white/30 rounded-full blur-3xl translate-x-10 -translate-y-10" />
-            <div className="absolute bottom-0 left-0 w-32 h-32 bg-white/30 rounded-full blur-3xl -translate-x-10 translate-y-10" />
+      <div className="max-w-md mx-auto p-4 space-y-6">
+        <div className="text-center space-y-4 py-12">
+          <div className="w-20 h-20 mx-auto rounded-full bg-muted flex items-center justify-center">
+            <User className="h-10 w-10 text-muted-foreground" />
           </div>
-          
-          <div className="relative text-center space-y-6">
-            <div className="w-24 h-24 mx-auto rounded-full bg-white/20 backdrop-blur-sm flex items-center justify-center">
-              <User className="h-12 w-12" />
-            </div>
-            <div>
-              <h1 className="text-3xl font-bold mb-2">Welcome to Touse</h1>
-              <p className="text-white/80">Sign in to track your ratings, earn points, and level up!</p>
-            </div>
-            <Button onClick={handleLogin} size="lg" className="bg-white text-purple-600 hover:bg-white/90 font-semibold">
-              <LogIn className="h-5 w-5 mr-2" />
-              Sign in with Google
-            </Button>
+          <div>
+            <h1 className="text-2xl font-bold">Welcome to Touse</h1>
+            <p className="text-muted-foreground mt-1">Sign in to track your ratings and earn points</p>
           </div>
+          <Button onClick={handleLogin} size="lg" className="w-full">
+            <LogIn className="h-5 w-5 mr-2" />
+            Sign in with Google
+          </Button>
         </div>
 
-        {/* Features Preview */}
         <div className="grid grid-cols-3 gap-3">
-          <Card className="glass p-4 text-center">
-            <div className="w-12 h-12 mx-auto mb-2 rounded-xl bg-pink-100 flex items-center justify-center">
-              <PartyPopper className="h-6 w-6 text-pink-600" />
-            </div>
-            <p className="text-sm font-medium">Rate Parties</p>
-          </Card>
-          <Card className="glass p-4 text-center">
-            <div className="w-12 h-12 mx-auto mb-2 rounded-xl bg-amber-100 flex items-center justify-center">
-              <Trophy className="h-6 w-6 text-amber-600" />
-            </div>
-            <p className="text-sm font-medium">Rate Frats</p>
-          </Card>
-          <Card className="glass p-4 text-center">
-            <div className="w-12 h-12 mx-auto mb-2 rounded-xl bg-emerald-100 flex items-center justify-center">
-              <Sparkles className="h-6 w-6 text-emerald-600" />
-            </div>
-            <p className="text-sm font-medium">Earn Points</p>
-          </Card>
+          <div className="p-4 rounded-xl bg-muted text-center">
+            <PartyPopper className="h-6 w-6 mx-auto mb-2 text-primary" />
+            <p className="text-xs font-medium">Rate Parties</p>
+          </div>
+          <div className="p-4 rounded-xl bg-muted text-center">
+            <Trophy className="h-6 w-6 mx-auto mb-2 text-primary" />
+            <p className="text-xs font-medium">Rate Frats</p>
+          </div>
+          <div className="p-4 rounded-xl bg-muted text-center">
+            <Award className="h-6 w-6 mx-auto mb-2 text-primary" />
+            <p className="text-xs font-medium">Earn Points</p>
+          </div>
         </div>
       </div>
     );
@@ -291,581 +263,319 @@ export default function Profile() {
   const levelInfo = getLevel(points);
   const progressToNext = levelInfo.next ? (points / levelInfo.next) * 100 : 100;
 
+  const tabs = [
+    { id: 'parties', label: 'Parties', count: stats.partyRatings, icon: PartyPopper },
+    { id: 'frats', label: 'Frats', count: stats.fratRatings, icon: Trophy },
+    { id: 'comments', label: 'Comments', count: stats.comments, icon: MessageCircle },
+    { id: 'photos', label: 'Photos', count: stats.privatePhotos, icon: Lock },
+  ] as const;
+
   return (
-    <div className="max-w-2xl mx-auto space-y-5 pb-20">
-      {/* HERO PROFILE CARD */}
-      <div className={`relative overflow-hidden rounded-3xl bg-gradient-to-br ${levelInfo.color} p-6 text-white shadow-xl`}>
-        {/* Background Effects */}
-        <div className="absolute inset-0 opacity-20">
-          <div className="absolute top-0 right-0 w-40 h-40 bg-white/30 rounded-full blur-3xl translate-x-10 -translate-y-10" />
-          <div className="absolute bottom-0 left-0 w-32 h-32 bg-white/30 rounded-full blur-3xl -translate-x-10 translate-y-10" />
+    <div className="max-w-2xl mx-auto space-y-4 pb-20">
+      {/* Profile Header */}
+      <div className="p-5 rounded-2xl bg-muted/50">
+        <div className="flex items-center gap-4">
+          <Avatar className="h-16 w-16 ring-2 ring-border">
+            <AvatarImage src={user.avatar_url} />
+            <AvatarFallback className="text-xl font-bold bg-primary text-primary-foreground">
+              {user.name?.charAt(0) || 'U'}
+            </AvatarFallback>
+          </Avatar>
+          <div className="flex-1 min-w-0">
+            <h1 className="text-xl font-bold truncate">{user.name}</h1>
+            <p className="text-sm text-muted-foreground truncate">{user.email}</p>
+            <div className="flex items-center gap-3 mt-2">
+              <Badge variant="secondary" className="font-medium">
+                Lvl {levelInfo.level} · {levelInfo.title}
+              </Badge>
+              <div className="flex items-center gap-1 text-sm text-muted-foreground">
+                <Flame className="h-4 w-4 text-orange-500" />
+                <span>{user.streak || 0}d</span>
+              </div>
+            </div>
+          </div>
         </div>
 
-        <div className="relative">
-          {/* Profile Header */}
-          <div className="flex items-start gap-4 mb-5">
-            <div className="relative">
-              <Avatar className="h-20 w-20 ring-4 ring-white/30">
-                <AvatarImage src={user.avatar_url} />
-                <AvatarFallback className="bg-white/20 text-white text-2xl font-bold">
-                  {user.name?.charAt(0) || 'U'}
-                </AvatarFallback>
-              </Avatar>
-              {levelInfo.level >= 4 && (
-                <div className="absolute -top-1 -right-1 w-7 h-7 rounded-full bg-amber-400 flex items-center justify-center shadow-lg">
-                  <Crown className="h-4 w-4 text-amber-900" />
-                </div>
-              )}
+        {/* Points Progress */}
+        <div className="mt-4 p-3 rounded-xl bg-background">
+          <div className="flex items-center justify-between text-sm mb-2">
+            <div className="flex items-center gap-2">
+              <Award className="h-4 w-4 text-primary" />
+              <span className="font-semibold">{points} pts</span>
             </div>
-            <div className="flex-1 min-w-0">
-              <h1 className="text-2xl font-bold truncate">{user.name}</h1>
-              <p className="text-white/80 text-sm truncate">{user.email}</p>
-              <div className="flex items-center gap-2 mt-2">
-                <Badge className="bg-white/20 text-white border-white/30 font-semibold">
-                  Lvl {levelInfo.level} • {levelInfo.title}
-                </Badge>
-              </div>
-            </div>
+            {levelInfo.next && (
+              <span className="text-muted-foreground">{levelInfo.next - points} to level up</span>
+            )}
           </div>
-
-          {/* Points & Level Progress */}
-          <div className="bg-white/10 backdrop-blur-sm rounded-xl p-4 space-y-3">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <Award className="h-5 w-5" />
-                <span className="font-bold text-lg">{points} points</span>
-              </div>
-              {levelInfo.next && (
-                <span className="text-sm text-white/80">{levelInfo.next - points} to next level</span>
-              )}
-            </div>
-            <div className="h-2.5 bg-white/20 rounded-full overflow-hidden">
-              <div 
-                className="h-full bg-white rounded-full transition-all duration-700"
-                style={{ width: `${Math.min(progressToNext, 100)}%` }}
-              />
-            </div>
-          </div>
-
-          {/* Streak & Rank Stats */}
-          <div className="grid grid-cols-2 gap-3 mt-4">
-            <div className="p-4 rounded-xl bg-white/10 backdrop-blur-sm">
-              <div className="flex items-center gap-2 mb-1">
-                <Trophy className="h-4 w-4 opacity-80" />
-                <span className="text-xs opacity-80">Rank on Touse</span>
-              </div>
-              <p className="text-2xl font-bold">#{user.rank || '—'}</p>
-            </div>
-            <div className="p-4 rounded-xl bg-white/10 backdrop-blur-sm">
-              <div className="flex items-center gap-2 mb-1">
-                <Flame className="h-4 w-4 opacity-80" />
-                <span className="text-xs opacity-80">Current Streak</span>
-              </div>
-              <p className="text-2xl font-bold">{user.streak || 0} <span className="text-sm font-normal opacity-80">days</span></p>
-            </div>
+          <div className="h-2 bg-muted rounded-full overflow-hidden">
+            <div 
+              className="h-full bg-primary rounded-full transition-all duration-500"
+              style={{ width: `${Math.min(progressToNext, 100)}%` }}
+            />
           </div>
         </div>
       </div>
 
-      {/* ACTIVITY SECTIONS */}
-      <div className="space-y-3">
-        {/* Party Ratings Section */}
-        <Collapsible open={expandedSection === 'partyRatings'} onOpenChange={(open) => setExpandedSection(open ? 'partyRatings' : null)}>
-          <CollapsibleTrigger asChild>
-            <Card className="glass overflow-hidden cursor-pointer hover:shadow-md transition-all">
-              <div className="bg-gradient-to-r from-pink-500 to-rose-500 p-4 flex items-center justify-between text-white">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-xl bg-white/20 flex items-center justify-center">
-                    <PartyPopper className="h-5 w-5" />
-                  </div>
-                  <div>
-                    <p className="text-2xl font-bold">{stats.partyRatings}</p>
-                    <p className="text-xs opacity-80">Party Ratings</p>
-                  </div>
-                </div>
-                <div className="flex items-center gap-2">
-                  {stats.partyRatings > 5 && (
-                    <Badge className="bg-white/20 text-white border-white/30">🔥 Active Rater</Badge>
-                  )}
-                  {expandedSection === 'partyRatings' ? <ChevronUp className="h-5 w-5" /> : <ChevronDown className="h-5 w-5" />}
-                </div>
+      {/* Tab Navigation */}
+      <div className="flex gap-2 overflow-x-auto no-scrollbar">
+        {tabs.map((tab) => (
+          <button
+            key={tab.id}
+            onClick={() => setActiveTab(tab.id)}
+            className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium whitespace-nowrap transition-all ${
+              activeTab === tab.id 
+                ? 'bg-primary text-primary-foreground' 
+                : 'bg-muted text-muted-foreground hover:bg-muted/80'
+            }`}
+          >
+            <tab.icon className="h-4 w-4" />
+            <span>{tab.label}</span>
+            <span className={`text-xs px-1.5 py-0.5 rounded-full ${
+              activeTab === tab.id ? 'bg-primary-foreground/20' : 'bg-background'
+            }`}>
+              {tab.count}
+            </span>
+          </button>
+        ))}
+      </div>
+
+      {/* Content Area */}
+      <div className="rounded-2xl bg-muted/30 overflow-hidden">
+        {/* Party Ratings Tab */}
+        {activeTab === 'parties' && (
+          <div>
+            {partyRatingsData.length === 0 ? (
+              <div className="p-8 text-center">
+                <PartyPopper className="h-10 w-10 mx-auto mb-3 text-muted-foreground/50" />
+                <p className="text-muted-foreground">No party ratings yet</p>
               </div>
-            </Card>
-          </CollapsibleTrigger>
-          <CollapsibleContent>
-            <Card className="glass mt-2 overflow-hidden">
-              {partyRatingsData.length === 0 ? (
-                <div className="p-8 text-center space-y-3">
-                  <div className="w-16 h-16 mx-auto rounded-2xl bg-pink-100 flex items-center justify-center">
-                    <PartyPopper className="h-8 w-8 text-pink-400" />
+            ) : (
+              <div className="divide-y divide-border/50">
+                {partyRatingsData.map((rating) => (
+                  <div key={rating.id} className="p-4 flex items-center gap-3 hover:bg-muted/50 transition-colors">
+                    <div className="flex-1 min-w-0">
+                      <p className="font-medium truncate">{rating.party?.title || 'Party'}</p>
+                      <p className="text-xs text-muted-foreground">
+                        {rating.fraternity?.name} · {formatTimeAgo(rating.created_date)}
+                      </p>
+                    </div>
+                    <Badge className={`${getScoreBgColor(rating.party_quality_score ?? 0)} text-white`}>
+                      {(rating.party_quality_score ?? 0).toFixed(1)}
+                    </Badge>
+                    <Button 
+                      variant="ghost" 
+                      size="icon" 
+                      className="h-8 w-8"
+                      onClick={() => setEditingPartyRating(rating)}
+                    >
+                      <Pencil className="h-4 w-4" />
+                    </Button>
+                    <AlertDialog open={deletingPartyRatingId === rating.id} onOpenChange={(open) => setDeletingPartyRatingId(open ? rating.id : null)}>
+                      <AlertDialogTrigger asChild>
+                        <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive">
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </AlertDialogTrigger>
+                      <AlertDialogContent>
+                        <AlertDialogHeader>
+                          <AlertDialogTitle>Delete Rating?</AlertDialogTitle>
+                          <AlertDialogDescription>This action cannot be undone.</AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <AlertDialogFooter>
+                          <AlertDialogCancel>Cancel</AlertDialogCancel>
+                          <AlertDialogAction onClick={() => handleDeletePartyRating(rating.id)} className="bg-destructive text-destructive-foreground">
+                            Delete
+                          </AlertDialogAction>
+                        </AlertDialogFooter>
+                      </AlertDialogContent>
+                    </AlertDialog>
                   </div>
-                  <p className="text-muted-foreground font-medium">No party ratings yet</p>
-                  <p className="text-sm text-muted-foreground/70">Rate parties to see them here!</p>
-                </div>
-              ) : (
-                <div className="divide-y divide-border/50">
-                  {partyRatingsData.map((rating) => (
-                    <div key={rating.id} className="p-4 hover:bg-muted/30 transition-colors">
-                      <div className="flex items-start justify-between mb-2">
-                        <div className="flex items-start gap-3">
-                          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-pink-100 to-rose-100 flex items-center justify-center flex-shrink-0">
-                            <PartyPopper className="h-5 w-5 text-pink-600" />
-                          </div>
-                          <div>
-                            <p className="font-semibold">{rating.party?.title || 'Party'}</p>
-                            {rating.fraternity && (
-                              <p className="text-sm text-muted-foreground">
-                                {rating.fraternity.name} {rating.fraternity.chapter ? `• ${rating.fraternity.chapter}` : ''}
-                              </p>
-                            )}
-                          </div>
-                        </div>
-                        <div className="flex items-center gap-1">
-                          <Badge className={`${getScoreBgColor(rating.party_quality_score ?? 0)} text-white font-bold`}>
-                            {(rating.party_quality_score ?? 0).toFixed(1)}
-                          </Badge>
-                          <Button 
-                            variant="ghost" 
-                            size="icon" 
-                            className="h-8 w-8"
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Frat Ratings Tab */}
+        {activeTab === 'frats' && (
+          <div>
+            {fratRatingsData.length === 0 ? (
+              <div className="p-8 text-center">
+                <Trophy className="h-10 w-10 mx-auto mb-3 text-muted-foreground/50" />
+                <p className="text-muted-foreground">No frat ratings yet</p>
+              </div>
+            ) : (
+              <div className="divide-y divide-border/50">
+                {fratRatingsData.map((rating) => (
+                  <div key={rating.id} className="p-4 flex items-center gap-3 hover:bg-muted/50 transition-colors">
+                    <div className="flex-1 min-w-0">
+                      <p className="font-medium truncate">{rating.fraternity?.name || 'Fraternity'}</p>
+                      <p className="text-xs text-muted-foreground">
+                        {rating.fraternity?.chapter} · {formatTimeAgo(rating.created_date)}
+                      </p>
+                    </div>
+                    <Badge className={`${getScoreBgColor(rating.combined_score ?? 0)} text-white`}>
+                      {(rating.combined_score ?? 0).toFixed(1)}
+                    </Badge>
+                    <Button 
+                      variant="ghost" 
+                      size="icon" 
+                      className="h-8 w-8"
+                      onClick={() => setEditingFratRating(rating)}
+                    >
+                      <Pencil className="h-4 w-4" />
+                    </Button>
+                    <AlertDialog open={deletingFratRatingId === rating.id} onOpenChange={(open) => setDeletingFratRatingId(open ? rating.id : null)}>
+                      <AlertDialogTrigger asChild>
+                        <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive">
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </AlertDialogTrigger>
+                      <AlertDialogContent>
+                        <AlertDialogHeader>
+                          <AlertDialogTitle>Delete Rating?</AlertDialogTitle>
+                          <AlertDialogDescription>This action cannot be undone.</AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <AlertDialogFooter>
+                          <AlertDialogCancel>Cancel</AlertDialogCancel>
+                          <AlertDialogAction onClick={() => handleDeleteFratRating(rating.id, rating.fraternity_id)} className="bg-destructive text-destructive-foreground">
+                            Delete
+                          </AlertDialogAction>
+                        </AlertDialogFooter>
+                      </AlertDialogContent>
+                    </AlertDialog>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Comments Tab */}
+        {activeTab === 'comments' && (
+          <div>
+            {commentsData.length === 0 ? (
+              <div className="p-8 text-center">
+                <MessageCircle className="h-10 w-10 mx-auto mb-3 text-muted-foreground/50" />
+                <p className="text-muted-foreground">No comments yet</p>
+              </div>
+            ) : (
+              <div className="divide-y divide-border/50">
+                {commentsData.map((comment) => (
+                  <div key={comment.id} className="p-4 hover:bg-muted/50 transition-colors">
+                    <div className="flex items-start gap-3">
+                      <div className="flex-1 min-w-0">
+                        <p className="font-medium text-sm truncate">{comment.entityName}</p>
+                        <p className="text-sm text-foreground mt-1 line-clamp-2">{comment.text}</p>
+                        <p className="text-xs text-muted-foreground mt-1">{format(new Date(comment.created_date), 'MMM d, yyyy')}</p>
+                      </div>
+                      <Badge variant="outline" className="text-xs capitalize shrink-0">
+                        {comment.type}
+                      </Badge>
+                      <AlertDialog open={deletingCommentId === comment.id} onOpenChange={(open) => setDeletingCommentId(open ? comment.id : null)}>
+                        <AlertDialogTrigger asChild>
+                          <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive shrink-0">
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </AlertDialogTrigger>
+                        <AlertDialogContent>
+                          <AlertDialogHeader>
+                            <AlertDialogTitle>Delete Comment?</AlertDialogTitle>
+                            <AlertDialogDescription>This action cannot be undone.</AlertDialogDescription>
+                          </AlertDialogHeader>
+                          <AlertDialogFooter>
+                            <AlertDialogCancel>Cancel</AlertDialogCancel>
+                            <AlertDialogAction onClick={() => handleDeleteComment(comment)} className="bg-destructive text-destructive-foreground">
+                              Delete
+                            </AlertDialogAction>
+                          </AlertDialogFooter>
+                        </AlertDialogContent>
+                      </AlertDialog>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Photos Tab */}
+        {activeTab === 'photos' && (
+          <div>
+            {privatePhotos.length === 0 ? (
+              <div className="p-8 text-center">
+                <Image className="h-10 w-10 mx-auto mb-3 text-muted-foreground/50" />
+                <p className="text-muted-foreground">No private photos yet</p>
+              </div>
+            ) : (
+              <div className="p-4 space-y-4">
+                {Object.entries(
+                  privatePhotos.reduce((acc, photo) => {
+                    const partyId = photo.party_id;
+                    if (!acc[partyId]) {
+                      acc[partyId] = { party: photo.party, fraternity: photo.fraternity, photos: [] };
+                    }
+                    acc[partyId].photos.push(photo);
+                    return acc;
+                  }, {} as Record<string, { party: any; fraternity: any; photos: typeof privatePhotos }>)
+                ).map(([partyId, group]) => (
+                  <div key={partyId} className="space-y-2">
+                    <Link to={`/Party?id=${partyId}`} className="flex items-center gap-3 p-3 rounded-xl bg-background hover:bg-muted/50 transition-colors">
+                      <Image className="h-5 w-5 text-muted-foreground" />
+                      <div className="flex-1 min-w-0">
+                        <p className="font-medium truncate">{group.party?.title || 'Party'}</p>
+                        <p className="text-xs text-muted-foreground">{group.fraternity?.name} · {group.photos.length} photo{group.photos.length !== 1 ? 's' : ''}</p>
+                      </div>
+                      <ChevronRight className="h-5 w-5 text-muted-foreground" />
+                    </Link>
+                    <div className="grid grid-cols-3 gap-2">
+                      {group.photos.map((photo) => (
+                        <div key={photo.id} className="relative aspect-square group">
+                          <img 
+                            src={photo.url} 
+                            alt={photo.caption || 'Private photo'}
+                            className="w-full h-full object-cover rounded-lg cursor-pointer"
+                            onClick={() => setViewingPhoto(photo)}
+                          />
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="absolute top-1 right-1 h-6 w-6 bg-black/50 text-white hover:bg-red-500/80 opacity-0 group-hover:opacity-100 transition-opacity"
                             onClick={(e) => {
                               e.stopPropagation();
-                              setEditingPartyRating(rating);
+                              setDeletingPhotoId(photo.id);
                             }}
                           >
-                            <Pencil className="h-4 w-4" />
+                            <Trash2 className="h-3 w-3" />
                           </Button>
-                          <AlertDialog open={deletingPartyRatingId === rating.id} onOpenChange={(open) => setDeletingPartyRatingId(open ? rating.id : null)}>
-                            <AlertDialogTrigger asChild>
-                              <Button 
-                                variant="ghost" 
-                                size="icon" 
-                                className="h-8 w-8 text-destructive hover:text-destructive"
-                                onClick={(e) => e.stopPropagation()}
-                              >
-                                <Trash2 className="h-4 w-4" />
-                              </Button>
-                            </AlertDialogTrigger>
-                            <AlertDialogContent className="bg-background">
-                              <AlertDialogHeader>
-                                <AlertDialogTitle>Delete Rating?</AlertDialogTitle>
-                                <AlertDialogDescription>
-                                  Are you sure you want to delete your rating for "{rating.party?.title || 'this party'}"?
-                                </AlertDialogDescription>
-                              </AlertDialogHeader>
-                              <AlertDialogFooter>
-                                <AlertDialogCancel>Cancel</AlertDialogCancel>
-                                <AlertDialogAction 
-                                  onClick={() => handleDeletePartyRating(rating.id)}
-                                  className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                                >
-                                  Delete
-                                </AlertDialogAction>
-                              </AlertDialogFooter>
-                            </AlertDialogContent>
-                          </AlertDialog>
                         </div>
-                      </div>
-
-                      <div className="flex items-center gap-4 ml-13">
-                        <div className="flex items-center gap-1.5 text-sm">
-                          <div className="w-6 h-6 rounded-full bg-amber-100 flex items-center justify-center">
-                            <Zap className="h-3.5 w-3.5 text-amber-600" />
-                          </div>
-                          <span className={getScoreColor(rating.vibe_score ?? 0)}>{(rating.vibe_score ?? 0).toFixed(1)}</span>
-                        </div>
-                        <div className="flex items-center gap-1.5 text-sm">
-                          <div className="w-6 h-6 rounded-full bg-blue-100 flex items-center justify-center">
-                            <Music className="h-3.5 w-3.5 text-blue-600" />
-                          </div>
-                          <span className={getScoreColor(rating.music_score ?? 0)}>{(rating.music_score ?? 0).toFixed(1)}</span>
-                        </div>
-                        <div className="flex items-center gap-1.5 text-sm">
-                          <div className="w-6 h-6 rounded-full bg-emerald-100 flex items-center justify-center">
-                            <Settings className="h-3.5 w-3.5 text-emerald-600" />
-                          </div>
-                          <span className={getScoreColor(rating.execution_score ?? 0)}>{(rating.execution_score ?? 0).toFixed(1)}</span>
-                        </div>
-                        <span className="text-xs text-muted-foreground ml-auto">
-                          {formatTimeAgo(rating.created_date)}
-                        </span>
-                      </div>
+                      ))}
                     </div>
-                  ))}
-                </div>
-              )}
-            </Card>
-          </CollapsibleContent>
-        </Collapsible>
-
-        {/* Frat Ratings Section */}
-        <Collapsible open={expandedSection === 'fratRatings'} onOpenChange={(open) => setExpandedSection(open ? 'fratRatings' : null)}>
-          <CollapsibleTrigger asChild>
-            <Card className="glass overflow-hidden cursor-pointer hover:shadow-md transition-all">
-              <div className="bg-gradient-to-r from-amber-500 to-orange-500 p-4 flex items-center justify-between text-white">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-xl bg-white/20 flex items-center justify-center">
-                    <Trophy className="h-5 w-5" />
                   </div>
-                  <div>
-                    <p className="text-2xl font-bold">{stats.fratRatings}</p>
-                    <p className="text-xs opacity-80">Frat Ratings</p>
-                  </div>
-                </div>
-                <div className="flex items-center gap-2">
-                  {stats.fratRatings >= 10 && (
-                    <Badge className="bg-white/20 text-white border-white/30">👑 Expert</Badge>
-                  )}
-                  {expandedSection === 'fratRatings' ? <ChevronUp className="h-5 w-5" /> : <ChevronDown className="h-5 w-5" />}
-                </div>
+                ))}
               </div>
-            </Card>
-          </CollapsibleTrigger>
-          <CollapsibleContent>
-            <Card className="glass mt-2 overflow-hidden">
-              {fratRatingsData.length === 0 ? (
-                <div className="p-8 text-center space-y-3">
-                  <div className="w-16 h-16 mx-auto rounded-2xl bg-amber-100 flex items-center justify-center">
-                    <Trophy className="h-8 w-8 text-amber-400" />
-                  </div>
-                  <p className="text-muted-foreground font-medium">No frat ratings yet</p>
-                  <p className="text-sm text-muted-foreground/70">Rate fraternities to see them here!</p>
-                </div>
-              ) : (
-                <div className="divide-y divide-border/50">
-                  {fratRatingsData.map((rating) => (
-                    <div key={rating.id} className="p-4 hover:bg-muted/30 transition-colors">
-                      <div className="flex items-start justify-between mb-2">
-                        <div className="flex items-start gap-3">
-                          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-amber-100 to-orange-100 flex items-center justify-center flex-shrink-0">
-                            <Trophy className="h-5 w-5 text-amber-600" />
-                          </div>
-                          <div>
-                            <p className="font-semibold">{rating.fraternity?.name || 'Fraternity'}</p>
-                            {rating.fraternity?.chapter && (
-                              <p className="text-sm text-muted-foreground">{rating.fraternity.chapter}</p>
-                            )}
-                          </div>
-                        </div>
-                        <div className="flex items-center gap-1">
-                          <Badge className={`${getScoreBgColor(rating.combined_score ?? 0)} text-white font-bold`}>
-                            {(rating.combined_score ?? 0).toFixed(1)}
-                          </Badge>
-                          <Button 
-                            variant="ghost" 
-                            size="icon" 
-                            className="h-8 w-8"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              setEditingFratRating(rating);
-                            }}
-                          >
-                            <Pencil className="h-4 w-4" />
-                          </Button>
-                          <AlertDialog open={deletingFratRatingId === rating.id} onOpenChange={(open) => setDeletingFratRatingId(open ? rating.id : null)}>
-                            <AlertDialogTrigger asChild>
-                              <Button 
-                                variant="ghost" 
-                                size="icon" 
-                                className="h-8 w-8 text-destructive hover:text-destructive"
-                                onClick={(e) => e.stopPropagation()}
-                              >
-                                <Trash2 className="h-4 w-4" />
-                              </Button>
-                            </AlertDialogTrigger>
-                            <AlertDialogContent className="bg-background">
-                              <AlertDialogHeader>
-                                <AlertDialogTitle>Delete Rating?</AlertDialogTitle>
-                                <AlertDialogDescription>
-                                  Are you sure you want to delete your rating for "{rating.fraternity?.name || 'this fraternity'}"?
-                                </AlertDialogDescription>
-                              </AlertDialogHeader>
-                              <AlertDialogFooter>
-                                <AlertDialogCancel>Cancel</AlertDialogCancel>
-                                <AlertDialogAction 
-                                  onClick={() => handleDeleteFratRating(rating.id, rating.fraternity_id)}
-                                  className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                                >
-                                  Delete
-                                </AlertDialogAction>
-                              </AlertDialogFooter>
-                            </AlertDialogContent>
-                          </AlertDialog>
-                        </div>
-                      </div>
-
-                      <div className="flex items-center gap-4 ml-13">
-                        <div className="flex items-center gap-1.5 text-sm">
-                          <div className="w-6 h-6 rounded-full bg-blue-100 flex items-center justify-center">
-                            <Users className="h-3.5 w-3.5 text-blue-600" />
-                          </div>
-                          <span className={getScoreColor(rating.brotherhood_score ?? 0)}>{(rating.brotherhood_score ?? 0).toFixed(1)}</span>
-                        </div>
-                        <div className="flex items-center gap-1.5 text-sm">
-                          <div className="w-6 h-6 rounded-full bg-violet-100 flex items-center justify-center">
-                            <Shield className="h-3.5 w-3.5 text-violet-600" />
-                          </div>
-                          <span className={getScoreColor(rating.reputation_score ?? 0)}>{(rating.reputation_score ?? 0).toFixed(1)}</span>
-                        </div>
-                        <div className="flex items-center gap-1.5 text-sm">
-                          <div className="w-6 h-6 rounded-full bg-rose-100 flex items-center justify-center">
-                            <Heart className="h-3.5 w-3.5 text-rose-600" />
-                          </div>
-                          <span className={getScoreColor(rating.community_score ?? 0)}>{(rating.community_score ?? 0).toFixed(1)}</span>
-                        </div>
-                        <span className="text-xs text-muted-foreground ml-auto">
-                          {formatTimeAgo(rating.created_date)}
-                        </span>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </Card>
-          </CollapsibleContent>
-        </Collapsible>
-
-        {/* Comments Section */}
-        <Collapsible open={expandedSection === 'comments'} onOpenChange={(open) => setExpandedSection(open ? 'comments' : null)}>
-          <CollapsibleTrigger asChild>
-            <Card className="glass overflow-hidden cursor-pointer hover:shadow-md transition-all">
-              <div className="bg-gradient-to-r from-indigo-500 to-purple-500 p-4 flex items-center justify-between text-white">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-xl bg-white/20 flex items-center justify-center">
-                    <MessageCircle className="h-5 w-5" />
-                  </div>
-                  <div>
-                    <p className="text-2xl font-bold">{stats.comments}</p>
-                    <p className="text-xs opacity-80">Comments</p>
-                  </div>
-                </div>
-                <div className="flex items-center gap-2">
-                  {stats.comments >= 10 && (
-                    <Badge className="bg-white/20 text-white border-white/30">💬 Social</Badge>
-                  )}
-                  {expandedSection === 'comments' ? <ChevronUp className="h-5 w-5" /> : <ChevronDown className="h-5 w-5" />}
-                </div>
-              </div>
-            </Card>
-          </CollapsibleTrigger>
-          <CollapsibleContent>
-            <Card className="glass mt-2 overflow-hidden">
-              {commentsData.length === 0 ? (
-                <div className="p-8 text-center space-y-3">
-                  <div className="w-16 h-16 mx-auto rounded-2xl bg-indigo-100 flex items-center justify-center">
-                    <MessageCircle className="h-8 w-8 text-indigo-400" />
-                  </div>
-                  <p className="text-muted-foreground font-medium">No comments yet</p>
-                  <p className="text-sm text-muted-foreground/70">Join the conversation!</p>
-                </div>
-              ) : (
-                <div className="divide-y divide-border/50">
-                  {commentsData.map((comment) => (
-                    <div key={comment.id} className="p-4 hover:bg-muted/30 transition-colors">
-                      <div className="flex items-start justify-between mb-2">
-                        <div className="flex items-start gap-3">
-                          <div className={`w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 ${
-                            comment.type === 'party' ? 'bg-pink-100' : 
-                            comment.type === 'fraternity' ? 'bg-amber-100' : 'bg-indigo-100'
-                          }`}>
-                            {comment.type === 'party' ? <PartyPopper className="h-5 w-5 text-pink-600" /> :
-                             comment.type === 'fraternity' ? <Trophy className="h-5 w-5 text-amber-600" /> :
-                             <MessageCircle className="h-5 w-5 text-indigo-600" />}
-                          </div>
-                          <div className="flex-1 min-w-0">
-                            <p className="font-semibold truncate">{comment.entityName}</p>
-                            <p className="text-sm text-foreground line-clamp-2 mt-0.5">{comment.text}</p>
-                            <p className="text-xs text-muted-foreground mt-1">{format(new Date(comment.created_date), 'MMM d, yyyy')}</p>
-                          </div>
-                        </div>
-                        <div className="flex items-center gap-2 flex-shrink-0">
-                          <Badge variant="outline" className={`text-xs capitalize ${
-                            comment.type === 'party' ? 'border-pink-200 text-pink-600 bg-pink-50' : 
-                            comment.type === 'fraternity' ? 'border-amber-200 text-amber-600 bg-amber-50' : 
-                            'border-indigo-200 text-indigo-600 bg-indigo-50'
-                          }`}>
-                            {comment.type}
-                          </Badge>
-                          <AlertDialog open={deletingCommentId === comment.id} onOpenChange={(open) => setDeletingCommentId(open ? comment.id : null)}>
-                            <AlertDialogTrigger asChild>
-                              <Button 
-                                variant="ghost" 
-                                size="icon" 
-                                className="h-8 w-8 text-destructive hover:text-destructive"
-                                onClick={(e) => e.stopPropagation()}
-                              >
-                                <Trash2 className="h-4 w-4" />
-                              </Button>
-                            </AlertDialogTrigger>
-                            <AlertDialogContent className="bg-background">
-                              <AlertDialogHeader>
-                                <AlertDialogTitle>Delete this comment?</AlertDialogTitle>
-                                <AlertDialogDescription>
-                                  This action cannot be undone.
-                                </AlertDialogDescription>
-                              </AlertDialogHeader>
-                              <AlertDialogFooter>
-                                <AlertDialogCancel>Cancel</AlertDialogCancel>
-                                <AlertDialogAction 
-                                  onClick={() => handleDeleteComment(comment)}
-                                  className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                                >
-                                  Delete
-                                </AlertDialogAction>
-                              </AlertDialogFooter>
-                            </AlertDialogContent>
-                          </AlertDialog>
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </Card>
-          </CollapsibleContent>
-        </Collapsible>
-        {/* My Photos Section */}
-        <Collapsible open={expandedSection === 'myPhotos'} onOpenChange={(open) => setExpandedSection(open ? 'myPhotos' : null)}>
-          <CollapsibleTrigger asChild>
-            <Card className="glass overflow-hidden cursor-pointer hover:shadow-md transition-all">
-              <div className="bg-gradient-to-r from-slate-600 to-zinc-700 p-4 flex items-center justify-between text-white">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-xl bg-white/20 flex items-center justify-center">
-                    <Lock className="h-5 w-5" />
-                  </div>
-                  <div>
-                    <p className="text-2xl font-bold">{stats.privatePhotos}</p>
-                    <p className="text-xs opacity-80">My Private Photos</p>
-                  </div>
-                </div>
-                <div className="flex items-center gap-2">
-                  <Badge className="bg-white/20 text-white border-white/30">📷 Just for you</Badge>
-                  {expandedSection === 'myPhotos' ? <ChevronUp className="h-5 w-5" /> : <ChevronDown className="h-5 w-5" />}
-                </div>
-              </div>
-            </Card>
-          </CollapsibleTrigger>
-          <CollapsibleContent>
-            <Card className="glass mt-2 overflow-hidden">
-              {privatePhotos.length === 0 ? (
-                <div className="p-8 text-center space-y-3">
-                  <div className="w-16 h-16 mx-auto rounded-2xl bg-slate-100 flex items-center justify-center">
-                    <Image className="h-8 w-8 text-slate-400" />
-                  </div>
-                  <p className="text-muted-foreground font-medium">No private photos yet</p>
-                  <p className="text-sm text-muted-foreground/70">Save photos just for yourself from party pages!</p>
-                </div>
-              ) : (
-                <div className="p-4 space-y-4">
-                  {/* Group photos by party */}
-                  {Object.entries(
-                    privatePhotos.reduce((acc, photo) => {
-                      const partyId = photo.party_id;
-                      if (!acc[partyId]) {
-                        acc[partyId] = {
-                          party: photo.party,
-                          fraternity: photo.fraternity,
-                          photos: []
-                        };
-                      }
-                      acc[partyId].photos.push(photo);
-                      return acc;
-                    }, {} as Record<string, { party: any; fraternity: any; photos: typeof privatePhotos }>)
-                  ).map(([partyId, group]) => (
-                    <div key={partyId} className="space-y-2">
-                      {/* Party Banner */}
-                      <Link 
-                        to={`/Party?id=${partyId}`}
-                        className="block"
-                      >
-                        <div className="flex items-center gap-3 p-3 rounded-xl bg-gradient-to-r from-primary/10 to-accent/10 hover:from-primary/20 hover:to-accent/20 transition-colors border border-border/50">
-                          <div className="w-10 h-10 rounded-lg bg-primary/20 flex items-center justify-center">
-                            <Image className="h-5 w-5 text-primary" />
-                          </div>
-                          <div className="flex-1 min-w-0">
-                            <p className="font-semibold text-foreground truncate">{group.party?.title || 'Party'}</p>
-                            <p className="text-xs text-muted-foreground">{group.fraternity?.name || 'Unknown'} • {group.photos.length} photo{group.photos.length !== 1 ? 's' : ''}</p>
-                          </div>
-                          <ChevronRight className="h-5 w-5 text-muted-foreground" />
-                        </div>
-                      </Link>
-                      
-                      {/* Photos Grid */}
-                      <div className="grid grid-cols-3 gap-2 pl-2">
-                        {group.photos.map((photo) => (
-                          <div key={photo.id} className="relative aspect-square group">
-                            <img 
-                              src={photo.url} 
-                              alt={photo.caption || 'Private photo'}
-                              className="w-full h-full object-cover rounded-lg cursor-pointer"
-                              onClick={() => setViewingPhoto(photo)}
-                            />
-                            <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 rounded-lg transition-colors pointer-events-none" />
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="absolute top-1 right-1 h-6 w-6 bg-black/50 text-white hover:bg-red-500/80 opacity-0 group-hover:opacity-100 transition-opacity"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                setDeletingPhotoId(photo.id);
-                              }}
-                            >
-                              <Trash2 className="h-3 w-3" />
-                            </Button>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </Card>
-          </CollapsibleContent>
-        </Collapsible>
+            )}
+          </div>
+        )}
       </div>
 
       {/* Photo Viewer Modal */}
       {viewingPhoto && (
-        <div 
-          className="fixed inset-0 z-50 bg-black/90 flex items-center justify-center p-4"
-          onClick={() => setViewingPhoto(null)}
-        >
-          <Button
-            variant="ghost"
-            size="icon"
-            className="absolute top-4 right-4 text-white hover:bg-white/20"
-            onClick={() => setViewingPhoto(null)}
-          >
+        <div className="fixed inset-0 z-50 bg-black/90 flex items-center justify-center p-4" onClick={() => setViewingPhoto(null)}>
+          <Button variant="ghost" size="icon" className="absolute top-4 right-4 text-white hover:bg-white/20" onClick={() => setViewingPhoto(null)}>
             <X className="h-6 w-6" />
           </Button>
           <div className="flex flex-col items-center max-w-full max-h-full" onClick={(e) => e.stopPropagation()}>
-            <img 
-              src={viewingPhoto.url} 
-              alt={viewingPhoto.caption || 'Photo'}
-              className="max-w-full max-h-[70vh] object-contain rounded-lg"
-            />
+            <img src={viewingPhoto.url} alt={viewingPhoto.caption || 'Photo'} className="max-w-full max-h-[70vh] object-contain rounded-lg" />
             <div className="mt-4 text-center text-white">
-              <Link 
-                to={`/Party?id=${viewingPhoto.party_id}`}
-                className="font-semibold hover:underline"
-                onClick={() => setViewingPhoto(null)}
-              >
+              <Link to={`/Party?id=${viewingPhoto.party_id}`} className="font-semibold hover:underline" onClick={() => setViewingPhoto(null)}>
                 {viewingPhoto.party?.title || 'Party'}
               </Link>
-              {viewingPhoto.fraternity && (
-                <p className="text-sm text-white/70">{viewingPhoto.fraternity.name}</p>
-              )}
+              {viewingPhoto.fraternity && <p className="text-sm text-white/70">{viewingPhoto.fraternity.name}</p>}
               {viewingPhoto.caption && <p className="text-sm mt-2">{viewingPhoto.caption}</p>}
               <p className="text-xs text-white/50 mt-2">{formatTimeAgo(viewingPhoto.created_date)}</p>
             </div>
-            <Button
-              variant="outline"
-              size="sm"
-              className="mt-4 text-red-400 border-red-400/50 hover:bg-red-500/20"
-              onClick={() => {
-                setDeletingPhotoId(viewingPhoto.id);
-              }}
-            >
+            <Button variant="outline" size="sm" className="mt-4 text-red-400 border-red-400/50 hover:bg-red-500/20" onClick={() => setDeletingPhotoId(viewingPhoto.id)}>
               <Trash2 className="h-4 w-4 mr-2" />
               Delete Photo
             </Button>
@@ -878,23 +588,19 @@ export default function Profile() {
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Delete Photo?</AlertDialogTitle>
-            <AlertDialogDescription>
-              This photo will be permanently deleted. This action cannot be undone.
-            </AlertDialogDescription>
+            <AlertDialogDescription>This photo will be permanently deleted.</AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
             <AlertDialogAction
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              className="bg-destructive text-destructive-foreground"
               onClick={async () => {
                 if (deletingPhotoId) {
                   try {
                     await base44.entities.PartyPhoto.delete(deletingPhotoId);
                     setPrivatePhotos(prev => prev.filter(p => p.id !== deletingPhotoId));
                     setStats(prev => ({ ...prev, privatePhotos: prev.privatePhotos - 1 }));
-                    if (viewingPhoto?.id === deletingPhotoId) {
-                      setViewingPhoto(null);
-                    }
+                    if (viewingPhoto?.id === deletingPhotoId) setViewingPhoto(null);
                   } catch (error) {
                     console.error('Failed to delete photo:', error);
                   }
@@ -908,7 +614,7 @@ export default function Profile() {
         </AlertDialogContent>
       </AlertDialog>
 
-      {/* Party Rating Edit Modal */}
+      {/* Edit Modals */}
       {editingPartyRating && editingPartyRating.party && (
         <PartyRatingForm
           party={editingPartyRating.party}
@@ -918,7 +624,6 @@ export default function Profile() {
         />
       )}
 
-      {/* Frat Rating Edit Sheet */}
       {editingFratRating && editingFratRating.fraternity && (
         <RateFratSheet
           fraternity={editingFratRating.fraternity}
