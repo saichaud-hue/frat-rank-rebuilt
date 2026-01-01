@@ -178,7 +178,9 @@ export default function Profile() {
 
         const enrichedPartyComments = partyComments.map((c: any) => {
           const party = parties.find((p: any) => p.id === c.party_id);
-          return { ...c, entityName: party?.title || 'Unknown Party', type: 'party' };
+          const frat = party?.fraternity_id ? fraternities.find((f: any) => f.id === party.fraternity_id) : null;
+          const entityName = frat ? `${frat.chapter} ${party?.title}` : (party?.title || 'Unknown Party');
+          return { ...c, entityName, type: 'party' };
         });
         const enrichedFratComments = fratComments.map((c: any) => {
           const frat = fraternities.find((f: any) => f.id === c.fraternity_id);
@@ -187,7 +189,10 @@ export default function Profile() {
         const enrichedChatMessages = chatMessages.map((c: any) => {
           const mentionedParty = c.mentioned_party_id ? parties.find((p: any) => p.id === c.mentioned_party_id) : null;
           const mentionedFrat = c.mentioned_fraternity_id ? fraternities.find((f: any) => f.id === c.mentioned_fraternity_id) : null;
-          const entityName = mentionedParty?.title || mentionedFrat?.name || 'Chat';
+          const partyFrat = mentionedParty?.fraternity_id ? fraternities.find((f: any) => f.id === mentionedParty.fraternity_id) : null;
+          const entityName = mentionedParty 
+            ? (partyFrat ? `${partyFrat.chapter} ${mentionedParty.title}` : mentionedParty.title)
+            : (mentionedFrat?.name || 'Chat');
           return { ...c, entityName, type: 'chat' };
         });
 
