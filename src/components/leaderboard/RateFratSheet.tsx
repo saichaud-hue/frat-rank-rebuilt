@@ -1,8 +1,8 @@
 import { useState, useEffect } from 'react';
-import { X, Loader2, Users, Shield, Heart, Star } from 'lucide-react';
-import { Card } from '@/components/ui/card';
+import { Loader2, Users, Shield, Heart, Star } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Slider } from '@/components/ui/slider';
+import { Drawer, DrawerContent, DrawerHeader, DrawerTitle, DrawerFooter } from '@/components/ui/drawer';
 import type { Fraternity } from '@/api/base44Client';
 import { computeCombinedReputation } from '@/utils/scoring';
 import { getScoreColor, clamp } from '@/utils';
@@ -58,6 +58,7 @@ export default function RateFratSheet({
       label: 'Brotherhood',
       icon: Users,
       color: 'text-blue-500',
+      bgColor: 'bg-blue-500/10',
       value: brotherhood,
       setValue: setBrotherhood,
       description: 'Member quality and cohesion'
@@ -67,6 +68,7 @@ export default function RateFratSheet({
       label: 'Reputation',
       icon: Shield,
       color: 'text-primary',
+      bgColor: 'bg-primary/10',
       value: reputation,
       setValue: setReputation,
       description: 'Campus perception and standing'
@@ -76,6 +78,7 @@ export default function RateFratSheet({
       label: 'Community',
       icon: Heart,
       color: 'text-rose-500',
+      bgColor: 'bg-rose-500/10',
       value: community,
       setValue: setCommunity,
       description: 'Welcoming and respectful'
@@ -83,78 +86,85 @@ export default function RateFratSheet({
   ];
 
   return (
-    <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4">
-      <Card className="w-full max-w-lg max-h-[90vh] overflow-y-auto">
+    <Drawer open={isOpen} onOpenChange={(open) => !open && onClose()}>
+      <DrawerContent className="h-[95vh] max-h-[95vh] flex flex-col">
+        {/* Drag Handle */}
+        <div className="flex justify-center pt-2 pb-1">
+          <div className="w-12 h-1.5 rounded-full bg-muted-foreground/30" />
+        </div>
+
         {/* Header */}
-        <div className="sticky top-0 bg-card p-4 border-b flex items-center justify-between">
-          <div>
-            <h2 className="text-xl font-bold">{fraternity.name}</h2>
+        <DrawerHeader className="px-6 pt-2 pb-4 border-b border-border">
+          <DrawerTitle className="text-left">
+            <h2 className="text-2xl font-bold text-foreground">{fraternity.name}</h2>
             {fraternity.chapter && (
-              <p className="text-sm text-muted-foreground">{fraternity.chapter}</p>
+              <p className="text-sm text-muted-foreground mt-1">{fraternity.chapter}</p>
             )}
-          </div>
-          <Button variant="ghost" size="icon" onClick={onClose}>
-            <X className="h-5 w-5" />
-          </Button>
-        </div>
+          </DrawerTitle>
+        </DrawerHeader>
 
-        {/* Combined Score */}
-        <div className="p-6 text-center border-b">
-          <p className="text-sm text-muted-foreground mb-2">Reputation Score</p>
-          <div className={`text-5xl font-bold ${getScoreColor(combinedScore)}`}>
-            {combinedScore.toFixed(1)}
-          </div>
-        </div>
-
-        {/* Categories */}
-        <div className="p-4 space-y-6">
-          {categories.map(({ key, label, icon: Icon, color, value, setValue, description }) => (
-            <div key={key} className="space-y-3">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <div className={`w-10 h-10 rounded-full bg-muted flex items-center justify-center ${color}`}>
-                    <Icon className="h-5 w-5" />
-                  </div>
-                  <div>
-                    <p className="font-medium">{label}</p>
-                    <p className="text-xs text-muted-foreground">{description}</p>
-                  </div>
-                </div>
-                <p className={`text-xl font-bold ${getScoreColor(value)}`}>{value.toFixed(1)}</p>
-              </div>
-              <Slider
-                value={[value]}
-                onValueChange={([v]) => setValue(clamp(v, 0, 10))}
-                min={0}
-                max={10}
-                step={0.1}
-                className="w-full"
-              />
+        {/* Content */}
+        <div className="flex-1 overflow-y-auto">
+          {/* Combined Score */}
+          <div className="px-6 py-8 text-center bg-muted/30">
+            <p className="text-sm text-muted-foreground mb-3">Reputation Score</p>
+            <div className={`text-6xl font-bold ${getScoreColor(combinedScore)}`}>
+              {combinedScore.toFixed(1)}
             </div>
-          ))}
+          </div>
+
+          {/* Categories */}
+          <div className="px-6 py-6 space-y-8">
+            {categories.map(({ key, label, icon: Icon, color, bgColor, value, setValue, description }) => (
+              <div key={key} className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className={`w-12 h-12 rounded-xl ${bgColor} flex items-center justify-center`}>
+                      <Icon className={`h-6 w-6 ${color}`} />
+                    </div>
+                    <div>
+                      <p className="text-lg font-semibold text-foreground">{label}</p>
+                      <p className="text-sm text-muted-foreground">{description}</p>
+                    </div>
+                  </div>
+                  <p className={`text-2xl font-bold ${getScoreColor(value)}`}>{value.toFixed(1)}</p>
+                </div>
+                <Slider
+                  value={[value]}
+                  onValueChange={([v]) => setValue(clamp(v, 0, 10))}
+                  min={0}
+                  max={10}
+                  step={0.1}
+                  className="w-full"
+                />
+              </div>
+            ))}
+          </div>
         </div>
 
         {/* Footer */}
-        <div className="sticky bottom-0 bg-card p-4 border-t flex gap-2">
-          <Button variant="outline" onClick={onClose} className="flex-1">
-            Cancel
-          </Button>
-          <Button 
-            onClick={handleSubmit}
-            disabled={isSubmitting}
-            className="flex-1 gradient-primary text-white"
-          >
-            {isSubmitting ? (
-              <Loader2 className="h-4 w-4 animate-spin" />
-            ) : (
-              <>
-                <Star className="h-4 w-4 mr-2" />
-                {existingScores ? 'Update Rating' : 'Submit Rating'}
-              </>
-            )}
-          </Button>
-        </div>
-      </Card>
-    </div>
+        <DrawerFooter className="px-6 py-4 border-t border-border">
+          <div className="flex gap-3 w-full">
+            <Button variant="outline" onClick={onClose} className="flex-1 h-12">
+              Cancel
+            </Button>
+            <Button 
+              onClick={handleSubmit}
+              disabled={isSubmitting}
+              className="flex-1 h-12 gradient-primary text-white"
+            >
+              {isSubmitting ? (
+                <Loader2 className="h-5 w-5 animate-spin" />
+              ) : (
+                <>
+                  <Star className="h-5 w-5 mr-2" />
+                  {existingScores ? 'Update Rating' : 'Submit Rating'}
+                </>
+              )}
+            </Button>
+          </div>
+        </DrawerFooter>
+      </DrawerContent>
+    </Drawer>
   );
 }
