@@ -24,7 +24,7 @@ export default function Profile() {
   const [fratRatingsData, setFratRatingsData] = useState<EnrichedRepRating[]>([]);
   const [commentsData, setCommentsData] = useState<any[]>([]);
   const [privatePhotos, setPrivatePhotos] = useState<EnrichedPhoto[]>([]);
-  const [activeTab, setActiveTab] = useState<'parties' | 'frats' | 'comments' | 'photos'>('parties');
+  const [activeTab, setActiveTab] = useState<'parties' | 'frats' | 'comments' | 'photos'>('frats');
   const [viewingPhoto, setViewingPhoto] = useState<EnrichedPhoto | null>(null);
   const [deletingPhotoId, setDeletingPhotoId] = useState<string | null>(null);
   
@@ -264,8 +264,8 @@ export default function Profile() {
   const progressToNext = levelInfo.next ? (points / levelInfo.next) * 100 : 100;
 
   const tabs = [
-    { id: 'parties', label: 'Parties', count: stats.partyRatings, icon: PartyPopper },
     { id: 'frats', label: 'Frats', count: stats.fratRatings, icon: Trophy },
+    { id: 'parties', label: 'Parties', count: stats.partyRatings, icon: PartyPopper },
     { id: 'comments', label: 'Comments', count: stats.comments, icon: MessageCircle },
     { id: 'photos', label: 'Photos', count: stats.privatePhotos, icon: Lock },
   ] as const;
