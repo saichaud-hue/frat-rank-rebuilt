@@ -1,51 +1,22 @@
-import { useState, useEffect, useMemo, useRef, useCallback } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import { 
   ThumbsUp, 
   ThumbsDown, 
   MessageCircle, 
-  Star, 
-  PartyPopper, 
-  ChevronRight,
-  Loader2,
   Send,
-  MessagesSquare,
-  AtSign,
-  X,
   Flame,
+  TrendingDown,
+  Eye,
+  MessageSquare,
   Trophy,
-  Zap,
-  TrendingUp,
-  Sparkles,
-  Crown,
-  Users,
-  Shield,
-  Heart,
-  Clock,
-  Vote,
-  Plus,
-  Check,
-  MapPin,
-  Radio,
-  Bell,
-  CheckCircle,
-  Book,
-  Moon,
-  Beer,
-  Coffee,
-  Swords,
-  BarChart3
+  ChevronDown,
+  ChevronUp,
+  X,
+  Swords
 } from 'lucide-react';
-import FratBattleGame from '@/components/activity/FratBattleGame';
-import RankingPostCard, { parseRankingFromText } from '@/components/activity/RankingPostCard';
-import { recordUserAction } from '@/utils/streak';
-import { Progress } from '@/components/ui/progress';
-import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { Textarea } from '@/components/ui/textarea';
 import { Input } from '@/components/ui/input';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Skeleton } from '@/components/ui/skeleton';
 import { 
   Sheet, 
@@ -53,13 +24,6 @@ import {
   SheetHeader, 
   SheetTitle 
 } from '@/components/ui/sheet';
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-} from '@/components/ui/dialog';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { 
   base44, 
@@ -67,108 +31,62 @@ import {
   type Fraternity, 
   type ChatMessage 
 } from '@/api/base44Client';
-import { formatDistanceToNow, differenceInSeconds, differenceInMinutes, differenceInHours, differenceInDays, format, isToday, isTomorrow } from 'date-fns';
-import { getScoreColor, getScoreBgColor, createPageUrl } from '@/utils';
+import { differenceInSeconds, differenceInMinutes, differenceInHours, differenceInDays } from 'date-fns';
+import { createPageUrl } from '@/utils';
 import { toast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
+import { recordUserAction } from '@/utils/streak';
 
-// Simple time ago formatter (e.g., "2h", "5m", "1d")
-const formatSimpleTimeAgo = (date: Date) => {
+// Pulse-style time formatter
+const formatPulseTime = (date: Date) => {
   const now = new Date();
   const seconds = differenceInSeconds(now, date);
   const minutes = differenceInMinutes(now, date);
   const hours = differenceInHours(now, date);
-  const days = differenceInDays(now, date);
   
-  if (seconds < 60) return 'now';
-  if (minutes < 60) return `${minutes}m`;
-  if (hours < 24) return `${hours}h`;
-  if (days < 7) return `${days}d`;
-  return format(date, 'MMM d');
+  if (seconds < 60) return 'just now';
+  if (minutes < 60) return `${minutes}m ago`;
+  if (hours < 6) return `${hours}h ago`;
+  if (hours < 24) return 'earlier tonight';
+  return 'yesterday';
 };
 
-type ActivityType = 'party_rating' | 'frat_rating' | 'party_comment' | 'frat_comment';
-
-interface ActivityItem {
+interface PulseItem {
   id: string;
-  type: ActivityType;
-  created_date: string;
-  score?: number;
-  vibe?: number;
-  music?: number;
-  execution?: number;
-  brotherhood?: number;
-  reputation?: number;
-  community?: number;
-  text?: string;
-  upvotes?: number;
-  downvotes?: number;
-  party?: Party;
-  fraternity?: Fraternity;
-  userVote?: 1 | -1 | null;
-  replies?: ActivityItem[];
-  parent_comment_id?: string | null;
+  type: 'heating_up' | 'mixed_reactions' | 'slipping' | 'talking_about' | 'rising';
+  entityName: string;
+  entityId: string;
+  entityType: 'fraternity' | 'party';
+  count?: number;
+  delta?: number;
+  timestamp: Date;
+  comments?: Array<{ id: string; text: string; upvotes: number; created_date: string }>;
 }
 
-interface ChatItem {
+interface HighlightItem {
   id: string;
-  text: string;
-  upvotes: number;
-  downvotes: number;
-  created_date: string;
-  mentionedFraternity?: Fraternity;
-  mentionedParty?: Party;
-  userVote?: 1 | -1 | null;
-  replies?: ChatItem[];
-  parent_message_id?: string | null;
+  type: 'viral_comment' | 'hot_take' | 'battle' | 'ranking_snapshot';
+  content: string;
+  entityName?: string;
+  entityId?: string;
+  entityType?: 'fraternity' | 'party';
+  upvotes?: number;
+  fratA?: { name: string; id: string; score: number };
+  fratB?: { name: string; id: string; score: number };
 }
 
 export default function Activity() {
-  const [activities, setActivities] = useState<ActivityItem[]>([]);
-  const [chatMessages, setChatMessages] = useState<ChatItem[]>([]);
   const [loading, setLoading] = useState(true);
-  const [replyingTo, setReplyingTo] = useState<string | null>(null);
-  const [replyText, setReplyText] = useState('');
-  const [submittingReply, setSubmittingReply] = useState(false);
-  const [commentsSheetItem, setCommentsSheetItem] = useState<ChatItem | null>(null);
-  
-  // Chat composer
-  const [showChatComposer, setShowChatComposer] = useState(false);
-  const [chatText, setChatText] = useState('');
-  const [submittingChat, setSubmittingChat] = useState(false);
-  const [showMentionPicker, setShowMentionPicker] = useState(false);
-  const [mentionType, setMentionType] = useState<'frat' | 'party' | null>(null);
-  const [selectedMention, setSelectedMention] = useState<{ type: 'frat' | 'party'; id: string; name: string } | null>(null);
-  const [chatInputEnabled, setChatInputEnabled] = useState(false);
-  
-  // Frat ranking post mode
-  const [showFratRankingPicker, setShowFratRankingPicker] = useState(false);
-  const [showFratBattleGame, setShowFratBattleGame] = useState(false);
-  const [showManualPicker, setShowManualPicker] = useState(false);
-  const [expandedTiers, setExpandedTiers] = useState<Record<string, boolean>>({});
-  const [fratRanking, setFratRanking] = useState<Record<string, Fraternity | null>>({
-    'Upper Touse': null,
-    'Touse': null,
-    'Lower Touse': null,
-    'Upper Mouse': null,
-    'Mouse 1': null,
-    'Mouse 2': null,
-    'Lower Mouse': null,
-    'Upper Bouse': null,
-    'Bouse': null,
-    'Lower Bouse': null,
-  });
-  
-  // Poll mode
-  const [isPollMode, setIsPollMode] = useState(false);
-  const [pollQuestion, setPollQuestion] = useState('');
-  const [pollOptions, setPollOptions] = useState<string[]>(['', '']);
-  
-  // Data for mentions
   const [fraternities, setFraternities] = useState<Fraternity[]>([]);
   const [parties, setParties] = useState<Party[]>([]);
-
-  // Generate/retrieve unique user ID for individual voting
+  const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
+  
+  // Quick comment
+  const [quickComment, setQuickComment] = useState('');
+  const [submitting, setSubmitting] = useState(false);
+  
+  // Move poll state
+  const [pollCollapsed, setPollCollapsed] = useState(false);
   const [userId] = useState<string>(() => {
     const existing = localStorage.getItem('touse_user_id');
     if (existing) return existing;
@@ -176,10 +94,8 @@ export default function Activity() {
     localStorage.setItem('touse_user_id', newId);
     return newId;
   });
-
-  // What's the move tonight - voting (stores all user votes)
+  
   const [allUserVotes, setAllUserVotes] = useState<Record<string, string>>(() => {
-    // Check if we need to reset (daily at 5 AM)
     const now = new Date();
     const today5AM = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 5, 0, 0);
     const lastReset = localStorage.getItem('touse_move_last_reset');
@@ -195,31 +111,8 @@ export default function Activity() {
     return saved ? JSON.parse(saved) : {};
   });
   
-  const [showSuggestionInput, setShowSuggestionInput] = useState(false);
-  const [showAllMoveOptions, setShowAllMoveOptions] = useState(false);
-  const [suggestionText, setSuggestionText] = useState('');
-  const [customSuggestions, setCustomSuggestions] = useState<{ id: string; text: string }[]>(() => {
-    // Check if we need to reset (daily at 5 AM)
-    const now = new Date();
-    const today5AM = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 5, 0, 0);
-    const lastReset = localStorage.getItem('touse_move_last_reset');
-    const lastResetDate = lastReset ? new Date(lastReset) : null;
-    
-    // If current time is past 5 AM and last reset was before today's 5 AM, clear suggestions
-    if (now >= today5AM && (!lastResetDate || lastResetDate < today5AM)) {
-      localStorage.removeItem('touse_custom_move_suggestions');
-      localStorage.setItem('touse_move_last_reset', now.toISOString());
-      return [];
-    }
-    
-    const saved = localStorage.getItem('touse_custom_move_suggestions');
-    return saved ? JSON.parse(saved) : [];
-  });
-  
-  // Derive current user's vote from allUserVotes
   const userMoveVote = allUserVotes[userId] || null;
   
-  // Calculate vote counts from all user votes
   const moveVotes = useMemo(() => {
     const counts: Record<string, number> = {};
     Object.values(allUserVotes).forEach(optionId => {
@@ -228,158 +121,49 @@ export default function Activity() {
     return counts;
   }, [allUserVotes]);
   
-  // Countdown timer
-  const [countdownTime, setCountdownTime] = useState<{ days: number; hours: number; minutes: number; seconds: number } | null>(null);
+  const totalMoveVotes = Object.keys(allUserVotes).length;
   
-  // Unread notification state - track count of new items
-  const [newPostsCount, setNewPostsCount] = useState(0);
-  const [lastSeenFeedCount, setLastSeenFeedCount] = useState(() => {
-    const saved = localStorage.getItem('touse_last_seen_feed_count');
-    return saved ? parseInt(saved, 10) : 0;
-  });
+  // Pulse items sheet
+  const [expandedPulse, setExpandedPulse] = useState<PulseItem | null>(null);
   
-  // "All caught up" state
-  const [showCaughtUp, setShowCaughtUp] = useState(false);
-  const [caughtUpClaimed, setCaughtUpClaimed] = useState(false);
-  const [userPoints, setUserPoints] = useState(() => {
-    const saved = localStorage.getItem('userPoints');
-    return saved ? parseInt(saved, 10) : 0;
-  });
-  const feedEndRef = useRef<HTMLDivElement>(null);
-  
-  // Poll votes (per poll message id -> option index voted)
-  const [pollVotes, setPollVotes] = useState<Record<string, Record<string, number>>>(() => {
-    const saved = localStorage.getItem('touse_poll_votes');
-    return saved ? JSON.parse(saved) : {};
-  });
-  
-  // Get current user's vote for a poll
-  const getUserPollVote = (pollId: string) => pollVotes[pollId]?.[userId] ?? null;
-  
-  // Get all votes for a poll
-  const getPollVoteCounts = (pollId: string) => {
-    const votes = pollVotes[pollId] || {};
-    const counts: Record<number, number> = {};
-    Object.values(votes).forEach(optionIndex => {
-      counts[optionIndex] = (counts[optionIndex] || 0) + 1;
-    });
-    return counts;
-  };
-  
-  // Handle poll vote
-  const handlePollVote = (pollId: string, optionIndex: number) => {
-    setPollVotes(prev => {
-      const updated = {
-        ...prev,
-        [pollId]: {
-          ...(prev[pollId] || {}),
-          [userId]: optionIndex,
-        },
-      };
-      localStorage.setItem('touse_poll_votes', JSON.stringify(updated));
-      return updated;
-    });
-  };
-  
-  // Parse poll from message text
-  const parsePollFromText = (text: string): { question: string; options: string[] } | null => {
-    if (!text.startsWith('POLL:')) return null;
-    const lines = text.split('\n');
-    const question = lines[0].replace('POLL:', '').trim();
-    const options = lines.slice(1).filter(l => l.startsWith('OPTION:')).map(l => l.replace('OPTION:', '').trim());
-    if (options.length >= 2) {
-      return { question, options };
-    }
-    return null;
-  };
-  
-  // Default activity options for "What's the move"
-  const defaultMoveOptions = [
-    { id: 'shooters', label: 'Shooters', icon: Beer },
-    { id: 'devines', label: 'Devines', icon: Coffee },
-    { id: 'study', label: 'Study', icon: Book },
-    { id: 'sleep', label: 'Sleep', icon: Moon },
-  ];
-
-  // Get live and upcoming parties for stories
-  const liveParties = useMemo(() => {
-    return parties.filter(p => (p.status as string) === 'active' || (p.status as string) === 'live');
-  }, [parties]);
-
-  const upcomingParties = useMemo(() => {
-    const now = new Date();
-    return parties
-      .filter(p => p.status === 'upcoming' && new Date(p.starts_at) > now)
-      .sort((a, b) => new Date(a.starts_at).getTime() - new Date(b.starts_at).getTime())
-      .slice(0, 6);
-  }, [parties]);
-
-  // Get next upcoming party - based on time, not stored status
-  const nextParty = useMemo(() => {
-    const now = new Date();
-    const upcomingParties = parties
-      .filter(p => new Date(p.starts_at) > now && p.status !== 'cancelled')
-      .sort((a, b) => new Date(a.starts_at).getTime() - new Date(b.starts_at).getTime());
-    return upcomingParties[0] || null;
-  }, [parties]);
-
-  // Get tonight's parties for "What's the move"
-  const tonightsParties = useMemo(() => {
-    const now = new Date();
-    const tonight = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-    const tomorrowMorning = new Date(tonight.getTime() + 24 * 60 * 60 * 1000 + 6 * 60 * 60 * 1000);
-    
-    return parties.filter(p => {
-      const partyDate = new Date(p.starts_at);
-      return partyDate >= tonight && partyDate < tomorrowMorning && p.status !== 'cancelled';
-    });
-  }, [parties]);
-
-  // Countdown effect
-  useEffect(() => {
-    if (!nextParty) {
-      setCountdownTime(null);
-      return;
-    }
-
-    const updateCountdown = () => {
-      const now = new Date();
-      const partyTime = new Date(nextParty.starts_at);
-      const diffMs = partyTime.getTime() - now.getTime();
-      
-      if (diffMs <= 0) {
-        setCountdownTime(null);
-        return;
-      }
-      
-      const days = Math.floor(diffMs / (1000 * 60 * 60 * 24));
-      const hours = Math.floor((diffMs % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
-      const minutes = Math.floor((diffMs % (1000 * 60 * 60)) / (1000 * 60));
-      const seconds = Math.floor((diffMs % (1000 * 60)) / 1000);
-      
-      setCountdownTime({ days, hours, minutes, seconds });
-    };
-
-    updateCountdown();
-    const interval = setInterval(updateCountdown, 1000);
-    return () => clearInterval(interval);
-  }, [nextParty]);
+  // Ratings and comments data for pulse generation
+  const [partyRatings, setPartyRatings] = useState<any[]>([]);
+  const [fratRatings, setFratRatings] = useState<any[]>([]);
+  const [partyComments, setPartyComments] = useState<any[]>([]);
+  const [fratComments, setFratComments] = useState<any[]>([]);
 
   useEffect(() => {
     loadData();
   }, []);
+  
+  // Clear notification when visiting
+  useEffect(() => {
+    if (!loading) {
+      const count = chatMessages.length + partyRatings.length + fratRatings.length;
+      localStorage.setItem('touse_last_seen_feed_count', count.toString());
+      localStorage.setItem('touse_current_feed_count', count.toString());
+    }
+  }, [loading, chatMessages.length, partyRatings.length, fratRatings.length]);
 
   const loadData = async () => {
     setLoading(true);
     try {
-      const [partiesData, fraternitiesData] = await Promise.all([
+      const [partiesData, fraternitiesData, messages, pRatings, fRatings, pComments, fComments] = await Promise.all([
         base44.entities.Party.list(),
         base44.entities.Fraternity.list(),
+        base44.entities.ChatMessage.list(),
+        base44.entities.PartyRating.list(),
+        base44.entities.ReputationRating.list(),
+        base44.entities.PartyComment.list(),
+        base44.entities.FraternityComment.list(),
       ]);
       setParties(partiesData);
       setFraternities(fraternitiesData);
-      
-      await Promise.all([loadActivity(), loadChat()]);
+      setChatMessages(messages);
+      setPartyRatings(pRatings);
+      setFratRatings(fRatings);
+      setPartyComments(pComments);
+      setFratComments(fComments);
     } catch (error) {
       console.error('Failed to load data:', error);
     } finally {
@@ -387,1929 +171,539 @@ export default function Activity() {
     }
   };
 
-  const loadActivity = async () => {
-    try {
-      const [partiesData, fraternitiesData, partyRatings, fratRatings, partyComments, fratComments] = await Promise.all([
-        base44.entities.Party.list(),
-        base44.entities.Fraternity.list(),
-        base44.entities.PartyRating.list(),
-        base44.entities.ReputationRating.list(),
-        base44.entities.PartyComment.list(),
-        base44.entities.FraternityComment.list(),
-      ]);
-
-      const partyMap = new Map(partiesData.map(p => [p.id, p]));
-      const fratMap = new Map(fraternitiesData.map(f => [f.id, f]));
-
-      const user = await base44.auth.me();
+  // Generate pulse items from activity data
+  const pulseItems = useMemo((): PulseItem[] => {
+    const items: PulseItem[] = [];
+    const now = new Date();
+    const oneHourAgo = new Date(now.getTime() - 60 * 60 * 1000);
+    const oneDayAgo = new Date(now.getTime() - 24 * 60 * 60 * 1000);
+    
+    // Count recent ratings per fraternity
+    const fratRatingCounts: Record<string, { count: number; recent: any[] }> = {};
+    
+    fratRatings.forEach(r => {
+      const frat = fraternities.find(f => f.id === r.fraternity_id);
+      if (!frat) return;
       
-      let userPartyCommentVotes: any[] = [];
-      let userFratCommentVotes: any[] = [];
-      if (user) {
-        [userPartyCommentVotes, userFratCommentVotes] = await Promise.all([
-          base44.entities.PartyCommentVote.filter({ user_id: user.id }),
-          base44.entities.FraternityCommentVote.filter({ user_id: user.id }),
-        ]);
+      if (!fratRatingCounts[frat.id]) {
+        fratRatingCounts[frat.id] = { count: 0, recent: [] };
       }
-
-      const partyVoteMap = new Map(userPartyCommentVotes.map(v => [v.comment_id, v.value]));
-      const fratVoteMap = new Map(userFratCommentVotes.map(v => [v.comment_id, v.value]));
-
-      const items: ActivityItem[] = [];
-
-      for (const rating of partyRatings) {
-        const party = partyMap.get(rating.party_id);
-        if (party) {
-          items.push({
-            id: rating.id,
-            type: 'party_rating',
-            created_date: rating.created_date,
-            score: rating.party_quality_score,
-            vibe: rating.vibe_score,
-            music: rating.music_score,
-            execution: rating.execution_score,
-            party,
-            fraternity: fratMap.get(party.fraternity_id),
-          });
-        }
-      }
-
-      for (const rating of fratRatings) {
-        const fraternity = fratMap.get(rating.fraternity_id);
-        if (fraternity) {
-          items.push({
-            id: rating.id,
-            type: 'frat_rating',
-            created_date: rating.created_date,
-            score: rating.combined_score,
-            brotherhood: rating.brotherhood_score,
-            reputation: rating.reputation_score,
-            community: rating.community_score,
-            fraternity,
-          });
-        }
-      }
-
-      for (const comment of partyComments.filter(c => !c.parent_comment_id)) {
-        const party = partyMap.get(comment.party_id);
-        if (party) {
-          const replies = partyComments
-            .filter(c => c.parent_comment_id === comment.id)
-            .map(c => ({
-              id: c.id,
-              type: 'party_comment' as ActivityType,
-              created_date: c.created_date,
-              text: c.text,
-              upvotes: c.upvotes,
-              downvotes: c.downvotes,
-              party,
-              fraternity: fratMap.get(party.fraternity_id),
-              userVote: partyVoteMap.get(c.id) || null,
-            }));
-
-          items.push({
-            id: comment.id,
-            type: 'party_comment',
-            created_date: comment.created_date,
-            text: comment.text,
-            upvotes: comment.upvotes,
-            downvotes: comment.downvotes,
-            party,
-            fraternity: fratMap.get(party.fraternity_id),
-            userVote: partyVoteMap.get(comment.id) || null,
-            replies,
-          });
-        }
-      }
-
-      for (const comment of fratComments.filter(c => !c.parent_comment_id)) {
-        const fraternity = fratMap.get(comment.fraternity_id);
-        if (fraternity) {
-          const replies = fratComments
-            .filter(c => c.parent_comment_id === comment.id)
-            .map(c => ({
-              id: c.id,
-              type: 'frat_comment' as ActivityType,
-              created_date: c.created_date,
-              text: c.text,
-              upvotes: c.upvotes,
-              downvotes: c.downvotes,
-              fraternity,
-              userVote: fratVoteMap.get(c.id) || null,
-            }));
-
-          items.push({
-            id: comment.id,
-            type: 'frat_comment',
-            created_date: comment.created_date,
-            text: comment.text,
-            upvotes: comment.upvotes,
-            downvotes: comment.downvotes,
-            fraternity,
-            userVote: fratVoteMap.get(comment.id) || null,
-            replies,
-          });
-        }
-      }
-
-      items.sort((a, b) => new Date(b.created_date).getTime() - new Date(a.created_date).getTime());
-      setActivities(items);
-    } catch (error) {
-      console.error('Failed to load activity:', error);
-    }
-  };
-
-  const loadChat = async () => {
-    try {
-      const [messages, partiesData, fraternitiesData] = await Promise.all([
-        base44.entities.ChatMessage.list(),
-        base44.entities.Party.list(),
-        base44.entities.Fraternity.list(),
-      ]);
-
-      const partyMap = new Map(partiesData.map(p => [p.id, p]));
-      const fratMap = new Map(fraternitiesData.map(f => [f.id, f]));
-
-      const user = await base44.auth.me();
-      let userVotes: any[] = [];
-      if (user) {
-        userVotes = await base44.entities.ChatMessageVote.filter({ user_id: user.id });
-      }
-      const voteMap = new Map(userVotes.map(v => [v.message_id, v.value]));
-
-      const topLevelMessages = messages.filter(m => !m.parent_message_id);
       
-      const chatItems: ChatItem[] = topLevelMessages.map(msg => {
-        const replies = messages
-          .filter(m => m.parent_message_id === msg.id)
-          .map(m => ({
-            id: m.id,
-            text: m.text,
-            upvotes: m.upvotes,
-            downvotes: m.downvotes,
-            created_date: m.created_date,
-            mentionedFraternity: m.mentioned_fraternity_id ? fratMap.get(m.mentioned_fraternity_id) : undefined,
-            mentionedParty: m.mentioned_party_id ? partyMap.get(m.mentioned_party_id) : undefined,
-            userVote: voteMap.get(m.id) || null,
-          }));
-
-        return {
-          id: msg.id,
-          text: msg.text,
-          upvotes: msg.upvotes,
-          downvotes: msg.downvotes,
-          created_date: msg.created_date,
-          mentionedFraternity: msg.mentioned_fraternity_id ? fratMap.get(msg.mentioned_fraternity_id) : undefined,
-          mentionedParty: msg.mentioned_party_id ? partyMap.get(msg.mentioned_party_id) : undefined,
-          userVote: voteMap.get(msg.id) || null,
-          replies,
-        };
-      });
-
-      chatItems.sort((a, b) => new Date(b.created_date).getTime() - new Date(a.created_date).getTime());
-      setChatMessages(chatItems);
-    } catch (error) {
-      console.error('Failed to load chat:', error);
-    }
-  };
-
-  const handleChatVote = async (item: ChatItem, value: 1 | -1) => {
-    const user = await base44.auth.me();
-    if (!user) {
-      toast({ title: 'Please sign in to vote', variant: 'destructive' });
-      return;
-    }
-
-    try {
-      const existingVotes = await base44.entities.ChatMessageVote.filter({
-        message_id: item.id,
-        user_id: user.id,
-      });
-
-      let upvoteDelta = 0;
-      let downvoteDelta = 0;
-
-      if (existingVotes.length > 0) {
-        const existingVote = existingVotes[0];
-        if (existingVote.value === value) {
-          await base44.entities.ChatMessageVote.delete(existingVote.id);
-          if (value === 1) upvoteDelta = -1;
-          else downvoteDelta = -1;
-        } else {
-          await base44.entities.ChatMessageVote.update(existingVote.id, { value });
-          if (value === 1) {
-            upvoteDelta = 1;
-            downvoteDelta = -1;
-          } else {
-            upvoteDelta = -1;
-            downvoteDelta = 1;
-          }
-        }
-      } else {
-        await base44.entities.ChatMessageVote.create({
-          message_id: item.id,
-          user_id: user.id,
-          value,
-        });
-        if (value === 1) upvoteDelta = 1;
-        else downvoteDelta = 1;
+      const ratingDate = new Date(r.created_date);
+      if (ratingDate >= oneHourAgo) {
+        fratRatingCounts[frat.id].count++;
+        fratRatingCounts[frat.id].recent.push(r);
       }
+    });
+    
+    // "Heating up" - frats with 3+ ratings in last hour
+    Object.entries(fratRatingCounts).forEach(([fratId, data]) => {
+      if (data.count >= 3) {
+        const frat = fraternities.find(f => f.id === fratId);
+        if (frat) {
+          items.push({
+            id: `heating-${fratId}`,
+            type: 'heating_up',
+            entityName: frat.name,
+            entityId: fratId,
+            entityType: 'fraternity',
+            count: data.count,
+            timestamp: new Date(data.recent[0]?.created_date || now),
+          });
+        }
+      }
+    });
+    
+    // "Mixed reactions" - frats with varied recent ratings
+    fratRatings.forEach(r => {
+      const frat = fraternities.find(f => f.id === r.fraternity_id);
+      if (!frat) return;
+      
+      const recentForFrat = fratRatings.filter(
+        fr => fr.fraternity_id === r.fraternity_id && 
+        new Date(fr.created_date) >= oneDayAgo
+      );
+      
+      if (recentForFrat.length >= 2) {
+        const scores = recentForFrat.map(fr => fr.combined_score || 0);
+        const variance = Math.max(...scores) - Math.min(...scores);
+        
+        if (variance >= 3 && !items.find(i => i.id === `mixed-${frat.id}`)) {
+          items.push({
+            id: `mixed-${frat.id}`,
+            type: 'mixed_reactions',
+            entityName: frat.name,
+            entityId: frat.id,
+            entityType: 'fraternity',
+            timestamp: new Date(recentForFrat[0]?.created_date || now),
+          });
+        }
+      }
+    });
+    
+    // "People talking about" - frats/parties with recent comments
+    const commentCounts: Record<string, number> = {};
+    
+    [...fratComments, ...partyComments].forEach(c => {
+      const commentDate = new Date(c.created_date);
+      if (commentDate >= oneDayAgo) {
+        const key = c.fraternity_id || c.party_id;
+        commentCounts[key] = (commentCounts[key] || 0) + 1;
+      }
+    });
+    
+    Object.entries(commentCounts).forEach(([entityId, count]) => {
+      if (count >= 2) {
+        const frat = fraternities.find(f => f.id === entityId);
+        const party = parties.find(p => p.id === entityId);
+        
+        if (frat && !items.find(i => i.entityId === entityId)) {
+          const recentComments = fratComments
+            .filter(c => c.fraternity_id === entityId)
+            .sort((a, b) => new Date(b.created_date).getTime() - new Date(a.created_date).getTime())
+            .slice(0, 5);
+          
+          items.push({
+            id: `talking-${entityId}`,
+            type: 'talking_about',
+            entityName: frat.name,
+            entityId: entityId,
+            entityType: 'fraternity',
+            count,
+            timestamp: new Date(recentComments[0]?.created_date || now),
+            comments: recentComments,
+          });
+        } else if (party && !items.find(i => i.entityId === entityId)) {
+          items.push({
+            id: `talking-${entityId}`,
+            type: 'talking_about',
+            entityName: party.title,
+            entityId: entityId,
+            entityType: 'party',
+            count,
+            timestamp: new Date(),
+          });
+        }
+      }
+    });
+    
+    // Sort by timestamp and limit
+    return items
+      .sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime())
+      .slice(0, 7);
+  }, [fraternities, parties, fratRatings, partyRatings, fratComments, partyComments]);
 
-      await base44.entities.ChatMessage.update(item.id, {
-        upvotes: item.upvotes + upvoteDelta,
-        downvotes: item.downvotes + downvoteDelta,
-      });
-
-      await loadChat();
-    } catch (error) {
-      console.error('Failed to vote:', error);
-      toast({ title: 'Failed to vote', variant: 'destructive' });
+  // Generate highlight item
+  const highlightItem = useMemo((): HighlightItem | null => {
+    // Find viral comment (most upvotes in last 24h)
+    const allComments = [
+      ...fratComments.map(c => ({ ...c, entityType: 'fraternity' as const })),
+      ...partyComments.map(c => ({ ...c, entityType: 'party' as const })),
+    ];
+    
+    const sortedByUpvotes = allComments
+      .filter(c => c.upvotes > 0)
+      .sort((a, b) => (b.upvotes || 0) - (a.upvotes || 0));
+    
+    if (sortedByUpvotes.length > 0) {
+      const top = sortedByUpvotes[0];
+      const frat = fraternities.find(f => f.id === top.fraternity_id);
+      const party = parties.find(p => p.id === top.party_id);
+      const entityName = top.entityType === 'fraternity' ? frat?.name : party?.title;
+      
+      return {
+        id: `viral-${top.id}`,
+        type: 'viral_comment',
+        content: top.text,
+        entityName,
+        entityId: top.fraternity_id || top.party_id,
+        entityType: top.entityType,
+        upvotes: top.upvotes,
+      };
     }
-  };
-
-  const handleChatReply = async (parentId: string) => {
-    if (!replyText.trim()) return;
-
-    const user = await base44.auth.me();
-    if (!user) {
-      toast({ title: 'Please sign in to reply', variant: 'destructive' });
-      return;
+    
+    // Fallback: Battle between top 2 frats
+    if (fraternities.length >= 2) {
+      const sorted = [...fraternities].sort((a, b) => (b.display_score || 0) - (a.display_score || 0));
+      return {
+        id: 'battle-top2',
+        type: 'battle',
+        content: 'Who runs campus?',
+        fratA: { name: sorted[0].name, id: sorted[0].id, score: sorted[0].display_score || 0 },
+        fratB: { name: sorted[1].name, id: sorted[1].id, score: sorted[1].display_score || 0 },
+      };
     }
+    
+    return null;
+  }, [fratComments, partyComments, fraternities, parties]);
 
-    setSubmittingReply(true);
-    try {
-      await base44.entities.ChatMessage.create({
-        user_id: user.id,
-        parent_message_id: parentId,
-        text: replyText.trim(),
-        upvotes: 0,
-        downvotes: 0,
-      });
-      await recordUserAction();
-      setReplyText('');
-      setReplyingTo(null);
-      await loadChat();
-    } catch (error) {
-      console.error('Failed to post reply:', error);
-      toast({ title: 'Failed to post reply', variant: 'destructive' });
-    } finally {
-      setSubmittingReply(false);
-    }
-  };
+  // Default move options
+  const moveOptions = [
+    { id: 'going_out', label: 'Going out' },
+    { id: 'staying_in', label: 'Staying in' },
+    { id: 'studying', label: 'Studying' },
+    { id: 'undecided', label: 'Undecided' },
+  ];
 
-  const handleSubmitChat = async () => {
-    if (!chatText.trim()) return;
-
-    const user = await base44.auth.me();
-    if (!user) {
-      toast({ title: 'Please sign in to chat', variant: 'destructive' });
-      return;
-    }
-
-    setSubmittingChat(true);
-    try {
-      await base44.entities.ChatMessage.create({
-        user_id: user.id,
-        text: chatText.trim(),
-        mentioned_fraternity_id: selectedMention?.type === 'frat' ? selectedMention.id : null,
-        mentioned_party_id: selectedMention?.type === 'party' ? selectedMention.id : null,
-        upvotes: 0,
-        downvotes: 0,
-      });
-      await recordUserAction();
-      setChatText('');
-      setSelectedMention(null);
-      setShowChatComposer(false);
-      await loadChat();
-    } catch (error) {
-      console.error('Failed to post:', error);
-      toast({ title: 'Failed to post', variant: 'destructive' });
-    } finally {
-      setSubmittingChat(false);
-    }
-  };
-
-  // Handle voting for "What's the move"
-  // Helper to update votes and persist to localStorage
-  const updateUserVote = (optionId: string | null) => {
+  const handleMoveVote = (optionId: string) => {
     const newVotes = { ...allUserVotes };
-    if (optionId === null) {
+    if (userMoveVote === optionId) {
       delete newVotes[userId];
     } else {
       newVotes[userId] = optionId;
     }
     setAllUserVotes(newVotes);
     localStorage.setItem('touse_all_user_votes', JSON.stringify(newVotes));
+    
+    // Collapse after voting
+    if (!userMoveVote) {
+      setTimeout(() => setPollCollapsed(true), 300);
+    }
   };
 
-  const handleMoveVote = async (optionId: string) => {
+  const handleQuickComment = async () => {
+    if (!quickComment.trim()) return;
+    
     const user = await base44.auth.me();
     if (!user) {
-      toast({ title: 'Please sign in to vote', variant: 'destructive' });
+      toast({ title: 'Please sign in to post', variant: 'destructive' });
       return;
     }
-
-    if (userMoveVote === optionId) {
-      // Unvote
-      updateUserVote(null);
-    } else {
-      // Vote for this option
-      updateUserVote(optionId);
+    
+    setSubmitting(true);
+    try {
+      await base44.entities.ChatMessage.create({
+        user_id: user.id,
+        text: quickComment.trim(),
+        upvotes: 0,
+        downvotes: 0,
+      });
+      await recordUserAction();
+      setQuickComment('');
+      await loadData();
+      toast({ title: 'Posted!' });
+    } catch (error) {
+      console.error('Failed to post:', error);
+      toast({ title: 'Failed to post', variant: 'destructive' });
+    } finally {
+      setSubmitting(false);
     }
   };
 
-  const handleCustomSuggestionVote = (suggestionId: string) => {
-    if (userMoveVote === suggestionId) {
-      // Unvote
-      updateUserVote(null);
-    } else {
-      // Vote for this suggestion
-      updateUserVote(suggestionId);
-    }
-  };
-
-  // Normalize text for comparison (lowercase, trim, remove extra spaces, limit repeated chars to 3)
-  const normalizeText = (text: string) => {
-    return text
-      .toLowerCase()
-      .trim()
-      .replace(/\s+/g, ' ')
-      .replace(/(.)\1{2,}/g, '$1$1$1'); // Collapse 3+ repeated chars to max 3
-  };
-
-  const handleAddSuggestion = () => {
-    if (!suggestionText.trim()) return;
-    
-    const normalizedInput = normalizeText(suggestionText);
-    
-    // Check if a similar suggestion already exists
-    const existingIndex = customSuggestions.findIndex(s => normalizeText(s.text) === normalizedInput);
-    
-    let updatedSuggestions: typeof customSuggestions;
-    let selectedId: string;
-    
-    if (existingIndex !== -1) {
-      // Merge with existing - vote for the existing suggestion
-      selectedId = customSuggestions[existingIndex].id;
-      updatedSuggestions = customSuggestions;
-      toast({ title: 'Vote added to existing suggestion!' });
-    } else {
-      // Create new suggestion
-      const newSuggestion = {
-        id: `custom-${Date.now()}`,
-        text: suggestionText.trim()
-      };
-      updatedSuggestions = [...customSuggestions, newSuggestion];
-      selectedId = newSuggestion.id;
-      toast({ title: 'Suggestion added!' });
-    }
-    
-    setCustomSuggestions(updatedSuggestions);
-    localStorage.setItem('touse_custom_move_suggestions', JSON.stringify(updatedSuggestions));
-    updateUserVote(selectedId);
-    setSuggestionText('');
-    setShowSuggestionInput(false);
-  };
-
-  const totalMoveVotes = useMemo(() => {
-    return Object.keys(allUserVotes).length;
-  }, [allUserVotes]);
-
-  // Combine all feed items (chat + activities) sorted by date
-  const feedItems = useMemo(() => {
-    const allItems: Array<{ type: 'chat' | 'activity'; item: ChatItem | ActivityItem; date: Date }> = [];
-    
-    chatMessages.forEach(msg => {
-      allItems.push({ type: 'chat', item: msg, date: new Date(msg.created_date) });
-    });
-    
-    activities.forEach(act => {
-      allItems.push({ type: 'activity', item: act, date: new Date(act.created_date) });
-    });
-    
-    return allItems.sort((a, b) => b.date.getTime() - a.date.getTime());
-  }, [chatMessages, activities]);
-
-  // Filter feed items to last 24 hours for "caught up" feature
-  const feedItemsLast24h = useMemo(() => {
-    const now = new Date();
-    const yesterday = new Date(now.getTime() - 24 * 60 * 60 * 1000);
-    return feedItems.filter(item => item.date >= yesterday);
-  }, [feedItems]);
-  
-  // Handle "All caught up" detection via intersection observer
-  const handleFeedEndVisible = useCallback((entries: IntersectionObserverEntry[]) => {
-    const [entry] = entries;
-    if (entry.isIntersecting && feedItemsLast24h.length > 0 && !caughtUpClaimed) {
-      setShowCaughtUp(true);
-      setNewPostsCount(0);
-      setLastSeenFeedCount(feedItems.length);
-      localStorage.setItem('touse_last_seen_feed_count', feedItems.length.toString());
-    }
-  }, [feedItemsLast24h.length, caughtUpClaimed]);
-  
-  useEffect(() => {
-    const observer = new IntersectionObserver(handleFeedEndVisible, { threshold: 0.1 });
-    if (feedEndRef.current) {
-      observer.observe(feedEndRef.current);
-    }
-    return () => observer.disconnect();
-  }, [handleFeedEndVisible]);
-  
-  // Track new posts count when feed items change and store current count for Layout
-  // Only count actual posts + activity, not user interactions
-  const actualContentCount = useMemo(() => {
-    return chatMessages.length + activities.length;
-  }, [chatMessages.length, activities.length]);
-  
-  useEffect(() => {
-    // Always store current feed count so Layout can calculate new posts
-    localStorage.setItem('touse_current_feed_count', actualContentCount.toString());
-    
-    if (actualContentCount > lastSeenFeedCount && lastSeenFeedCount > 0) {
-      setNewPostsCount(actualContentCount - lastSeenFeedCount);
-      setShowCaughtUp(false);
-    }
-  }, [actualContentCount, lastSeenFeedCount]);
-  
-  // Clear notification badge immediately when visiting the Activity page
-  useEffect(() => {
-    if (!loading && actualContentCount > 0) {
-      // Mark all current content as seen when visiting the page
-      setLastSeenFeedCount(actualContentCount);
-      localStorage.setItem('touse_last_seen_feed_count', actualContentCount.toString());
-      setNewPostsCount(0);
-    }
-  }, [loading, actualContentCount]);
-  
-  // Clear unread when user clicks the notification (called from Layout via storage event)
-  const handleClearUnread = () => {
-    setNewPostsCount(0);
-    setLastSeenFeedCount(actualContentCount);
-    localStorage.setItem('touse_last_seen_feed_count', actualContentCount.toString());
-    window.scrollTo({ top: 0, behavior: 'smooth' });
-  };
-  
-  // Claim caught up points
-  const handleClaimPoints = () => {
-    const newPoints = userPoints + 10;
-    setUserPoints(newPoints);
-    localStorage.setItem('userPoints', newPoints.toString());
-    setCaughtUpClaimed(true);
-    toast({ 
-      title: '+10 Points!', 
-      description: "You're all caught up for today!",
-    });
-  };
-
-  const getActivityIcon = (type: ActivityType) => {
+  const getPulseIcon = (type: PulseItem['type']) => {
     switch (type) {
-      case 'party_rating':
-        return <Star className="h-4 w-4" />;
-      case 'frat_rating':
-        return <Trophy className="h-4 w-4" />;
-      case 'party_comment':
-      case 'frat_comment':
-        return <MessageCircle className="h-4 w-4" />;
+      case 'heating_up': return <Flame className="h-4 w-4" />;
+      case 'mixed_reactions': return <Eye className="h-4 w-4" />;
+      case 'slipping': return <TrendingDown className="h-4 w-4" />;
+      case 'talking_about': return <MessageSquare className="h-4 w-4" />;
+      case 'rising': return <Trophy className="h-4 w-4" />;
+    }
+  };
+
+  const getPulseMessage = (item: PulseItem) => {
+    switch (item.type) {
+      case 'heating_up': 
+        return `${item.entityName} is heating up — ${item.count} ratings in the last hour`;
+      case 'mixed_reactions': 
+        return `${item.entityName} getting mixed reactions tonight`;
+      case 'slipping': 
+        return `${item.entityName} slipping — down ${item.delta} spots since yesterday`;
+      case 'talking_about': 
+        return `People are talking about ${item.entityName} right now`;
+      case 'rising': 
+        return `${item.entityName} climbing the ranks`;
+    }
+  };
+
+  const getPulseBgColor = (type: PulseItem['type']) => {
+    switch (type) {
+      case 'heating_up': return 'bg-orange-500/10';
+      case 'mixed_reactions': return 'bg-yellow-500/10';
+      case 'slipping': return 'bg-red-500/10';
+      case 'talking_about': return 'bg-blue-500/10';
+      case 'rising': return 'bg-emerald-500/10';
+    }
+  };
+
+  const getPulseIconColor = (type: PulseItem['type']) => {
+    switch (type) {
+      case 'heating_up': return 'text-orange-500';
+      case 'mixed_reactions': return 'text-yellow-500';
+      case 'slipping': return 'text-red-500';
+      case 'talking_about': return 'text-blue-500';
+      case 'rising': return 'text-emerald-500';
     }
   };
 
   if (loading) {
     return (
-      <div className="space-y-4">
-        {/* Stories skeleton */}
-        <div className="flex gap-3 overflow-x-auto pb-2 no-scrollbar">
+      <div className="space-y-4 pb-24">
+        <Skeleton className="h-32 rounded-2xl" />
+        <Skeleton className="h-12 rounded-xl" />
+        <div className="space-y-2">
           {[1, 2, 3, 4].map((i) => (
-            <Skeleton key={i} className="w-20 h-24 rounded-2xl shrink-0" />
+            <Skeleton key={i} className="h-16 rounded-xl" />
           ))}
         </div>
-        {/* Feed skeleton */}
-        {[1, 2, 3].map((i) => (
-          <Skeleton key={i} className="h-32 rounded-2xl" />
-        ))}
       </div>
     );
   }
 
   return (
-    <div className="space-y-5 pb-24">
-      {/* Stories-style horizontal scroll for live/upcoming */}
-      {(liveParties.length > 0 || upcomingParties.length > 0) && (
-        <div className="flex gap-3 overflow-x-auto pb-2 no-scrollbar -mx-4 px-4">
-          {/* Live parties first */}
-          {liveParties.map((party) => {
-            const frat = fraternities.find(f => f.id === party.fraternity_id);
-            return (
-              <Link
-                key={party.id}
-                to={createPageUrl(`Party?id=${party.id}`)}
-                className="shrink-0 group"
-              >
-                <div className="relative w-20 h-28 rounded-2xl overflow-hidden ring-[3px] ring-red-500 ring-offset-2 ring-offset-background">
-                  <div className="absolute inset-0 bg-primary" />
-                  <div className="absolute inset-0 flex flex-col items-center justify-center p-2 text-white">
-                    <Radio className="h-8 w-8 text-white animate-pulse mb-1" />
-                    <span className="text-[10px] font-bold uppercase tracking-wide">LIVE</span>
-                  </div>
-                  <div className="absolute bottom-0 inset-x-0 p-1.5 bg-black/60 backdrop-blur-sm">
-                    <p className="text-[10px] font-semibold text-white text-center truncate">{frat?.name || 'Party'}</p>
-                  </div>
-                </div>
-              </Link>
-            );
-          })}
-          
-          {/* Upcoming parties */}
-          {upcomingParties.map((party) => {
-            const frat = fraternities.find(f => f.id === party.fraternity_id);
-            const partyDate = new Date(party.starts_at);
-            const isPartyToday = isToday(partyDate);
-            const isPartyTomorrow = isTomorrow(partyDate);
-            
-            return (
-              <Link
-                key={party.id}
-                to={createPageUrl(`Party?id=${party.id}`)}
-                className="shrink-0 group"
-              >
-                <div className="relative w-20 h-28 rounded-2xl overflow-hidden ring-2 ring-border hover:ring-primary/50 transition-all">
-                  {/* Cover photo or fallback gradient */}
-                  {party.display_photo_url ? (
-                    <img 
-                      src={party.display_photo_url} 
-                      alt={party.title}
-                      className="absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-transform"
-                    />
-                  ) : (
-                    <div className="absolute inset-0 bg-primary" />
-                  )}
-                  {/* Overlay for text readability */}
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent" />
-                  {/* Day label */}
-                  <div className="absolute top-2 left-1/2 -translate-x-1/2 px-2 py-0.5 rounded-full bg-black/60 backdrop-blur-sm">
-                    <span className="text-[10px] font-semibold text-white">
-                      {isPartyToday ? 'Tonight' : isPartyTomorrow ? 'Tmrw' : format(partyDate, 'EEE')}
-                    </span>
-                  </div>
-                  {/* If no cover photo, show icon */}
-                  {!party.display_photo_url && (
-                    <div className="absolute inset-0 flex items-center justify-center">
-                      <PartyPopper className="h-8 w-8 text-white/80" />
-                    </div>
-                  )}
-                  {/* Frat name at bottom */}
-                  <div className="absolute bottom-0 inset-x-0 p-1.5">
-                    <p className="text-[10px] font-semibold text-white text-center truncate">{frat?.name || party.title}</p>
-                  </div>
-                </div>
-              </Link>
-            );
-          })}
-          
-          {/* Add party CTA */}
-          <Link to="/Parties" className="shrink-0">
-            <div className="w-20 h-28 rounded-2xl border-2 border-dashed border-muted-foreground/30 flex flex-col items-center justify-center text-muted-foreground hover:border-primary hover:text-primary transition-all">
-              <Plus className="h-6 w-6 mb-1" />
-              <span className="text-[10px] font-medium">See all</span>
+    <div className="space-y-4 pb-24">
+      {/* 1. Sticky Top: What's the move tonight? */}
+      <div className="sticky top-0 z-40 -mx-4 px-4 pt-2 pb-3 bg-background/95 backdrop-blur-sm">
+        {pollCollapsed && userMoveVote ? (
+          // Collapsed compact bar
+          <button
+            onClick={() => setPollCollapsed(false)}
+            className="w-full flex items-center justify-between p-3 rounded-2xl bg-card border"
+          >
+            <div className="flex items-center gap-3">
+              <span className="text-sm font-medium">Tonight:</span>
+              <span className="text-sm font-semibold text-primary">
+                {moveOptions.find(o => o.id === userMoveVote)?.label || userMoveVote}
+              </span>
+              <span className="text-xs text-muted-foreground">
+                {totalMoveVotes} voting
+              </span>
             </div>
-          </Link>
-        </div>
-      )}
-
-      {/* What's the move tonight? - Shows top 3 options */}
-      <div className="rounded-3xl overflow-hidden gradient-primary p-[2px]">
-        <div className="rounded-[22px] bg-card p-5">
-          <div className="flex items-center gap-3 mb-4">
-            <div className="flex-1">
-              <h2 className="text-lg font-bold animate-pulse">What's the move tonight?</h2>
-              <p className="text-sm text-muted-foreground">
-                {totalMoveVotes > 0 ? `${totalMoveVotes} votes · See what everyone's doing` : 'Vote and see what others are up to'}
-              </p>
+            <ChevronDown className="h-4 w-4 text-muted-foreground" />
+          </button>
+        ) : (
+          // Expanded poll
+          <div className="rounded-2xl bg-card border p-4">
+            <div className="flex items-center justify-between mb-3">
+              <h2 className="text-lg font-bold">What's the move tonight?</h2>
+              {userMoveVote && (
+                <button
+                  onClick={() => setPollCollapsed(true)}
+                  className="p-1 hover:bg-muted rounded-full"
+                >
+                  <ChevronUp className="h-4 w-4 text-muted-foreground" />
+                </button>
+              )}
             </div>
-            {userMoveVote && (
-              <div className="w-8 h-8 rounded-full bg-green-500 flex items-center justify-center text-white">
-                <Check className="h-4 w-4" />
-              </div>
-            )}
-          </div>
-          
-          {/* Build sorted options list */}
-          {(() => {
-            // Combine all options with their vote counts
-            const allOptions: { id: string; type: 'party' | 'default' | 'custom'; label: string; subLabel?: string; votes: number; icon?: any; party?: typeof tonightsParties[0] }[] = [];
             
-            // Add tonight's parties
-            tonightsParties.forEach(party => {
-              const frat = fraternities.find(f => f.id === party.fraternity_id);
-              allOptions.push({
-                id: party.id,
-                type: 'party',
-                label: party.title,
-                subLabel: `${frat?.name} · ${format(new Date(party.starts_at), 'h:mm a')}`,
-                votes: moveVotes[party.id] || 0,
-                party
-              });
-            });
-            
-            // Add default options
-            defaultMoveOptions.forEach(option => {
-              allOptions.push({
-                id: option.id,
-                type: 'default',
-                label: option.label,
-                votes: moveVotes[option.id] || 0,
-                icon: option.icon
-              });
-            });
-            
-            // Add custom suggestions
-            customSuggestions.forEach(suggestion => {
-              allOptions.push({
-                id: suggestion.id,
-                type: 'custom',
-                label: suggestion.text,
-                votes: moveVotes[suggestion.id] || 0
-              });
-            });
-            
-            // Sort by votes descending
-            allOptions.sort((a, b) => b.votes - a.votes);
-            
-            // Get top 3
-            const top3 = allOptions.slice(0, 3);
-            const hasMore = allOptions.length > 3;
-            
-            const renderOption = (option: typeof allOptions[0], index: number) => {
-              const percentage = totalMoveVotes > 0 ? (option.votes / totalMoveVotes) * 100 : 0;
-              const isSelected = userMoveVote === option.id;
-              
-              return (
-                <button
-                  key={option.id}
-                  onClick={() => option.type === 'custom' ? handleCustomSuggestionVote(option.id) : handleMoveVote(option.id)}
-                  className={cn(
-                    "w-full min-h-[52px] p-3 rounded-2xl border-2 transition-all text-left relative overflow-hidden active:scale-[0.98]",
-                    isSelected 
-                      ? "border-primary bg-primary/10" 
-                      : "border-border hover:border-primary/50"
-                  )}
-                >
-                  {userMoveVote && (
-                    <div 
-                      className="absolute inset-0 bg-gradient-to-r from-primary/20 to-transparent transition-all duration-500"
-                      style={{ width: `${percentage}%` }}
-                    />
-                  )}
-                  <div className="relative flex items-center gap-3">
-                    <div className={cn(
-                      "w-9 h-9 rounded-xl flex items-center justify-center shrink-0 font-bold text-sm",
-                      isSelected 
-                        ? "gradient-primary text-white" 
-                        : "bg-muted text-muted-foreground"
-                    )}>
-                      {isSelected ? <Check className="h-4 w-4" /> : (index + 1)}
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="font-semibold text-sm truncate">{option.label}</p>
-                      {option.subLabel && (
-                        <p className="text-xs text-muted-foreground truncate">{option.subLabel}</p>
-                      )}
-                    </div>
-                    {userMoveVote && (
-                      <div className="flex items-center gap-2">
-                        <span className="text-sm font-bold">{percentage.toFixed(0)}%</span>
-                        <Badge variant="secondary" className="text-xs">{option.votes}</Badge>
-                      </div>
-                    )}
-                  </div>
-                </button>
-              );
-            };
-            
-            return (
-              <div className="space-y-2">
-                {top3.map((option, index) => renderOption(option, index))}
-                
-                {/* Something else / View all button */}
-                <button
-                  onClick={() => setShowAllMoveOptions(true)}
-                  className="w-full min-h-[44px] p-3 rounded-2xl border-2 border-dashed border-muted-foreground/30 flex items-center justify-center gap-2 text-muted-foreground hover:border-fuchsia-500 hover:text-fuchsia-500 transition-all active:scale-[0.98]"
-                >
-                  <Plus className="h-4 w-4" />
-                  <span className="font-medium text-sm">
-                    {hasMore ? `View all options (${allOptions.length})` : 'Something else'}
-                  </span>
-                </button>
-              </div>
-            );
-          })()}
-        </div>
-      </div>
-
-      {/* All Move Options Sheet */}
-      <Sheet open={showAllMoveOptions} onOpenChange={setShowAllMoveOptions}>
-        <SheetContent side="bottom" className="rounded-t-3xl h-[85vh] flex flex-col" style={{ paddingBottom: 'max(env(safe-area-inset-bottom), 16px)' }}>
-          <SheetHeader className="pb-4 text-left shrink-0">
-            <SheetTitle>What's the move tonight?</SheetTitle>
-          </SheetHeader>
-          
-          <ScrollArea className="flex-1 -mx-6 px-6 overflow-y-auto">
-            <div className="space-y-2 pb-4">
-              {/* Tonight's parties */}
-              {tonightsParties.map((party) => {
-                const frat = fraternities.find(f => f.id === party.fraternity_id);
-                const votes = moveVotes[party.id] || 0;
-                const percentage = totalMoveVotes > 0 ? (votes / totalMoveVotes) * 100 : 0;
-                const isSelected = userMoveVote === party.id;
-                
-                return (
-                  <button
-                    key={party.id}
-                    onClick={() => { handleMoveVote(party.id); setShowAllMoveOptions(false); }}
-                    className={cn(
-                      "w-full min-h-[52px] p-3 rounded-2xl border-2 transition-all text-left relative overflow-hidden active:scale-[0.98]",
-                      isSelected 
-                        ? "border-primary bg-primary/10" 
-                        : "border-border hover:border-primary/50"
-                    )}
-                  >
-                    {userMoveVote && (
-                      <div 
-                        className="absolute inset-0 bg-gradient-to-r from-primary/20 to-transparent transition-all duration-500"
-                        style={{ width: `${percentage}%` }}
-                      />
-                    )}
-                    <div className="relative flex items-center gap-3">
-                      <div className={cn(
-                        "w-9 h-9 rounded-xl flex items-center justify-center shrink-0",
-                        isSelected 
-                          ? "gradient-primary text-white" 
-                          : "bg-muted text-muted-foreground"
-                      )}>
-                        {isSelected ? <Check className="h-4 w-4" /> : <PartyPopper className="h-4 w-4" />}
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="font-semibold text-sm truncate">{party.title}</p>
-                        <p className="text-xs text-muted-foreground truncate">{frat?.name} · {format(new Date(party.starts_at), 'h:mm a')}</p>
-                      </div>
-                      {userMoveVote && (
-                        <div className="flex items-center gap-2">
-                          <span className="text-sm font-bold">{percentage.toFixed(0)}%</span>
-                          <Badge variant="secondary" className="text-xs">{votes}</Badge>
-                        </div>
-                      )}
-                    </div>
-                  </button>
-                );
-              })}
-              
-              {/* Default options */}
-              {defaultMoveOptions.map((option) => {
+            <div className="grid grid-cols-2 gap-2">
+              {moveOptions.map((option) => {
                 const votes = moveVotes[option.id] || 0;
                 const percentage = totalMoveVotes > 0 ? (votes / totalMoveVotes) * 100 : 0;
                 const isSelected = userMoveVote === option.id;
-                const Icon = option.icon;
                 
                 return (
                   <button
                     key={option.id}
-                    onClick={() => { handleMoveVote(option.id); setShowAllMoveOptions(false); }}
+                    onClick={() => handleMoveVote(option.id)}
                     className={cn(
-                      "w-full min-h-[52px] p-3 rounded-2xl border-2 transition-all text-left relative overflow-hidden active:scale-[0.98]",
+                      "relative p-4 rounded-xl text-left transition-all active:scale-[0.98] overflow-hidden",
                       isSelected 
-                        ? "border-fuchsia-500 bg-fuchsia-500/10" 
-                        : "border-border hover:border-fuchsia-500/50"
+                        ? "bg-primary text-primary-foreground" 
+                        : "bg-muted hover:bg-muted/80"
                     )}
                   >
-                    {userMoveVote && (
+                    {userMoveVote && !isSelected && (
                       <div 
-                        className="absolute inset-0 bg-gradient-to-r from-fuchsia-500/20 to-transparent transition-all duration-500"
+                        className="absolute inset-y-0 left-0 bg-primary/10 transition-all duration-500"
                         style={{ width: `${percentage}%` }}
                       />
                     )}
-                    <div className="relative flex items-center gap-3">
-                      <div className={cn(
-                        "w-9 h-9 rounded-xl flex items-center justify-center shrink-0",
-                        isSelected 
-                          ? "bg-gradient-to-br from-fuchsia-500 to-pink-500 text-white" 
-                          : "bg-muted text-muted-foreground"
-                      )}>
-                        {isSelected ? <Check className="h-4 w-4" /> : <Icon className="h-4 w-4" />}
-                      </div>
-                      <p className="flex-1 font-semibold text-sm">{option.label}</p>
+                    <div className="relative">
+                      <p className="font-semibold text-sm">{option.label}</p>
                       {userMoveVote && (
-                        <div className="flex items-center gap-2">
-                          <span className="text-sm font-bold">{percentage.toFixed(0)}%</span>
-                          <Badge variant="secondary" className="text-xs">{votes}</Badge>
-                        </div>
-                      )}
-                    </div>
-                  </button>
-                );
-              })}
-              
-              {/* Custom suggestions */}
-              {customSuggestions.map((suggestion) => {
-                const votes = moveVotes[suggestion.id] || 0;
-                const percentage = totalMoveVotes > 0 ? (votes / totalMoveVotes) * 100 : 0;
-                const isSelected = userMoveVote === suggestion.id;
-                
-                return (
-                  <button
-                    key={suggestion.id}
-                    onClick={() => { handleCustomSuggestionVote(suggestion.id); setShowAllMoveOptions(false); }}
-                    className={cn(
-                      "w-full min-h-[52px] p-3 rounded-2xl border-2 transition-all text-left relative overflow-hidden active:scale-[0.98]",
-                      isSelected 
-                        ? "border-pink-500 bg-pink-500/10" 
-                        : "border-border hover:border-pink-500/50"
-                    )}
-                  >
-                    {userMoveVote && (
-                      <div 
-                        className="absolute inset-0 bg-gradient-to-r from-pink-500/20 to-transparent transition-all duration-500"
-                        style={{ width: `${percentage}%` }}
-                      />
-                    )}
-                    <div className="relative flex items-center gap-3">
-                      <div className={cn(
-                        "w-9 h-9 rounded-xl flex items-center justify-center shrink-0",
-                        isSelected 
-                          ? "bg-gradient-to-br from-pink-500 to-rose-500 text-white" 
-                          : "bg-muted text-muted-foreground"
-                      )}>
-                        {isSelected ? <Check className="h-4 w-4" /> : <Sparkles className="h-4 w-4" />}
-                      </div>
-                      <p className="flex-1 font-semibold text-sm truncate">{suggestion.text}</p>
-                      {userMoveVote && (
-                        <div className="flex items-center gap-2">
-                          <span className="text-sm font-bold">{percentage.toFixed(0)}%</span>
-                          <Badge variant="secondary" className="text-xs">{votes}</Badge>
-                        </div>
-                      )}
-                    </div>
-                  </button>
-                );
-              })}
-              
-              {/* Add custom suggestion */}
-              {showSuggestionInput ? (
-                <div className="flex gap-2">
-                  <Input
-                    value={suggestionText}
-                    onChange={(e) => setSuggestionText(e.target.value)}
-                    placeholder="Something else?"
-                    className="flex-1 h-11 rounded-xl text-sm"
-                    onKeyDown={(e) => e.key === 'Enter' && handleAddSuggestion()}
-                    autoFocus
-                  />
-                  <Button
-                    onClick={handleAddSuggestion}
-                    disabled={!suggestionText.trim()}
-                    size="sm"
-                    className="h-11 w-11 rounded-xl bg-gradient-to-r from-fuchsia-500 to-pink-500"
-                  >
-                    <Check className="h-4 w-4" />
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => { setShowSuggestionInput(false); setSuggestionText(''); }}
-                    className="h-11 w-11 rounded-xl"
-                  >
-                    <X className="h-4 w-4" />
-                  </Button>
-                </div>
-              ) : (
-                <button
-                  onClick={() => setShowSuggestionInput(true)}
-                  className="w-full min-h-[44px] p-3 rounded-2xl border-2 border-dashed border-muted-foreground/30 flex items-center justify-center gap-2 text-muted-foreground hover:border-fuchsia-500 hover:text-fuchsia-500 transition-all active:scale-[0.98]"
-                >
-                  <Plus className="h-4 w-4" />
-                  <span className="font-medium text-sm">Something else</span>
-                </button>
-              )}
-            </div>
-          </ScrollArea>
-        </SheetContent>
-      </Sheet>
-
-      {/* Two-Column Feed Layout */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        {/* Left Column - Posts */}
-        <div className="space-y-3">
-          <h3 className="font-semibold text-sm">Posts</h3>
-          
-          {chatMessages.length === 0 ? (
-            <div className="text-center py-8 rounded-2xl border border-dashed border-muted-foreground/30">
-              <Sparkles className="h-8 w-8 mx-auto text-muted-foreground mb-2" />
-              <p className="text-sm text-muted-foreground">No posts yet</p>
-              <Button 
-                onClick={() => setShowChatComposer(true)}
-                size="sm"
-                className="mt-3 rounded-full"
-              >
-                Be the first
-              </Button>
-            </div>
-          ) : (
-            chatMessages.map((chatItem) => {
-              return (
-                <div 
-                  key={`chat-${chatItem.id}`} 
-                  className="rounded-xl bg-card p-4 border"
-                >
-                  <div className="space-y-2">
-                    {/* Post content */}
-                    {(() => {
-                      const parsedPoll = parsePollFromText(chatItem.text);
-                      if (parsedPoll) {
-                        const userVote = getUserPollVote(chatItem.id);
-                        const voteCounts = getPollVoteCounts(chatItem.id);
-                        const totalVotes = Object.values(voteCounts).reduce((a, b) => a + b, 0);
-                        
-                        return (
-                          <div className="space-y-2">
-                            <p className="font-medium text-sm">{parsedPoll.question}</p>
-                            <div className="space-y-1.5">
-                              {parsedPoll.options.map((option, index) => {
-                                const voteCount = voteCounts[index] || 0;
-                                const percentage = totalVotes > 0 ? Math.round((voteCount / totalVotes) * 100) : 0;
-                                const isSelected = userVote === index;
-                                const hasVoted = userVote !== null;
-                                
-                                return (
-                                  <button
-                                    key={index}
-                                    onClick={() => !hasVoted && handlePollVote(chatItem.id, index)}
-                                    disabled={hasVoted}
-                                    className={cn(
-                                      "w-full p-2 rounded-lg text-left transition-all relative overflow-hidden text-sm",
-                                      hasVoted ? "cursor-default" : "hover:bg-primary/10 active:scale-[0.98]",
-                                      isSelected ? "border-2 border-primary bg-primary/5" : "border border-border"
-                                    )}
-                                  >
-                                    {hasVoted && (
-                                      <div 
-                                        className="absolute inset-y-0 left-0 bg-primary/10 transition-all duration-500"
-                                        style={{ width: `${percentage}%` }}
-                                      />
-                                    )}
-                                    <div className="relative flex items-center justify-between">
-                                      <span className={cn("text-sm", isSelected && "text-primary font-medium")}>{option}</span>
-                                      {hasVoted && (
-                                        <span className="text-xs font-semibold text-muted-foreground">{percentage}%</span>
-                                      )}
-                                    </div>
-                                  </button>
-                                );
-                              })}
-                            </div>
-                            <p className="text-[10px] text-muted-foreground">{totalVotes} votes</p>
-                          </div>
-                        );
-                      }
-                      
-                      const parsedRanking = parseRankingFromText(chatItem.text);
-                      if (parsedRanking && parsedRanking.rankings.length >= 3) {
-                        return <RankingPostCard rankings={parsedRanking.rankings} comment={parsedRanking.comment} />;
-                      }
-                      return <p className="text-sm leading-relaxed">{chatItem.text}</p>;
-                    })()}
-                    
-                    {(chatItem.mentionedFraternity || chatItem.mentionedParty) && (
-                      <Link 
-                        to={chatItem.mentionedFraternity 
-                          ? createPageUrl(`Fraternity?id=${chatItem.mentionedFraternity.id}`)
-                          : createPageUrl(`Party?id=${chatItem.mentionedParty?.id}`)
-                        }
-                        className="inline-block px-2 py-1 rounded-full bg-primary/10 text-primary text-xs font-medium hover:bg-primary/20 transition-all"
-                      >
-                        @{chatItem.mentionedFraternity?.name || chatItem.mentionedParty?.title}
-                      </Link>
-                    )}
-                    
-                    {/* Actions row */}
-                    <div className="flex items-center gap-3 pt-1">
-                      <button
-                        onClick={() => handleChatVote(chatItem, 1)}
-                        className={cn(
-                          "flex items-center gap-1 text-xs transition-all",
-                          chatItem.userVote === 1 
-                            ? 'text-emerald-500 font-medium' 
-                            : 'text-muted-foreground hover:text-emerald-500'
-                        )}
-                      >
-                        <ThumbsUp className="h-4 w-4" />
-                        {chatItem.upvotes > 0 && <span>{chatItem.upvotes}</span>}
-                      </button>
-                      <button
-                        onClick={() => handleChatVote(chatItem, -1)}
-                        className={cn(
-                          "flex items-center gap-1 text-xs transition-all",
-                          chatItem.userVote === -1 
-                            ? 'text-red-500 font-medium' 
-                            : 'text-muted-foreground hover:text-red-500'
-                        )}
-                      >
-                        <ThumbsDown className="h-4 w-4" />
-                        {chatItem.downvotes > 0 && <span>{chatItem.downvotes}</span>}
-                      </button>
-                      <button
-                        onClick={() => setCommentsSheetItem(chatItem)}
-                        className="flex items-center gap-1 text-xs text-muted-foreground hover:text-primary transition-all"
-                      >
-                        <MessageCircle className="h-4 w-4" />
-                        {chatItem.replies && chatItem.replies.length > 0 && <span>{chatItem.replies.length}</span>}
-                      </button>
-                      <span className="text-xs text-muted-foreground ml-auto">
-                        {formatSimpleTimeAgo(new Date(chatItem.created_date))}
-                      </span>
-                    </div>
-                  </div>
-                </div>
-              );
-            })
-          )}
-        </div>
-        
-        {/* Right Column - Activity (Ratings & Comments) */}
-        <div className="space-y-3">
-          <h3 className="font-semibold text-sm">Activity</h3>
-          
-          {activities.length === 0 ? (
-            <div className="text-center py-8 rounded-2xl border border-dashed border-muted-foreground/30">
-              <p className="text-sm text-muted-foreground">No activity yet</p>
-            </div>
-          ) : (
-            activities.map((activityItem) => {
-              const isRating = activityItem.type === 'party_rating' || activityItem.type === 'frat_rating';
-              const isFratRating = activityItem.type === 'frat_rating';
-              const isComment = activityItem.type === 'party_comment' || activityItem.type === 'frat_comment';
-              
-              return (
-                <Link 
-                  key={`activity-${activityItem.id}`}
-                  to={activityItem.party 
-                    ? createPageUrl(`Party?id=${activityItem.party.id}`) 
-                    : createPageUrl(`Fraternity?id=${activityItem.fraternity?.id}`)
-                  }
-                >
-                  <div className="rounded-xl bg-card p-3 border hover:border-primary/50 transition-all">
-                    <div className="flex items-center gap-3">
-                      {/* Large score badge for ratings */}
-                      {isRating && activityItem.score && (
-                        <div className={cn(
-                          "w-11 h-11 rounded-lg flex items-center justify-center text-white font-bold text-base shrink-0",
-                          getScoreBgColor(activityItem.score)
+                        <p className={cn(
+                          "text-xs mt-1",
+                          isSelected ? "text-primary-foreground/80" : "text-muted-foreground"
                         )}>
-                          {activityItem.score.toFixed(1)}
-                        </div>
-                      )}
-                      
-                      <div className="flex-1 min-w-0">
-                        <p className="font-medium text-sm truncate">
-                          {isFratRating ? activityItem.fraternity?.name : (activityItem.party?.title || activityItem.fraternity?.name)}
+                          {percentage.toFixed(0)}% ({votes})
                         </p>
-                        {activityItem.fraternity && activityItem.type === 'party_rating' && (
-                          <p className="text-xs text-muted-foreground truncate">{activityItem.fraternity.name}</p>
-                        )}
-                        {activityItem.text && (
-                          <p className="text-xs text-muted-foreground line-clamp-1 mt-0.5">"{activityItem.text}"</p>
-                        )}
-                      </div>
-                      
-                      <span className="text-xs text-muted-foreground shrink-0">
-                        {formatSimpleTimeAgo(new Date(activityItem.created_date))}
-                      </span>
+                      )}
                     </div>
-                  </div>
-                </Link>
-              );
-            })
-          )}
-        </div>
+                  </button>
+                );
+              })}
+            </div>
+            
+            {totalMoveVotes > 0 && (
+              <p className="text-xs text-muted-foreground text-center mt-3">
+                {totalMoveVotes} {totalMoveVotes === 1 ? 'person' : 'people'} voting
+              </p>
+            )}
+          </div>
+        )}
       </div>
 
+      {/* 2. Quick Comment Bar */}
+      <div className="flex gap-2">
+        <Input
+          value={quickComment}
+          onChange={(e) => setQuickComment(e.target.value)}
+          placeholder="Say something..."
+          className="flex-1 h-12 rounded-xl bg-card border text-sm"
+          onKeyDown={(e) => e.key === 'Enter' && !e.shiftKey && handleQuickComment()}
+        />
+        <Button
+          onClick={handleQuickComment}
+          disabled={!quickComment.trim() || submitting}
+          size="icon"
+          className="h-12 w-12 rounded-xl"
+        >
+          <Send className="h-5 w-5" />
+        </Button>
+      </div>
 
-      {/* Floating compose button */}
-      <button
-        onClick={() => setShowChatComposer(true)}
-        className="fixed bottom-24 right-4 z-50 flex items-center gap-2 px-5 py-3 rounded-full bg-foreground text-background shadow-lg active:scale-95 transition-transform hover:shadow-xl"
-        style={{ marginBottom: 'env(safe-area-inset-bottom)' }}
-      >
-        <Plus className="h-5 w-5" />
-        <span className="font-bold">Post</span>
-      </button>
+      {/* 3. Campus Pulse */}
+      <div className="space-y-2">
+        {pulseItems.length === 0 ? (
+          <div className="text-center py-8 text-muted-foreground">
+            <p className="text-sm">No activity yet tonight</p>
+          </div>
+        ) : (
+          pulseItems.map((item) => (
+            <button
+              key={item.id}
+              onClick={() => setExpandedPulse(item)}
+              className={cn(
+                "w-full p-3 rounded-xl text-left transition-all active:scale-[0.99]",
+                getPulseBgColor(item.type)
+              )}
+            >
+              <div className="flex items-center gap-3">
+                <span className={getPulseIconColor(item.type)}>
+                  {getPulseIcon(item.type)}
+                </span>
+                <p className="flex-1 text-sm font-medium">
+                  {getPulseMessage(item)}
+                </p>
+                <span className="text-xs text-muted-foreground shrink-0">
+                  {formatPulseTime(item.timestamp)}
+                </span>
+              </div>
+            </button>
+          ))
+        )}
+      </div>
 
-      {/* Chat Composer Sheet */}
-      <Sheet open={showChatComposer} onOpenChange={(open) => {
-        setShowChatComposer(open);
-        if (!open) {
-          // Reset states when closing
-          setChatInputEnabled(false);
-          setIsPollMode(false);
-          setPollQuestion('');
-          setPollOptions(['', '']);
-          setFratRanking({
-            'Upper Touse': null,
-            'Touse': null,
-            'Lower Touse': null,
-            'Upper Mouse': null,
-            'Mouse 1': null,
-            'Mouse 2': null,
-            'Lower Mouse': null,
-            'Upper Bouse': null,
-            'Bouse': null,
-            'Lower Bouse': null,
-          });
-        }
-      }}>
-        <SheetContent side="bottom" className="rounded-t-3xl" style={{ paddingBottom: 'max(env(safe-area-inset-bottom), 16px)' }}>
-          <SheetHeader className="pb-4 text-left">
-            <SheetTitle className="text-lg">
-              {isPollMode ? "Create a Poll" : Object.values(fratRanking).some(Boolean) ? "Share Frat Ranking" : "What's on your mind?"}
-            </SheetTitle>
-          </SheetHeader>
-          <div className="space-y-4">
-            {/* Poll mode UI */}
-            {isPollMode && (
-              <div className="space-y-4 p-4 rounded-2xl bg-gradient-to-br from-primary/5 to-primary/10 border border-primary/20">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-xl bg-primary/20 flex items-center justify-center">
-                      <BarChart3 className="h-5 w-5 text-primary" />
-                    </div>
-                    <div>
-                      <p className="font-semibold text-sm">Create Poll</p>
-                      <p className="text-xs text-muted-foreground">Let others vote on your question</p>
-                    </div>
-                  </div>
-                  <button 
-                    onClick={() => {
-                      setIsPollMode(false);
-                      setPollQuestion('');
-                      setPollOptions(['', '']);
-                    }} 
-                    className="p-2 hover:bg-muted rounded-full transition-colors"
-                  >
-                    <X className="h-4 w-4 text-muted-foreground" />
-                  </button>
+      {/* 4. Highlight Slot */}
+      {highlightItem && (
+        <div className="rounded-2xl bg-card border-2 border-primary/20 p-5">
+          {highlightItem.type === 'viral_comment' && (
+            <div className="space-y-3">
+              <div className="flex items-center gap-2">
+                <Flame className="h-4 w-4 text-orange-500" />
+                <span className="text-xs font-medium text-orange-500 uppercase tracking-wide">Hot Take</span>
+              </div>
+              <p className="text-lg font-medium leading-snug">"{highlightItem.content}"</p>
+              {highlightItem.entityName && (
+                <Link 
+                  to={createPageUrl(`${highlightItem.entityType === 'fraternity' ? 'Fraternity' : 'Party'}?id=${highlightItem.entityId}`)}
+                  className="text-sm text-primary hover:underline"
+                >
+                  on {highlightItem.entityName}
+                </Link>
+              )}
+              <div className="flex items-center gap-4 pt-2">
+                <button className="flex items-center gap-2 px-4 py-2 rounded-xl bg-emerald-500/10 text-emerald-600 font-medium text-sm hover:bg-emerald-500/20 transition-all">
+                  <ThumbsUp className="h-4 w-4" />
+                  Agree ({highlightItem.upvotes || 0})
+                </button>
+                <button className="flex items-center gap-2 px-4 py-2 rounded-xl bg-red-500/10 text-red-500 font-medium text-sm hover:bg-red-500/20 transition-all">
+                  <ThumbsDown className="h-4 w-4" />
+                  Disagree
+                </button>
+              </div>
+            </div>
+          )}
+          
+          {highlightItem.type === 'battle' && highlightItem.fratA && highlightItem.fratB && (
+            <div className="space-y-4">
+              <div className="flex items-center gap-2 justify-center">
+                <Swords className="h-4 w-4 text-primary" />
+                <span className="text-xs font-medium text-primary uppercase tracking-wide">Battle</span>
+              </div>
+              <p className="text-center text-lg font-bold">{highlightItem.content}</p>
+              <div className="grid grid-cols-2 gap-3">
+                <Link
+                  to={createPageUrl(`Fraternity?id=${highlightItem.fratA.id}`)}
+                  className="p-4 rounded-xl bg-muted hover:bg-primary hover:text-primary-foreground transition-all text-center group"
+                >
+                  <p className="font-bold text-base">{highlightItem.fratA.name}</p>
+                  <p className="text-xs text-muted-foreground group-hover:text-primary-foreground/70 mt-1">
+                    {highlightItem.fratA.score.toFixed(1)} score
+                  </p>
+                </Link>
+                <Link
+                  to={createPageUrl(`Fraternity?id=${highlightItem.fratB.id}`)}
+                  className="p-4 rounded-xl bg-muted hover:bg-primary hover:text-primary-foreground transition-all text-center group"
+                >
+                  <p className="font-bold text-base">{highlightItem.fratB.name}</p>
+                  <p className="text-xs text-muted-foreground group-hover:text-primary-foreground/70 mt-1">
+                    {highlightItem.fratB.score.toFixed(1)} score
+                  </p>
+                </Link>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Pulse Expansion Sheet */}
+      <Sheet open={!!expandedPulse} onOpenChange={(open) => !open && setExpandedPulse(null)}>
+        <SheetContent side="bottom" className="rounded-t-3xl max-h-[70vh]">
+          {expandedPulse && (
+            <>
+              <SheetHeader className="pb-4">
+                <div className="flex items-center gap-3">
+                  <span className={getPulseIconColor(expandedPulse.type)}>
+                    {getPulseIcon(expandedPulse.type)}
+                  </span>
+                  <SheetTitle className="text-lg">
+                    {expandedPulse.entityName}
+                  </SheetTitle>
                 </div>
-                
-                <div className="space-y-3">
-                  <div>
-                    <label className="text-xs font-medium text-muted-foreground mb-1.5 block">Your Question</label>
-                    <Input
-                      value={pollQuestion}
-                      onChange={(e) => setPollQuestion(e.target.value)}
-                      placeholder="What do you want to ask?"
-                      className="rounded-xl h-12 text-base font-medium border-primary/20 focus:border-primary/40"
-                    />
-                  </div>
+              </SheetHeader>
+              
+              <ScrollArea className="max-h-[50vh]">
+                <div className="space-y-3 pb-4">
+                  <Link
+                    to={createPageUrl(`${expandedPulse.entityType === 'fraternity' ? 'Fraternity' : 'Party'}?id=${expandedPulse.entityId}`)}
+                    className="block p-3 rounded-xl bg-primary/10 text-primary text-sm font-medium hover:bg-primary/20 transition-all"
+                  >
+                    View {expandedPulse.entityType === 'fraternity' ? 'fraternity' : 'party'} page
+                  </Link>
                   
-                  <div>
-                    <label className="text-xs font-medium text-muted-foreground mb-1.5 block">Options</label>
+                  {expandedPulse.comments && expandedPulse.comments.length > 0 && (
                     <div className="space-y-2">
-                      {pollOptions.map((option, index) => (
-                        <div key={index} className="flex items-center gap-2">
-                          <div className="w-6 h-6 rounded-full bg-primary/10 flex items-center justify-center text-xs font-bold text-primary shrink-0">
-                            {index + 1}
+                      <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Recent comments</p>
+                      {expandedPulse.comments.map((comment) => (
+                        <div key={comment.id} className="p-3 rounded-xl bg-muted">
+                          <p className="text-sm">{comment.text}</p>
+                          <div className="flex items-center gap-2 mt-2">
+                            <ThumbsUp className="h-3 w-3 text-muted-foreground" />
+                            <span className="text-xs text-muted-foreground">{comment.upvotes}</span>
+                            <span className="text-xs text-muted-foreground ml-auto">
+                              {formatPulseTime(new Date(comment.created_date))}
+                            </span>
                           </div>
-                          <Input
-                            value={option}
-                            onChange={(e) => {
-                              const newOptions = [...pollOptions];
-                              newOptions[index] = e.target.value;
-                              setPollOptions(newOptions);
-                            }}
-                            placeholder={`Option ${index + 1}`}
-                            className="rounded-xl flex-1 h-11 border-primary/20 focus:border-primary/40"
-                          />
-                          {pollOptions.length > 2 && (
-                            <button
-                              onClick={() => {
-                                const newOptions = pollOptions.filter((_, i) => i !== index);
-                                setPollOptions(newOptions);
-                              }}
-                              className="p-1.5 hover:bg-destructive/10 rounded-full transition-colors"
-                            >
-                              <X className="h-4 w-4 text-muted-foreground hover:text-destructive" />
-                            </button>
-                          )}
                         </div>
                       ))}
                     </div>
-                    {pollOptions.length < 4 && (
-                      <button
-                        onClick={() => setPollOptions([...pollOptions, ''])}
-                        className="mt-2 flex items-center gap-1.5 text-sm font-medium text-primary hover:text-primary/80 transition-colors"
-                      >
-                        <Plus className="h-4 w-4" />
-                        Add option
-                      </button>
-                    )}
-                  </div>
-                </div>
-              </div>
-            )}
-            
-            {/* Frat ranking display */}
-            {!isPollMode && Object.values(fratRanking).some(Boolean) && (
-              <div className="space-y-2 p-3 rounded-xl bg-amber-500/10 border border-amber-500/20">
-                <div className="flex items-center justify-between mb-2">
-                  <div className="flex items-center gap-2">
-                    <Trophy className="h-5 w-5 text-amber-500" />
-                    <p className="font-medium text-sm">Frat Ranking Post</p>
-                  </div>
-                  <button 
-                    onClick={() => setFratRanking({
-                      'Upper Touse': null,
-                      'Touse': null,
-                      'Lower Touse': null,
-                      'Upper Mouse': null,
-                      'Mouse 1': null,
-                      'Mouse 2': null,
-                      'Lower Mouse': null,
-                      'Upper Bouse': null,
-                      'Bouse': null,
-                      'Lower Bouse': null,
-                    })} 
-                    className="p-1 hover:bg-muted rounded-full"
-                  >
-                    <X className="h-4 w-4 text-muted-foreground" />
-                  </button>
-                </div>
-                <div className="grid grid-cols-2 gap-1 text-xs">
-                  {['Upper Touse', 'Touse', 'Lower Touse', 'Upper Mouse', 'Mouse 1', 'Mouse 2', 'Lower Mouse', 'Upper Bouse', 'Bouse', 'Lower Bouse'].map(tier => {
-                    const frat = fratRanking[tier];
-                    if (!frat) return null;
-                    const displayTier = tier === 'Mouse 1' || tier === 'Mouse 2' ? 'Mouse' : tier;
-                    return (
-                      <div key={tier} className="truncate">
-                        <span className="text-muted-foreground">{displayTier}:</span> {frat.name}
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-            )}
-            
-            {!isPollMode && (
-              <Textarea
-                value={chatText}
-                onChange={(e) => setChatText(e.target.value)}
-                placeholder={Object.values(fratRanking).some(Boolean) ? "Add a comment to your ranking (optional)..." : "Share what's happening..."}
-                className="min-h-[120px] text-base rounded-xl resize-none"
-                readOnly={!chatInputEnabled}
-                onClick={() => {
-                  if (!chatInputEnabled) {
-                    setChatInputEnabled(true);
-                  }
-                }}
-              />
-            )}
-            
-            {!isPollMode && selectedMention && !Object.values(fratRanking).some(Boolean) && (
-              <div className="flex items-center gap-2">
-                <Badge className="flex items-center gap-1 px-3 py-1.5">
-                  <AtSign className="h-3 w-3" />
-                  {selectedMention.name}
-                  <button onClick={() => setSelectedMention(null)} className="ml-1">
-                    <X className="h-3 w-3" />
-                  </button>
-                </Badge>
-              </div>
-            )}
-            
-            <div className="flex gap-2 flex-wrap">
-              {!isPollMode && !Object.values(fratRanking).some(Boolean) && (
-                <>
-                  <Button
-                    variant="outline"
-                    onClick={() => { setMentionType('frat'); setShowMentionPicker(true); }}
-                    className="rounded-xl"
-                  >
-                    <AtSign className="h-4 w-4 mr-2" />
-                    Mention
-                  </Button>
-                  <Button
-                    variant="outline"
-                    onClick={() => setShowFratRankingPicker(true)}
-                    className="rounded-xl border-amber-500/50 text-amber-600 hover:bg-amber-500/10"
-                  >
-                    <Trophy className="h-4 w-4 mr-2" />
-                    Frat Ranking
-                  </Button>
-                  <Button
-                    variant="outline"
-                    onClick={() => setIsPollMode(true)}
-                    className="rounded-xl border-blue-500/50 text-blue-600 hover:bg-blue-500/10"
-                  >
-                    <BarChart3 className="h-4 w-4 mr-2" />
-                    Poll
-                  </Button>
-                </>
-              )}
-              <Button
-                onClick={async () => {
-                  // If poll mode, post the poll
-                  if (isPollMode) {
-                    const user = await base44.auth.me();
-                    if (!user) {
-                      toast({ title: 'Please sign in to post', variant: 'destructive' });
-                      return;
-                    }
-                    
-                    const validOptions = pollOptions.filter(o => o.trim());
-                    if (!pollQuestion.trim() || validOptions.length < 2) {
-                      toast({ title: 'Please add a question and at least 2 options', variant: 'destructive' });
-                      return;
-                    }
-                    
-                    setSubmittingChat(true);
-                    try {
-                      // Format poll as a special message with POLL: prefix for detection
-                      const pollMessage = `POLL: ${pollQuestion.trim()}\n${validOptions.map((opt, i) => `OPTION:${opt}`).join('\n')}`;
-                      
-                      await base44.entities.ChatMessage.create({
-                        user_id: user.id,
-                        text: pollMessage,
-                        upvotes: 0,
-                        downvotes: 0,
-                      });
-                      
-                      setIsPollMode(false);
-                      setPollQuestion('');
-                      setPollOptions(['', '']);
-                      setShowChatComposer(false);
-                      await loadChat();
-                      toast({ title: 'Poll posted!' });
-                    } catch (error) {
-                      console.error('Failed to post:', error);
-                      toast({ title: 'Failed to post', variant: 'destructive' });
-                    } finally {
-                      setSubmittingChat(false);
-                    }
-                  }
-                  // If frat ranking mode, post the ranking
-                  else if (Object.values(fratRanking).some(Boolean)) {
-                    const user = await base44.auth.me();
-                    if (!user) {
-                      toast({ title: 'Please sign in to post', variant: 'destructive' });
-                      return;
-                    }
-                    
-                    setSubmittingChat(true);
-                    try {
-                      const tiers = ['Upper Touse', 'Touse', 'Lower Touse', 'Upper Mouse', 'Mouse 1', 'Mouse 2', 'Lower Mouse', 'Upper Bouse', 'Bouse', 'Lower Bouse'];
-                      const tierLines = tiers
-                        .map(tier => {
-                          const frat = fratRanking[tier];
-                          if (!frat) return null;
-                          const displayTier = tier === 'Mouse 1' || tier === 'Mouse 2' ? 'Mouse' : tier;
-                          return `${displayTier}: ${frat.name}`;
-                        })
-                        .filter(Boolean);
-                      
-                      let message = tierLines.join('\n');
-                      if (chatText.trim()) {
-                        message = `${chatText.trim()}\n\n${message}`;
-                      }
-                      
-                      await base44.entities.ChatMessage.create({
-                        user_id: user.id,
-                        text: message,
-                        upvotes: 0,
-                        downvotes: 0,
-                      });
-                      
-                      setChatText('');
-                      setFratRanking({
-                        'Upper Touse': null,
-                        'Touse': null,
-                        'Lower Touse': null,
-                        'Upper Mouse': null,
-                        'Mouse 1': null,
-                        'Mouse 2': null,
-                        'Lower Mouse': null,
-                        'Upper Bouse': null,
-                        'Bouse': null,
-                        'Lower Bouse': null,
-                      });
-                      setShowChatComposer(false);
-                      await loadChat();
-                      toast({ title: 'Ranking posted!' });
-                    } catch (error) {
-                      console.error('Failed to post:', error);
-                      toast({ title: 'Failed to post', variant: 'destructive' });
-                    } finally {
-                      setSubmittingChat(false);
-                    }
-                  } else {
-                    handleSubmitChat();
-                  }
-                }}
-                disabled={submittingChat || (!isPollMode && !chatText.trim() && !Object.values(fratRanking).some(Boolean)) || (isPollMode && (!pollQuestion.trim() || pollOptions.filter(o => o.trim()).length < 2))}
-                className="flex-1 rounded-xl gradient-primary text-white"
-              >
-                {submittingChat ? (
-                  <Loader2 className="h-5 w-5 animate-spin" />
-                ) : (
-                  <>
-                    <Plus className="h-5 w-5 mr-2" />
-                    Post
-                  </>
-                )}
-              </Button>
-            </div>
-          </div>
-        </SheetContent>
-      </Sheet>
-
-      {/* Frat Ranking Picker Sheet */}
-      <Sheet open={showFratRankingPicker} onOpenChange={(open) => {
-        setShowFratRankingPicker(open);
-        if (!open) {
-          setShowFratBattleGame(false);
-          setShowManualPicker(false);
-          setExpandedTiers({});
-        }
-      }}>
-        <SheetContent side="bottom" className="rounded-t-3xl max-h-[85vh]" style={{ paddingBottom: 'max(env(safe-area-inset-bottom), 16px)' }}>
-          {showFratBattleGame ? (
-            <FratBattleGame
-              fraternities={fraternities}
-              onComplete={(ranking) => {
-                const fullRanking: Record<string, Fraternity | null> = {
-                  'Upper Touse': ranking['Upper Touse'] || null,
-                  'Touse': ranking['Touse'] || null,
-                  'Lower Touse': ranking['Lower Touse'] || null,
-                  'Upper Mouse': ranking['Upper Mouse'] || null,
-                  'Mouse 1': ranking['Mouse 1'] || null,
-                  'Mouse 2': ranking['Mouse 2'] || null,
-                  'Lower Mouse': ranking['Lower Mouse'] || null,
-                  'Upper Bouse': ranking['Upper Bouse'] || null,
-                  'Bouse': ranking['Bouse'] || null,
-                  'Lower Bouse': ranking['Lower Bouse'] || null,
-                };
-                setFratRanking(fullRanking);
-                setShowFratBattleGame(false);
-                setShowFratRankingPicker(false);
-                setShowChatComposer(true);
-              }}
-              onShare={(rankingData) => {
-                const fullRanking: Record<string, Fraternity | null> = {
-                  'Upper Touse': null,
-                  'Touse': null,
-                  'Lower Touse': null,
-                  'Upper Mouse': null,
-                  'Mouse 1': null,
-                  'Mouse 2': null,
-                  'Lower Mouse': null,
-                  'Upper Bouse': null,
-                  'Bouse': null,
-                  'Lower Bouse': null,
-                };
-                rankingData.forEach(r => {
-                  const frat = fraternities.find(f => f.name === r.fratName);
-                  if (frat && r.tier in fullRanking) {
-                    fullRanking[r.tier] = frat;
-                  }
-                });
-                setFratRanking(fullRanking);
-                setShowFratBattleGame(false);
-                setShowFratRankingPicker(false);
-                setShowChatComposer(true);
-              }}
-              onSave={(rankingData) => {
-                const savedRankings = JSON.parse(localStorage.getItem('touse_saved_battle_rankings') || '[]');
-                const newRanking = {
-                  id: `battle-${Date.now()}`,
-                  date: new Date().toISOString(),
-                  ranking: rankingData,
-                };
-                const updated = [newRanking, ...savedRankings].slice(0, 3);
-                localStorage.setItem('touse_saved_battle_rankings', JSON.stringify(updated));
-                
-                toast({ title: "Saved!", description: "Check 'Your Lists' to see your saved rankings" });
-              }}
-              onClose={() => setShowFratBattleGame(false)}
-            />
-          ) : showManualPicker ? (
-            <div className="flex flex-col h-full overflow-hidden">
-              <SheetHeader className="pb-4 shrink-0 text-left">
-                <div className="flex items-center gap-2">
-                  <button 
-                    onClick={() => setShowManualPicker(false)}
-                    className="p-1 hover:bg-muted rounded-full"
-                  >
-                    <ChevronRight className="h-5 w-5 rotate-180" />
-                  </button>
-                  <SheetTitle className="flex items-center gap-2">
-                    <Trophy className="h-5 w-5 text-amber-500" />
-                    Pick Manually
-                  </SheetTitle>
-                </div>
-                <p className="text-sm text-muted-foreground pl-8">Select a frat for each tier position</p>
-              </SheetHeader>
-              
-              <ScrollArea className="flex-1 -mx-6 px-6">
-                <div className="space-y-3 pb-4">
-                  {[
-                    { tier: 'Upper Touse', label: 'Upper Touse (1st)', color: 'bg-green-500/20 border-green-500/40' },
-                    { tier: 'Touse', label: 'Touse (2nd)', color: 'bg-green-500/15 border-green-500/30' },
-                    { tier: 'Lower Touse', label: 'Lower Touse (3rd)', color: 'bg-green-500/10 border-green-500/20' },
-                    { tier: 'Upper Mouse', label: 'Upper Mouse (4th)', color: 'bg-yellow-500/15 border-yellow-500/30' },
-                    { tier: 'Mouse 1', label: 'Mouse (5th)', color: 'bg-yellow-500/10 border-yellow-500/20' },
-                    { tier: 'Mouse 2', label: 'Mouse (6th)', color: 'bg-yellow-500/10 border-yellow-500/20' },
-                    { tier: 'Lower Mouse', label: 'Lower Mouse (7th)', color: 'bg-orange-500/15 border-orange-500/30' },
-                    { tier: 'Upper Bouse', label: 'Upper Bouse (8th)', color: 'bg-red-500/10 border-red-500/20' },
-                    { tier: 'Bouse', label: 'Bouse (9th)', color: 'bg-red-500/15 border-red-500/30' },
-                    { tier: 'Lower Bouse', label: 'Lower Bouse (10th)', color: 'bg-red-500/20 border-red-500/40' },
-                  ].map(({ tier, label, color }) => {
-                    const selectedFrat = fratRanking[tier];
-                    const usedFratIds = Object.values(fratRanking).filter(Boolean).map(f => f!.id);
-                    const availableFrats = fraternities.filter(f => !usedFratIds.includes(f.id) || f.id === selectedFrat?.id);
-                    const isExpanded = expandedTiers[tier] || false;
-                    const displayedFrats = isExpanded ? availableFrats : availableFrats.slice(0, 5);
-                    const hasMore = availableFrats.length > 5;
-                    
-                    return (
-                      <div key={tier} className={cn("p-3 rounded-xl border", color)}>
-                        <p className="text-xs font-medium text-muted-foreground mb-2">{label}</p>
-                        {selectedFrat ? (
-                          <div className="flex items-center justify-between">
-                            <p className="font-semibold">{selectedFrat.name}</p>
-                            <button 
-                              onClick={() => setFratRanking(prev => ({ ...prev, [tier]: null }))}
-                              className="p-1 hover:bg-muted rounded-full"
-                            >
-                              <X className="h-4 w-4" />
-                            </button>
-                          </div>
-                        ) : (
-                          <div className="flex gap-2 flex-wrap">
-                            {displayedFrats.map(frat => (
-                              <button
-                                key={frat.id}
-                                onClick={() => setFratRanking(prev => ({ ...prev, [tier]: frat }))}
-                                className="px-3 py-1.5 text-sm rounded-lg bg-background/50 hover:bg-background border border-border transition-all"
-                              >
-                                {frat.name}
-                              </button>
-                            ))}
-                            {hasMore && !isExpanded && (
-                              <button
-                                onClick={() => setExpandedTiers(prev => ({ ...prev, [tier]: true }))}
-                                className="px-3 py-1.5 text-sm rounded-lg bg-primary/10 hover:bg-primary/20 text-primary border border-primary/30 transition-all font-medium"
-                              >
-                                +{availableFrats.length - 5} more
-                              </button>
-                            )}
-                            {hasMore && isExpanded && (
-                              <button
-                                onClick={() => setExpandedTiers(prev => ({ ...prev, [tier]: false }))}
-                                className="px-3 py-1.5 text-sm rounded-lg bg-muted hover:bg-muted/80 text-muted-foreground border border-border transition-all"
-                              >
-                                Show less
-                              </button>
-                            )}
-                          </div>
-                        )}
-                      </div>
-                    );
-                  })}
+                  )}
                 </div>
               </ScrollArea>
-              <div className="pt-4 border-t shrink-0">
-                <Button 
-                  onClick={() => {
-                    setShowFratRankingPicker(false);
-                    setShowChatComposer(true);
-                  }}
-                  className="w-full rounded-xl bg-gradient-to-r from-amber-500 to-orange-500 text-white"
-                  disabled={!Object.values(fratRanking).some(Boolean)}
-                >
-                  <Check className="h-5 w-5 mr-2" />
-                  Continue to Post
-                </Button>
-              </div>
-            </div>
-          ) : (
-            (() => {
-              const savedBattleRankings = JSON.parse(localStorage.getItem('touse_saved_battle_rankings') || '[]');
-              const savedManualRankings = JSON.parse(localStorage.getItem('touse_saved_manual_rankings') || '[]');
-              
-              return (
-                <>
-                  <SheetHeader className="pb-4 border-b border-border text-left">
-                    <SheetTitle className="text-lg font-semibold">Create Frat Ranking</SheetTitle>
-                    <p className="text-sm text-muted-foreground">
-                      Fill in your tier list - this is just for sharing, doesn't affect ratings
-                    </p>
-                  </SheetHeader>
-                  
-                  <div className="divide-y divide-border">
-                    {/* Battle Game Row */}
-                    <button
-                      onClick={() => setShowFratBattleGame(true)}
-                      className="w-full py-4 flex items-center gap-4 text-left hover:bg-muted/50 transition-colors active:bg-muted"
-                    >
-                      <div className="w-10 h-10 rounded-full bg-amber-500 flex items-center justify-center text-white shrink-0">
-                        <Swords className="h-5 w-5" />
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="font-semibold text-foreground">Play Frat Battle</p>
-                        <p className="text-sm text-muted-foreground">10 head-to-head matchups generate your ranking</p>
-                      </div>
-                      <ChevronRight className="h-5 w-5 text-muted-foreground shrink-0" />
-                    </button>
-                    
-                    {/* Past Battles */}
-                    {savedBattleRankings.slice(0, 3).map((saved: { id: string; date: string; ranking: { tier: string; fratName: string; wins: number }[] }) => (
-                      <div key={saved.id} className="py-3 flex items-center gap-3">
-                        <div className="w-8 h-8 rounded-full bg-amber-500/10 flex items-center justify-center shrink-0">
-                          <Swords className="h-4 w-4 text-amber-500" />
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <p className="text-sm font-medium text-foreground leading-snug">
-                            {saved.ranking.slice(0, 3).map(r => r.fratName).join(' → ')}...
-                          </p>
-                          <p className="text-xs text-muted-foreground">{format(new Date(saved.date), 'MMM d, h:mm a')}</p>
-                        </div>
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          className="shrink-0 text-amber-600 hover:text-amber-700 hover:bg-amber-500/10"
-                          onClick={() => {
-                            const fullRanking: Record<string, Fraternity | null> = {
-                              'Upper Touse': null, 'Touse': null, 'Lower Touse': null,
-                              'Upper Mouse': null, 'Mouse 1': null, 'Mouse 2': null, 'Lower Mouse': null,
-                              'Upper Bouse': null, 'Bouse': null, 'Lower Bouse': null,
-                            };
-                            saved.ranking.forEach((r: { tier: string; fratName: string }) => {
-                              const frat = fraternities.find(f => f.name === r.fratName);
-                              if (frat && r.tier in fullRanking) {
-                                fullRanking[r.tier] = frat;
-                              }
-                            });
-                            setFratRanking(fullRanking);
-                            setShowFratRankingPicker(false);
-                            setShowChatComposer(true);
-                          }}
-                        >
-                          <Send className="h-4 w-4" />
-                        </Button>
-                      </div>
-                    ))}
-                    
-                    {/* Pick Manually Row */}
-                    <button
-                      onClick={() => setShowManualPicker(true)}
-                      className="w-full py-4 flex items-center gap-4 text-left hover:bg-muted/50 transition-colors active:bg-muted"
-                    >
-                      <div className="w-10 h-10 rounded-full bg-emerald-500 flex items-center justify-center text-white shrink-0">
-                        <Trophy className="h-5 w-5" />
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="font-semibold text-foreground">Pick Manually</p>
-                        <p className="text-sm text-muted-foreground">Select a frat for each tier position</p>
-                      </div>
-                      <ChevronRight className="h-5 w-5 text-muted-foreground shrink-0" />
-                    </button>
-                    
-                    {/* Past Manual Choices */}
-                    {savedManualRankings.slice(0, 3).map((saved: { id: string; date: string; ranking: { tier: string; fratName: string }[] }) => (
-                      <div key={saved.id} className="py-3 flex items-center gap-3">
-                        <div className="w-8 h-8 rounded-full bg-emerald-500/10 flex items-center justify-center shrink-0">
-                          <Trophy className="h-4 w-4 text-emerald-500" />
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <p className="text-sm font-medium text-foreground leading-snug">
-                            {saved.ranking.slice(0, 3).map(r => r.fratName).join(' → ')}...
-                          </p>
-                          <p className="text-xs text-muted-foreground">{format(new Date(saved.date), 'MMM d, h:mm a')}</p>
-                        </div>
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          className="shrink-0 text-emerald-600 hover:text-emerald-700 hover:bg-emerald-500/10"
-                          onClick={() => {
-                            const fullRanking: Record<string, Fraternity | null> = {
-                              'Upper Touse': null, 'Touse': null, 'Lower Touse': null,
-                              'Upper Mouse': null, 'Mouse 1': null, 'Mouse 2': null, 'Lower Mouse': null,
-                              'Upper Bouse': null, 'Bouse': null, 'Lower Bouse': null,
-                            };
-                            saved.ranking.forEach((r: { tier: string; fratName: string }) => {
-                              const frat = fraternities.find(f => f.name === r.fratName);
-                              if (frat && r.tier in fullRanking) {
-                                fullRanking[r.tier] = frat;
-                              }
-                            });
-                            setFratRanking(fullRanking);
-                            setShowFratRankingPicker(false);
-                            setShowChatComposer(true);
-                          }}
-                        >
-                          <Send className="h-4 w-4" />
-                        </Button>
-                      </div>
-                    ))}
-                  </div>
-                </>
-              );
-            })()
+            </>
           )}
         </SheetContent>
       </Sheet>
 
-      {/* Mention Picker Sheet */}
-      <Sheet open={showMentionPicker} onOpenChange={setShowMentionPicker}>
-        <SheetContent side="bottom" className="rounded-t-3xl max-h-[70vh]" style={{ paddingBottom: 'max(env(safe-area-inset-bottom), 16px)' }}>
-          <SheetHeader className="pb-4 text-left">
-            <SheetTitle>Tag something</SheetTitle>
-          </SheetHeader>
-          <div className="flex gap-2 mb-4">
-            <Button
-              variant={mentionType === 'frat' ? 'default' : 'outline'}
-              onClick={() => setMentionType('frat')}
-              className="rounded-full"
-            >
-              <Trophy className="h-4 w-4 mr-2" />
-              Frats
-            </Button>
-            <Button
-              variant={mentionType === 'party' ? 'default' : 'outline'}
-              onClick={() => setMentionType('party')}
-              className="rounded-full"
-            >
-              <PartyPopper className="h-4 w-4 mr-2" />
-              Parties
-            </Button>
-          </div>
-          <ScrollArea className="h-[calc(70vh-160px)]">
-            <div className="space-y-2">
-              {mentionType === 'frat' && fraternities.map((frat) => (
-                <button
-                  key={frat.id}
-                  onClick={() => {
-                    setSelectedMention({ type: 'frat', id: frat.id, name: frat.name });
-                    setShowMentionPicker(false);
-                  }}
-                  className="w-full p-4 rounded-xl bg-muted/50 hover:bg-muted text-left transition-all active:scale-[0.98]"
-                >
-                  <p className="font-semibold">{frat.name}</p>
-                </button>
-              ))}
-              {mentionType === 'party' && (() => {
-                const now = new Date();
-                const upcomingParties = parties
-                  .filter(p => new Date(p.starts_at) >= now)
-                  .sort((a, b) => new Date(a.starts_at).getTime() - new Date(b.starts_at).getTime())
-                  .slice(0, 5);
-                const pastParties = parties
-                  .filter(p => new Date(p.starts_at) < now)
-                  .sort((a, b) => new Date(b.starts_at).getTime() - new Date(a.starts_at).getTime())
-                  .slice(0, 5);
-                
-                return (
-                  <>
-                    {upcomingParties.length > 0 && (
-                      <>
-                        <p className="text-sm font-medium text-muted-foreground px-1">Upcoming Parties</p>
-                        {upcomingParties.map((party) => (
-                          <button
-                            key={party.id}
-                            onClick={() => {
-                              setSelectedMention({ type: 'party', id: party.id, name: party.title });
-                              setShowMentionPicker(false);
-                            }}
-                            className="w-full p-4 rounded-xl bg-muted/50 hover:bg-muted text-left transition-all active:scale-[0.98]"
-                          >
-                            <p className="font-semibold">{party.title}</p>
-                            <p className="text-sm text-muted-foreground">{format(new Date(party.starts_at), 'MMM d, h:mm a')}</p>
-                          </button>
-                        ))}
-                      </>
-                    )}
-                    {pastParties.length > 0 && (
-                      <>
-                        <p className="text-sm font-medium text-muted-foreground px-1 mt-2">Past Parties</p>
-                        {pastParties.map((party) => (
-                          <button
-                            key={party.id}
-                            onClick={() => {
-                              setSelectedMention({ type: 'party', id: party.id, name: party.title });
-                              setShowMentionPicker(false);
-                            }}
-                            className="w-full p-4 rounded-xl bg-muted/50 hover:bg-muted text-left transition-all active:scale-[0.98]"
-                          >
-                            <p className="font-semibold">{party.title}</p>
-                            <p className="text-sm text-muted-foreground">{format(new Date(party.starts_at), 'MMM d, h:mm a')}</p>
-                          </button>
-                        ))}
-                      </>
-                    )}
-                  </>
-                );
-              })()}
-            </div>
-          </ScrollArea>
-        </SheetContent>
-      </Sheet>
-
-      {/* Comments Sheet */}
-      <Sheet open={!!commentsSheetItem} onOpenChange={(open) => {
-        if (!open) {
-          setCommentsSheetItem(null);
-          setReplyText('');
-        }
-      }}>
-        <SheetContent side="bottom" className="rounded-t-3xl max-h-[75vh]" style={{ paddingBottom: 'max(env(safe-area-inset-bottom), 16px)' }}>
-          <SheetHeader className="pb-4 shrink-0 text-left">
-            <SheetTitle className="flex items-center gap-2">
-              <MessageCircle className="h-5 w-5" />
-              Comments
-              {commentsSheetItem?.replies && commentsSheetItem.replies.length > 0 && (
-                <Badge variant="secondary">{commentsSheetItem.replies.length}</Badge>
-              )}
-            </SheetTitle>
-          </SheetHeader>
-          
-          {/* Original message preview */}
-          {commentsSheetItem && (
-            <div className="px-4 py-3 rounded-xl bg-muted/50 border mb-4 shrink-0">
-              <p className="text-sm text-muted-foreground mb-1">
-                {formatDistanceToNow(new Date(commentsSheetItem.created_date), { addSuffix: true })}
-              </p>
-              <p className="text-sm line-clamp-2">{commentsSheetItem.text}</p>
-            </div>
-          )}
-          
-          {/* Comments list */}
-          <ScrollArea className="h-[calc(75vh-280px)] -mx-6 px-6">
-            <div className="space-y-3 pb-4">
-              {commentsSheetItem?.replies && commentsSheetItem.replies.length > 0 ? (
-                commentsSheetItem.replies.map((reply) => (
-                  <div key={reply.id} className="p-4 rounded-xl bg-card border">
-                    <div className="flex items-start gap-3">
-                      <Avatar className="h-8 w-8 shrink-0">
-                        <AvatarFallback className="bg-gradient-to-br from-violet-500 to-purple-500 text-white text-xs">
-                          <MessagesSquare className="h-4 w-4" />
-                        </AvatarFallback>
-                      </Avatar>
-                      <div className="flex-1 min-w-0">
-                        <p className="text-xs text-muted-foreground mb-1">
-                          {formatDistanceToNow(new Date(reply.created_date), { addSuffix: true })}
-                        </p>
-                        <p className="text-sm">{reply.text}</p>
-                      </div>
-                    </div>
-                  </div>
-                ))
-              ) : (
-                <div className="text-center py-8">
-                  <div className="w-12 h-12 mx-auto rounded-full bg-muted flex items-center justify-center mb-3">
-                    <MessageCircle className="h-6 w-6 text-muted-foreground" />
-                  </div>
-                  <p className="text-sm text-muted-foreground">No comments yet</p>
-                  <p className="text-xs text-muted-foreground mt-1">Be the first to comment!</p>
-                </div>
-              )}
-            </div>
-          </ScrollArea>
-          
-          {/* Reply input */}
-          <div className="pt-4 border-t shrink-0 flex gap-2">
-            <Textarea
-              value={replyText}
-              onChange={(e) => setReplyText(e.target.value)}
-              placeholder="Write a comment..."
-              className="min-h-[50px] max-h-[100px] text-base rounded-xl resize-none flex-1"
-            />
-            <Button
-              onClick={async () => {
-                if (commentsSheetItem) {
-                  await handleChatReply(commentsSheetItem.id);
-                  const updatedMessage = chatMessages.find(m => m.id === commentsSheetItem.id);
-                  if (updatedMessage) {
-                    setCommentsSheetItem(updatedMessage);
-                  }
-                }
-              }}
-              disabled={submittingReply || !replyText.trim()}
-              className="h-auto rounded-xl bg-gradient-to-r from-violet-500 to-purple-500 px-4"
-            >
-              {submittingReply ? (
-                <Loader2 className="h-5 w-5 animate-spin" />
-              ) : (
-                <Send className="h-5 w-5" />
-              )}
-            </Button>
-          </div>
-        </SheetContent>
-      </Sheet>
+      {/* Floating Action Button */}
+      <button
+        onClick={() => document.querySelector<HTMLInputElement>('input[placeholder="Say something..."]')?.focus()}
+        className="fixed bottom-24 right-4 z-50 px-5 py-3 rounded-full bg-foreground text-background shadow-lg active:scale-95 transition-transform hover:shadow-xl font-bold text-sm"
+        style={{ marginBottom: 'env(safe-area-inset-bottom)' }}
+      >
+        Say something
+      </button>
     </div>
   );
 }
