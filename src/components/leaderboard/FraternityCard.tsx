@@ -95,9 +95,9 @@ export default function FraternityCard({ fraternity, rank, onRate, filter = 'ove
 
           {/* Content */}
           <div className="flex-1 min-w-0">
-            <h3 className="font-semibold text-base leading-tight truncate">{fraternity.name}</h3>
+            <h3 className="font-semibold text-base leading-tight truncate">{fraternity.chapter}</h3>
             <div className="flex items-center gap-2 mt-0.5">
-              <span className="text-sm text-muted-foreground truncate">{fraternity.chapter}</span>
+              <span className="text-sm text-muted-foreground truncate">{fraternity.name}</span>
               {filter !== 'trending' && <TrendIndicator momentum={trending} compact />}
             </div>
           </div>

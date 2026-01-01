@@ -146,7 +146,7 @@ export default function PartyRatingForm({ party, fraternity, onClose, onSubmit }
             <h2 className="text-2xl font-bold text-foreground">{party.title}</h2>
             {fraternity && (
               <p className="text-sm text-muted-foreground mt-1">
-                {fraternity.name} • {fraternity.chapter}
+                {fraternity.chapter} • {fraternity.name}
               </p>
             )}
           </DrawerTitle>
