@@ -56,9 +56,10 @@ export default function YourListsIntro({
   const [neverShowAgain, setNeverShowAgain] = useState(false);
   const [step, setStep] = useState<IntroStep>('main');
 
-  const fratUnlocked = ratedFratCount >= totalFratCount && totalFratCount > 0;
+  const FRAT_UNLOCK_THRESHOLD = 5;
+  const fratUnlocked = ratedFratCount >= FRAT_UNLOCK_THRESHOLD;
   const partyUnlocked = ratedPartyCount >= 3;
-  const fratsRemaining = totalFratCount - ratedFratCount;
+  const fratsRemaining = Math.max(0, FRAT_UNLOCK_THRESHOLD - ratedFratCount);
   const partiesRemaining = Math.max(0, 3 - ratedPartyCount);
 
   const handleSelectFrat = (frat: Fraternity) => {
@@ -123,7 +124,7 @@ export default function YourListsIntro({
                   <p className="text-sm text-muted-foreground">
                     {fratUnlocked 
                       ? `${ratedFratCount} rated` 
-                      : `Rate all ${totalFratCount} to unlock`}
+                      : `Rate 5 frats to unlock`}
                   </p>
                 </div>
                 {fratUnlocked ? (

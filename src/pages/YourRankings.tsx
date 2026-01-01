@@ -303,9 +303,10 @@ export default function YourRankings() {
     setSelectedFrat(null);
     await loadData();
 
-    // Check if user just completed all frat ratings
+    // Check if user just completed 5 frat ratings (unlock threshold)
+    const FRAT_UNLOCK_THRESHOLD = 5;
     const newRatedCount = isNewRating ? ratedFratCount + 1 : ratedFratCount;
-    if (isNewRating && newRatedCount >= allFraternities.length && !completionPostedRef.current) {
+    if (isNewRating && newRatedCount >= FRAT_UNLOCK_THRESHOLD && ratedFratCount < FRAT_UNLOCK_THRESHOLD && !completionPostedRef.current) {
       completionPostedRef.current = true;
       // Show confetti and share popup
       setShowConfetti(true);
@@ -459,7 +460,8 @@ export default function YourRankings() {
   }
 
   // Check if user has completed all requirements
-  const isFullyUnlocked = ratedFratCount >= allFraternities.length && ratedPartyCount >= 3;
+  const FRAT_UNLOCK_THRESHOLD = 5;
+  const isFullyUnlocked = ratedFratCount >= FRAT_UNLOCK_THRESHOLD && ratedPartyCount >= 3;
 
   return (
     <div className="pb-28">
@@ -533,12 +535,12 @@ export default function YourRankings() {
         {/* Fraternities Tab */}
         {activeTab === 'frats' && (
           <>
-            {ratedFratCount < allFraternities.length ? (
+            {ratedFratCount < 5 ? (
               <div className="py-12 text-center">
                 <Lock className="h-8 w-8 mx-auto text-muted-foreground/50 mb-3" />
                 <p className="font-medium text-muted-foreground">Frat list locked</p>
                 <p className="text-sm text-muted-foreground/70 mt-1">
-                  Rate all {allFraternities.length} fraternities to unlock ({ratedFratCount}/{allFraternities.length})
+                  Rate at least 5 fraternities to unlock ({ratedFratCount}/5)
                 </p>
                 <Button 
                   onClick={() => setShowFratPicker(true)} 
