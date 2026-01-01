@@ -993,23 +993,96 @@ export default function Activity() {
             )}
           </div>
           
-          {/* Build sorted options list */}
+          {/* Featured Party Cards - Show if there are parties tonight */}
+          {tonightsParties.length > 0 && (
+            <div className="mb-4 space-y-3">
+              <p className="text-xs font-semibold text-primary uppercase tracking-wide flex items-center gap-2">
+                <Sparkles className="h-3 w-3" />
+                Tonight's Events
+              </p>
+              {tonightsParties.slice(0, 2).map((party) => {
+                const frat = fraternities.find(f => f.id === party.fraternity_id);
+                const partyVotes = moveVotes[party.id] || 0;
+                const percentage = totalMoveVotes > 0 ? (partyVotes / totalMoveVotes) * 100 : 0;
+                const isSelected = userMoveVote === party.id;
+                const partyTime = format(new Date(party.starts_at), 'h:mm a');
+                
+                return (
+                  <button
+                    key={party.id}
+                    onClick={() => handleMoveVote(party.id)}
+                    className={cn(
+                      "w-full rounded-2xl overflow-hidden transition-all active:scale-[0.98]",
+                      isSelected 
+                        ? "ring-2 ring-primary ring-offset-2 ring-offset-card" 
+                        : "hover:ring-1 hover:ring-primary/50"
+                    )}
+                  >
+                    <div className="relative">
+                      {/* Party Cover or Gradient */}
+                      <div className="h-20 bg-gradient-to-br from-primary via-pink-500 to-amber-500 relative overflow-hidden">
+                        {party.display_photo_url && (
+                          <img 
+                            src={party.display_photo_url} 
+                            alt={party.title}
+                            className="absolute inset-0 w-full h-full object-cover"
+                          />
+                        )}
+                        <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/20 to-transparent" />
+                        
+                        {/* Vote percentage bar */}
+                        {userMoveVote && percentage > 0 && (
+                          <div 
+                            className="absolute bottom-0 left-0 h-1 bg-white/80 transition-all duration-500"
+                            style={{ width: `${percentage}%` }}
+                          />
+                        )}
+                        
+                        {/* Selected checkmark */}
+                        {isSelected && (
+                          <div className="absolute top-2 right-2 w-6 h-6 rounded-full bg-green-500 flex items-center justify-center text-white shadow-lg">
+                            <Check className="h-3.5 w-3.5" />
+                          </div>
+                        )}
+                        
+                        {/* Party details overlay */}
+                        <div className="absolute bottom-0 left-0 right-0 p-3 text-white text-left">
+                          <p className="font-bold text-base truncate">{party.title}</p>
+                          <div className="flex items-center gap-2 text-xs text-white/80">
+                            <span className="font-medium">{frat?.chapter}</span>
+                            <span>·</span>
+                            <span>{partyTime}</span>
+                            {party.venue && (
+                              <>
+                                <span>·</span>
+                                <span className="truncate">{party.venue}</span>
+                              </>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                      
+                      {/* Vote stats bar */}
+                      {userMoveVote && (
+                        <div className="px-3 py-2 bg-muted/50 flex items-center justify-between">
+                          <div className="flex items-center gap-2">
+                            <PartyPopper className="h-4 w-4 text-primary" />
+                            <span className="text-sm font-medium">{partyVotes} {partyVotes === 1 ? 'vote' : 'votes'}</span>
+                          </div>
+                          <span className="text-sm font-bold text-primary">{percentage.toFixed(0)}%</span>
+                        </div>
+                      )}
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+          )}
+          
+          {/* Build sorted options list - exclude parties if shown above */}
           {(() => {
             // Combine all options with their vote counts
             const allOptions: { id: string; type: 'party' | 'default' | 'custom'; label: string; subLabel?: string; votes: number; icon?: any; party?: typeof tonightsParties[0] }[] = [];
-            
-            // Add tonight's parties
-            tonightsParties.forEach(party => {
-              const frat = fraternities.find(f => f.id === party.fraternity_id);
-              allOptions.push({
-                id: party.id,
-                type: 'party',
-                label: party.title,
-                subLabel: `${frat?.chapter} · ${format(new Date(party.starts_at), 'h:mm a')}`,
-                votes: moveVotes[party.id] || 0,
-                party
-              });
-            });
             
             // Add default options
             defaultMoveOptions.forEach(option => {
@@ -1037,7 +1110,7 @@ export default function Activity() {
             
             // Get top 3
             const top3 = allOptions.slice(0, 3);
-            const hasMore = allOptions.length > 3;
+            const hasMore = allOptions.length > 3 || tonightsParties.length > 2;
             
             const renderOption = (option: typeof allOptions[0], index: number) => {
               const percentage = totalMoveVotes > 0 ? (option.votes / totalMoveVotes) * 100 : 0;
@@ -1097,7 +1170,7 @@ export default function Activity() {
                 >
                   <Plus className="h-4 w-4" />
                   <span className="font-medium text-sm">
-                    {hasMore ? `View all options (${allOptions.length})` : 'Something else'}
+                    {hasMore ? `View all options` : 'Something else'}
                   </span>
                 </button>
               </div>
