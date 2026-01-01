@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useSearchParams, Link } from 'react-router-dom';
+import { useParams, Link } from 'react-router-dom';
 import { ArrowLeft, Calendar, Star, PartyPopper, Users, Shield, Heart, MessageCircle, Trophy, Zap } from 'lucide-react';
 import { base44, type Fraternity as FraternityType, type Party, type PartyRating, type ReputationRating } from '@/api/base44Client';
 import { recordUserAction } from '@/utils/streak';
@@ -24,8 +24,7 @@ import {
 } from '@/utils/scoring';
 
 export default function FraternityPage() {
-  const [searchParams] = useSearchParams();
-  const fratId = searchParams.get('id');
+  const { id: fratId } = useParams<{ id: string }>();
   
   const [fraternity, setFraternity] = useState<FraternityType | null>(null);
   const [parties, setParties] = useState<Party[]>([]);
