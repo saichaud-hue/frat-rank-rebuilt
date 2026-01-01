@@ -29,12 +29,12 @@ import {
   Radio,
   Bell,
   CheckCircle,
-  Book,
   Moon,
   Beer,
   Coffee,
   Swords,
-  BarChart3
+  BarChart3,
+  ArrowLeft
 } from 'lucide-react';
 import FratBattleGame from '@/components/activity/FratBattleGame';
 import RankingPostCard, { parseRankingFromText } from '@/components/activity/RankingPostCard';
@@ -120,6 +120,7 @@ export default function Activity() {
   
   // Chat composer
   const [showChatComposer, setShowChatComposer] = useState(false);
+  const [showFeedView, setShowFeedView] = useState(false);
   const [chatText, setChatText] = useState('');
   const [submittingChat, setSubmittingChat] = useState(false);
   const [showMentionPicker, setShowMentionPicker] = useState(false);
@@ -1271,23 +1272,26 @@ export default function Activity() {
 
       {/* Two-Column Feed Layout */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        {/* Left Column - Posts */}
+        {/* Left Column - Posts (Clickable to open full feed) */}
         <div className="space-y-3">
-          <h3 className="font-semibold text-sm">Posts</h3>
-          
-          {chatMessages.length === 0 ? (
-            <div className="text-center py-8 rounded-2xl border border-dashed border-muted-foreground/30">
-              <Sparkles className="h-8 w-8 mx-auto text-muted-foreground mb-2" />
-              <p className="text-sm text-muted-foreground">No posts yet</p>
-              <Button 
-                onClick={() => setShowChatComposer(true)}
-                size="sm"
-                className="mt-3 rounded-full"
-              >
-                Be the first
-              </Button>
+          <button 
+            onClick={() => setShowFeedView(true)}
+            className="w-full text-left group"
+          >
+            <div className="flex items-center justify-between mb-2">
+              <h3 className="font-semibold text-sm group-hover:text-primary transition-colors">Posts</h3>
+              <ChevronRight className="h-4 w-4 text-muted-foreground group-hover:text-primary group-hover:translate-x-0.5 transition-all" />
             </div>
-          ) : (
+            
+            {chatMessages.length === 0 ? (
+              <div className="text-center py-8 rounded-2xl border border-dashed border-muted-foreground/30 group-hover:border-primary/50 transition-colors">
+                <Sparkles className="h-8 w-8 mx-auto text-muted-foreground mb-2" />
+                <p className="text-sm text-muted-foreground">No posts yet</p>
+                <span className="inline-block mt-3 px-4 py-2 rounded-full gradient-primary text-white text-sm font-medium">
+                  Be the first
+                </span>
+              </div>
+            ) : (
             chatMessages.map((chatItem) => {
               const netVotes = chatItem.upvotes - chatItem.downvotes;
               const isHot = netVotes >= 5;
@@ -1406,6 +1410,7 @@ export default function Activity() {
               );
             })
           )}
+          </button>
         </div>
         
         {/* Right Column - Activity (Ratings & Comments) */}
@@ -2326,6 +2331,186 @@ export default function Activity() {
               )}
             </Button>
           </div>
+        </SheetContent>
+      </Sheet>
+
+      {/* Full Feed View Sheet */}
+      <Sheet open={showFeedView} onOpenChange={setShowFeedView}>
+        <SheetContent side="bottom" className="h-[95vh] rounded-t-3xl flex flex-col p-0" style={{ paddingBottom: 'max(env(safe-area-inset-bottom), 0px)' }}>
+          {/* Header */}
+          <div className="sticky top-0 z-10 bg-background border-b px-4 py-3 flex items-center justify-between shrink-0">
+            <div className="flex items-center gap-3">
+              <button 
+                onClick={() => setShowFeedView(false)}
+                className="p-2 -ml-2 rounded-full hover:bg-muted transition-colors"
+              >
+                <ArrowLeft className="h-5 w-5" />
+              </button>
+              <h2 className="text-lg font-bold">Feed</h2>
+            </div>
+            <Button 
+              onClick={() => { setShowFeedView(false); setShowChatComposer(true); }}
+              size="sm"
+              className="rounded-full gradient-primary"
+            >
+              <Plus className="h-4 w-4 mr-1" />
+              Post
+            </Button>
+          </div>
+          
+          {/* Feed Content */}
+          <ScrollArea className="flex-1">
+            <div className="p-4 space-y-3 pb-20">
+              {chatMessages.length === 0 ? (
+                <div className="text-center py-16">
+                  <div className="w-16 h-16 mx-auto rounded-full bg-muted flex items-center justify-center mb-4">
+                    <Sparkles className="h-8 w-8 text-muted-foreground" />
+                  </div>
+                  <p className="text-lg font-semibold mb-1">No posts yet</p>
+                  <p className="text-sm text-muted-foreground mb-4">Be the first to share something!</p>
+                  <Button 
+                    onClick={() => { setShowFeedView(false); setShowChatComposer(true); }}
+                    className="rounded-full gradient-primary"
+                  >
+                    <Plus className="h-4 w-4 mr-2" />
+                    Create Post
+                  </Button>
+                </div>
+              ) : (
+                chatMessages.map((chatItem) => {
+                  const netVotes = chatItem.upvotes - chatItem.downvotes;
+                  const isHot = netVotes >= 5;
+                  
+                  return (
+                    <div 
+                      key={`feed-${chatItem.id}`} 
+                      className={cn(
+                        "rounded-2xl bg-card p-4 border transition-all",
+                        isHot && "border-orange-500/50 shadow-lg shadow-orange-500/10"
+                      )}
+                    >
+                      <div className="flex items-start gap-3">
+                        <Avatar className={cn(
+                          "h-10 w-10 ring-2 shrink-0",
+                          isHot ? "ring-orange-500" : "ring-border"
+                        )}>
+                          <AvatarFallback className={cn(
+                            "text-white text-sm",
+                            isHot 
+                              ? "bg-gradient-to-br from-orange-500 to-red-500" 
+                              : "gradient-primary"
+                          )}>
+                            {isHot ? <Flame className="h-4 w-4" /> : <MessagesSquare className="h-4 w-4" />}
+                          </AvatarFallback>
+                        </Avatar>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2 mb-2">
+                            <span className="text-xs text-muted-foreground">
+                              {formatDistanceToNow(new Date(chatItem.created_date), { addSuffix: true })}
+                            </span>
+                            {isHot && (
+                              <Badge className="bg-orange-500 text-white text-[10px] px-1.5 py-0">
+                                <Flame className="h-2.5 w-2.5 mr-0.5" />
+                                Hot
+                              </Badge>
+                            )}
+                          </div>
+                          
+                          {/* Post content */}
+                          {(() => {
+                            const parsedPoll = parsePollFromText(chatItem.text);
+                            if (parsedPoll) {
+                              return (
+                                <PollCard
+                                  question={parsedPoll.question}
+                                  options={parsedPoll.options}
+                                  userVote={getUserPollVote(chatItem.id)}
+                                  voteCounts={getPollVoteCounts(chatItem.id)}
+                                  onVote={(optionIndex) => handlePollVote(chatItem.id, optionIndex)}
+                                />
+                              );
+                            }
+                            
+                            const parsedRanking = parseRankingFromText(chatItem.text);
+                            if (parsedRanking && parsedRanking.rankings.length >= 3) {
+                              return (
+                                <div className="mb-3">
+                                  <RankingPostCard rankings={parsedRanking.rankings} comment={parsedRanking.comment} />
+                                </div>
+                              );
+                            }
+                            return <p className="text-sm leading-relaxed mb-3">{chatItem.text}</p>;
+                          })()}
+                          
+                          {(chatItem.mentionedFraternity || chatItem.mentionedParty) && (
+                            <Link 
+                              to={chatItem.mentionedFraternity 
+                                ? createPageUrl(`Fraternity?id=${chatItem.mentionedFraternity.id}`)
+                                : createPageUrl(`Party?id=${chatItem.mentionedParty?.id}`)
+                              }
+                              onClick={() => setShowFeedView(false)}
+                              className="inline-flex items-center gap-1 px-3 py-1.5 rounded-full bg-primary/10 text-primary text-xs font-medium hover:bg-primary/20 transition-all mb-3"
+                            >
+                              <AtSign className="h-3 w-3" />
+                              {chatItem.mentionedFraternity?.name || chatItem.mentionedParty?.title}
+                            </Link>
+                          )}
+                          
+                          {/* Vote actions */}
+                          <div className="flex items-center gap-2 pt-2 border-t border-border/50">
+                            <button
+                              onClick={() => handleChatVote(chatItem, 1)}
+                              className={cn(
+                                "flex items-center gap-1.5 px-3 py-2 rounded-full text-sm font-medium transition-all active:scale-95",
+                                chatItem.userVote === 1 
+                                  ? 'bg-emerald-500 text-white' 
+                                  : 'bg-muted hover:bg-emerald-500/20 text-muted-foreground hover:text-emerald-500'
+                              )}
+                            >
+                              <ThumbsUp className="h-4 w-4" />
+                              {chatItem.upvotes > 0 && <span>{chatItem.upvotes}</span>}
+                            </button>
+                            <button
+                              onClick={() => handleChatVote(chatItem, -1)}
+                              className={cn(
+                                "flex items-center gap-1.5 px-3 py-2 rounded-full text-sm font-medium transition-all active:scale-95",
+                                chatItem.userVote === -1 
+                                  ? 'bg-red-500 text-white' 
+                                  : 'bg-muted hover:bg-red-500/20 text-muted-foreground hover:text-red-500'
+                              )}
+                            >
+                              <ThumbsDown className="h-4 w-4" />
+                              {chatItem.downvotes > 0 && <span>{chatItem.downvotes}</span>}
+                            </button>
+                            <button
+                              onClick={() => { setShowFeedView(false); setCommentsSheetItem(chatItem); }}
+                              className="flex items-center gap-1.5 px-3 py-2 rounded-full text-sm font-medium bg-muted hover:bg-primary/20 text-muted-foreground hover:text-primary transition-all active:scale-95 ml-auto"
+                            >
+                              <MessageCircle className="h-4 w-4" />
+                              {chatItem.replies && chatItem.replies.length > 0 && <span>{chatItem.replies.length}</span>}
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })
+              )}
+            </div>
+          </ScrollArea>
+          
+          {/* Floating compose button */}
+          {chatMessages.length > 0 && (
+            <div className="absolute bottom-6 right-6">
+              <Button
+                onClick={() => { setShowFeedView(false); setShowChatComposer(true); }}
+                size="lg"
+                className="rounded-full w-14 h-14 gradient-primary shadow-lg shadow-primary/30"
+              >
+                <Plus className="h-6 w-6" />
+              </Button>
+            </div>
+          )}
         </SheetContent>
       </Sheet>
     </div>
