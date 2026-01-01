@@ -912,7 +912,7 @@ export default function Activity() {
                     <span className="text-[10px] font-bold uppercase tracking-wide">LIVE</span>
                   </div>
                   <div className="absolute bottom-0 inset-x-0 p-1.5 bg-black/60 backdrop-blur-sm">
-                    <p className="text-[10px] font-semibold text-white text-center truncate">{frat?.name || 'Party'}</p>
+                    <p className="text-[10px] font-semibold text-white text-center truncate">{frat?.chapter || 'Party'}</p>
                   </div>
                 </div>
               </Link>
@@ -959,7 +959,7 @@ export default function Activity() {
                   )}
                   {/* Frat name at bottom */}
                   <div className="absolute bottom-0 inset-x-0 p-1.5">
-                    <p className="text-[10px] font-semibold text-white text-center truncate">{frat?.name || party.title}</p>
+                    <p className="text-[10px] font-semibold text-white text-center truncate">{frat?.chapter || party.title}</p>
                   </div>
                 </div>
               </Link>
@@ -1005,7 +1005,7 @@ export default function Activity() {
                 id: party.id,
                 type: 'party',
                 label: party.title,
-                subLabel: `${frat?.name} · ${format(new Date(party.starts_at), 'h:mm a')}`,
+                subLabel: `${frat?.chapter} · ${format(new Date(party.starts_at), 'h:mm a')}`,
                 votes: moveVotes[party.id] || 0,
                 party
               });
@@ -1150,7 +1150,7 @@ export default function Activity() {
                       </div>
                       <div className="flex-1 min-w-0">
                         <p className="font-semibold text-sm truncate">{party.title}</p>
-                        <p className="text-xs text-muted-foreground truncate">{frat?.name} · {format(new Date(party.starts_at), 'h:mm a')}</p>
+                        <p className="text-xs text-muted-foreground truncate">{frat?.chapter} · {format(new Date(party.starts_at), 'h:mm a')}</p>
                       </div>
                       {userMoveVote && (
                         <div className="flex items-center gap-2">

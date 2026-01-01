@@ -81,7 +81,7 @@ export default function Parties() {
 
   const getFraternityName = (id: string) => {
     const frat = fraternities.find(f => f.id === id);
-    return frat ? frat.name : 'Unknown';
+    return frat ? frat.chapter : 'Unknown';
   };
 
   const getPartyStatus = (party: Party): 'live' | 'upcoming' | 'completed' => {
