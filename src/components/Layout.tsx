@@ -172,23 +172,23 @@ export default function Layout({ children }: LayoutProps) {
             {nextParty && (
               <Link 
                 to={`/Party?id=${nextParty.id}`}
-                className="flex-1 min-w-0 flex items-center justify-center gap-2 tap-bounce"
+                className="flex items-center gap-2 tap-bounce"
               >
                 <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-white/15 backdrop-blur-sm">
-                  <span className="text-[10px] text-white/80 font-bold uppercase tracking-wider">Next</span>
-                  <span className="text-sm font-bold text-white truncate max-w-[100px]">{nextParty.title}</span>
+                  <span className="px-1.5 py-0.5 rounded bg-white/20 text-[10px] text-white font-bold uppercase tracking-wider">Next</span>
+                  <span className="text-sm font-bold text-white truncate max-w-[80px]">{nextParty.title}</span>
                   
                   {/* Countdown - bold numbers */}
                   <div className="flex items-center gap-0.5 text-white font-display">
                     {countdown.days > 0 && (
                       <>
-                        <span className="text-sm font-black tabular-nums animate-countdown">{countdown.days}</span>
-                        <span className="text-[10px] opacity-70 mr-1">d</span>
+                        <span className="text-sm font-black tabular-nums">{countdown.days}</span>
+                        <span className="text-[10px] opacity-70 mr-0.5">d</span>
                       </>
                     )}
-                    <span className="text-sm font-black tabular-nums animate-countdown">{countdown.hours}</span>
-                    <span className="text-[10px] opacity-70 mr-1">h</span>
-                    <span className="text-sm font-black tabular-nums animate-countdown">{countdown.minutes}</span>
+                    <span className="text-sm font-black tabular-nums">{countdown.hours}</span>
+                    <span className="text-[10px] opacity-70 mr-0.5">h</span>
+                    <span className="text-sm font-black tabular-nums">{countdown.minutes}</span>
                     <span className="text-[10px] opacity-70">m</span>
                   </div>
                 </div>
