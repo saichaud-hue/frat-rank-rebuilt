@@ -224,88 +224,93 @@ export default function PhotoBulletin({ partyId, partyStatus = 'completed' }: Ph
         ) : (
           <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
             {photos.map((photo) => (
-              <div 
-                key={photo.id}
-                className="relative aspect-square rounded-lg overflow-hidden group"
-              >
-                <img 
-                  src={photo.url} 
-                  alt={photo.caption || 'Party photo'}
-                  className="w-full h-full object-cover cursor-pointer transition-transform group-hover:scale-105"
-                  onClick={() => setViewerPhoto(photo)}
-                />
-                
-                {/* Overlay with view icon */}
+              <div key={photo.id} className="space-y-1">
                 <div 
-                  className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors pointer-events-none"
-                />
+                  className="relative aspect-square rounded-lg overflow-hidden group"
+                >
+                  <img 
+                    src={photo.url} 
+                    alt={photo.caption || 'Party photo'}
+                    className="w-full h-full object-cover cursor-pointer transition-transform group-hover:scale-105"
+                    onClick={() => setViewerPhoto(photo)}
+                  />
+                  
+                  {/* Overlay with view icon */}
+                  <div 
+                    className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors pointer-events-none"
+                  />
 
-                {/* Delete button - only for own photos */}
-                {canDelete(photo) && (
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="absolute top-2 right-2 h-7 w-7 bg-black/50 text-white hover:bg-red-500/80 opacity-0 group-hover:opacity-100 transition-opacity"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      handleDelete(photo);
-                    }}
-                    disabled={deletingPhotoId === photo.id}
-                  >
-                    {deletingPhotoId === photo.id ? (
-                      <Loader2 className="h-4 w-4 animate-spin" />
-                    ) : (
-                      <Trash2 className="h-4 w-4" />
-                    )}
-                  </Button>
-                )}
-                
-                {/* Vote controls at bottom */}
-                <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 to-transparent p-2">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-1">
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className={`h-7 px-2 text-white hover:bg-white/20 ${
-                          photo.userVote === 1 ? 'bg-green-500/40' : ''
-                        }`}
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleVote(photo, 1);
-                        }}
-                        disabled={votingPhotoId === photo.id || !currentUserId}
-                      >
-                        <ThumbsUp className={`h-4 w-4 ${photo.userVote === 1 ? 'fill-current' : ''}`} />
-                        <span className="ml-1 text-xs">{photo.likes || 0}</span>
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className={`h-7 px-2 text-white hover:bg-white/20 ${
-                          photo.userVote === -1 ? 'bg-red-500/40' : ''
-                        }`}
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleVote(photo, -1);
-                        }}
-                        disabled={votingPhotoId === photo.id || !currentUserId}
-                      >
-                        <ThumbsDown className={`h-4 w-4 ${photo.userVote === -1 ? 'fill-current' : ''}`} />
-                        <span className="ml-1 text-xs">{photo.dislikes || 0}</span>
-                      </Button>
+                  {/* Delete button - only for own photos */}
+                  {canDelete(photo) && (
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="absolute top-2 right-2 h-7 w-7 bg-black/50 text-white hover:bg-red-500/80 opacity-0 group-hover:opacity-100 transition-opacity"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleDelete(photo);
+                      }}
+                      disabled={deletingPhotoId === photo.id}
+                    >
+                      {deletingPhotoId === photo.id ? (
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                      ) : (
+                        <Trash2 className="h-4 w-4" />
+                      )}
+                    </Button>
+                  )}
+                  
+                  {/* Vote controls at bottom */}
+                  <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 to-transparent p-2">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-1">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className={`h-7 px-2 text-white hover:bg-white/20 ${
+                            photo.userVote === 1 ? 'bg-green-500/40' : ''
+                          }`}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleVote(photo, 1);
+                          }}
+                          disabled={votingPhotoId === photo.id || !currentUserId}
+                        >
+                          <ThumbsUp className={`h-4 w-4 ${photo.userVote === 1 ? 'fill-current' : ''}`} />
+                          <span className="ml-1 text-xs">{photo.likes || 0}</span>
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className={`h-7 px-2 text-white hover:bg-white/20 ${
+                            photo.userVote === -1 ? 'bg-red-500/40' : ''
+                          }`}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleVote(photo, -1);
+                          }}
+                          disabled={votingPhotoId === photo.id || !currentUserId}
+                        >
+                          <ThumbsDown className={`h-4 w-4 ${photo.userVote === -1 ? 'fill-current' : ''}`} />
+                          <span className="ml-1 text-xs">{photo.dislikes || 0}</span>
+                        </Button>
+                      </div>
+                      <span className={`text-xs font-medium px-2 py-0.5 rounded ${
+                        getNetScore(photo) > 0 
+                          ? 'bg-green-500/40 text-green-200' 
+                          : getNetScore(photo) < 0 
+                            ? 'bg-red-500/40 text-red-200' 
+                            : 'bg-white/20 text-white'
+                      }`}>
+                        {getNetScore(photo) > 0 ? '+' : ''}{getNetScore(photo)}
+                      </span>
                     </div>
-                    <span className={`text-xs font-medium px-2 py-0.5 rounded ${
-                      getNetScore(photo) > 0 
-                        ? 'bg-green-500/40 text-green-200' 
-                        : getNetScore(photo) < 0 
-                          ? 'bg-red-500/40 text-red-200' 
-                          : 'bg-white/20 text-white'
-                    }`}>
-                      {getNetScore(photo) > 0 ? '+' : ''}{getNetScore(photo)}
-                    </span>
                   </div>
                 </div>
+                {/* Caption below photo */}
+                {photo.caption && (
+                  <p className="text-xs text-muted-foreground px-1 line-clamp-2">{photo.caption}</p>
+                )}
               </div>
             ))}
           </div>
