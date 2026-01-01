@@ -33,7 +33,8 @@ import {
   Moon,
   Beer,
   Coffee,
-  Swords
+  Swords,
+  BarChart3
 } from 'lucide-react';
 import FratBattleGame from '@/components/activity/FratBattleGame';
 import RankingPostCard, { parseRankingFromText } from '@/components/activity/RankingPostCard';
@@ -142,6 +143,11 @@ export default function Activity() {
     'Bouse': null,
     'Lower Bouse': null,
   });
+  
+  // Poll mode
+  const [isPollMode, setIsPollMode] = useState(false);
+  const [pollQuestion, setPollQuestion] = useState('');
+  const [pollOptions, setPollOptions] = useState<string[]>(['', '']);
   
   // Data for mentions
   const [fraternities, setFraternities] = useState<Fraternity[]>([]);
@@ -1496,6 +1502,9 @@ export default function Activity() {
         if (!open) {
           // Reset states when closing
           setChatInputEnabled(false);
+          setIsPollMode(false);
+          setPollQuestion('');
+          setPollOptions(['', '']);
           setFratRanking({
             'Upper Touse': null,
             'Touse': null,
@@ -1513,12 +1522,78 @@ export default function Activity() {
         <SheetContent side="bottom" className="rounded-t-3xl" style={{ paddingBottom: 'max(env(safe-area-inset-bottom), 16px)' }}>
           <SheetHeader className="pb-4 text-left">
             <SheetTitle className="text-lg">
-              {Object.values(fratRanking).some(Boolean) ? "Share Frat Ranking" : "What's on your mind?"}
+              {isPollMode ? "Create a Poll" : Object.values(fratRanking).some(Boolean) ? "Share Frat Ranking" : "What's on your mind?"}
             </SheetTitle>
           </SheetHeader>
           <div className="space-y-4">
+            {/* Poll mode UI */}
+            {isPollMode && (
+              <div className="space-y-3 p-3 rounded-xl bg-blue-500/10 border border-blue-500/20">
+                <div className="flex items-center justify-between mb-2">
+                  <div className="flex items-center gap-2">
+                    <BarChart3 className="h-5 w-5 text-blue-500" />
+                    <p className="font-medium text-sm">Poll</p>
+                  </div>
+                  <button 
+                    onClick={() => {
+                      setIsPollMode(false);
+                      setPollQuestion('');
+                      setPollOptions(['', '']);
+                    }} 
+                    className="p-1 hover:bg-muted rounded-full"
+                  >
+                    <X className="h-4 w-4 text-muted-foreground" />
+                  </button>
+                </div>
+                <Input
+                  value={pollQuestion}
+                  onChange={(e) => setPollQuestion(e.target.value)}
+                  placeholder="Ask a question... (e.g., Which frat is winning rush?)"
+                  className="rounded-xl"
+                />
+                <div className="space-y-2">
+                  {pollOptions.map((option, index) => (
+                    <div key={index} className="flex items-center gap-2">
+                      <Input
+                        value={option}
+                        onChange={(e) => {
+                          const newOptions = [...pollOptions];
+                          newOptions[index] = e.target.value;
+                          setPollOptions(newOptions);
+                        }}
+                        placeholder={`Option ${index + 1}`}
+                        className="rounded-xl flex-1"
+                      />
+                      {pollOptions.length > 2 && (
+                        <button
+                          onClick={() => {
+                            const newOptions = pollOptions.filter((_, i) => i !== index);
+                            setPollOptions(newOptions);
+                          }}
+                          className="p-1 hover:bg-muted rounded-full"
+                        >
+                          <X className="h-4 w-4 text-muted-foreground" />
+                        </button>
+                      )}
+                    </div>
+                  ))}
+                  {pollOptions.length < 4 && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => setPollOptions([...pollOptions, ''])}
+                      className="text-blue-500 hover:text-blue-600"
+                    >
+                      <Plus className="h-4 w-4 mr-1" />
+                      Add option
+                    </Button>
+                  )}
+                </div>
+              </div>
+            )}
+            
             {/* Frat ranking display */}
-            {Object.values(fratRanking).some(Boolean) && (
+            {!isPollMode && Object.values(fratRanking).some(Boolean) && (
               <div className="space-y-2 p-3 rounded-xl bg-amber-500/10 border border-amber-500/20">
                 <div className="flex items-center justify-between mb-2">
                   <div className="flex items-center gap-2">
@@ -1558,20 +1633,22 @@ export default function Activity() {
               </div>
             )}
             
-            <Textarea
-              value={chatText}
-              onChange={(e) => setChatText(e.target.value)}
-              placeholder={Object.values(fratRanking).some(Boolean) ? "Add a comment to your ranking (optional)..." : "Share what's happening..."}
-              className="min-h-[120px] text-base rounded-xl resize-none"
-              readOnly={!chatInputEnabled}
-              onClick={() => {
-                if (!chatInputEnabled) {
-                  setChatInputEnabled(true);
-                }
-              }}
-            />
+            {!isPollMode && (
+              <Textarea
+                value={chatText}
+                onChange={(e) => setChatText(e.target.value)}
+                placeholder={Object.values(fratRanking).some(Boolean) ? "Add a comment to your ranking (optional)..." : "Share what's happening..."}
+                className="min-h-[120px] text-base rounded-xl resize-none"
+                readOnly={!chatInputEnabled}
+                onClick={() => {
+                  if (!chatInputEnabled) {
+                    setChatInputEnabled(true);
+                  }
+                }}
+              />
+            )}
             
-            {selectedMention && !Object.values(fratRanking).some(Boolean) && (
+            {!isPollMode && selectedMention && !Object.values(fratRanking).some(Boolean) && (
               <div className="flex items-center gap-2">
                 <Badge className="flex items-center gap-1 px-3 py-1.5">
                   <AtSign className="h-3 w-3" />
@@ -1584,7 +1661,7 @@ export default function Activity() {
             )}
             
             <div className="flex gap-2 flex-wrap">
-              {!Object.values(fratRanking).some(Boolean) && (
+              {!isPollMode && !Object.values(fratRanking).some(Boolean) && (
                 <>
                   <Button
                     variant="outline"
@@ -1602,12 +1679,59 @@ export default function Activity() {
                     <Trophy className="h-4 w-4 mr-2" />
                     Frat Ranking
                   </Button>
+                  <Button
+                    variant="outline"
+                    onClick={() => setIsPollMode(true)}
+                    className="rounded-xl border-blue-500/50 text-blue-600 hover:bg-blue-500/10"
+                  >
+                    <BarChart3 className="h-4 w-4 mr-2" />
+                    Poll
+                  </Button>
                 </>
               )}
               <Button
                 onClick={async () => {
+                  // If poll mode, post the poll
+                  if (isPollMode) {
+                    const user = await base44.auth.me();
+                    if (!user) {
+                      toast({ title: 'Please sign in to post', variant: 'destructive' });
+                      return;
+                    }
+                    
+                    const validOptions = pollOptions.filter(o => o.trim());
+                    if (!pollQuestion.trim() || validOptions.length < 2) {
+                      toast({ title: 'Please add a question and at least 2 options', variant: 'destructive' });
+                      return;
+                    }
+                    
+                    setSubmittingChat(true);
+                    try {
+                      // Format poll as a special message
+                      const pollMessage = `📊 POLL: ${pollQuestion.trim()}\n\n${validOptions.map((opt, i) => `${i + 1}. ${opt}`).join('\n')}`;
+                      
+                      await base44.entities.ChatMessage.create({
+                        user_id: user.id,
+                        text: pollMessage,
+                        upvotes: 0,
+                        downvotes: 0,
+                      });
+                      
+                      setIsPollMode(false);
+                      setPollQuestion('');
+                      setPollOptions(['', '']);
+                      setShowChatComposer(false);
+                      await loadChat();
+                      toast({ title: 'Poll posted!' });
+                    } catch (error) {
+                      console.error('Failed to post:', error);
+                      toast({ title: 'Failed to post', variant: 'destructive' });
+                    } finally {
+                      setSubmittingChat(false);
+                    }
+                  }
                   // If frat ranking mode, post the ranking
-                  if (Object.values(fratRanking).some(Boolean)) {
+                  else if (Object.values(fratRanking).some(Boolean)) {
                     const user = await base44.auth.me();
                     if (!user) {
                       toast({ title: 'Please sign in to post', variant: 'destructive' });
@@ -1664,14 +1788,14 @@ export default function Activity() {
                     handleSubmitChat();
                   }
                 }}
-                disabled={submittingChat || (!chatText.trim() && !Object.values(fratRanking).some(Boolean))}
+                disabled={submittingChat || (!isPollMode && !chatText.trim() && !Object.values(fratRanking).some(Boolean)) || (isPollMode && (!pollQuestion.trim() || pollOptions.filter(o => o.trim()).length < 2))}
                 className="flex-1 rounded-xl gradient-primary text-white"
               >
                 {submittingChat ? (
                   <Loader2 className="h-5 w-5 animate-spin" />
                 ) : (
                   <>
-                    <Send className="h-5 w-5 mr-2" />
+                    <Plus className="h-5 w-5 mr-2" />
                     Post
                   </>
                 )}
