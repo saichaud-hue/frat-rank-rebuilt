@@ -23,7 +23,7 @@ import PartyRatingForm from '@/components/rate/PartyRatingForm';
 import { Skeleton } from '@/components/ui/skeleton';
 import { clamp } from '@/utils';
 import { ensureAuthed } from '@/utils/auth';
-import { Star, PartyPopper, X, Sparkles, ArrowUpDown, Search } from 'lucide-react';
+import { Star, PartyPopper, X, Plus, ArrowUpDown, Search } from 'lucide-react';
 
 type FilterType = 'overall' | 'reputation' | 'party' | 'trending';
 
@@ -391,7 +391,7 @@ export default function Leaderboard() {
               onClick={() => setRateExpanded(true)}
               className="flex items-center gap-2 px-5 py-3 rounded-full bg-foreground text-background shadow-lg active:scale-95 transition-transform hover:shadow-xl"
             >
-              <Sparkles className="h-5 w-5" />
+              <Plus className="h-5 w-5" />
               <span className="font-bold">Rate</span>
             </button>
           )}
