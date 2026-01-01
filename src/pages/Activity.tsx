@@ -976,19 +976,37 @@ export default function Activity() {
         </div>
       )}
 
-      {/* What's the move tonight? - Shows top 3 options */}
-      <div className="rounded-3xl overflow-hidden gradient-primary p-[2px]">
-        <div className="rounded-[22px] bg-card p-5">
-          <div className="flex items-center gap-3 mb-4">
+      {/* What's the move tonight? - BOLD Duke Energy */}
+      <div className="relative card-hero overflow-hidden">
+        {/* Background glow effect */}
+        <div className="absolute inset-0 gradient-hero opacity-10" />
+        <div className="absolute top-0 right-0 w-32 h-32 bg-primary/10 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2" />
+        
+        <div className="relative p-6">
+          <div className="flex items-start gap-4 mb-5">
+            <div className="w-14 h-14 rounded-2xl gradient-primary flex items-center justify-center shadow-glow shrink-0 animate-float">
+              <Zap className="h-7 w-7 text-white" />
+            </div>
             <div className="flex-1">
-              <h2 className="text-lg font-bold animate-pulse">What's the move tonight?</h2>
-              <p className="text-sm text-muted-foreground">
-                {totalMoveVotes > 0 ? `${totalMoveVotes} votes · See what everyone's doing` : 'Vote and see what others are up to'}
+              <h2 className="text-xl font-display font-black tracking-tight">Where we going?</h2>
+              <p className="text-sm text-muted-foreground mt-0.5">
+                {totalMoveVotes > 0 ? (
+                  <span className="flex items-center gap-2">
+                    <span className="inline-flex items-center gap-1 text-primary font-bold">
+                      <Users className="h-3.5 w-3.5" />
+                      {totalMoveVotes}
+                    </span>
+                    <span>people voted</span>
+                    {totalMoveVotes >= 10 && <span className="badge-trending">🔥 Hot</span>}
+                  </span>
+                ) : (
+                  'Cast the first vote tonight'
+                )}
               </p>
             </div>
             {userMoveVote && (
-              <div className="w-8 h-8 rounded-full bg-green-500 flex items-center justify-center text-white">
-                <Check className="h-4 w-4" />
+              <div className="w-10 h-10 rounded-full bg-positive flex items-center justify-center text-white shadow-duke animate-pop">
+                <Check className="h-5 w-5" strokeWidth={3} />
               </div>
             )}
           </div>
@@ -1115,44 +1133,68 @@ export default function Activity() {
             const renderOption = (option: typeof allOptions[0], index: number) => {
               const percentage = totalMoveVotes > 0 ? (option.votes / totalMoveVotes) * 100 : 0;
               const isSelected = userMoveVote === option.id;
+              const isLeading = index === 0 && option.votes > 0;
               
               return (
                 <button
                   key={option.id}
                   onClick={() => option.type === 'custom' ? handleCustomSuggestionVote(option.id) : handleMoveVote(option.id)}
                   className={cn(
-                    "w-full min-h-[52px] p-3 rounded-2xl border-2 transition-all text-left relative overflow-hidden active:scale-[0.98]",
+                    "w-full min-h-[60px] p-4 rounded-2xl transition-all text-left relative overflow-hidden tap-press",
                     isSelected 
-                      ? "border-primary bg-primary/10" 
-                      : "border-border hover:border-primary/50"
+                      ? "card-vote-selected" 
+                      : isLeading
+                        ? "card-vote border-primary/50 shadow-duke-lg"
+                        : "card-vote"
                   )}
                 >
-                  {userMoveVote && (
+                  {/* Vote percentage bar */}
+                  {userMoveVote && percentage > 0 && (
                     <div 
-                      className="absolute inset-0 bg-gradient-to-r from-primary/20 to-transparent transition-all duration-500"
+                      className={cn(
+                        "absolute inset-y-0 left-0 transition-all duration-700 vote-bar",
+                        isSelected ? "bg-white/20" : "bg-primary/15"
+                      )}
                       style={{ width: `${percentage}%` }}
                     />
                   )}
-                  <div className="relative flex items-center gap-3">
+                  
+                  <div className="relative flex items-center gap-4">
+                    {/* Rank/Check indicator */}
                     <div className={cn(
-                      "w-9 h-9 rounded-xl flex items-center justify-center shrink-0 font-bold text-sm",
+                      "w-11 h-11 rounded-xl flex items-center justify-center shrink-0 font-display font-black text-lg transition-all",
                       isSelected 
-                        ? "gradient-primary text-white" 
-                        : "bg-muted text-muted-foreground"
+                        ? "bg-white/20 text-white" 
+                        : isLeading
+                          ? "gradient-primary text-white shadow-duke"
+                          : "bg-muted text-muted-foreground"
                     )}>
-                      {isSelected ? <Check className="h-4 w-4" /> : (index + 1)}
+                      {isSelected ? <Check className="h-5 w-5" strokeWidth={3} /> : (index + 1)}
                     </div>
+                    
                     <div className="flex-1 min-w-0">
-                      <p className="font-semibold text-sm truncate">{option.label}</p>
+                      <p className={cn(
+                        "font-bold text-base truncate",
+                        isLeading && !isSelected && "text-primary"
+                      )}>{option.label}</p>
                       {option.subLabel && (
                         <p className="text-xs text-muted-foreground truncate">{option.subLabel}</p>
                       )}
                     </div>
+                    
+                    {/* Vote stats */}
                     {userMoveVote && (
                       <div className="flex items-center gap-2">
-                        <span className="text-sm font-bold">{percentage.toFixed(0)}%</span>
-                        <Badge variant="secondary" className="text-xs">{option.votes}</Badge>
+                        <span className={cn(
+                          "text-lg font-display font-black tabular-nums",
+                          isSelected ? "text-white" : isLeading ? "text-primary" : "text-foreground"
+                        )}>{percentage.toFixed(0)}%</span>
                       </div>
+                    )}
+                    
+                    {/* Leading indicator */}
+                    {isLeading && !isSelected && option.votes >= 3 && (
+                      <span className="absolute -top-1 -right-1 badge-hot">Leading</span>
                     )}
                   </div>
                 </button>
@@ -1160,17 +1202,17 @@ export default function Activity() {
             };
             
             return (
-              <div className="space-y-2">
+              <div className="space-y-3 stagger-children">
                 {top3.map((option, index) => renderOption(option, index))}
                 
                 {/* Something else / View all button */}
                 <button
                   onClick={() => setShowAllMoveOptions(true)}
-                  className="w-full min-h-[44px] p-3 rounded-2xl border-2 border-dashed border-muted-foreground/30 flex items-center justify-center gap-2 text-muted-foreground hover:border-primary hover:text-primary transition-all active:scale-[0.98]"
+                  className="w-full min-h-[52px] p-4 rounded-2xl border-2 border-dashed border-primary/30 flex items-center justify-center gap-2 text-primary font-bold hover:bg-primary/5 hover:border-primary transition-all tap-bounce"
                 >
-                  <Plus className="h-4 w-4" />
-                  <span className="font-medium text-sm">
-                    {hasMore ? `View all options` : 'Something else'}
+                  <Plus className="h-5 w-5" />
+                  <span>
+                    {hasMore ? `See all ${allOptions.length} options` : 'Add your own'}
                   </span>
                 </button>
               </div>
