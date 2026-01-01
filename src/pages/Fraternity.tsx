@@ -285,48 +285,54 @@ export default function FraternityPage() {
       </Button>
 
       {/* Header Card */}
-      <div className="rounded-2xl bg-gradient-to-br from-primary to-violet-600 p-5 text-white">
+      <div className="rounded-2xl bg-primary p-5 text-primary-foreground">
         <div className="flex items-start gap-4">
           {/* Greek Letter */}
-          <div className="w-16 h-16 rounded-xl bg-white/20 flex items-center justify-center text-2xl font-bold shrink-0">
+          <div className="w-16 h-16 rounded-xl bg-primary-foreground/20 flex items-center justify-center text-2xl font-bold shrink-0">
             {getFratGreek(fraternity.name)}
           </div>
           
           <div className="flex-1 min-w-0">
             <h1 className="text-xl font-bold truncate">{fraternity.name}</h1>
             <div className="flex items-center gap-2 mt-1 flex-wrap">
-              <span className="px-2 py-0.5 rounded bg-white/20 text-xs font-medium">
+              <span className="px-2 py-0.5 rounded bg-primary-foreground/20 text-xs font-medium">
                 {getFratShorthand(fraternity.name)}
               </span>
               {fraternity.founded_year && (
-                <span className="text-white/70 text-xs flex items-center gap-1">
+                <span className="text-primary-foreground/70 text-xs flex items-center gap-1">
                   <Calendar className="h-3 w-3" />
                   Est. {fraternity.founded_year}
                 </span>
               )}
             </div>
             {fraternity.description && (
-              <p className="text-white/70 text-xs mt-2 line-clamp-2">{fraternity.description}</p>
+              <p className="text-primary-foreground/70 text-xs mt-2 line-clamp-2">{fraternity.description}</p>
             )}
           </div>
         </div>
 
-        {/* Stats Row */}
+        {/* Stats Row - Now showing scores */}
         <div className="grid grid-cols-3 gap-2 mt-4">
-          <div className="text-center p-3 rounded-xl bg-white/15">
-            <PartyPopper className="h-4 w-4 mx-auto mb-1 opacity-80" />
-            <p className="text-xl font-bold">{computedScores?.numPartiesHosted ?? 0}</p>
-            <p className="text-xs opacity-70">Parties</p>
+          <div className="text-center p-3 rounded-xl bg-primary-foreground/15">
+            <Trophy className="h-4 w-4 mx-auto mb-1 opacity-80" />
+            <p className="text-xl font-bold">
+              {computedScores?.hasOverallData ? computedScores.overall.toFixed(1) : '—'}
+            </p>
+            <p className="text-xs opacity-70">Overall</p>
           </div>
-          <div className="text-center p-3 rounded-xl bg-white/15">
+          <div className="text-center p-3 rounded-xl bg-primary-foreground/15">
             <Star className="h-4 w-4 mx-auto mb-1 opacity-80" />
-            <p className="text-xl font-bold">{(computedScores?.numRepRatings ?? 0) + (computedScores?.numPartyRatings ?? 0)}</p>
-            <p className="text-xs opacity-70">Ratings</p>
+            <p className="text-xl font-bold">
+              {computedScores?.hasRepData ? computedScores.repAdj.toFixed(1) : '—'}
+            </p>
+            <p className="text-xs opacity-70">Frat Rating</p>
           </div>
-          <div className="text-center p-3 rounded-xl bg-white/15">
-            <MessageCircle className="h-4 w-4 mx-auto mb-1 opacity-80" />
-            <p className="text-xl font-bold">{(computedScores?.numPartyComments ?? 0) + (computedScores?.numFratComments ?? 0)}</p>
-            <p className="text-xs opacity-70">Comments</p>
+          <div className="text-center p-3 rounded-xl bg-primary-foreground/15">
+            <PartyPopper className="h-4 w-4 mx-auto mb-1 opacity-80" />
+            <p className="text-xl font-bold">
+              {headerPartyQuality !== null ? headerPartyQuality.toFixed(1) : '—'}
+            </p>
+            <p className="text-xs opacity-70">Party Score</p>
           </div>
         </div>
       </div>
@@ -368,7 +374,7 @@ export default function FraternityPage() {
         {activeTab === 'overview' && computedScores && (
           <div className="p-4 space-y-4">
             {/* Overall Score */}
-            <div className="flex items-center gap-4 p-4 rounded-xl bg-background">
+            <div className="flex items-center gap-4 p-4 rounded-xl bg-background border border-border">
               <div className="relative w-16 h-16">
                 <svg className="w-16 h-16 -rotate-90">
                   <circle cx="32" cy="32" r="28" stroke="currentColor" strokeWidth="4" fill="none" className="text-muted" />
@@ -450,7 +456,7 @@ export default function FraternityPage() {
             )}
 
             {/* Your Rating */}
-            <div className="p-4 rounded-xl bg-background">
+            <div className="p-4 rounded-xl bg-background border border-border">
               <div className="flex items-center justify-between mb-3">
                 <p className="font-medium text-sm">Your Rating</p>
                 <Button onClick={handleRate} variant="outline" size="sm">
@@ -468,7 +474,7 @@ export default function FraternityPage() {
             </div>
 
             {/* Confidence */}
-            <div className="p-4 rounded-xl bg-background">
+            <div className="p-4 rounded-xl bg-background border border-border">
               <div className="flex items-center justify-between mb-2">
                 <p className="font-medium text-sm">Data Confidence</p>
                 <Badge className={
