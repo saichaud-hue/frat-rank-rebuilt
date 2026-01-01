@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { Home, Trophy, PartyPopper, User, ChevronRight, Zap, Newspaper } from 'lucide-react';
+import { Home, Trophy, User, ChevronRight, Zap, Newspaper } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -13,7 +13,6 @@ interface LayoutProps {
 }
 
 const navItems = [
-  { title: 'Parties', url: '/Parties', icon: PartyPopper },
   { title: 'Rankings', url: '/Leaderboard', icon: Trophy },
   { title: 'Feed', url: '/Activity', icon: Home, hasNotification: true },
   { title: 'Posts', url: '/Posts', icon: Newspaper },
@@ -224,7 +223,7 @@ export default function Layout({ children }: LayoutProps) {
 
         {/* Mobile Bottom Nav - Bold and expressive */}
         <nav className="fixed bottom-0 left-0 right-0 bg-background/95 backdrop-blur-xl border-t-2 border-border/50 z-40 shadow-duke-lg" style={{ paddingBottom: 'max(env(safe-area-inset-bottom), 8px)' }}>
-          <div className="grid grid-cols-5 gap-1 px-2 pt-2">
+          <div className="grid grid-cols-4 gap-1 px-3 pt-2">
             {navItems.map((item) => {
               const active = isActive(item.url);
               const showBadge = item.hasNotification && hasUnreadFeed && !active;
