@@ -12,6 +12,7 @@ interface TierInfo {
   color: string;
   bgColor: string;
   rankBg: string;
+  rowBg: string;
 }
 
 interface LeaderboardRowProps {
@@ -60,7 +61,10 @@ export default function LeaderboardRow({
       to={createPageUrl(`Fraternity?id=${fraternity.id}`)}
       className="block"
     >
-      <div className="flex items-center gap-3 py-3 px-1 active:bg-muted/30 transition-colors">
+      <div className={cn(
+        "flex items-center gap-3 py-3 px-2 transition-colors rounded-xl",
+        displayMode === 'vibes' && tierInfo?.rowBg ? tierInfo.rowBg : "active:bg-muted/30"
+      )}>
         {/* Rank - colored circle in vibes mode */}
         {displayMode === 'vibes' && tierInfo ? (
           <div className={cn(
