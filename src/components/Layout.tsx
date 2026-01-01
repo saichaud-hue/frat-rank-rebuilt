@@ -15,7 +15,7 @@ interface LayoutProps {
 const navItems = [
   { title: 'Feed', url: '/Activity', icon: Home, hasNotification: true },
   { title: 'Rankings', url: '/Leaderboard', icon: Trophy },
-  { title: 'Post', url: '/Posts', icon: Plus },
+  { title: 'Create', url: '/Posts', icon: Plus, isCenter: true },
   { title: 'Parties', url: '/Parties', icon: PartyPopper },
   { title: 'You', url: '/Profile', icon: User },
 ];
@@ -228,6 +228,26 @@ export default function Layout({ children }: LayoutProps) {
             {navItems.map((item) => {
               const active = isActive(item.url);
               const showBadge = item.hasNotification && hasUnreadFeed && !active;
+              const isCenter = (item as any).isCenter;
+              
+              if (isCenter) {
+                return (
+                  <Link
+                    key={item.title}
+                    to={item.url}
+                    className="relative flex flex-col items-center justify-center gap-1 py-1 min-h-[56px] tap-bounce -mt-4"
+                  >
+                    <div className={`w-14 h-14 rounded-full flex items-center justify-center shadow-duke-lg transition-all ${
+                      active 
+                        ? 'bg-primary text-primary-foreground scale-110' 
+                        : 'bg-primary text-primary-foreground hover:scale-105'
+                    }`}>
+                      <Plus className="h-7 w-7" strokeWidth={2.5} />
+                    </div>
+                    <span className={`text-[10px] font-bold tracking-tight ${active ? 'text-primary' : 'text-muted-foreground'}`}>{item.title}</span>
+                  </Link>
+                );
+              }
               
               return (
                 <Link
