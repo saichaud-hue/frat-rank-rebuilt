@@ -270,6 +270,28 @@ export default function Activity() {
   
   // parsePollFromText is now imported from PollCard component
   
+  // Get top 3 posts sorted by engagement (likes, comments) and recency
+  const topPosts = useMemo(() => {
+    const now = Date.now();
+    const oneDayAgo = now - 24 * 60 * 60 * 1000;
+    
+    return [...chatMessages]
+      .map(post => {
+        const postTime = new Date(post.created_date).getTime();
+        const isRecent = postTime > oneDayAgo;
+        const netVotes = post.upvotes - post.downvotes;
+        const commentCount = post.replies?.length || 0;
+        
+        // Engagement score: upvotes + comments * 2 + recency bonus
+        const recencyBonus = isRecent ? Math.max(0, (postTime - oneDayAgo) / (1000 * 60 * 60)) : 0; // hours since 24h ago
+        const engagementScore = netVotes + (commentCount * 2) + (recencyBonus * 0.5);
+        
+        return { ...post, engagementScore };
+      })
+      .sort((a, b) => b.engagementScore - a.engagementScore)
+      .slice(0, 3);
+  }, [chatMessages]);
+
   // Default activity options for "What's the move"
   const defaultMoveOptions = [
     { id: 'shooters', label: 'Shooters', icon: Beer },
@@ -1279,8 +1301,16 @@ export default function Activity() {
             className="w-full text-left group"
           >
             <div className="flex items-center justify-between mb-2">
-              <h3 className="font-semibold text-sm group-hover:text-primary transition-colors">Posts</h3>
-              <ChevronRight className="h-4 w-4 text-muted-foreground group-hover:text-primary group-hover:translate-x-0.5 transition-all" />
+              <div className="flex items-center gap-2">
+                <h3 className="font-semibold text-sm group-hover:text-primary transition-colors">Posts</h3>
+                {chatMessages.length > 3 && (
+                  <span className="text-xs text-muted-foreground">Top 3</span>
+                )}
+              </div>
+              <div className="flex items-center gap-1 text-xs text-muted-foreground group-hover:text-primary transition-colors">
+                {chatMessages.length > 0 && <span>See all {chatMessages.length}</span>}
+                <ChevronRight className="h-4 w-4 group-hover:translate-x-0.5 transition-all" />
+              </div>
             </div>
             
             {chatMessages.length === 0 ? (
@@ -1292,7 +1322,7 @@ export default function Activity() {
                 </span>
               </div>
             ) : (
-            chatMessages.map((chatItem) => {
+            topPosts.map((chatItem) => {
               const netVotes = chatItem.upvotes - chatItem.downvotes;
               const isHot = netVotes >= 5;
               
