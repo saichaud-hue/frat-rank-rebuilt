@@ -9,8 +9,6 @@ import {
   ChevronRight,
   Loader2,
   Send,
-  Camera,
-  Calendar,
   MessagesSquare,
   AtSign,
   X,
@@ -70,11 +68,9 @@ import {
   type Fraternity, 
   type ChatMessage 
 } from '@/api/base44Client';
-import { formatDistanceToNow, differenceInSeconds, differenceInMinutes, differenceInHours, differenceInDays, format, isToday, isTomorrow, addDays } from 'date-fns';
+import { formatDistanceToNow, differenceInSeconds, differenceInMinutes, differenceInHours, differenceInDays, format, isToday, isTomorrow } from 'date-fns';
 import { getScoreColor, getScoreBgColor, createPageUrl } from '@/utils';
 import { toast } from '@/hooks/use-toast';
-import { computeRawPartyQuality, getPartyConfidenceLevel } from '@/utils/scoring';
-import type { PartyRating, ReputationRating } from '@/api/base44Client';
 import { cn } from '@/lib/utils';
 
 type ActivityType = 'party_rating' | 'frat_rating' | 'party_comment' | 'frat_comment';
@@ -158,11 +154,6 @@ export default function Activity() {
   // Data for mentions
   const [fraternities, setFraternities] = useState<Fraternity[]>([]);
   const [parties, setParties] = useState<Party[]>([]);
-  
-  // Party scores and frat scores for display
-  const [partyScores, setPartyScores] = useState<Map<string, number>>(new Map());
-  const [partyRatingCounts, setPartyRatingCounts] = useState<Map<string, number>>(new Map());
-  const [fratScores, setFratScores] = useState<Map<string, number>>(new Map());
 
   // Generate/retrieve unique user ID for individual voting
   const [userId] = useState<string>(() => {
@@ -344,44 +335,6 @@ export default function Activity() {
     });
   }, [parties]);
 
-  // Get parties in the next few days (excluding tonight)
-  const upcomingDaysParties = useMemo(() => {
-    const now = new Date();
-    const tomorrowMorning = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1, 6, 0, 0);
-    const inAWeek = addDays(now, 7);
-    
-    return parties
-      .filter(p => {
-        const partyDate = new Date(p.starts_at);
-        return partyDate >= tomorrowMorning && partyDate <= inAWeek && p.status !== 'cancelled';
-      })
-      .sort((a, b) => new Date(a.starts_at).getTime() - new Date(b.starts_at).getTime());
-  }, [parties]);
-
-  // Get completed/past parties (for context below)
-  const pastParties = useMemo(() => {
-    const now = new Date();
-    return parties
-      .filter(p => new Date(p.starts_at) < now && p.status !== 'cancelled')
-      .sort((a, b) => {
-        // Sort by score first, then by date
-        const scoreA = partyScores.get(a.id) ?? 0;
-        const scoreB = partyScores.get(b.id) ?? 0;
-        if (scoreB !== scoreA) return scoreB - scoreA;
-        return new Date(b.starts_at).getTime() - new Date(a.starts_at).getTime();
-      })
-      .slice(0, 5);
-  }, [parties, partyScores]);
-
-  // Helper to get frat score color
-  const getScoreColorClass = (score: number | null): string => {
-    if (score === null) return 'text-muted-foreground';
-    if (score >= 8.5) return 'text-emerald-600';
-    if (score >= 7) return 'text-primary';
-    if (score >= 5) return 'text-amber-600';
-    return 'text-muted-foreground';
-  };
-
   // Countdown effect
   useEffect(() => {
     if (!nextParty) {
@@ -419,57 +372,12 @@ export default function Activity() {
   const loadData = async () => {
     setLoading(true);
     try {
-      const [partiesData, fraternitiesData, allPartyRatings, allRepRatings] = await Promise.all([
+      const [partiesData, fraternitiesData] = await Promise.all([
         base44.entities.Party.list(),
         base44.entities.Fraternity.list(),
-        base44.entities.PartyRating.list(),
-        base44.entities.ReputationRating.list(),
       ]);
       setParties(partiesData);
       setFraternities(fraternitiesData);
-      
-      // Compute party scores
-      const partyRatingsMap = new Map<string, PartyRating[]>();
-      const ratingCountsMap = new Map<string, number>();
-      for (const rating of allPartyRatings) {
-        if (rating.party_id) {
-          const existing = partyRatingsMap.get(rating.party_id) || [];
-          existing.push(rating);
-          partyRatingsMap.set(rating.party_id, existing);
-          ratingCountsMap.set(rating.party_id, existing.length);
-        }
-      }
-      setPartyRatingCounts(ratingCountsMap);
-      
-      const perPartyScores = new Map<string, number>();
-      for (const party of partiesData) {
-        const ratings = partyRatingsMap.get(party.id) || [];
-        const rawQuality = computeRawPartyQuality(ratings);
-        if (rawQuality !== null) {
-          perPartyScores.set(party.id, rawQuality);
-        }
-      }
-      setPartyScores(perPartyScores);
-      
-      // Compute frat scores (simple average of reputation ratings)
-      const fratRatingsMap = new Map<string, ReputationRating[]>();
-      for (const rating of allRepRatings) {
-        if (rating.fraternity_id) {
-          const existing = fratRatingsMap.get(rating.fraternity_id) || [];
-          existing.push(rating);
-          fratRatingsMap.set(rating.fraternity_id, existing);
-        }
-      }
-      
-      const perFratScores = new Map<string, number>();
-      for (const frat of fraternitiesData) {
-        const ratings = fratRatingsMap.get(frat.id) || [];
-        if (ratings.length > 0) {
-          const avgScore = ratings.reduce((sum, r) => sum + (r.combined_score ?? 5), 0) / ratings.length;
-          perFratScores.set(frat.id, avgScore);
-        }
-      }
-      setFratScores(perFratScores);
       
       await Promise.all([loadActivity(), loadChat()]);
     } catch (error) {
@@ -1326,227 +1234,6 @@ export default function Activity() {
           })()}
         </div>
       </div>
-
-      {/* TONIGHT'S PARTIES SECTION */}
-      {tonightsParties.length > 0 && (
-        <div className="space-y-3">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <Flame className="h-4 w-4 text-orange-500" />
-              <h2 className="font-bold text-lg">Tonight's Options</h2>
-            </div>
-            <Badge variant="secondary" className="text-xs">
-              {tonightsParties.length} {tonightsParties.length === 1 ? 'event' : 'events'}
-            </Badge>
-          </div>
-          <div className="space-y-2">
-            {tonightsParties.map((party) => {
-              const frat = fraternities.find(f => f.id === party.fraternity_id);
-              const fratScore = fratScores.get(party.fraternity_id);
-              const partyScore = partyScores.get(party.id);
-              const ratingCount = partyRatingCounts.get(party.id) ?? 0;
-              const partyTime = format(new Date(party.starts_at), 'h:mm a');
-              
-              return (
-                <Link
-                  key={party.id}
-                  to={createPageUrl(`Party?id=${party.id}`)}
-                  className="block"
-                >
-                  <Card className="overflow-hidden hover:shadow-duke transition-shadow active:scale-[0.99]">
-                    <div className="flex items-stretch">
-                      {/* Party Image */}
-                      <div className="w-24 h-24 bg-muted flex-shrink-0">
-                        {party.display_photo_url ? (
-                          <img 
-                            src={party.display_photo_url} 
-                            alt={party.title}
-                            className="w-full h-full object-cover"
-                          />
-                        ) : (
-                          <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-primary/20 to-primary/5">
-                            <PartyPopper className="h-8 w-8 text-primary/50" />
-                          </div>
-                        )}
-                      </div>
-                      
-                      {/* Content */}
-                      <div className="flex-1 p-3 flex flex-col justify-between min-w-0">
-                        <div>
-                          <h3 className="font-bold text-sm truncate">{party.title}</h3>
-                          <p className="text-xs text-muted-foreground truncate">
-                            {frat?.chapter} • {partyTime}
-                          </p>
-                          {party.venue && (
-                            <p className="text-xs text-muted-foreground truncate flex items-center gap-1 mt-0.5">
-                              <MapPin className="h-3 w-3" />
-                              {party.venue}
-                            </p>
-                          )}
-                        </div>
-                        
-                        {/* Frat Rating */}
-                        <div className="flex items-center gap-2 mt-1">
-                          {fratScore !== undefined && (
-                            <div className="flex items-center gap-1">
-                              <Trophy className="h-3 w-3 text-amber-500" />
-                              <span className={cn("text-xs font-bold", getScoreColorClass(fratScore))}>
-                                {fratScore.toFixed(1)}
-                              </span>
-                              <span className="text-[10px] text-muted-foreground">frat</span>
-                            </div>
-                          )}
-                          {partyScore !== undefined && ratingCount > 0 && (
-                            <div className="flex items-center gap-1">
-                              <Star className="h-3 w-3 text-primary" />
-                              <span className={cn("text-xs font-bold", getScoreColorClass(partyScore))}>
-                                {partyScore.toFixed(1)}
-                              </span>
-                              <span className="text-[10px] text-muted-foreground">
-                                ({ratingCount})
-                              </span>
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                      
-                      {/* Arrow */}
-                      <div className="flex items-center pr-3">
-                        <ChevronRight className="h-5 w-5 text-muted-foreground" />
-                      </div>
-                    </div>
-                  </Card>
-                </Link>
-              );
-            })}
-          </div>
-        </div>
-      )}
-
-      {/* UPCOMING PARTIES (Next Few Days) */}
-      {upcomingDaysParties.length > 0 && (
-        <div className="space-y-3">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <Calendar className="h-4 w-4 text-primary" />
-              <h2 className="font-bold text-lg">Coming Up</h2>
-            </div>
-            <Badge variant="secondary" className="text-xs">
-              Next 7 days
-            </Badge>
-          </div>
-          <div className="space-y-2">
-            {upcomingDaysParties.slice(0, 4).map((party) => {
-              const frat = fraternities.find(f => f.id === party.fraternity_id);
-              const fratScore = fratScores.get(party.fraternity_id);
-              const partyDate = new Date(party.starts_at);
-              const dayLabel = isTomorrow(partyDate) ? 'Tomorrow' : format(partyDate, 'EEEE');
-              
-              return (
-                <Link
-                  key={party.id}
-                  to={createPageUrl(`Party?id=${party.id}`)}
-                  className="block"
-                >
-                  <div className="flex items-center gap-3 p-3 rounded-2xl bg-card border border-border/50 hover:border-primary/30 transition-all active:scale-[0.99]">
-                    {/* Date Badge */}
-                    <div className="w-12 h-12 rounded-xl bg-primary/10 flex flex-col items-center justify-center shrink-0">
-                      <span className="text-[10px] font-medium text-primary uppercase">
-                        {format(partyDate, 'MMM')}
-                      </span>
-                      <span className="text-lg font-bold text-primary leading-none">
-                        {format(partyDate, 'd')}
-                      </span>
-                    </div>
-                    
-                    {/* Content */}
-                    <div className="flex-1 min-w-0">
-                      <h3 className="font-semibold text-sm truncate">{party.title}</h3>
-                      <p className="text-xs text-muted-foreground truncate">
-                        {frat?.chapter} • {dayLabel} at {format(partyDate, 'h:mm a')}
-                      </p>
-                    </div>
-                    
-                    {/* Frat Score */}
-                    {fratScore !== undefined && (
-                      <div className="flex items-center gap-1 shrink-0">
-                        <Trophy className="h-3.5 w-3.5 text-amber-500" />
-                        <span className={cn("text-sm font-bold", getScoreColorClass(fratScore))}>
-                          {fratScore.toFixed(1)}
-                        </span>
-                      </div>
-                    )}
-                    
-                    <ChevronRight className="h-4 w-4 text-muted-foreground shrink-0" />
-                  </div>
-                </Link>
-              );
-            })}
-          </div>
-        </div>
-      )}
-
-      {/* PAST PARTIES (Context) */}
-      {pastParties.length > 0 && (
-        <div className="space-y-3">
-          <div className="flex items-center gap-2">
-            <Clock className="h-4 w-4 text-muted-foreground" />
-            <h2 className="font-bold text-lg text-muted-foreground">Recent Events</h2>
-          </div>
-          <div className="space-y-2">
-            {pastParties.map((party) => {
-              const frat = fraternities.find(f => f.id === party.fraternity_id);
-              const partyScore = partyScores.get(party.id);
-              const ratingCount = partyRatingCounts.get(party.id) ?? 0;
-              const partyDate = new Date(party.starts_at);
-              
-              return (
-                <Link
-                  key={party.id}
-                  to={createPageUrl(`Party?id=${party.id}`)}
-                  className="block"
-                >
-                  <div className="flex items-center gap-3 p-3 rounded-2xl bg-muted/30 hover:bg-muted/50 transition-all active:scale-[0.99]">
-                    {/* Image */}
-                    <div className="w-10 h-10 rounded-lg bg-muted flex items-center justify-center overflow-hidden shrink-0">
-                      {party.display_photo_url ? (
-                        <img 
-                          src={party.display_photo_url} 
-                          alt={party.title}
-                          className="w-full h-full object-cover opacity-70"
-                        />
-                      ) : (
-                        <Camera className="h-4 w-4 text-muted-foreground/50" />
-                      )}
-                    </div>
-                    
-                    {/* Content */}
-                    <div className="flex-1 min-w-0">
-                      <h3 className="font-medium text-sm truncate text-muted-foreground">{party.title}</h3>
-                      <p className="text-xs text-muted-foreground/70 truncate">
-                        {frat?.chapter} • {format(partyDate, 'MMM d')}
-                      </p>
-                    </div>
-                    
-                    {/* Score */}
-                    {partyScore !== undefined && ratingCount > 0 && (
-                      <div className={cn(
-                        "flex items-center justify-center w-10 h-10 rounded-full border-2 font-bold text-sm",
-                        partyScore >= 8.5 ? "text-emerald-600 border-emerald-200 bg-emerald-50 dark:bg-emerald-950/30" :
-                        partyScore >= 7 ? "text-primary border-primary/20 bg-primary/5" :
-                        partyScore >= 5 ? "text-amber-600 border-amber-200 bg-amber-50 dark:bg-amber-950/30" :
-                        "text-muted-foreground border-muted bg-muted/50"
-                      )}>
-                        {partyScore.toFixed(1)}
-                      </div>
-                    )}
-                  </div>
-                </Link>
-              );
-            })}
-          </div>
-        </div>
-      )}
 
       {/* All Move Options Sheet */}
       <Sheet open={showAllMoveOptions} onOpenChange={setShowAllMoveOptions}>
