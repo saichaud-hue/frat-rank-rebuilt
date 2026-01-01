@@ -38,6 +38,7 @@ import {
 } from 'lucide-react';
 import FratBattleGame from '@/components/activity/FratBattleGame';
 import RankingPostCard, { parseRankingFromText } from '@/components/activity/RankingPostCard';
+import PollCard, { parsePollFromText } from '@/components/activity/PollCard';
 import { recordUserAction } from '@/utils/streak';
 import { Progress } from '@/components/ui/progress';
 import { Card } from '@/components/ui/card';
@@ -266,17 +267,7 @@ export default function Activity() {
     });
   };
   
-  // Parse poll from message text
-  const parsePollFromText = (text: string): { question: string; options: string[] } | null => {
-    if (!text.startsWith('POLL:')) return null;
-    const lines = text.split('\n');
-    const question = lines[0].replace('POLL:', '').trim();
-    const options = lines.slice(1).filter(l => l.startsWith('OPTION:')).map(l => l.replace('OPTION:', '').trim());
-    if (options.length >= 2) {
-      return { question, options };
-    }
-    return null;
-  };
+  // parsePollFromText is now imported from PollCard component
   
   // Default activity options for "What's the move"
   const defaultMoveOptions = [
@@ -1341,52 +1332,14 @@ export default function Activity() {
                       {(() => {
                         const parsedPoll = parsePollFromText(chatItem.text);
                         if (parsedPoll) {
-                          const userVote = getUserPollVote(chatItem.id);
-                          const voteCounts = getPollVoteCounts(chatItem.id);
-                          const totalVotes = Object.values(voteCounts).reduce((a, b) => a + b, 0);
-                          
                           return (
-                            <div className="space-y-2">
-                              <p className="font-medium text-sm">{parsedPoll.question}</p>
-                              <div className="space-y-1.5">
-                                {parsedPoll.options.map((option, index) => {
-                                  const voteCount = voteCounts[index] || 0;
-                                  const percentage = totalVotes > 0 ? Math.round((voteCount / totalVotes) * 100) : 0;
-                                  const isSelected = userVote === index;
-                                  const hasVoted = userVote !== null;
-                                  
-                                  return (
-                                    <button
-                                      key={index}
-                                      onClick={() => !hasVoted && handlePollVote(chatItem.id, index)}
-                                      disabled={hasVoted}
-                                      className={cn(
-                                        "w-full p-2 rounded-lg text-left transition-all relative overflow-hidden text-sm",
-                                        hasVoted ? "cursor-default" : "hover:bg-primary/10 active:scale-[0.98]",
-                                        isSelected ? "border-2 border-primary bg-primary/5" : "border border-border"
-                                      )}
-                                    >
-                                      {hasVoted && (
-                                        <div 
-                                          className="absolute inset-y-0 left-0 bg-primary/10 transition-all duration-500"
-                                          style={{ width: `${percentage}%` }}
-                                        />
-                                      )}
-                                      <div className="relative flex items-center justify-between">
-                                        <div className="flex items-center gap-1.5">
-                                          {isSelected && <Check className="h-3 w-3 text-primary" />}
-                                          <span className={cn("text-sm", isSelected && "text-primary font-medium")}>{option}</span>
-                                        </div>
-                                        {hasVoted && (
-                                          <span className="text-xs font-semibold text-muted-foreground">{percentage}%</span>
-                                        )}
-                                      </div>
-                                    </button>
-                                  );
-                                })}
-                              </div>
-                              <p className="text-[10px] text-muted-foreground">{totalVotes} votes</p>
-                            </div>
+                            <PollCard
+                              question={parsedPoll.question}
+                              options={parsedPoll.options}
+                              userVote={getUserPollVote(chatItem.id)}
+                              voteCounts={getPollVoteCounts(chatItem.id)}
+                              onVote={(optionIndex) => handlePollVote(chatItem.id, optionIndex)}
+                            />
                           );
                         }
                         
@@ -2280,11 +2233,36 @@ export default function Activity() {
           
           {/* Original message preview */}
           {commentsSheetItem && (
-            <div className="px-4 py-3 rounded-xl bg-muted/50 border mb-4 shrink-0">
-              <p className="text-sm text-muted-foreground mb-1">
+            <div className="mb-4 shrink-0">
+              <p className="text-sm text-muted-foreground mb-2">
                 {formatDistanceToNow(new Date(commentsSheetItem.created_date), { addSuffix: true })}
               </p>
-              <p className="text-sm line-clamp-2">{commentsSheetItem.text}</p>
+              {(() => {
+                const parsedPoll = parsePollFromText(commentsSheetItem.text);
+                if (parsedPoll) {
+                  return (
+                    <PollCard
+                      question={parsedPoll.question}
+                      options={parsedPoll.options}
+                      userVote={getUserPollVote(commentsSheetItem.id)}
+                      voteCounts={getPollVoteCounts(commentsSheetItem.id)}
+                      onVote={(optionIndex) => handlePollVote(commentsSheetItem.id, optionIndex)}
+                      compact
+                    />
+                  );
+                }
+                
+                const parsedRanking = parseRankingFromText(commentsSheetItem.text);
+                if (parsedRanking && parsedRanking.rankings.length >= 3) {
+                  return <RankingPostCard rankings={parsedRanking.rankings} comment={parsedRanking.comment} />;
+                }
+                
+                return (
+                  <div className="px-4 py-3 rounded-xl bg-muted/50 border">
+                    <p className="text-sm line-clamp-2">{commentsSheetItem.text}</p>
+                  </div>
+                );
+              })()}
             </div>
           )}
           
