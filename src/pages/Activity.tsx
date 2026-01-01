@@ -270,8 +270,8 @@ export default function Activity() {
   
   // parsePollFromText is now imported from PollCard component
   
-  // Get top 3 posts sorted by engagement (likes, comments) and recency
-  const topPosts = useMemo(() => {
+  // Get all posts sorted by engagement (likes, comments) and recency
+  const sortedPosts = useMemo(() => {
     const now = Date.now();
     const oneDayAgo = now - 24 * 60 * 60 * 1000;
     
@@ -288,9 +288,11 @@ export default function Activity() {
         
         return { ...post, engagementScore };
       })
-      .sort((a, b) => b.engagementScore - a.engagementScore)
-      .slice(0, 3);
+      .sort((a, b) => b.engagementScore - a.engagementScore);
   }, [chatMessages]);
+  
+  // Top 3 posts for the preview
+  const topPosts = useMemo(() => sortedPosts.slice(0, 3), [sortedPosts]);
 
   // Default activity options for "What's the move"
   const defaultMoveOptions = [
@@ -2391,7 +2393,7 @@ export default function Activity() {
           {/* Feed Content */}
           <ScrollArea className="flex-1">
             <div className="p-4 space-y-3 pb-20">
-              {chatMessages.length === 0 ? (
+              {sortedPosts.length === 0 ? (
                 <div className="text-center py-16">
                   <div className="w-16 h-16 mx-auto rounded-full bg-muted flex items-center justify-center mb-4">
                     <Sparkles className="h-8 w-8 text-muted-foreground" />
@@ -2407,7 +2409,7 @@ export default function Activity() {
                   </Button>
                 </div>
               ) : (
-                chatMessages.map((chatItem) => {
+                sortedPosts.map((chatItem) => {
                   const netVotes = chatItem.upvotes - chatItem.downvotes;
                   const isHot = netVotes >= 5;
                   
