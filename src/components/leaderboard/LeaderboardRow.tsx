@@ -11,6 +11,7 @@ interface TierInfo {
   abbrev: string;
   color: string;
   bgColor: string;
+  rankBg: string;
 }
 
 interface LeaderboardRowProps {
@@ -59,14 +60,23 @@ export default function LeaderboardRow({
       to={createPageUrl(`Fraternity?id=${fraternity.id}`)}
       className="block"
     >
-      <div className="flex items-center gap-4 py-4 px-1 active:bg-muted/30 transition-colors">
-        {/* Rank */}
-        <span className={cn(
-          "w-6 text-sm font-medium tabular-nums",
-          rank <= 3 ? "text-foreground" : "text-muted-foreground"
-        )}>
-          {isTied ? `T${rank}` : rank}.
-        </span>
+      <div className="flex items-center gap-3 py-3 px-1 active:bg-muted/30 transition-colors">
+        {/* Rank - colored circle in vibes mode */}
+        {displayMode === 'vibes' && tierInfo ? (
+          <div className={cn(
+            "w-9 h-9 rounded-full flex items-center justify-center text-sm font-bold shrink-0",
+            tierInfo.rankBg
+          )}>
+            {rank}
+          </div>
+        ) : (
+          <span className={cn(
+            "w-6 text-sm font-medium tabular-nums",
+            rank <= 3 ? "text-foreground" : "text-muted-foreground"
+          )}>
+            {isTied ? `T${rank}` : rank}.
+          </span>
+        )}
 
         {/* Content */}
         <div className="flex-1 min-w-0">
@@ -81,16 +91,8 @@ export default function LeaderboardRow({
           </p>
         </div>
 
-        {/* Score Badge or Tier Badge */}
-        {displayMode === 'vibes' && tierInfo ? (
-          <div className={cn(
-            "flex items-center justify-center w-12 h-12 rounded-full border text-sm font-bold",
-            tierInfo.bgColor,
-            tierInfo.color
-          )}>
-            {tierInfo.abbrev}
-          </div>
-        ) : (
+        {/* Score Badge - only show in score mode */}
+        {displayMode === 'score' && (
           <div className={cn(
             "flex items-center justify-center w-12 h-12 rounded-full border-2 font-bold text-base",
             getScoreColorClass(score)
