@@ -1140,11 +1140,11 @@ export default function Activity() {
                   key={option.id}
                   onClick={() => option.type === 'custom' ? handleCustomSuggestionVote(option.id) : handleMoveVote(option.id)}
                   className={cn(
-                    "w-full min-h-[60px] p-4 rounded-2xl transition-all text-left relative overflow-hidden tap-press",
+                    "w-full min-h-[64px] p-4 rounded-2xl text-left relative overflow-hidden transition-all duration-200 ease-out",
                     isSelected 
-                      ? "card-vote-selected" 
+                      ? "card-vote-selected animate-pop" 
                       : isLeading
-                        ? "card-vote border-primary/50 shadow-duke-lg"
+                        ? "card-vote-leading"
                         : "card-vote"
                   )}
                 >
@@ -1153,7 +1153,7 @@ export default function Activity() {
                     <div 
                       className={cn(
                         "absolute inset-y-0 left-0 transition-all duration-700 vote-bar",
-                        isSelected ? "bg-white/20" : "bg-primary/15"
+                        isSelected ? "bg-white/20" : "bg-primary/10"
                       )}
                       style={{ width: `${percentage}%` }}
                     />
@@ -1162,39 +1162,53 @@ export default function Activity() {
                   <div className="relative flex items-center gap-4">
                     {/* Rank/Check indicator */}
                     <div className={cn(
-                      "w-11 h-11 rounded-xl flex items-center justify-center shrink-0 font-display font-black text-lg transition-all",
+                      "w-12 h-12 rounded-xl flex items-center justify-center shrink-0 font-display font-black text-lg transition-all",
                       isSelected 
-                        ? "bg-white/20 text-white" 
+                        ? "bg-white/20 text-white animate-pop" 
                         : isLeading
-                          ? "gradient-primary text-white shadow-duke"
+                          ? "gradient-primary text-white shadow-duke animate-float-subtle"
                           : "bg-muted text-muted-foreground"
                     )}>
-                      {isSelected ? <Check className="h-5 w-5" strokeWidth={3} /> : (index + 1)}
+                      {isSelected ? <Check className="h-6 w-6" strokeWidth={3} /> : (index + 1)}
                     </div>
                     
                     <div className="flex-1 min-w-0">
                       <p className={cn(
-                        "font-bold text-base truncate",
-                        isLeading && !isSelected && "text-primary"
+                        "font-bold text-base truncate leading-tight",
+                        isSelected ? "text-white" : isLeading ? "text-primary" : ""
                       )}>{option.label}</p>
                       {option.subLabel && (
-                        <p className="text-xs text-muted-foreground truncate">{option.subLabel}</p>
+                        <p className={cn(
+                          "text-xs truncate mt-0.5",
+                          isSelected ? "text-white/70" : "text-muted-foreground"
+                        )}>{option.subLabel}</p>
                       )}
                     </div>
                     
                     {/* Vote stats */}
-                    {userMoveVote && (
-                      <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-3">
+                      {/* Live activity indicator for leading option */}
+                      {isLeading && option.votes >= 3 && !isSelected && (
+                        <div className="flex items-center gap-1.5">
+                          <span className="indicator-live" />
+                          <span className="text-xs font-bold text-primary">{option.votes}</span>
+                        </div>
+                      )}
+                      
+                      {userMoveVote && (
                         <span className={cn(
-                          "text-lg font-display font-black tabular-nums",
+                          "text-xl font-display font-black tabular-nums",
                           isSelected ? "text-white" : isLeading ? "text-primary" : "text-foreground"
                         )}>{percentage.toFixed(0)}%</span>
-                      </div>
-                    )}
+                      )}
+                    </div>
                     
-                    {/* Leading indicator */}
-                    {isLeading && !isSelected && option.votes >= 3 && (
-                      <span className="absolute -top-1 -right-1 badge-hot">Leading</span>
+                    {/* Leading badge with pulse */}
+                    {isLeading && !isSelected && option.votes >= 5 && (
+                      <span className="absolute -top-2 -right-2 indicator-trending flex items-center gap-1">
+                        <TrendingUp className="h-3 w-3" />
+                        <span>Top pick</span>
+                      </span>
                     )}
                   </div>
                 </button>
@@ -1208,7 +1222,7 @@ export default function Activity() {
                 {/* Something else / View all button */}
                 <button
                   onClick={() => setShowAllMoveOptions(true)}
-                  className="w-full min-h-[52px] p-4 rounded-2xl border-2 border-dashed border-primary/30 flex items-center justify-center gap-2 text-primary font-bold hover:bg-primary/5 hover:border-primary transition-all tap-bounce"
+                  className="w-full min-h-[56px] p-4 rounded-2xl bg-muted/50 flex items-center justify-center gap-2 text-primary font-bold shadow-sm hover:shadow-duke hover:bg-muted transition-all active:scale-[0.98]"
                 >
                   <Plus className="h-5 w-5" />
                   <span>

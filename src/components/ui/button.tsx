@@ -5,20 +5,21 @@ import { cva, type VariantProps } from "class-variance-authority";
 import { cn } from "@/lib/utils";
 
 const buttonVariants = cva(
-  "inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-xl text-sm font-bold ring-offset-background transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 active:scale-[0.97] active:shadow-pressed",
+  "inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-xl text-sm font-bold transition-all duration-200 ease-out focus-visible:outline-none disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0",
   {
     variants: {
       variant: {
-        default: "bg-primary text-primary-foreground shadow-duke hover:shadow-duke-lg hover:-translate-y-0.5",
-        destructive: "bg-destructive text-destructive-foreground shadow-duke hover:bg-destructive/90",
-        outline: "border-2 border-primary bg-background text-primary hover:bg-primary hover:text-primary-foreground shadow-duke",
-        secondary: "bg-secondary text-secondary-foreground shadow-duke hover:shadow-duke-lg hover:-translate-y-0.5",
-        ghost: "hover:bg-muted hover:text-foreground",
+        default: "bg-primary text-primary-foreground shadow-duke hover:shadow-duke-lg hover:-translate-y-0.5 hover:scale-[1.02] active:scale-[0.97] active:translate-y-0 active:shadow-pressed",
+        destructive: "bg-destructive text-destructive-foreground shadow-duke hover:shadow-duke-lg hover:scale-[1.02] active:scale-[0.97]",
+        outline: "bg-card text-primary shadow-duke hover:bg-primary hover:text-primary-foreground hover:shadow-duke-lg hover:-translate-y-0.5 active:scale-[0.97]",
+        secondary: "bg-secondary text-secondary-foreground shadow-duke hover:shadow-duke-lg hover:-translate-y-0.5 hover:scale-[1.02] active:scale-[0.97]",
+        ghost: "hover:bg-muted hover:shadow-sm active:scale-[0.97]",
         link: "text-primary underline-offset-4 hover:underline",
-        // Bold new variants
-        hero: "gradient-primary text-primary-foreground shadow-duke-lg hover:shadow-glow hover:-translate-y-1 text-base",
-        vote: "bg-card border-2 border-border text-foreground shadow-duke hover:border-primary hover:shadow-duke-lg data-[selected=true]:bg-primary data-[selected=true]:text-primary-foreground data-[selected=true]:border-primary",
-        social: "bg-muted text-muted-foreground hover:bg-primary/10 hover:text-primary",
+        // Bold interactive variants
+        hero: "gradient-primary text-primary-foreground shadow-duke-lg hover:shadow-glow hover:-translate-y-1 hover:scale-[1.03] active:scale-[0.97] active:translate-y-0 text-base",
+        vote: "bg-card text-foreground shadow-duke hover:shadow-duke-lg hover:-translate-y-0.5 hover:scale-[1.02] active:scale-[0.97] data-[selected=true]:bg-primary data-[selected=true]:text-primary-foreground data-[selected=true]:shadow-duke-lg data-[selected=true]:-translate-y-1 data-[selected=true]:scale-[1.02]",
+        social: "bg-muted text-muted-foreground shadow-sm hover:bg-primary/10 hover:text-primary hover:shadow-duke active:scale-[0.97]",
+        elevated: "bg-card text-foreground shadow-duke-lg hover:shadow-duke-xl hover:-translate-y-1 hover:scale-[1.02] active:scale-[0.97] active:shadow-duke",
       },
       size: {
         default: "h-11 px-5 py-2",
