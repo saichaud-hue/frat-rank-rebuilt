@@ -1169,39 +1169,68 @@ export default function Profile() {
               </div>
             ) : (
               <div className="divide-y divide-border/50">
-                {commentsData.map((comment) => (
-                  <div key={comment.id} className="p-4 hover:bg-muted/50 transition-colors">
-                    <div className="flex items-start gap-3">
-                      <div className="flex-1 min-w-0">
-                        <p className="font-medium text-sm truncate">{comment.entityName}</p>
-                        <p className="text-sm text-foreground mt-1 line-clamp-2">{comment.text}</p>
-                        <p className="text-xs text-muted-foreground mt-1">{format(new Date(comment.created_date), 'MMM d, yyyy')}</p>
+                {commentsData.map((comment) => {
+                  // Determine navigation link based on comment type
+                  const getCommentLink = () => {
+                    if (comment.type === 'party' && comment.party_id) {
+                      return `/Party?id=${comment.party_id}`;
+                    } else if (comment.type === 'fraternity' && comment.fraternity_id) {
+                      return `/Fraternity/${comment.fraternity_id}`;
+                    } else if (comment.type === 'chat') {
+                      if (comment.mentioned_party_id) {
+                        return `/Party?id=${comment.mentioned_party_id}`;
+                      } else if (comment.mentioned_fraternity_id) {
+                        return `/Fraternity/${comment.mentioned_fraternity_id}`;
+                      }
+                      return '/Activity';
+                    }
+                    return null;
+                  };
+                  
+                  const link = getCommentLink();
+                  
+                  return (
+                    <div key={comment.id} className="p-4 hover:bg-muted/50 transition-colors">
+                      <div className="flex items-start gap-3">
+                        {link ? (
+                          <Link to={link} className="flex-1 min-w-0 cursor-pointer">
+                            <p className="font-medium text-sm truncate hover:text-primary transition-colors">{comment.entityName}</p>
+                            <p className="text-sm text-foreground mt-1 line-clamp-2">{comment.text}</p>
+                            <p className="text-xs text-muted-foreground mt-1">{format(new Date(comment.created_date), 'MMM d, yyyy')}</p>
+                          </Link>
+                        ) : (
+                          <div className="flex-1 min-w-0">
+                            <p className="font-medium text-sm truncate">{comment.entityName}</p>
+                            <p className="text-sm text-foreground mt-1 line-clamp-2">{comment.text}</p>
+                            <p className="text-xs text-muted-foreground mt-1">{format(new Date(comment.created_date), 'MMM d, yyyy')}</p>
+                          </div>
+                        )}
+                        <Badge variant="outline" className="text-xs capitalize shrink-0">
+                          {comment.type}
+                        </Badge>
+                        <AlertDialog open={deletingCommentId === comment.id} onOpenChange={(open) => setDeletingCommentId(open ? comment.id : null)}>
+                          <AlertDialogTrigger asChild>
+                            <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive shrink-0">
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </AlertDialogTrigger>
+                          <AlertDialogContent>
+                            <AlertDialogHeader>
+                              <AlertDialogTitle>Delete Comment?</AlertDialogTitle>
+                              <AlertDialogDescription>This action cannot be undone.</AlertDialogDescription>
+                            </AlertDialogHeader>
+                            <AlertDialogFooter>
+                              <AlertDialogCancel>Cancel</AlertDialogCancel>
+                              <AlertDialogAction onClick={() => handleDeleteComment(comment)} className="bg-destructive text-destructive-foreground">
+                                Delete
+                              </AlertDialogAction>
+                            </AlertDialogFooter>
+                          </AlertDialogContent>
+                        </AlertDialog>
                       </div>
-                      <Badge variant="outline" className="text-xs capitalize shrink-0">
-                        {comment.type}
-                      </Badge>
-                      <AlertDialog open={deletingCommentId === comment.id} onOpenChange={(open) => setDeletingCommentId(open ? comment.id : null)}>
-                        <AlertDialogTrigger asChild>
-                          <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive shrink-0">
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        </AlertDialogTrigger>
-                        <AlertDialogContent>
-                          <AlertDialogHeader>
-                            <AlertDialogTitle>Delete Comment?</AlertDialogTitle>
-                            <AlertDialogDescription>This action cannot be undone.</AlertDialogDescription>
-                          </AlertDialogHeader>
-                          <AlertDialogFooter>
-                            <AlertDialogCancel>Cancel</AlertDialogCancel>
-                            <AlertDialogAction onClick={() => handleDeleteComment(comment)} className="bg-destructive text-destructive-foreground">
-                              Delete
-                            </AlertDialogAction>
-                          </AlertDialogFooter>
-                        </AlertDialogContent>
-                      </AlertDialog>
                     </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             )}
           </div>
