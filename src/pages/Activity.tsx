@@ -1277,29 +1277,29 @@ export default function Activity() {
         </SheetContent>
       </Sheet>
 
-
-      {/* Unified Feed */}
-      <div className="space-y-4">
-        {feedItems.length === 0 ? (
-          <div className="text-center py-12">
-            <div className="w-20 h-20 mx-auto rounded-full bg-muted/50 flex items-center justify-center mb-4">
-              <Sparkles className="h-10 w-10 text-muted-foreground" />
-            </div>
-            <h3 className="text-lg font-bold mb-2">Nothing happening yet</h3>
-            <p className="text-muted-foreground mb-6">Be the first to share what's going on!</p>
-            <Button 
-              onClick={() => setShowChatComposer(true)}
-              size="lg"
-              className="rounded-full px-8 gradient-primary"
-            >
-              <Send className="h-5 w-5 mr-2" />
-              Start the convo
-            </Button>
+      {/* Two-Column Feed Layout */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        {/* Left Column - Posts */}
+        <div className="space-y-3">
+          <div className="flex items-center gap-2 mb-2">
+            <MessagesSquare className="h-4 w-4 text-primary" />
+            <h3 className="font-semibold text-sm">Posts</h3>
           </div>
-        ) : (
-          feedItems.map(({ type, item }) => {
-            if (type === 'chat') {
-              const chatItem = item as ChatItem;
+          
+          {chatMessages.length === 0 ? (
+            <div className="text-center py-8 rounded-2xl border border-dashed border-muted-foreground/30">
+              <Sparkles className="h-8 w-8 mx-auto text-muted-foreground mb-2" />
+              <p className="text-sm text-muted-foreground">No posts yet</p>
+              <Button 
+                onClick={() => setShowChatComposer(true)}
+                size="sm"
+                className="mt-3 rounded-full"
+              >
+                Be the first
+              </Button>
+            </div>
+          ) : (
+            chatMessages.map((chatItem) => {
               const netVotes = chatItem.upvotes - chatItem.downvotes;
               const isHot = netVotes >= 5;
               
@@ -1307,39 +1307,39 @@ export default function Activity() {
                 <div 
                   key={`chat-${chatItem.id}`} 
                   className={cn(
-                    "rounded-2xl bg-card p-5 border transition-all",
-                    isHot && "border-orange-500/50 bg-gradient-to-br from-orange-500/5 to-transparent"
+                    "rounded-xl bg-card p-4 border transition-all",
+                    isHot && "border-orange-500/50"
                   )}
                 >
                   <div className="flex items-start gap-3">
                     <Avatar className={cn(
-                      "h-11 w-11 ring-2 shrink-0",
+                      "h-9 w-9 ring-2 shrink-0",
                       isHot ? "ring-orange-500" : "ring-border"
                     )}>
                       <AvatarFallback className={cn(
-                        "text-white font-bold",
+                        "text-white text-xs",
                         isHot 
                           ? "bg-gradient-to-br from-orange-500 to-red-500" 
                           : "gradient-primary"
                       )}>
-                        {isHot ? <Flame className="h-5 w-5" /> : <MessagesSquare className="h-5 w-5" />}
+                        {isHot ? <Flame className="h-4 w-4" /> : <MessagesSquare className="h-4 w-4" />}
                       </AvatarFallback>
                     </Avatar>
                     <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 mb-2 flex-wrap">
-                        <span className="text-sm text-muted-foreground">
+                      <div className="flex items-center gap-2 mb-1">
+                        <span className="text-xs text-muted-foreground">
                           {formatDistanceToNow(new Date(chatItem.created_date), { addSuffix: true })}
                         </span>
                         {isHot && (
-                          <Badge className="bg-gradient-to-r from-orange-500 to-red-500 text-white text-xs px-2 py-0.5">
-                            <Flame className="h-3 w-3 mr-1" />
+                          <Badge className="bg-orange-500 text-white text-[10px] px-1.5 py-0">
+                            <Flame className="h-2.5 w-2.5 mr-0.5" />
                             Hot
                           </Badge>
                         )}
                       </div>
+                      
                       {/* Check if this is a poll, ranking, or regular post */}
                       {(() => {
-                        // Check for poll first
                         const parsedPoll = parsePollFromText(chatItem.text);
                         if (parsedPoll) {
                           const userVote = getUserPollVote(chatItem.id);
@@ -1347,9 +1347,9 @@ export default function Activity() {
                           const totalVotes = Object.values(voteCounts).reduce((a, b) => a + b, 0);
                           
                           return (
-                            <div className="mb-3 space-y-3">
-                              <p className="font-semibold text-base">{parsedPoll.question}</p>
-                              <div className="space-y-2">
+                            <div className="space-y-2">
+                              <p className="font-medium text-sm">{parsedPoll.question}</p>
+                              <div className="space-y-1.5">
                                 {parsedPoll.options.map((option, index) => {
                                   const voteCount = voteCounts[index] || 0;
                                   const percentage = totalVotes > 0 ? Math.round((voteCount / totalVotes) * 100) : 0;
@@ -1362,13 +1362,9 @@ export default function Activity() {
                                       onClick={() => !hasVoted && handlePollVote(chatItem.id, index)}
                                       disabled={hasVoted}
                                       className={cn(
-                                        "w-full p-3 rounded-xl text-left transition-all relative overflow-hidden",
-                                        hasVoted 
-                                          ? "cursor-default" 
-                                          : "hover:bg-primary/10 active:scale-[0.98]",
-                                        isSelected 
-                                          ? "border-2 border-primary bg-primary/5" 
-                                          : "border border-border"
+                                        "w-full p-2 rounded-lg text-left transition-all relative overflow-hidden text-sm",
+                                        hasVoted ? "cursor-default" : "hover:bg-primary/10 active:scale-[0.98]",
+                                        isSelected ? "border-2 border-primary bg-primary/5" : "border border-border"
                                       )}
                                     >
                                       {hasVoted && (
@@ -1378,45 +1374,32 @@ export default function Activity() {
                                         />
                                       )}
                                       <div className="relative flex items-center justify-between">
-                                        <div className="flex items-center gap-2">
-                                          {isSelected && (
-                                            <Check className="h-4 w-4 text-primary" />
-                                          )}
-                                          <span className={cn(
-                                            "font-medium",
-                                            isSelected && "text-primary"
-                                          )}>{option}</span>
+                                        <div className="flex items-center gap-1.5">
+                                          {isSelected && <Check className="h-3 w-3 text-primary" />}
+                                          <span className={cn("text-sm", isSelected && "text-primary font-medium")}>{option}</span>
                                         </div>
                                         {hasVoted && (
-                                          <span className="text-sm font-semibold text-muted-foreground">
-                                            {percentage}%
-                                          </span>
+                                          <span className="text-xs font-semibold text-muted-foreground">{percentage}%</span>
                                         )}
                                       </div>
                                     </button>
                                   );
                                 })}
                               </div>
-                              <p className="text-xs text-muted-foreground">
-                                {totalVotes} {totalVotes === 1 ? 'vote' : 'votes'}
-                              </p>
+                              <p className="text-[10px] text-muted-foreground">{totalVotes} votes</p>
                             </div>
                           );
                         }
                         
-                        // Check for ranking post
                         const parsedRanking = parseRankingFromText(chatItem.text);
                         if (parsedRanking && parsedRanking.rankings.length >= 3) {
                           return (
-                            <div className="mb-3">
-                              <RankingPostCard 
-                                rankings={parsedRanking.rankings} 
-                                comment={parsedRanking.comment} 
-                              />
+                            <div className="mb-2">
+                              <RankingPostCard rankings={parsedRanking.rankings} comment={parsedRanking.comment} />
                             </div>
                           );
                         }
-                        return <p className="text-base leading-relaxed mb-3">{chatItem.text}</p>;
+                        return <p className="text-sm leading-relaxed mb-2">{chatItem.text}</p>;
                       })()}
                       
                       {(chatItem.mentionedFraternity || chatItem.mentionedParty) && (
@@ -1425,56 +1408,72 @@ export default function Activity() {
                             ? createPageUrl(`Fraternity?id=${chatItem.mentionedFraternity.id}`)
                             : createPageUrl(`Party?id=${chatItem.mentionedParty?.id}`)
                           }
-                          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-primary/10 text-primary text-sm font-medium hover:bg-primary/20 transition-all mb-3"
+                          className="inline-flex items-center gap-1 px-2 py-1 rounded-full bg-primary/10 text-primary text-xs font-medium hover:bg-primary/20 transition-all mb-2"
                         >
-                          <AtSign className="h-3.5 w-3.5" />
+                          <AtSign className="h-3 w-3" />
                           {chatItem.mentionedFraternity?.name || chatItem.mentionedParty?.title}
                         </Link>
                       )}
                       
-                      {/* Vote actions - large tap targets */}
-                      <div className="flex items-center gap-3">
+                      {/* Compact vote actions */}
+                      <div className="flex items-center gap-2">
                         <button
                           onClick={() => handleChatVote(chatItem, 1)}
                           className={cn(
-                            "min-h-[44px] min-w-[44px] flex items-center justify-center gap-2 px-4 rounded-full text-sm font-medium transition-all active:scale-95",
+                            "flex items-center gap-1 px-2.5 py-1.5 rounded-full text-xs font-medium transition-all active:scale-95",
                             chatItem.userVote === 1 
                               ? 'bg-emerald-500 text-white' 
                               : 'bg-muted hover:bg-emerald-500/20 text-muted-foreground hover:text-emerald-500'
                           )}
                         >
-                          <ThumbsUp className="h-5 w-5" />
+                          <ThumbsUp className="h-3.5 w-3.5" />
                           {chatItem.upvotes > 0 && <span>{chatItem.upvotes}</span>}
                         </button>
                         <button
                           onClick={() => handleChatVote(chatItem, -1)}
                           className={cn(
-                            "min-h-[44px] min-w-[44px] flex items-center justify-center gap-2 px-4 rounded-full text-sm font-medium transition-all active:scale-95",
+                            "flex items-center gap-1 px-2.5 py-1.5 rounded-full text-xs font-medium transition-all active:scale-95",
                             chatItem.userVote === -1 
                               ? 'bg-red-500 text-white' 
                               : 'bg-muted hover:bg-red-500/20 text-muted-foreground hover:text-red-500'
                           )}
                         >
-                          <ThumbsDown className="h-5 w-5" />
+                          <ThumbsDown className="h-3.5 w-3.5" />
                           {chatItem.downvotes > 0 && <span>{chatItem.downvotes}</span>}
                         </button>
                         <button
                           onClick={() => setCommentsSheetItem(chatItem)}
-                          className="min-h-[44px] min-w-[44px] flex items-center justify-center gap-2 px-4 rounded-full text-sm font-medium bg-muted hover:bg-primary/20 text-muted-foreground hover:text-primary transition-all active:scale-95 ml-auto"
+                          className="flex items-center gap-1 px-2.5 py-1.5 rounded-full text-xs font-medium bg-muted hover:bg-primary/20 text-muted-foreground hover:text-primary transition-all active:scale-95 ml-auto"
                         >
-                          <MessageCircle className="h-5 w-5" />
-                          {chatItem.replies && chatItem.replies.length > 0 && (
-                            <span>{chatItem.replies.length}</span>
-                          )}
+                          <MessageCircle className="h-3.5 w-3.5" />
+                          {chatItem.replies && chatItem.replies.length > 0 && <span>{chatItem.replies.length}</span>}
                         </button>
                       </div>
                     </div>
                   </div>
                 </div>
               );
-            } else {
-              const activityItem = item as ActivityItem;
+            })
+          )}
+        </div>
+        
+        {/* Right Column - Activity (Ratings & Comments) */}
+        <div className="space-y-3">
+          <div className="flex items-center gap-2 mb-2">
+            <TrendingUp className="h-4 w-4 text-primary" />
+            <h3 className="font-semibold text-sm">Activity</h3>
+          </div>
+          
+          {activities.length === 0 ? (
+            <div className="text-center py-8 rounded-2xl border border-dashed border-muted-foreground/30">
+              <Star className="h-8 w-8 mx-auto text-muted-foreground mb-2" />
+              <p className="text-sm text-muted-foreground">No activity yet</p>
+            </div>
+          ) : (
+            activities.map((activityItem) => {
               const isRating = activityItem.type === 'party_rating' || activityItem.type === 'frat_rating';
+              const isFratRating = activityItem.type === 'frat_rating';
+              const isComment = activityItem.type === 'party_comment' || activityItem.type === 'frat_comment';
               
               return (
                 <Link 
@@ -1484,117 +1483,57 @@ export default function Activity() {
                     : createPageUrl(`Fraternity?id=${activityItem.fraternity?.id}`)
                   }
                 >
-                  <div className="rounded-2xl bg-card p-5 border hover:border-primary/50 transition-all active:scale-[0.99]">
-                    <div className="flex items-start gap-3">
-                      <div className={cn(
-                        "w-11 h-11 rounded-xl flex items-center justify-center text-white shrink-0",
-                        activityItem.type === 'party_rating' && "bg-gradient-to-br from-pink-500 to-rose-500",
-                        activityItem.type === 'frat_rating' && "bg-gradient-to-br from-amber-500 to-orange-500",
-                        activityItem.type === 'party_comment' && "gradient-primary",
-                        activityItem.type === 'frat_comment' && "bg-gradient-to-br from-cyan-500 to-blue-500"
-                      )}>
-                        {getActivityIcon(activityItem.type)}
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2 mb-1">
-                          <span className="text-sm text-muted-foreground">
-                            {formatDistanceToNow(new Date(activityItem.created_date), { addSuffix: true })}
-                          </span>
-                          {isRating && activityItem.score && (
-                            <Badge className={cn(
-                              "text-white font-bold",
-                              getScoreBgColor(activityItem.score)
-                            )}>
-                              {activityItem.score.toFixed(1)}
-                            </Badge>
-                          )}
+                  <div className="rounded-xl bg-card p-3 border hover:border-primary/50 transition-all active:scale-[0.99]">
+                    <div className="flex items-center gap-3">
+                      {/* Large score badge for ratings */}
+                      {isRating && activityItem.score && (
+                        <div className={cn(
+                          "w-12 h-12 rounded-xl flex items-center justify-center text-white font-bold text-lg shrink-0",
+                          getScoreBgColor(activityItem.score)
+                        )}>
+                          {activityItem.score.toFixed(1)}
                         </div>
-                        <p className="font-semibold text-base mb-1">
-                          {activityItem.type.includes('party') ? activityItem.party?.title : activityItem.fraternity?.name}
+                      )}
+                      
+                      {/* Icon for comments */}
+                      {isComment && (
+                        <div className={cn(
+                          "w-10 h-10 rounded-xl flex items-center justify-center text-white shrink-0",
+                          activityItem.type === 'party_comment' && "gradient-primary",
+                          activityItem.type === 'frat_comment' && "bg-gradient-to-br from-cyan-500 to-blue-500"
+                        )}>
+                          <MessageCircle className="h-5 w-5" />
+                        </div>
+                      )}
+                      
+                      <div className="flex-1 min-w-0">
+                        <p className="text-xs text-muted-foreground mb-0.5">
+                          {isRating 
+                            ? (isFratRating ? 'Rated' : 'Rated party at')
+                            : 'Commented on'
+                          }
                         </p>
-                        {activityItem.fraternity && activityItem.type.includes('party') && (
-                          <p className="text-sm text-muted-foreground">{activityItem.fraternity.name}</p>
+                        <p className="font-semibold text-sm truncate">
+                          {isFratRating ? activityItem.fraternity?.name : (activityItem.party?.title || activityItem.fraternity?.name)}
+                        </p>
+                        {activityItem.fraternity && activityItem.type === 'party_rating' && (
+                          <p className="text-xs text-muted-foreground truncate">{activityItem.fraternity.name}</p>
                         )}
                         {activityItem.text && (
-                          <p className="text-sm mt-2 text-muted-foreground line-clamp-2">{activityItem.text}</p>
-                        )}
-                        
-                        {/* Score breakdown for ratings */}
-                        {activityItem.type === 'party_rating' && (
-                          <div className="flex items-center gap-4 mt-3 text-sm">
-                            <div className="flex items-center gap-1">
-                              <Zap className="h-4 w-4 text-pink-500" />
-                              <span className="font-semibold">{activityItem.vibe?.toFixed(1)}</span>
-                            </div>
-                            <div className="flex items-center gap-1">
-                              <Star className="h-4 w-4 text-primary" />
-                              <span className="font-semibold">{activityItem.music?.toFixed(1)}</span>
-                            </div>
-                            <div className="flex items-center gap-1">
-                              <TrendingUp className="h-4 w-4 text-cyan-500" />
-                              <span className="font-semibold">{activityItem.execution?.toFixed(1)}</span>
-                            </div>
-                          </div>
-                        )}
-                        
-                        {activityItem.type === 'frat_rating' && (
-                          <div className="flex items-center gap-4 mt-3 text-sm">
-                            <div className="flex items-center gap-1">
-                              <Users className="h-4 w-4 text-amber-500" />
-                              <span className="font-semibold">{activityItem.brotherhood?.toFixed(1)}</span>
-                            </div>
-                            <div className="flex items-center gap-1">
-                              <Shield className="h-4 w-4 text-emerald-500" />
-                              <span className="font-semibold">{activityItem.reputation?.toFixed(1)}</span>
-                            </div>
-                            <div className="flex items-center gap-1">
-                              <Heart className="h-4 w-4 text-rose-500" />
-                              <span className="font-semibold">{activityItem.community?.toFixed(1)}</span>
-                            </div>
-                          </div>
+                          <p className="text-xs mt-1 text-muted-foreground line-clamp-1">{activityItem.text}</p>
                         )}
                       </div>
-                      <ChevronRight className="h-5 w-5 text-muted-foreground shrink-0" />
+                      
+                      <div className="text-[10px] text-muted-foreground shrink-0">
+                        {formatDistanceToNow(new Date(activityItem.created_date), { addSuffix: false })}
+                      </div>
                     </div>
                   </div>
                 </Link>
               );
-            }
-          })
-        )}
-        
-        {/* Feed end marker for intersection observer */}
-        <div ref={feedEndRef} className="h-1" />
-        
-        {/* You're all caught up message */}
-        {showCaughtUp && feedItemsLast24h.length > 0 && (
-          <div className="text-center py-8">
-            <div className="inline-flex flex-col items-center">
-              <div className="w-16 h-16 rounded-full bg-gradient-to-br from-green-400 to-emerald-500 flex items-center justify-center mb-4 animate-scale-in">
-                <CheckCircle className="h-8 w-8 text-white" />
-              </div>
-              <h3 className="text-lg font-bold mb-1">You're all caught up!</h3>
-              <p className="text-muted-foreground text-sm mb-4">You've seen all posts from the last 24 hours</p>
-              {!caughtUpClaimed ? (
-                <button
-                  onClick={handleClaimPoints}
-                  className="px-6 py-3 rounded-full bg-gradient-to-r from-amber-400 via-yellow-400 to-amber-500 text-black font-bold text-lg shadow-lg shadow-amber-500/30 animate-pulse hover:scale-105 active:scale-95 transition-transform"
-                >
-                  <span className="flex items-center gap-2">
-                    <Sparkles className="h-5 w-5" />
-                    Claim +10 Points
-                    <Sparkles className="h-5 w-5" />
-                  </span>
-                </button>
-              ) : (
-                <div className="flex items-center gap-2 text-green-500 font-bold">
-                  <Check className="h-5 w-5" />
-                  <span>+10 Points Claimed!</span>
-                </div>
-              )}
-            </div>
-          </div>
-        )}
+            })
+          )}
+        </div>
       </div>
 
 
