@@ -959,11 +959,8 @@ export default function Activity() {
       <div className="rounded-3xl overflow-hidden gradient-primary p-[2px]">
         <div className="rounded-[22px] bg-card p-5">
           <div className="flex items-center gap-3 mb-4">
-            <div className="w-12 h-12 rounded-2xl gradient-primary flex items-center justify-center text-white animate-pulse">
-              <Vote className="h-6 w-6" />
-            </div>
             <div className="flex-1">
-              <h2 className="text-lg font-bold">What's the move tonight?</h2>
+              <h2 className="text-lg font-bold animate-pulse">What's the move tonight?</h2>
               <p className="text-sm text-muted-foreground">
                 {totalMoveVotes > 0 ? `${totalMoveVotes} votes · See what everyone's doing` : 'Vote and see what others are up to'}
               </p>
@@ -1024,7 +1021,6 @@ export default function Activity() {
             const renderOption = (option: typeof allOptions[0], index: number) => {
               const percentage = totalMoveVotes > 0 ? (option.votes / totalMoveVotes) * 100 : 0;
               const isSelected = userMoveVote === option.id;
-              const Icon = option.icon || (option.type === 'custom' ? Sparkles : PartyPopper);
               
               return (
                 <button
@@ -1045,12 +1041,12 @@ export default function Activity() {
                   )}
                   <div className="relative flex items-center gap-3">
                     <div className={cn(
-                      "w-9 h-9 rounded-xl flex items-center justify-center shrink-0",
+                      "w-9 h-9 rounded-xl flex items-center justify-center shrink-0 font-bold text-sm",
                       isSelected 
                         ? "gradient-primary text-white" 
                         : "bg-muted text-muted-foreground"
                     )}>
-                      {isSelected ? <Check className="h-4 w-4" /> : <Icon className="h-4 w-4" />}
+                      {isSelected ? <Check className="h-4 w-4" /> : (index + 1)}
                     </div>
                     <div className="flex-1 min-w-0">
                       <p className="font-semibold text-sm truncate">{option.label}</p>
@@ -1281,10 +1277,7 @@ export default function Activity() {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         {/* Left Column - Posts */}
         <div className="space-y-3">
-          <div className="flex items-center gap-2 mb-2">
-            <MessagesSquare className="h-4 w-4 text-primary" />
-            <h3 className="font-semibold text-sm">Posts</h3>
-          </div>
+          <h3 className="font-semibold text-sm">Posts</h3>
           
           {chatMessages.length === 0 ? (
             <div className="text-center py-8 rounded-2xl border border-dashed border-muted-foreground/30">
@@ -1459,10 +1452,7 @@ export default function Activity() {
         
         {/* Right Column - Activity (Ratings & Comments) */}
         <div className="space-y-3">
-          <div className="flex items-center gap-2 mb-2">
-            <TrendingUp className="h-4 w-4 text-primary" />
-            <h3 className="font-semibold text-sm">Activity</h3>
-          </div>
+          <h3 className="font-semibold text-sm">Activity</h3>
           
           {activities.length === 0 ? (
             <div className="text-center py-8 rounded-2xl border border-dashed border-muted-foreground/30">
