@@ -7,6 +7,7 @@ import { getFratGreek, getFratShorthand } from '@/utils';
 interface Fraternity {
   id: string;
   name: string;
+  chapter?: string;
   letters?: string;
   logo_url?: string;
 }
@@ -47,8 +48,8 @@ export default function FratPickerSheet({ isOpen, onClose, onSelect, fraternitie
                   </AvatarFallback>
                 </Avatar>
                 <div className="flex-1 min-w-0">
-                  <p className="font-semibold truncate">{frat.name}</p>
-                  <p className="text-sm text-muted-foreground">{getFratShorthand(frat.name)}</p>
+                  <p className="font-semibold truncate">{frat.chapter || getFratShorthand(frat.name)}</p>
+                  <p className="text-sm text-muted-foreground">{frat.name}</p>
                 </div>
                 <Star className="h-5 w-5 text-amber-500" />
               </button>
