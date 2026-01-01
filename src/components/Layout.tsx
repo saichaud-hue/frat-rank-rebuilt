@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { Home, Trophy, PartyPopper, User, ChevronRight, Zap } from 'lucide-react';
+import { Home, Trophy, PartyPopper, User, ChevronRight, Zap, Newspaper } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -14,6 +14,7 @@ interface LayoutProps {
 
 const navItems = [
   { title: 'Feed', url: '/Activity', icon: Home, hasNotification: true },
+  { title: 'Posts', url: '/Posts', icon: Newspaper },
   { title: 'Rankings', url: '/Leaderboard', icon: Trophy },
   { title: 'Parties', url: '/Parties', icon: PartyPopper },
   { title: 'You', url: '/Profile', icon: User },

@@ -6,6 +6,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate, useLocation } from "react-router-dom";
 import Layout from "./components/Layout";
 import Activity from "./pages/Activity";
+import Posts from "./pages/Posts";
 import Leaderboard from "./pages/Leaderboard";
 import CategoryRankings from "./pages/CategoryRankings";
 import Parties from "./pages/Parties";
@@ -44,6 +45,7 @@ const App = () => (
         <Routes>
           <Route path="/" element={<Navigate to="/Activity" replace />} />
           <Route path="/Activity" element={<Layout><Activity /></Layout>} />
+          <Route path="/Posts" element={<Layout><Posts /></Layout>} />
           <Route path="/Leaderboard" element={<Layout><Leaderboard /></Layout>} />
           <Route path="/Rankings" element={<Layout><CategoryRankings /></Layout>} />
           <Route path="/Parties" element={<Layout><Parties /></Layout>} />
