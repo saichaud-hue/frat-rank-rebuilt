@@ -288,7 +288,7 @@ export default function FratBattleGame({
             <motion.div
               initial={{ scale: 0 }}
               animate={{ scale: 1 }}
-              className="w-16 h-16 mx-auto mb-3 rounded-full bg-gradient-to-br from-amber-400 to-orange-500 flex items-center justify-center"
+              className="w-16 h-16 mx-auto mb-3 rounded-full gradient-primary flex items-center justify-center"
             >
               <Trophy className="h-8 w-8 text-white" />
             </motion.div>
@@ -348,9 +348,8 @@ export default function FratBattleGame({
           </Button>
           <Button 
             onClick={handleSubmitRanking}
-            className="flex-1 rounded-xl bg-gradient-to-r from-amber-500 to-orange-500"
+            className="flex-1 rounded-xl gradient-primary"
           >
-            <Sparkles className="h-4 w-4 mr-2" />
             Use This Ranking
           </Button>
         </div>
@@ -375,7 +374,7 @@ export default function FratBattleGame({
       <div className="space-y-2">
         <div className="relative h-3 w-full rounded-full bg-muted overflow-hidden">
           <div 
-            className="absolute inset-y-0 left-0 bg-gradient-to-r from-amber-500 to-orange-500 rounded-full transition-all duration-300"
+            className="absolute inset-y-0 left-0 gradient-primary rounded-full transition-all duration-300"
             style={{ width: `${progress}%` }}
           />
         </div>
@@ -428,7 +427,7 @@ export default function FratBattleGame({
 
             {/* VS Badge */}
             <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 z-10">
-              <div className="w-12 h-12 rounded-full bg-gradient-to-br from-amber-500 to-orange-500 flex items-center justify-center text-white font-black shadow-lg shadow-orange-500/30">
+              <div className="w-12 h-12 rounded-full gradient-primary flex items-center justify-center text-white font-black shadow-lg">
                 VS
               </div>
             </div>
@@ -466,13 +465,6 @@ export default function FratBattleGame({
         </motion.div>
       </AnimatePresence>
 
-      {/* Hint */}
-      <div className="text-center">
-        <p className="text-xs text-muted-foreground flex items-center justify-center gap-1">
-          <Flame className="h-3 w-3" />
-          Tap the frat you prefer!
-        </p>
-      </div>
 
       {/* Cancel button */}
       <Button 
