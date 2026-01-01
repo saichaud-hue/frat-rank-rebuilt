@@ -34,11 +34,13 @@ import {
   Coffee,
   Swords,
   BarChart3,
-  ArrowLeft
+  ArrowLeft,
+  Newspaper
 } from 'lucide-react';
 import FratBattleGame from '@/components/activity/FratBattleGame';
 import RankingPostCard, { parseRankingFromText } from '@/components/activity/RankingPostCard';
 import PollCard, { parsePollFromText } from '@/components/activity/PollCard';
+import AnonymousFeed from '@/components/feed/AnonymousFeed';
 import { recordUserAction } from '@/utils/streak';
 import { Progress } from '@/components/ui/progress';
 import { Card } from '@/components/ui/card';
@@ -72,6 +74,8 @@ import { formatDistanceToNow, differenceInSeconds, differenceInMinutes, differen
 import { getScoreColor, getScoreBgColor, createPageUrl } from '@/utils';
 import { toast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
+
+type ActivityTab = 'feed' | 'posts';
 
 type ActivityType = 'party_rating' | 'frat_rating' | 'party_comment' | 'frat_comment';
 
@@ -110,6 +114,7 @@ interface ChatItem {
 }
 
 export default function Activity() {
+  const [activeTab, setActiveTab] = useState<ActivityTab>('feed');
   const [activities, setActivities] = useState<ActivityItem[]>([]);
   const [chatMessages, setChatMessages] = useState<ChatItem[]>([]);
   const [loading, setLoading] = useState(true);
@@ -892,7 +897,52 @@ export default function Activity() {
   }
 
   return (
-    <div className="space-y-5 pb-24">
+    <div className="relative min-h-screen pb-20">
+      {/* Bottom Tab Navigation */}
+      <div className="fixed bottom-0 left-0 right-0 z-50 bg-background/95 backdrop-blur-md border-t safe-area-pb">
+        <div className="flex max-w-lg mx-auto">
+          <button
+            onClick={() => setActiveTab('feed')}
+            className={cn(
+              "flex-1 flex flex-col items-center gap-1 py-3 transition-all",
+              activeTab === 'feed' 
+                ? "text-primary" 
+                : "text-muted-foreground hover:text-foreground"
+            )}
+          >
+            <div className={cn(
+              "w-10 h-10 rounded-xl flex items-center justify-center transition-all",
+              activeTab === 'feed' && "bg-primary/10"
+            )}>
+              <Zap className={cn("h-5 w-5", activeTab === 'feed' && "text-primary")} />
+            </div>
+            <span className="text-xs font-medium">Activity</span>
+          </button>
+          <button
+            onClick={() => setActiveTab('posts')}
+            className={cn(
+              "flex-1 flex flex-col items-center gap-1 py-3 transition-all",
+              activeTab === 'posts' 
+                ? "text-primary" 
+                : "text-muted-foreground hover:text-foreground"
+            )}
+          >
+            <div className={cn(
+              "w-10 h-10 rounded-xl flex items-center justify-center transition-all",
+              activeTab === 'posts' && "bg-primary/10"
+            )}>
+              <Newspaper className={cn("h-5 w-5", activeTab === 'posts' && "text-primary")} />
+            </div>
+            <span className="text-xs font-medium">Posts</span>
+          </button>
+        </div>
+      </div>
+
+      {/* Tab Content */}
+      {activeTab === 'posts' ? (
+        <AnonymousFeed />
+      ) : (
+        <div className="space-y-5 pb-4">
       {/* Stories-style horizontal scroll for live/upcoming */}
       {(liveParties.length > 0 || upcomingParties.length > 0) && (
         <div className="flex gap-3 overflow-x-auto pb-2 no-scrollbar -mx-4 px-4">
@@ -2674,6 +2724,8 @@ export default function Activity() {
           )}
         </SheetContent>
       </Sheet>
+      </div>
+      )}
     </div>
   );
 }
