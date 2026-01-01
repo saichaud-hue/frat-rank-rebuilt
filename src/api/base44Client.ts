@@ -279,6 +279,7 @@ export interface Party {
   ends_at: string;
   venue: string;
   theme: string;
+  access_type: 'open' | 'invite_only';
   tags: string[];
   display_photo_url: string;
   performance_score: number;
@@ -491,6 +492,7 @@ export async function seedInitialData(): Promise<void> {
       ends_at: endDate.toISOString(),
       venue: `${frat.name} House`,
       theme: themes[i % themes.length],
+      access_type: i % 2 === 0 ? 'open' : 'invite_only',
       tags: ['social', themes[i % themes.length]],
       display_photo_url: '',
       performance_score: daysOffset < 0 ? 6 + Math.random() * 3 : 0,

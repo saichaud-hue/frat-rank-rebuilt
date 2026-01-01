@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useSearchParams, Link } from 'react-router-dom';
-import { ArrowLeft, Calendar, Clock, MapPin, Users, Star, Radio, Camera, MessageCircle, Trophy, Zap } from 'lucide-react';
+import { ArrowLeft, Calendar, Clock, MapPin, Users, Star, Camera, MessageCircle, Trophy, Zap, Lock, Globe } from 'lucide-react';
 import { base44, type Party, type Fraternity, type PartyRating } from '@/api/base44Client';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -142,17 +142,22 @@ export default function PartyPage() {
 
       {/* Header Card */}
       <div className={`rounded-2xl ${config.headerBg} p-5 text-white`}>
-        {/* Status & Theme */}
+        {/* Status & Theme Badges */}
         <div className="flex items-center justify-between mb-3">
           <Badge className={`${config.bg} text-white border-0 ${status === 'live' ? 'animate-pulse' : ''}`}>
-            <Radio className="h-3 w-3 mr-1" />
-            {config.text}
+            <Calendar className="h-3 w-3 mr-1" />
+            {status === 'live' ? 'LIVE' : status === 'upcoming' ? 'UPCOMING' : 'COMPLETED'}
           </Badge>
-          {party.theme && (
-            <Badge className="bg-white/20 text-white border-0 capitalize">
-              {party.theme}
+          <div className="flex items-center gap-2">
+            {party.theme && (
+              <Badge className="bg-white/20 text-white border-0 capitalize">
+                {party.theme}
+              </Badge>
+            )}
+            <Badge className="bg-white/20 text-white border-0">
+              {party.access_type === 'invite_only' ? 'Invite Only' : 'Open'}
             </Badge>
-          )}
+          </div>
         </div>
 
         {/* Title & Frat */}
