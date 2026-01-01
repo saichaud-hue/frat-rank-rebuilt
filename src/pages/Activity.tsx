@@ -893,12 +893,13 @@ export default function Activity() {
 
   return (
     <div className="space-y-5 pb-24">
-      {/* Stories-style horizontal scroll for live/upcoming */}
+      {/* Stories-style horizontal scroll for live/upcoming with quality signals */}
       {(liveParties.length > 0 || upcomingParties.length > 0) && (
         <div className="flex gap-3 overflow-x-auto pb-2 no-scrollbar -mx-4 px-4">
           {/* Live parties first */}
           {liveParties.map((party) => {
             const frat = fraternities.find(f => f.id === party.fraternity_id);
+            const fratScore = frat?.display_score || 0;
             return (
               <Link
                 key={party.id}
@@ -913,18 +914,27 @@ export default function Activity() {
                   </div>
                   <div className="absolute bottom-0 inset-x-0 p-1.5 bg-black/60 backdrop-blur-sm">
                     <p className="text-[10px] font-semibold text-white text-center truncate">{frat?.chapter || 'Party'}</p>
+                    {fratScore > 0 && (
+                      <div className="flex items-center justify-center gap-0.5 mt-0.5">
+                        <Star className="h-2.5 w-2.5 text-amber-400 fill-amber-400" />
+                        <span className="text-[9px] text-amber-400 font-bold">{fratScore.toFixed(1)}</span>
+                      </div>
+                    )}
                   </div>
                 </div>
               </Link>
             );
           })}
           
-          {/* Upcoming parties */}
+          {/* Upcoming parties with quality signals */}
           {upcomingParties.map((party) => {
             const frat = fraternities.find(f => f.id === party.fraternity_id);
+            const fratScore = frat?.display_score || 0;
             const partyDate = new Date(party.starts_at);
             const isPartyToday = isToday(partyDate);
             const isPartyTomorrow = isTomorrow(partyDate);
+            // Momentum indicator based on frat momentum score
+            const hasMomentum = frat?.momentum && frat.momentum > 0.1;
             
             return (
               <Link
@@ -932,7 +942,10 @@ export default function Activity() {
                 to={createPageUrl(`Party?id=${party.id}`)}
                 className="shrink-0 group"
               >
-                <div className="relative w-20 h-28 rounded-2xl overflow-hidden ring-2 ring-border hover:ring-primary/50 transition-all">
+                <div className={cn(
+                  "relative w-20 h-28 rounded-2xl overflow-hidden ring-2 transition-all",
+                  hasMomentum ? "ring-amber-500/50" : "ring-border hover:ring-primary/50"
+                )}>
                   {/* Cover photo or fallback gradient */}
                   {party.display_photo_url ? (
                     <img 
@@ -945,11 +958,18 @@ export default function Activity() {
                   )}
                   {/* Overlay for text readability */}
                   <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent" />
-                  {/* Day label */}
-                  <div className="absolute top-2 left-1/2 -translate-x-1/2 px-2 py-0.5 rounded-full bg-black/60 backdrop-blur-sm">
-                    <span className="text-[10px] font-semibold text-white">
-                      {isPartyToday ? 'Tonight' : isPartyTomorrow ? 'Tmrw' : format(partyDate, 'EEE')}
-                    </span>
+                  {/* Day label with momentum badge */}
+                  <div className="absolute top-2 left-1/2 -translate-x-1/2 flex items-center gap-1">
+                    <div className="px-2 py-0.5 rounded-full bg-black/60 backdrop-blur-sm">
+                      <span className="text-[10px] font-semibold text-white">
+                        {isPartyToday ? 'Tonight' : isPartyTomorrow ? 'Tmrw' : format(partyDate, 'EEE')}
+                      </span>
+                    </div>
+                    {hasMomentum && (
+                      <div className="w-4 h-4 rounded-full bg-amber-500/80 flex items-center justify-center">
+                        <TrendingUp className="h-2.5 w-2.5 text-white" />
+                      </div>
+                    )}
                   </div>
                   {/* If no cover photo, show icon */}
                   {!party.display_photo_url && (
@@ -957,9 +977,15 @@ export default function Activity() {
                       <PartyPopper className="h-8 w-8 text-white/80" />
                     </div>
                   )}
-                  {/* Frat name at bottom */}
+                  {/* Frat name + rating at bottom */}
                   <div className="absolute bottom-0 inset-x-0 p-1.5">
                     <p className="text-[10px] font-semibold text-white text-center truncate">{frat?.chapter || party.title}</p>
+                    {fratScore > 0 && (
+                      <div className="flex items-center justify-center gap-0.5 mt-0.5">
+                        <Star className="h-2.5 w-2.5 text-amber-400 fill-amber-400" />
+                        <span className="text-[9px] text-amber-400 font-bold">{fratScore.toFixed(1)}</span>
+                      </div>
+                    )}
                   </div>
                 </div>
               </Link>
@@ -976,7 +1002,7 @@ export default function Activity() {
         </div>
       )}
 
-      {/* What's the move tonight? - BOLD Duke Energy */}
+      {/* What's the move tonight? - BOLD Duke Energy with context */}
       <div className="relative card-hero overflow-hidden">
         {/* Background glow effect */}
         <div className="absolute inset-0 gradient-hero opacity-10" />
@@ -988,19 +1014,24 @@ export default function Activity() {
               <Zap className="h-7 w-7 text-white" />
             </div>
             <div className="flex-1">
-              <h2 className="text-xl font-display font-black tracking-tight">Where we going?</h2>
-              <p className="text-sm text-muted-foreground mt-0.5">
+              <div className="flex items-center gap-2 mb-0.5">
+                <h2 className="text-xl font-display font-black tracking-tight">Where we going?</h2>
+                <Badge variant="secondary" className="text-[10px] px-2 py-0.5 bg-primary/10 text-primary border-0">
+                  {isToday(new Date()) && new Date().getHours() >= 17 ? 'Tonight' : 'This weekend'}
+                </Badge>
+              </div>
+              <p className="text-sm text-muted-foreground">
                 {totalMoveVotes > 0 ? (
                   <span className="flex items-center gap-2">
                     <span className="inline-flex items-center gap-1 text-primary font-bold">
                       <Users className="h-3.5 w-3.5" />
-                      {totalMoveVotes}
+                      {totalMoveVotes} {totalMoveVotes === 1 ? 'person' : 'people'}
                     </span>
-                    <span>people voted</span>
+                    <span>voted</span>
                     {totalMoveVotes >= 10 && <span className="badge-trending">🔥 Hot</span>}
                   </span>
                 ) : (
-                  'Cast the first vote tonight'
+                  'Cast the first vote — be the trendsetter'
                 )}
               </p>
             </div>
@@ -1235,7 +1266,7 @@ export default function Activity() {
         </div>
       </div>
 
-      {/* Trending Summary - Parties & Frats */}
+      {/* Trending Summary - Parties & Frats with inline ratings */}
       <div className="space-y-3">
         {/* Quick glance header */}
         <div className="flex items-center justify-between">
@@ -1243,53 +1274,66 @@ export default function Activity() {
             <Flame className="h-4 w-4 text-primary" />
             Trending Now
           </h3>
+          <Link to="/Leaderboard" className="text-xs font-semibold text-primary hover:underline">
+            View all
+          </Link>
         </div>
         
-        {/* Horizontal scroll cards */}
-        <div className="flex gap-3 overflow-x-auto pb-2 -mx-4 px-4 scrollbar-hide">
-          {/* Top Frats */}
+        {/* Top Frats with star ratings */}
+        <div className="rounded-2xl bg-gradient-to-br from-muted/50 to-muted/30 border border-border/50 p-3 space-y-2">
           {fraternities
             .filter(f => f.display_score && f.display_score > 0)
             .sort((a, b) => (b.display_score || 0) - (a.display_score || 0))
             .slice(0, 3)
-            .map((frat, index) => (
-              <Link
-                key={frat.id}
-                to={`/Fraternity/${frat.id}`}
-                className="shrink-0 w-32 p-3 rounded-2xl bg-gradient-to-br from-muted/50 to-muted/30 border border-border/50 hover:border-primary/50 transition-all active:scale-[0.98]"
-              >
-                <div className="flex items-center gap-2 mb-2">
+            .map((frat, index) => {
+              const score = frat.display_score || 0;
+              const fullStars = Math.floor(score / 2);
+              const hasHalfStar = (score / 2) % 1 >= 0.5;
+              const isTrending = frat.momentum && frat.momentum > 0.1;
+              
+              return (
+                <Link
+                  key={frat.id}
+                  to={`/Fraternity/${frat.id}`}
+                  className="flex items-center gap-3 p-2 rounded-xl hover:bg-muted/50 transition-colors group"
+                >
                   <div className={cn(
-                    "w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold",
+                    "w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold shrink-0",
                     index === 0 ? "bg-amber-500 text-white" : index === 1 ? "bg-slate-400 text-white" : "bg-amber-700 text-white"
                   )}>
                     {index + 1}
                   </div>
-                  <Crown className={cn(
-                    "h-3.5 w-3.5",
-                    index === 0 ? "text-amber-500" : "text-muted-foreground"
-                  )} />
-                </div>
-                <p className="font-bold text-sm truncate">{frat.chapter}</p>
-                <p className="text-xs text-muted-foreground truncate">{frat.name}</p>
-                <div className="mt-2 flex items-center gap-1">
-                  <Trophy className="h-3 w-3 text-primary" />
-                  <span className="text-xs font-bold text-primary">{frat.display_score?.toFixed(1)}</span>
-                </div>
-              </Link>
-            ))}
-          
-          {/* View all frats */}
-          <Link
-            to="/Leaderboard"
-            className="shrink-0 w-24 p-3 rounded-2xl border-2 border-dashed border-muted-foreground/30 flex flex-col items-center justify-center text-muted-foreground hover:border-primary hover:text-primary transition-all"
-          >
-            <Trophy className="h-5 w-5 mb-1" />
-            <span className="text-[10px] font-medium text-center">Rankings</span>
-          </Link>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2">
+                      <p className="font-bold text-sm truncate">{frat.chapter}</p>
+                      {isTrending && (
+                        <TrendingUp className="h-3 w-3 text-emerald-500 shrink-0" />
+                      )}
+                    </div>
+                    <div className="flex items-center gap-1 mt-0.5">
+                      {[...Array(5)].map((_, i) => (
+                        <Star
+                          key={i}
+                          className={cn(
+                            "h-3 w-3",
+                            i < fullStars 
+                              ? "text-amber-400 fill-amber-400" 
+                              : i === fullStars && hasHalfStar 
+                                ? "text-amber-400 fill-amber-400/50"
+                                : "text-muted-foreground/30"
+                          )}
+                        />
+                      ))}
+                      <span className="text-xs font-bold text-muted-foreground ml-1">{score.toFixed(1)}</span>
+                    </div>
+                  </div>
+                  <ChevronRight className="h-4 w-4 text-muted-foreground shrink-0" />
+                </Link>
+              );
+            })}
         </div>
         
-        {/* Upcoming parties quick list */}
+        {/* Upcoming parties quick list with ratings */}
         {upcomingParties.length > 0 && (
           <div className="rounded-2xl bg-muted/30 border border-border/50 p-3 space-y-2">
             <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide flex items-center gap-2">
@@ -1299,8 +1343,10 @@ export default function Activity() {
             <div className="space-y-1.5">
               {upcomingParties.slice(0, 3).map((party) => {
                 const frat = fraternities.find(f => f.id === party.fraternity_id);
+                const fratScore = frat?.display_score || 0;
                 const partyDate = new Date(party.starts_at);
-                const dayLabel = isToday(partyDate) ? 'Today' : isTomorrow(partyDate) ? 'Tomorrow' : format(partyDate, 'EEE');
+                const dayLabel = isToday(partyDate) ? 'Tonight' : isTomorrow(partyDate) ? 'Tomorrow' : format(partyDate, 'EEE');
+                const isThisWeekend = !isToday(partyDate) && !isTomorrow(partyDate);
                 
                 return (
                   <Link
@@ -1308,14 +1354,29 @@ export default function Activity() {
                     to={`/Party/${party.id}`}
                     className="flex items-center gap-3 p-2 rounded-xl hover:bg-muted/50 transition-colors group"
                   >
-                    <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center shrink-0 group-hover:bg-primary/20 transition-colors">
-                      <PartyPopper className="h-4 w-4 text-primary" />
+                    <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center shrink-0 group-hover:bg-primary/20 transition-colors overflow-hidden">
+                      {party.display_photo_url ? (
+                        <img src={party.display_photo_url} alt="" className="w-full h-full object-cover" />
+                      ) : (
+                        <PartyPopper className="h-4 w-4 text-primary" />
+                      )}
                     </div>
                     <div className="flex-1 min-w-0">
-                      <p className="font-semibold text-sm truncate">{party.title}</p>
-                      <p className="text-xs text-muted-foreground truncate">
-                        {frat?.chapter} · {dayLabel} {format(partyDate, 'h:mm a')}
-                      </p>
+                      <div className="flex items-center gap-2">
+                        <p className="font-semibold text-sm truncate">{party.title}</p>
+                        <Badge variant="secondary" className="text-[9px] px-1.5 py-0 h-4 shrink-0">
+                          {dayLabel}
+                        </Badge>
+                      </div>
+                      <div className="flex items-center gap-2 mt-0.5">
+                        <span className="text-xs text-muted-foreground truncate">{frat?.chapter}</span>
+                        {fratScore > 0 && (
+                          <div className="flex items-center gap-0.5 shrink-0">
+                            <Star className="h-2.5 w-2.5 text-amber-400 fill-amber-400" />
+                            <span className="text-[10px] font-bold text-muted-foreground">{fratScore.toFixed(1)}</span>
+                          </div>
+                        )}
+                      </div>
                     </div>
                     <ChevronRight className="h-4 w-4 text-muted-foreground shrink-0" />
                   </Link>
@@ -1331,6 +1392,62 @@ export default function Activity() {
           </div>
         )}
       </div>
+
+      {/* Relevant Posts - Top 2-3 opinions about parties and frats */}
+      {topPosts.length > 0 && (
+        <div className="space-y-3">
+          <div className="flex items-center justify-between">
+            <h3 className="text-sm font-bold text-muted-foreground uppercase tracking-wide flex items-center gap-2">
+              <MessagesSquare className="h-4 w-4 text-primary" />
+              What People Are Saying
+            </h3>
+            <button
+              onClick={() => setShowFeedView(true)}
+              className="text-xs font-semibold text-primary hover:underline"
+            >
+              See all
+            </button>
+          </div>
+          
+          <div className="space-y-2">
+            {topPosts.slice(0, 2).map((post) => {
+              const netVotes = post.upvotes - post.downvotes;
+              const isHot = netVotes >= 3 || (post.replies?.length || 0) >= 2;
+              
+              return (
+                <button
+                  key={post.id}
+                  onClick={() => setCommentsSheetItem(post)}
+                  className="w-full text-left p-3 rounded-2xl bg-muted/30 border border-border/50 hover:border-primary/30 transition-all active:scale-[0.99]"
+                >
+                  <div className="flex items-start gap-3">
+                    <div className="w-8 h-8 rounded-full bg-gradient-to-br from-primary/20 to-primary/10 flex items-center justify-center shrink-0">
+                      <MessageCircle className="h-4 w-4 text-primary" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm leading-relaxed line-clamp-2">{post.text}</p>
+                      <div className="flex items-center gap-3 mt-2 text-xs text-muted-foreground">
+                        <span className="flex items-center gap-1">
+                          <ThumbsUp className={cn("h-3 w-3", netVotes > 0 && "text-primary")} />
+                          {netVotes > 0 ? `+${netVotes}` : netVotes}
+                        </span>
+                        {(post.replies?.length || 0) > 0 && (
+                          <span className="flex items-center gap-1">
+                            <MessageCircle className="h-3 w-3" />
+                            {post.replies?.length}
+                          </span>
+                        )}
+                        <span>{formatDistanceToNow(new Date(post.created_date), { addSuffix: true })}</span>
+                        {isHot && <span className="badge-trending text-[9px] px-1.5">Hot</span>}
+                      </div>
+                    </div>
+                  </div>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      )}
 
       {/* All Move Options Sheet */}
       <Sheet open={showAllMoveOptions} onOpenChange={setShowAllMoveOptions}>
