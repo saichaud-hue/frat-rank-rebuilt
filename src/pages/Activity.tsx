@@ -323,16 +323,25 @@ export default function Activity() {
     return upcomingParties[0] || null;
   }, [parties]);
 
-  // Get tonight's parties for "What's the move"
-  const tonightsParties = useMemo(() => {
+  // Get today's parties for "What's the move" - resets at 5 AM each morning
+  const todaysParties = useMemo(() => {
     const now = new Date();
-    const tonight = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-    const tomorrowMorning = new Date(tonight.getTime() + 24 * 60 * 60 * 1000 + 6 * 60 * 60 * 1000);
+    // Calculate today's 5 AM as the start of the "day" (aligns with daily vote reset)
+    const today5AM = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 5, 0, 0);
+    const tomorrow5AM = new Date(today5AM.getTime() + 24 * 60 * 60 * 1000);
     
-    return parties.filter(p => {
-      const partyDate = new Date(p.starts_at);
-      return partyDate >= tonight && partyDate < tomorrowMorning && p.status !== 'cancelled';
-    });
+    // If current time is before 5 AM, use yesterday's 5 AM as start
+    const dayStart = now < today5AM 
+      ? new Date(today5AM.getTime() - 24 * 60 * 60 * 1000) 
+      : today5AM;
+    const dayEnd = now < today5AM ? today5AM : tomorrow5AM;
+    
+    return parties
+      .filter(p => {
+        const partyDate = new Date(p.starts_at);
+        return partyDate >= dayStart && partyDate < dayEnd && p.status !== 'cancelled';
+      })
+      .sort((a, b) => new Date(a.starts_at).getTime() - new Date(b.starts_at).getTime());
   }, [parties]);
 
   // Countdown effect
@@ -1042,14 +1051,14 @@ export default function Activity() {
             )}
           </div>
           
-          {/* Featured Party Cards - Show if there are parties tonight */}
-          {tonightsParties.length > 0 && (
+          {/* Featured Party Cards - Show if there are parties today */}
+          {todaysParties.length > 0 && (
             <div className="mb-4 space-y-3">
               <p className="text-xs font-semibold text-primary uppercase tracking-wide flex items-center gap-2">
                 <Sparkles className="h-3 w-3" />
-                Tonight's Events
+                Today's Events
               </p>
-              {tonightsParties.slice(0, 2).map((party) => {
+              {todaysParties.slice(0, 2).map((party) => {
                 const frat = fraternities.find(f => f.id === party.fraternity_id);
                 const partyVotes = moveVotes[party.id] || 0;
                 const percentage = totalMoveVotes > 0 ? (partyVotes / totalMoveVotes) * 100 : 0;
@@ -1131,7 +1140,7 @@ export default function Activity() {
           {/* Build sorted options list - exclude parties if shown above */}
           {(() => {
             // Combine all options with their vote counts
-            const allOptions: { id: string; type: 'party' | 'default' | 'custom'; label: string; subLabel?: string; votes: number; icon?: any; party?: typeof tonightsParties[0] }[] = [];
+            const allOptions: { id: string; type: 'party' | 'default' | 'custom'; label: string; subLabel?: string; votes: number; icon?: any; party?: typeof todaysParties[0] }[] = [];
             
             // Add default options
             defaultMoveOptions.forEach(option => {
@@ -1159,7 +1168,7 @@ export default function Activity() {
             
             // Get top 3
             const top3 = allOptions.slice(0, 3);
-            const hasMore = allOptions.length > 3 || tonightsParties.length > 2;
+            const hasMore = allOptions.length > 3 || todaysParties.length > 2;
             
             const renderOption = (option: typeof allOptions[0], index: number) => {
               const percentage = totalMoveVotes > 0 ? (option.votes / totalMoveVotes) * 100 : 0;
@@ -1458,8 +1467,8 @@ export default function Activity() {
           
           <ScrollArea className="flex-1 -mx-6 px-6 overflow-y-auto">
             <div className="space-y-2 pb-4">
-              {/* Tonight's parties */}
-              {tonightsParties.map((party) => {
+              {/* Today's parties */}
+              {todaysParties.map((party) => {
                 const frat = fraternities.find(f => f.id === party.fraternity_id);
                 const votes = moveVotes[party.id] || 0;
                 const percentage = totalMoveVotes > 0 ? (votes / totalMoveVotes) * 100 : 0;
