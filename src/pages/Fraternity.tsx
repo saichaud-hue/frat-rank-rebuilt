@@ -311,7 +311,7 @@ export default function FraternityPage() {
           </div>
         </div>
 
-        {/* Stats Row - Now showing scores */}
+        {/* Stats Row - Overall score + counts */}
         <div className="grid grid-cols-3 gap-2 mt-4">
           <div className="text-center p-3 rounded-xl bg-primary-foreground/15">
             <Trophy className="h-4 w-4 mx-auto mb-1 opacity-80" />
@@ -321,18 +321,14 @@ export default function FraternityPage() {
             <p className="text-xs opacity-70">Overall</p>
           </div>
           <div className="text-center p-3 rounded-xl bg-primary-foreground/15">
-            <Star className="h-4 w-4 mx-auto mb-1 opacity-80" />
-            <p className="text-xl font-bold">
-              {computedScores?.hasRepData ? computedScores.repAdj.toFixed(1) : '—'}
-            </p>
-            <p className="text-xs opacity-70">Frat Rating</p>
+            <PartyPopper className="h-4 w-4 mx-auto mb-1 opacity-80" />
+            <p className="text-xl font-bold">{computedScores?.numPartiesHosted ?? 0}</p>
+            <p className="text-xs opacity-70">Parties</p>
           </div>
           <div className="text-center p-3 rounded-xl bg-primary-foreground/15">
-            <PartyPopper className="h-4 w-4 mx-auto mb-1 opacity-80" />
-            <p className="text-xl font-bold">
-              {headerPartyQuality !== null ? headerPartyQuality.toFixed(1) : '—'}
-            </p>
-            <p className="text-xs opacity-70">Party Score</p>
+            <Star className="h-4 w-4 mx-auto mb-1 opacity-80" />
+            <p className="text-xl font-bold">{(computedScores?.numRepRatings ?? 0) + (computedScores?.numPartyRatings ?? 0)}</p>
+            <p className="text-xs opacity-70">Ratings</p>
           </div>
         </div>
       </div>
