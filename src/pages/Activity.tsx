@@ -232,6 +232,52 @@ export default function Activity() {
   });
   const feedEndRef = useRef<HTMLDivElement>(null);
   
+  // Poll votes (per poll message id -> option index voted)
+  const [pollVotes, setPollVotes] = useState<Record<string, Record<string, number>>>(() => {
+    const saved = localStorage.getItem('touse_poll_votes');
+    return saved ? JSON.parse(saved) : {};
+  });
+  
+  // Get current user's vote for a poll
+  const getUserPollVote = (pollId: string) => pollVotes[pollId]?.[userId] ?? null;
+  
+  // Get all votes for a poll
+  const getPollVoteCounts = (pollId: string) => {
+    const votes = pollVotes[pollId] || {};
+    const counts: Record<number, number> = {};
+    Object.values(votes).forEach(optionIndex => {
+      counts[optionIndex] = (counts[optionIndex] || 0) + 1;
+    });
+    return counts;
+  };
+  
+  // Handle poll vote
+  const handlePollVote = (pollId: string, optionIndex: number) => {
+    setPollVotes(prev => {
+      const updated = {
+        ...prev,
+        [pollId]: {
+          ...(prev[pollId] || {}),
+          [userId]: optionIndex,
+        },
+      };
+      localStorage.setItem('touse_poll_votes', JSON.stringify(updated));
+      return updated;
+    });
+  };
+  
+  // Parse poll from message text
+  const parsePollFromText = (text: string): { question: string; options: string[] } | null => {
+    if (!text.startsWith('POLL:')) return null;
+    const lines = text.split('\n');
+    const question = lines[0].replace('POLL:', '').trim();
+    const options = lines.slice(1).filter(l => l.startsWith('OPTION:')).map(l => l.replace('OPTION:', '').trim());
+    if (options.length >= 2) {
+      return { question, options };
+    }
+    return null;
+  };
+  
   // Default activity options for "What's the move"
   const defaultMoveOptions = [
     { id: 'shooters', label: 'Shooters', icon: Beer },
@@ -1291,8 +1337,74 @@ export default function Activity() {
                           </Badge>
                         )}
                       </div>
-                      {/* Check if this is a ranking post */}
+                      {/* Check if this is a poll, ranking, or regular post */}
                       {(() => {
+                        // Check for poll first
+                        const parsedPoll = parsePollFromText(chatItem.text);
+                        if (parsedPoll) {
+                          const userVote = getUserPollVote(chatItem.id);
+                          const voteCounts = getPollVoteCounts(chatItem.id);
+                          const totalVotes = Object.values(voteCounts).reduce((a, b) => a + b, 0);
+                          
+                          return (
+                            <div className="mb-3 space-y-3">
+                              <p className="font-semibold text-base">{parsedPoll.question}</p>
+                              <div className="space-y-2">
+                                {parsedPoll.options.map((option, index) => {
+                                  const voteCount = voteCounts[index] || 0;
+                                  const percentage = totalVotes > 0 ? Math.round((voteCount / totalVotes) * 100) : 0;
+                                  const isSelected = userVote === index;
+                                  const hasVoted = userVote !== null;
+                                  
+                                  return (
+                                    <button
+                                      key={index}
+                                      onClick={() => !hasVoted && handlePollVote(chatItem.id, index)}
+                                      disabled={hasVoted}
+                                      className={cn(
+                                        "w-full p-3 rounded-xl text-left transition-all relative overflow-hidden",
+                                        hasVoted 
+                                          ? "cursor-default" 
+                                          : "hover:bg-primary/10 active:scale-[0.98]",
+                                        isSelected 
+                                          ? "border-2 border-primary bg-primary/5" 
+                                          : "border border-border"
+                                      )}
+                                    >
+                                      {hasVoted && (
+                                        <div 
+                                          className="absolute inset-y-0 left-0 bg-primary/10 transition-all duration-500"
+                                          style={{ width: `${percentage}%` }}
+                                        />
+                                      )}
+                                      <div className="relative flex items-center justify-between">
+                                        <div className="flex items-center gap-2">
+                                          {isSelected && (
+                                            <Check className="h-4 w-4 text-primary" />
+                                          )}
+                                          <span className={cn(
+                                            "font-medium",
+                                            isSelected && "text-primary"
+                                          )}>{option}</span>
+                                        </div>
+                                        {hasVoted && (
+                                          <span className="text-sm font-semibold text-muted-foreground">
+                                            {percentage}%
+                                          </span>
+                                        )}
+                                      </div>
+                                    </button>
+                                  );
+                                })}
+                              </div>
+                              <p className="text-xs text-muted-foreground">
+                                {totalVotes} {totalVotes === 1 ? 'vote' : 'votes'}
+                              </p>
+                            </div>
+                          );
+                        }
+                        
+                        // Check for ranking post
                         const parsedRanking = parseRankingFromText(chatItem.text);
                         if (parsedRanking && parsedRanking.rankings.length >= 3) {
                           return (
@@ -1528,11 +1640,16 @@ export default function Activity() {
           <div className="space-y-4">
             {/* Poll mode UI */}
             {isPollMode && (
-              <div className="space-y-3 p-3 rounded-xl bg-blue-500/10 border border-blue-500/20">
-                <div className="flex items-center justify-between mb-2">
-                  <div className="flex items-center gap-2">
-                    <BarChart3 className="h-5 w-5 text-blue-500" />
-                    <p className="font-medium text-sm">Poll</p>
+              <div className="space-y-4 p-4 rounded-2xl bg-gradient-to-br from-primary/5 to-primary/10 border border-primary/20">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-xl bg-primary/20 flex items-center justify-center">
+                      <BarChart3 className="h-5 w-5 text-primary" />
+                    </div>
+                    <div>
+                      <p className="font-semibold text-sm">Create Poll</p>
+                      <p className="text-xs text-muted-foreground">Let others vote on your question</p>
+                    </div>
                   </div>
                   <button 
                     onClick={() => {
@@ -1540,54 +1657,65 @@ export default function Activity() {
                       setPollQuestion('');
                       setPollOptions(['', '']);
                     }} 
-                    className="p-1 hover:bg-muted rounded-full"
+                    className="p-2 hover:bg-muted rounded-full transition-colors"
                   >
                     <X className="h-4 w-4 text-muted-foreground" />
                   </button>
                 </div>
-                <Input
-                  value={pollQuestion}
-                  onChange={(e) => setPollQuestion(e.target.value)}
-                  placeholder="Ask a question... (e.g., Which frat is winning rush?)"
-                  className="rounded-xl"
-                />
-                <div className="space-y-2">
-                  {pollOptions.map((option, index) => (
-                    <div key={index} className="flex items-center gap-2">
-                      <Input
-                        value={option}
-                        onChange={(e) => {
-                          const newOptions = [...pollOptions];
-                          newOptions[index] = e.target.value;
-                          setPollOptions(newOptions);
-                        }}
-                        placeholder={`Option ${index + 1}`}
-                        className="rounded-xl flex-1"
-                      />
-                      {pollOptions.length > 2 && (
-                        <button
-                          onClick={() => {
-                            const newOptions = pollOptions.filter((_, i) => i !== index);
-                            setPollOptions(newOptions);
-                          }}
-                          className="p-1 hover:bg-muted rounded-full"
-                        >
-                          <X className="h-4 w-4 text-muted-foreground" />
-                        </button>
-                      )}
+                
+                <div className="space-y-3">
+                  <div>
+                    <label className="text-xs font-medium text-muted-foreground mb-1.5 block">Your Question</label>
+                    <Input
+                      value={pollQuestion}
+                      onChange={(e) => setPollQuestion(e.target.value)}
+                      placeholder="What do you want to ask?"
+                      className="rounded-xl h-12 text-base font-medium border-primary/20 focus:border-primary/40"
+                    />
+                  </div>
+                  
+                  <div>
+                    <label className="text-xs font-medium text-muted-foreground mb-1.5 block">Options</label>
+                    <div className="space-y-2">
+                      {pollOptions.map((option, index) => (
+                        <div key={index} className="flex items-center gap-2">
+                          <div className="w-6 h-6 rounded-full bg-primary/10 flex items-center justify-center text-xs font-bold text-primary shrink-0">
+                            {index + 1}
+                          </div>
+                          <Input
+                            value={option}
+                            onChange={(e) => {
+                              const newOptions = [...pollOptions];
+                              newOptions[index] = e.target.value;
+                              setPollOptions(newOptions);
+                            }}
+                            placeholder={`Option ${index + 1}`}
+                            className="rounded-xl flex-1 h-11 border-primary/20 focus:border-primary/40"
+                          />
+                          {pollOptions.length > 2 && (
+                            <button
+                              onClick={() => {
+                                const newOptions = pollOptions.filter((_, i) => i !== index);
+                                setPollOptions(newOptions);
+                              }}
+                              className="p-1.5 hover:bg-destructive/10 rounded-full transition-colors"
+                            >
+                              <X className="h-4 w-4 text-muted-foreground hover:text-destructive" />
+                            </button>
+                          )}
+                        </div>
+                      ))}
                     </div>
-                  ))}
-                  {pollOptions.length < 4 && (
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => setPollOptions([...pollOptions, ''])}
-                      className="text-blue-500 hover:text-blue-600"
-                    >
-                      <Plus className="h-4 w-4 mr-1" />
-                      Add option
-                    </Button>
-                  )}
+                    {pollOptions.length < 4 && (
+                      <button
+                        onClick={() => setPollOptions([...pollOptions, ''])}
+                        className="mt-2 flex items-center gap-1.5 text-sm font-medium text-primary hover:text-primary/80 transition-colors"
+                      >
+                        <Plus className="h-4 w-4" />
+                        Add option
+                      </button>
+                    )}
+                  </div>
                 </div>
               </div>
             )}
@@ -1707,8 +1835,8 @@ export default function Activity() {
                     
                     setSubmittingChat(true);
                     try {
-                      // Format poll as a special message
-                      const pollMessage = `📊 POLL: ${pollQuestion.trim()}\n\n${validOptions.map((opt, i) => `${i + 1}. ${opt}`).join('\n')}`;
+                      // Format poll as a special message with POLL: prefix for detection
+                      const pollMessage = `POLL: ${pollQuestion.trim()}\n${validOptions.map((opt, i) => `OPTION:${opt}`).join('\n')}`;
                       
                       await base44.entities.ChatMessage.create({
                         user_id: user.id,
