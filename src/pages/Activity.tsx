@@ -802,32 +802,38 @@ export default function Activity() {
   }, [handleFeedEndVisible]);
   
   // Track new posts count when feed items change and store current count for Layout
+  // Only count actual posts + activity, not user interactions
+  const actualContentCount = useMemo(() => {
+    return chatMessages.length + activities.length;
+  }, [chatMessages.length, activities.length]);
+  
   useEffect(() => {
     // Always store current feed count so Layout can calculate new posts
-    localStorage.setItem('touse_current_feed_count', feedItems.length.toString());
+    localStorage.setItem('touse_current_feed_count', actualContentCount.toString());
     
-    if (feedItems.length > lastSeenFeedCount && lastSeenFeedCount > 0) {
-      setNewPostsCount(feedItems.length - lastSeenFeedCount);
+    if (actualContentCount > lastSeenFeedCount && lastSeenFeedCount > 0) {
+      setNewPostsCount(actualContentCount - lastSeenFeedCount);
       setShowCaughtUp(false);
     }
-  }, [feedItems.length, lastSeenFeedCount]);
+  }, [actualContentCount, lastSeenFeedCount]);
+  
+  // Clear notification badge immediately when visiting the Activity page
+  useEffect(() => {
+    if (!loading && actualContentCount > 0) {
+      // Mark all current content as seen when visiting the page
+      setLastSeenFeedCount(actualContentCount);
+      localStorage.setItem('touse_last_seen_feed_count', actualContentCount.toString());
+      setNewPostsCount(0);
+    }
+  }, [loading, actualContentCount]);
   
   // Clear unread when user clicks the notification (called from Layout via storage event)
   const handleClearUnread = () => {
     setNewPostsCount(0);
-    setLastSeenFeedCount(feedItems.length);
-    localStorage.setItem('touse_last_seen_feed_count', feedItems.length.toString());
+    setLastSeenFeedCount(actualContentCount);
+    localStorage.setItem('touse_last_seen_feed_count', actualContentCount.toString());
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
-  
-  // Update last seen count when user scrolls to top or on initial load
-  useEffect(() => {
-    if (!loading && feedItems.length > 0 && lastSeenFeedCount === 0) {
-      setLastSeenFeedCount(feedItems.length);
-      localStorage.setItem('touse_last_seen_feed_count', feedItems.length.toString());
-      localStorage.setItem('touse_current_feed_count', feedItems.length.toString());
-    }
-  }, [loading, feedItems.length, lastSeenFeedCount]);
   
   // Claim caught up points
   const handleClaimPoints = () => {
