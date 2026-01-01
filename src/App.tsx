@@ -50,7 +50,7 @@ const App = () => (
           <Route path="/Rankings" element={<Layout><CategoryRankings /></Layout>} />
           <Route path="/Parties" element={<Layout><Parties /></Layout>} />
           <Route path="/Party" element={<Layout><Party /></Layout>} />
-          <Route path="/Fraternity" element={<Layout><Fraternity /></Layout>} />
+          <Route path="/Fraternity/:id" element={<Layout><Fraternity /></Layout>} />
           <Route path="/Rate" element={<Navigate to="/Profile" replace />} />
           <Route path="/Profile" element={<Layout><Profile /></Layout>} />
           <Route path="/CreateParty" element={<Layout><CreateParty /></Layout>} />
