@@ -17,9 +17,9 @@ export default function PartyStories({ parties, fraternities, className }: Party
     return frat ? frat.name : 'Unknown';
   };
 
-  const getFraternityShort = (id: string) => {
+  const getFraternityChapter = (id: string) => {
     const frat = fraternities.find(f => f.id === id);
-    return frat ? getFratShorthand(frat.name) : '?';
+    return frat ? frat.chapter || getFratShorthand(frat.name) : '?';
   };
 
   // Only show parties with cover photos, prioritize upcoming/live
@@ -70,7 +70,7 @@ export default function PartyStories({ parties, fraternities, className }: Party
                 
                 {/* Frat Name */}
                 <p className="mt-2.5 text-xs font-medium text-center truncate w-full">
-                  {getFraternityShort(party.fraternity_id)}
+                  {getFraternityChapter(party.fraternity_id)}
                 </p>
               </div>
             </Link>

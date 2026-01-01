@@ -212,7 +212,7 @@ export default function CreateParty() {
               {selectedFrat && (
                 <div className="flex items-center gap-2 mt-1">
                   <Badge variant="secondary" className="text-xs">
-                    {getFratShorthand(selectedFrat.name)}
+                    {selectedFrat.chapter || getFratShorthand(selectedFrat.name)}
                   </Badge>
                   <span className="text-sm text-muted-foreground">{selectedFrat.name}</span>
                 </div>
@@ -289,8 +289,8 @@ export default function CreateParty() {
                 {fraternities.map((frat) => (
                   <SelectItem key={frat.id} value={frat.id}>
                     <div className="flex items-center gap-2">
-                      <span className="font-medium">{frat.name}</span>
-                      <span className="text-muted-foreground">({frat.chapter})</span>
+                      <span className="font-medium">{frat.chapter}</span>
+                      <span className="text-muted-foreground">({frat.name})</span>
                     </div>
                   </SelectItem>
                 ))}

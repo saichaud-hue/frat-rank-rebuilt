@@ -322,7 +322,7 @@ export default function FratBattleGame({
                     {idx === 0 ? <Crown className="h-4 w-4" /> : idx + 1}
                   </div>
                   <div className="flex-1 min-w-0">
-                    <p className="font-semibold text-sm truncate">{frat.name}</p>
+                    <p className="font-semibold text-sm truncate">{frat.chapter}</p>
                     <p className="text-xs text-muted-foreground">{tier.label.replace(/\s*\(\d+\w+\)/, '')}</p>
                   </div>
                   <div className="text-right flex-shrink-0">
@@ -422,7 +422,7 @@ export default function FratBattleGame({
               <div className="w-14 h-14 rounded-full bg-gradient-to-br from-violet-500 to-purple-500 flex items-center justify-center text-white font-bold text-lg mb-3">
                 {getFratGreek(currentMatchup.left.name)}
               </div>
-              <p className="font-bold text-lg">{currentMatchup.left.name}</p>
+              <p className="font-bold text-lg">{currentMatchup.left.chapter}</p>
             </motion.button>
 
             {/* VS Badge */}
@@ -459,7 +459,7 @@ export default function FratBattleGame({
               <div className="w-14 h-14 rounded-full bg-gradient-to-br from-pink-500 to-rose-500 flex items-center justify-center text-white font-bold text-lg mb-3">
                 {getFratGreek(currentMatchup.right.name)}
               </div>
-              <p className="font-bold text-lg">{currentMatchup.right.name}</p>
+              <p className="font-bold text-lg">{currentMatchup.right.chapter}</p>
             </motion.button>
           </div>
         </motion.div>

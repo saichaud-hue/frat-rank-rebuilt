@@ -921,7 +921,7 @@ export default function YourRankings() {
                         <p className="font-semibold truncate">{party.title}</p>
                         {frat && (
                           <p className="text-sm text-muted-foreground truncate">
-                            {frat.name} • {getFratShorthand(frat.name)}
+                            {frat.chapter} • {frat.name}
                           </p>
                         )}
                       </div>
@@ -971,8 +971,8 @@ export default function YourRankings() {
                       </AvatarFallback>
                     </Avatar>
                     <div className="flex-1 min-w-0">
-                      <p className="font-semibold truncate">{frat.name}</p>
-                      <p className="text-sm text-muted-foreground">{getFratShorthand(frat.name)}</p>
+                      <p className="font-semibold truncate">{frat.chapter}</p>
+                      <p className="text-sm text-muted-foreground">{frat.name}</p>
                     </div>
                     {isRated ? (
                       <CheckCircle2 className="h-5 w-5 text-green-500" />
