@@ -35,16 +35,16 @@ interface EloScore {
 }
 
 const TIERS = [
-  { key: 'Upper Touse', label: 'Upper Touse (1st)', color: 'from-green-500 to-emerald-600' },
-  { key: 'Touse', label: 'Touse (2nd)', color: 'from-green-400 to-emerald-500' },
-  { key: 'Lower Touse', label: 'Lower Touse (3rd)', color: 'from-lime-500 to-green-500' },
-  { key: 'Upper Mouse', label: 'Upper Mouse (4th)', color: 'from-yellow-400 to-amber-500' },
-  { key: 'Mouse 1', label: 'Mouse (5th)', color: 'from-yellow-500 to-orange-400' },
-  { key: 'Mouse 2', label: 'Mouse (6th)', color: 'from-orange-400 to-amber-500' },
-  { key: 'Lower Mouse', label: 'Lower Mouse (7th)', color: 'from-orange-500 to-red-400' },
-  { key: 'Upper Bouse', label: 'Upper Bouse (8th)', color: 'from-red-400 to-rose-500' },
-  { key: 'Bouse', label: 'Bouse (9th)', color: 'from-red-500 to-rose-600' },
-  { key: 'Lower Bouse', label: 'Lower Bouse (10th)', color: 'from-red-600 to-red-700' },
+  { key: 'Upper Touse', label: 'Upper Touse (1st)', color: 'from-emerald-500 to-emerald-600', rowBg: 'bg-emerald-50 border-emerald-200' },
+  { key: 'Touse', label: 'Touse (2nd)', color: 'from-emerald-400 to-green-500', rowBg: 'bg-emerald-50/80 border-emerald-200/80' },
+  { key: 'Lower Touse', label: 'Lower Touse (3rd)', color: 'from-green-400 to-green-500', rowBg: 'bg-green-50/70 border-green-200/70' },
+  { key: 'Upper Mouse', label: 'Upper Mouse (4th)', color: 'from-lime-400 to-lime-500', rowBg: 'bg-lime-50/60 border-lime-200/60' },
+  { key: 'Mouse 1', label: 'Mouse (5th)', color: 'from-yellow-400 to-yellow-500', rowBg: 'bg-yellow-50/50 border-yellow-200/50' },
+  { key: 'Mouse 2', label: 'Mouse (6th)', color: 'from-amber-400 to-amber-500', rowBg: 'bg-amber-50/50 border-amber-200/50' },
+  { key: 'Lower Mouse', label: 'Lower Mouse (7th)', color: 'from-orange-400 to-orange-500', rowBg: 'bg-orange-50/50 border-orange-200/50' },
+  { key: 'Upper Bouse', label: 'Upper Bouse (8th)', color: 'from-orange-500 to-red-400', rowBg: 'bg-orange-50/40 border-orange-200/40' },
+  { key: 'Bouse', label: 'Bouse (9th)', color: 'from-red-400 to-red-500', rowBg: 'bg-red-50/40 border-red-200/40' },
+  { key: 'Lower Bouse', label: 'Lower Bouse (10th)', color: 'from-red-500 to-red-600', rowBg: 'bg-red-50/30 border-red-200/30' },
 ];
 
 export default function FratBattleGame({ 
@@ -310,9 +310,7 @@ export default function FratBattleGame({
                   transition={{ delay: idx * 0.05 }}
                   className={cn(
                     "p-3 rounded-xl border flex items-center gap-3",
-                    idx < 3 && "bg-green-500/10 border-green-500/30",
-                    idx >= 3 && idx < 7 && "bg-yellow-500/10 border-yellow-500/30",
-                    idx >= 7 && "bg-red-500/10 border-red-500/30"
+                    tier.rowBg
                   )}
                 >
                   <div className={cn(
