@@ -36,8 +36,10 @@ const DrawerContent = React.forwardRef<
       ref={ref}
       className={cn(
         "fixed inset-x-0 bottom-0 z-50 mt-24 flex h-auto flex-col rounded-t-[10px] border bg-background",
+        "touch-pan-y overscroll-none",
         className,
       )}
+      style={{ touchAction: 'pan-y', overscrollBehavior: 'none' }}
       {...props}
     >
       <div className={cn("mx-auto mt-4 h-2 w-[100px] rounded-full bg-muted", handleClassName)} />
