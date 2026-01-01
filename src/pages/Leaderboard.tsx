@@ -29,19 +29,19 @@ type FilterType = 'overall' | 'reputation' | 'party' | 'trending';
 type DisplayMode = 'score' | 'vibes';
 
 // Tier classifications based on rank (1-10 tiers) - with color blocks
-const getTierFromRank = (rank: number, total: number): { name: string; abbrev: string; color: string; bgColor: string; rankBg: string } => {
+const getTierFromRank = (rank: number, total: number): { name: string; abbrev: string; color: string; bgColor: string; rankBg: string; rowBg: string } => {
   const percentile = (rank - 1) / Math.max(total - 1, 1);
   
-  if (percentile < 0.1) return { name: 'Upper Touse', abbrev: 'UT', color: 'text-primary', bgColor: 'bg-primary/10 border-primary/30', rankBg: 'bg-emerald-500 text-white' };
-  if (percentile < 0.2) return { name: 'Touse', abbrev: 'T', color: 'text-primary/80', bgColor: 'bg-primary/8 border-primary/20', rankBg: 'bg-emerald-400 text-white' };
-  if (percentile < 0.3) return { name: 'Lower Touse', abbrev: 'LT', color: 'text-primary/70', bgColor: 'bg-primary/5 border-primary/15', rankBg: 'bg-green-400 text-white' };
-  if (percentile < 0.4) return { name: 'Upper Mouse', abbrev: 'UM', color: 'text-foreground/80', bgColor: 'bg-muted border-border', rankBg: 'bg-lime-400 text-white' };
-  if (percentile < 0.5) return { name: 'Mouse', abbrev: 'M', color: 'text-foreground/70', bgColor: 'bg-muted/80 border-border/80', rankBg: 'bg-yellow-400 text-white' };
-  if (percentile < 0.6) return { name: 'Lower Mouse', abbrev: 'LM', color: 'text-muted-foreground', bgColor: 'bg-muted/60 border-border/60', rankBg: 'bg-amber-300 text-amber-900' };
-  if (percentile < 0.7) return { name: 'Upper Bouse', abbrev: 'UB', color: 'text-muted-foreground/80', bgColor: 'bg-muted/40 border-border/40', rankBg: 'bg-orange-200 text-orange-800' };
-  if (percentile < 0.8) return { name: 'Bouse', abbrev: 'B', color: 'text-muted-foreground/70', bgColor: 'bg-muted/30 border-border/30', rankBg: 'bg-orange-100 text-orange-700' };
-  if (percentile < 0.9) return { name: 'Lower Bouse', abbrev: 'LB', color: 'text-muted-foreground/60', bgColor: 'bg-muted/20 border-border/20', rankBg: 'bg-stone-200 text-stone-600' };
-  return { name: 'The Pit', abbrev: '💀', color: 'text-muted-foreground/50', bgColor: 'bg-muted/10 border-border/10', rankBg: 'bg-stone-100 text-stone-500' };
+  if (percentile < 0.1) return { name: 'Upper Touse', abbrev: 'UT', color: 'text-primary', bgColor: 'bg-primary/10 border-primary/30', rankBg: 'bg-emerald-500 text-white', rowBg: 'bg-emerald-50' };
+  if (percentile < 0.2) return { name: 'Touse', abbrev: 'T', color: 'text-primary/80', bgColor: 'bg-primary/8 border-primary/20', rankBg: 'bg-emerald-400 text-white', rowBg: 'bg-emerald-50/70' };
+  if (percentile < 0.3) return { name: 'Lower Touse', abbrev: 'LT', color: 'text-primary/70', bgColor: 'bg-primary/5 border-primary/15', rankBg: 'bg-green-400 text-white', rowBg: 'bg-green-50/60' };
+  if (percentile < 0.4) return { name: 'Upper Mouse', abbrev: 'UM', color: 'text-foreground/80', bgColor: 'bg-muted border-border', rankBg: 'bg-lime-400 text-white', rowBg: 'bg-lime-50/50' };
+  if (percentile < 0.5) return { name: 'Mouse', abbrev: 'M', color: 'text-foreground/70', bgColor: 'bg-muted/80 border-border/80', rankBg: 'bg-yellow-400 text-white', rowBg: 'bg-yellow-50/50' };
+  if (percentile < 0.6) return { name: 'Lower Mouse', abbrev: 'LM', color: 'text-muted-foreground', bgColor: 'bg-muted/60 border-border/60', rankBg: 'bg-amber-300 text-amber-900', rowBg: 'bg-amber-50/40' };
+  if (percentile < 0.7) return { name: 'Upper Bouse', abbrev: 'UB', color: 'text-muted-foreground/80', bgColor: 'bg-muted/40 border-border/40', rankBg: 'bg-orange-200 text-orange-800', rowBg: 'bg-orange-50/30' };
+  if (percentile < 0.8) return { name: 'Bouse', abbrev: 'B', color: 'text-muted-foreground/70', bgColor: 'bg-muted/30 border-border/30', rankBg: 'bg-orange-100 text-orange-700', rowBg: 'bg-stone-50/30' };
+  if (percentile < 0.9) return { name: 'Lower Bouse', abbrev: 'LB', color: 'text-muted-foreground/60', bgColor: 'bg-muted/20 border-border/20', rankBg: 'bg-stone-200 text-stone-600', rowBg: 'bg-stone-50/20' };
+  return { name: 'The Pit', abbrev: '💀', color: 'text-muted-foreground/50', bgColor: 'bg-muted/10 border-border/10', rankBg: 'bg-stone-100 text-stone-500', rowBg: '' };
 };
 
 export default function Leaderboard() {
