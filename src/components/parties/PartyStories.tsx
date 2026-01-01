@@ -14,7 +14,7 @@ interface PartyStoriesProps {
 export default function PartyStories({ parties, fraternities, className }: PartyStoriesProps) {
   const getFraternityName = (id: string) => {
     const frat = fraternities.find(f => f.id === id);
-    return frat ? frat.name : 'Unknown';
+    return frat ? frat.chapter : 'Unknown';
   };
 
   const getFraternityChapter = (id: string) => {
