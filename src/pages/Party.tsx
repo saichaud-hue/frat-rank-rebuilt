@@ -1,10 +1,9 @@
 import { useState, useEffect } from 'react';
 import { useSearchParams, Link } from 'react-router-dom';
-import { ArrowLeft, Calendar, Clock, MapPin, Users, Star, Radio, Camera, MessageCircle, Trophy, Sparkles, TrendingUp, Zap } from 'lucide-react';
+import { ArrowLeft, Calendar, Clock, MapPin, Users, Star, Radio, Camera, MessageCircle, Trophy, Zap } from 'lucide-react';
 import { base44, type Party, type Fraternity, type PartyRating } from '@/api/base44Client';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Card } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import PhotoBulletin from '@/components/photos/PhotoBulletin';
 import RatingHistory from '@/components/party/RatingHistory';
@@ -25,6 +24,7 @@ export default function PartyPage() {
   const [showRatingForm, setShowRatingForm] = useState(false);
   const [ratingsRefreshKey, setRatingsRefreshKey] = useState(0);
   const [partyRatings, setPartyRatings] = useState<PartyRating[]>([]);
+  const [activeTab, setActiveTab] = useState<'photos' | 'ratings' | 'comments'>('photos');
 
   useEffect(() => {
     if (partyId) {
@@ -33,7 +33,6 @@ export default function PartyPage() {
     }
   }, [partyId]);
 
-  // Reload ratings when refreshKey changes
   useEffect(() => {
     if (partyId && ratingsRefreshKey > 0) {
       loadPartyRatings();
@@ -65,7 +64,6 @@ export default function PartyPage() {
     }
   };
 
-  // Determine party status based on current time, not stored status
   const getPartyStatus = (): 'live' | 'upcoming' | 'completed' => {
     if (!party) return 'upcoming';
     const now = new Date();
@@ -77,9 +75,6 @@ export default function PartyPage() {
     return 'completed';
   };
 
-  const isLive = () => getPartyStatus() === 'live';
-  
-  // Can only rate past parties (completed based on time)
   const canRate = () => getPartyStatus() === 'completed';
 
   const handleRatingSubmit = () => {
@@ -96,22 +91,20 @@ export default function PartyPage() {
 
   if (loading) {
     return (
-      <div className="max-w-2xl mx-auto space-y-6">
-        <Skeleton className="h-10 w-32" />
-        <Skeleton className="h-64 rounded-3xl" />
-        <Skeleton className="h-48 rounded-xl" />
-        <Skeleton className="h-48 rounded-xl" />
+      <div className="max-w-2xl mx-auto space-y-4 p-4">
+        <Skeleton className="h-8 w-32" />
+        <Skeleton className="h-48 rounded-2xl" />
+        <Skeleton className="h-12 rounded-xl" />
+        <Skeleton className="h-64 rounded-2xl" />
       </div>
     );
   }
 
   if (!party) {
     return (
-      <div className="max-w-2xl mx-auto text-center py-12">
-        <div className="w-16 h-16 mx-auto mb-4 rounded-2xl bg-muted flex items-center justify-center">
-          <Star className="h-8 w-8 text-muted-foreground/50" />
-        </div>
-        <p className="text-muted-foreground font-medium">Party not found</p>
+      <div className="max-w-2xl mx-auto text-center py-12 p-4">
+        <Star className="h-10 w-10 mx-auto mb-3 text-muted-foreground/50" />
+        <p className="text-muted-foreground">Party not found</p>
         <Button asChild variant="link" className="mt-4">
           <Link to={createPageUrl('Parties')}>Back to Parties</Link>
         </Button>
@@ -124,253 +117,177 @@ export default function PartyPage() {
   const confidence = getPartyConfidenceLevel(partyRatings.length);
   const status = getPartyStatus();
 
-  // Status styling
   const statusConfig = {
-    live: { gradient: 'from-red-500 to-orange-500', badge: 'bg-red-500', text: 'LIVE NOW', icon: Radio },
-    upcoming: { gradient: 'from-emerald-500 to-teal-500', badge: 'bg-emerald-500', text: 'UPCOMING', icon: Calendar },
-    completed: { gradient: 'from-violet-600 to-purple-600', badge: 'bg-violet-600', text: 'COMPLETED', icon: Trophy },
+    live: { bg: 'bg-red-500', text: 'Live Now', headerBg: 'bg-gradient-to-br from-red-500 to-orange-500' },
+    upcoming: { bg: 'bg-emerald-500', text: 'Upcoming', headerBg: 'bg-gradient-to-br from-emerald-500 to-teal-500' },
+    completed: { bg: 'bg-primary', text: 'Completed', headerBg: 'bg-gradient-to-br from-primary to-violet-600' },
   };
   const config = statusConfig[status];
 
+  const tabs: { id: 'photos' | 'ratings' | 'comments'; label: string; icon: typeof Camera; count?: number }[] = [
+    { id: 'photos', label: 'Photos', icon: Camera },
+    { id: 'ratings', label: 'Ratings', icon: Star, count: partyRatings.length },
+    { id: 'comments', label: 'Chat', icon: MessageCircle },
+  ];
+
   return (
-    <div className="max-w-2xl mx-auto space-y-5 pb-20">
+    <div className="max-w-2xl mx-auto space-y-4 pb-20">
       {/* Back Button */}
-      <Button asChild variant="ghost" className="px-0 -mb-2">
+      <Button asChild variant="ghost" size="sm" className="px-0">
         <Link to={createPageUrl('Parties')}>
           <ArrowLeft className="h-4 w-4 mr-2" />
           Back to Parties
         </Link>
       </Button>
 
-      {/* HERO SECTION */}
-      <div className={`relative overflow-hidden rounded-3xl bg-gradient-to-br ${config.gradient} p-6 text-white shadow-xl`}>
-        {/* Background Effects */}
-        <div className="absolute inset-0 opacity-20">
-          <div className="absolute top-0 right-0 w-40 h-40 bg-white/30 rounded-full blur-3xl translate-x-10 -translate-y-10" />
-          <div className="absolute bottom-0 left-0 w-32 h-32 bg-white/30 rounded-full blur-3xl -translate-x-10 translate-y-10" />
-        </div>
-
-        {/* Status Badge */}
-        <div className="relative flex justify-between items-start mb-4">
-          <Badge className={`${config.badge} text-white border-0 px-3 py-1 ${status === 'live' ? 'animate-pulse' : ''}`}>
-            <config.icon className="h-3 w-3 mr-1" />
+      {/* Header Card */}
+      <div className={`rounded-2xl ${config.headerBg} p-5 text-white`}>
+        {/* Status & Theme */}
+        <div className="flex items-center justify-between mb-3">
+          <Badge className={`${config.bg} text-white border-0 ${status === 'live' ? 'animate-pulse' : ''}`}>
+            <Radio className="h-3 w-3 mr-1" />
             {config.text}
           </Badge>
           {party.theme && (
-            <Badge className="bg-white/20 text-white border-white/30 capitalize">
+            <Badge className="bg-white/20 text-white border-0 capitalize">
               {party.theme}
             </Badge>
           )}
         </div>
 
-        {/* Party Info */}
-        <div className="relative">
-          <h1 className="text-2xl font-bold mb-2">{party.title}</h1>
-          {fraternity && (
-            <Link 
-              to={createPageUrl(`Fraternity?id=${fraternity.id}`)}
-              className="inline-flex items-center gap-2 text-white/90 hover:text-white transition-colors"
-            >
-              <span className="px-2 py-0.5 rounded-full bg-white/20 text-sm font-medium">
-                {getFratShorthand(fraternity.name)}
-              </span>
-              <span className="text-sm">{fraternity.name}</span>
-            </Link>
-          )}
-        </div>
+        {/* Title & Frat */}
+        <h1 className="text-2xl font-bold mb-1">{party.title}</h1>
+        {fraternity && (
+          <Link 
+            to={createPageUrl(`Fraternity?id=${fraternity.id}`)}
+            className="inline-flex items-center gap-2 text-white/80 hover:text-white"
+          >
+            <span className="px-2 py-0.5 rounded bg-white/20 text-xs font-medium">
+              {getFratShorthand(fraternity.name)}
+            </span>
+            <span className="text-sm">{fraternity.name}</span>
+          </Link>
+        )}
 
         {/* Event Details */}
-        <div className="relative flex flex-wrap gap-3 mt-4 text-sm text-white/90">
-          <span className="flex items-center gap-1.5 bg-white/10 px-3 py-1.5 rounded-full">
-            <Calendar className="h-4 w-4" />
+        <div className="flex flex-wrap gap-2 mt-4 text-sm">
+          <span className="flex items-center gap-1.5 bg-white/15 px-3 py-1.5 rounded-full">
+            <Calendar className="h-3.5 w-3.5" />
             {format(startDate, 'MMM d, yyyy')}
           </span>
-          <span className="flex items-center gap-1.5 bg-white/10 px-3 py-1.5 rounded-full">
-            <Clock className="h-4 w-4" />
+          <span className="flex items-center gap-1.5 bg-white/15 px-3 py-1.5 rounded-full">
+            <Clock className="h-3.5 w-3.5" />
             {format(startDate, 'h:mm a')}
           </span>
           {party.venue && (
-            <span className="flex items-center gap-1.5 bg-white/10 px-3 py-1.5 rounded-full">
-              <MapPin className="h-4 w-4" />
+            <span className="flex items-center gap-1.5 bg-white/15 px-3 py-1.5 rounded-full">
+              <MapPin className="h-3.5 w-3.5" />
               {party.venue}
             </span>
           )}
         </div>
 
-        {/* Quick Stats */}
-        <div className="relative grid grid-cols-3 gap-3 mt-5">
-          <div className="text-center p-3 rounded-xl bg-white/10 backdrop-blur-sm">
-            <Users className="h-5 w-5 mx-auto mb-1 opacity-80" />
-            <p className="text-2xl font-bold">{partyRatings.length}</p>
-            <p className="text-xs opacity-80">Ratings</p>
+        {/* Stats Row */}
+        <div className="grid grid-cols-3 gap-2 mt-4">
+          <div className="text-center p-3 rounded-xl bg-white/15">
+            <Users className="h-4 w-4 mx-auto mb-1 opacity-80" />
+            <p className="text-xl font-bold">{partyRatings.length}</p>
+            <p className="text-xs opacity-70">Ratings</p>
           </div>
-          <div className="text-center p-3 rounded-xl bg-white/10 backdrop-blur-sm">
-            <Star className="h-5 w-5 mx-auto mb-1 opacity-80" />
-            <p className="text-2xl font-bold">{partyQuality !== null ? partyQuality.toFixed(1) : '—'}</p>
-            <p className="text-xs opacity-80">Quality</p>
+          <div className="text-center p-3 rounded-xl bg-white/15">
+            <Star className="h-4 w-4 mx-auto mb-1 opacity-80" />
+            <p className="text-xl font-bold">{partyQuality !== null ? partyQuality.toFixed(1) : '—'}</p>
+            <p className="text-xs opacity-70">Quality</p>
           </div>
-          <div className="text-center p-3 rounded-xl bg-white/10 backdrop-blur-sm">
-            <Zap className="h-5 w-5 mx-auto mb-1 opacity-80" />
-            <p className="text-2xl font-bold">{confidence.percentage}%</p>
-            <p className="text-xs opacity-80">Confidence</p>
+          <div className="text-center p-3 rounded-xl bg-white/15">
+            <Zap className="h-4 w-4 mx-auto mb-1 opacity-80" />
+            <p className="text-xl font-bold">{confidence.percentage}%</p>
+            <p className="text-xs opacity-70">Confidence</p>
           </div>
         </div>
       </div>
 
-      {/* SCORE CARD - Only for completed parties with ratings */}
-      {status === 'completed' && partyQuality !== null && (
-        <Card className="glass p-5 relative overflow-hidden">
-          <div className="absolute top-0 right-0 w-24 h-24 bg-primary/5 rounded-full blur-2xl" />
-          <div className="relative flex items-center justify-between">
-            <div className="flex items-center gap-4">
-              {/* Circular Score Display */}
-              <div className="relative">
-                <svg className="w-20 h-20 -rotate-90">
-                  <circle
-                    cx="40"
-                    cy="40"
-                    r="36"
-                    stroke="currentColor"
-                    strokeWidth="6"
-                    fill="none"
-                    className="text-muted"
-                  />
-                  <circle
-                    cx="40"
-                    cy="40"
-                    r="36"
-                    stroke="currentColor"
-                    strokeWidth="6"
-                    fill="none"
-                    strokeDasharray={`${(partyQuality / 10) * 226} 226`}
-                    strokeLinecap="round"
-                    className="text-primary transition-all duration-1000"
-                  />
-                </svg>
-                <div className="absolute inset-0 flex items-center justify-center">
-                  <span className={`text-2xl font-bold ${getScoreColor(partyQuality)}`}>
-                    {partyQuality.toFixed(1)}
-                  </span>
-                </div>
-              </div>
-              <div>
-                <p className="text-sm text-muted-foreground font-medium">Party Quality</p>
-                <p className={`text-xs mt-0.5 ${
-                  confidence.level === 'low' ? 'text-amber-600' : 
-                  confidence.level === 'medium' ? 'text-blue-600' : 
-                  'text-emerald-600'
-                }`}>
-                  {confidence.label}
-                </p>
-              </div>
-            </div>
-            
-            {partyQuality >= 8 && (
-              <div className="px-3 py-1.5 rounded-full text-sm font-semibold bg-amber-100 text-amber-700">
-                🏆 Top Rated
-              </div>
-            )}
-          </div>
-        </Card>
+      {/* Rate Button / Status */}
+      {canRate() ? (
+        <Button onClick={handleRateClick} className="w-full" size="lg">
+          <Star className="h-5 w-5 mr-2" />
+          Rate This Party
+        </Button>
+      ) : (
+        <div className="p-3 rounded-xl bg-muted text-center text-sm text-muted-foreground">
+          <Clock className="h-4 w-4 inline mr-2" />
+          Ratings open after the party
+        </div>
       )}
 
-      {/* RATE BUTTON or STATUS MESSAGE */}
-      <Card className="glass overflow-hidden">
-        {canRate() ? (
-          <div className="bg-gradient-to-r from-amber-500 to-orange-500 p-4">
-            <Button 
-              onClick={handleRateClick}
-              className="w-full bg-white text-amber-600 hover:bg-white/90 font-semibold"
-              size="lg"
-            >
-              <Star className="h-5 w-5 mr-2" />
-              Rate This Party
-            </Button>
-          </div>
-        ) : (
-          <div className={`bg-gradient-to-r ${status === 'live' ? 'from-red-500/10 to-orange-500/10' : 'from-emerald-500/10 to-teal-500/10'} p-4 text-center`}>
-            <div className="flex items-center justify-center gap-2 text-muted-foreground">
-              {status === 'live' ? (
-                <>
-                  <Radio className="h-4 w-4 animate-pulse text-red-500" />
-                  <span>Rating opens after the party ends</span>
-                </>
-              ) : (
-                <>
-                  <Clock className="h-4 w-4 text-emerald-500" />
-                  <span>Ratings open after the party</span>
-                </>
-              )}
-            </div>
+      {/* Tab Navigation */}
+      <div className="flex gap-2">
+        {tabs.map((tab) => (
+          <button
+            key={tab.id}
+            onClick={() => setActiveTab(tab.id)}
+            className={`flex-1 flex items-center justify-center gap-2 px-4 py-3 rounded-xl text-sm font-medium transition-all ${
+              activeTab === tab.id 
+                ? 'bg-primary text-primary-foreground' 
+                : 'bg-muted text-muted-foreground hover:bg-muted/80'
+            }`}
+          >
+            <tab.icon className="h-4 w-4" />
+            <span>{tab.label}</span>
+            {tab.count !== undefined && tab.count > 0 && (
+              <span className={`text-xs px-1.5 py-0.5 rounded-full ${
+                activeTab === tab.id ? 'bg-primary-foreground/20' : 'bg-background'
+              }`}>
+                {tab.count}
+              </span>
+            )}
+          </button>
+        ))}
+      </div>
+
+      {/* Content Area */}
+      <div className="rounded-2xl bg-muted/30 overflow-hidden min-h-[200px]">
+        {activeTab === 'photos' && (
+          <div className="p-4">
+            <PhotoBulletin partyId={party.id} partyStatus={getPartyStatus()} />
           </div>
         )}
-      </Card>
 
-      {/* PHOTOS SECTION - Gamified */}
-      <Card className="glass overflow-hidden">
-        <div className="bg-gradient-to-r from-pink-500 to-rose-500 p-4 flex items-center justify-between text-white">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-white/20 flex items-center justify-center">
-              <Camera className="h-5 w-5" />
-            </div>
-            <div>
-              <h2 className="font-semibold">Photos</h2>
-              <p className="text-xs opacity-80">Captured moments</p>
-            </div>
+        {activeTab === 'ratings' && (
+          <div className="p-4">
+            {partyQuality !== null && (
+              <div className="flex items-center gap-4 p-4 mb-4 rounded-xl bg-background">
+                <div className="relative w-16 h-16">
+                  <svg className="w-16 h-16 -rotate-90">
+                    <circle cx="32" cy="32" r="28" stroke="currentColor" strokeWidth="4" fill="none" className="text-muted" />
+                    <circle cx="32" cy="32" r="28" stroke="currentColor" strokeWidth="4" fill="none" strokeDasharray={`${(partyQuality / 10) * 176} 176`} strokeLinecap="round" className="text-primary" />
+                  </svg>
+                  <div className="absolute inset-0 flex items-center justify-center">
+                    <span className={`text-lg font-bold ${getScoreColor(partyQuality)}`}>{partyQuality.toFixed(1)}</span>
+                  </div>
+                </div>
+                <div>
+                  <p className="font-medium">Average Score</p>
+                  <p className="text-xs text-muted-foreground">{confidence.label}</p>
+                </div>
+                {partyQuality >= 8 && (
+                  <Badge className="ml-auto bg-amber-100 text-amber-700 border-0">
+                    <Trophy className="h-3 w-3 mr-1" />
+                    Top Rated
+                  </Badge>
+                )}
+              </div>
+            )}
+            <RatingHistory partyId={party.id} refreshKey={ratingsRefreshKey} />
           </div>
-          <Badge className="bg-white/20 text-white border-white/30">
-            📸 Share yours
-          </Badge>
-        </div>
-        <div className="p-4">
-          <PhotoBulletin partyId={party.id} partyStatus={getPartyStatus()} />
-        </div>
-      </Card>
+        )}
 
-      {/* RATINGS SECTION - Gamified */}
-      <Card className="glass overflow-hidden">
-        <div className="bg-gradient-to-r from-cyan-500 to-blue-500 p-4 flex items-center justify-between text-white">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-white/20 flex items-center justify-center">
-              <TrendingUp className="h-5 w-5" />
-            </div>
-            <div>
-              <h2 className="font-semibold">Individual Ratings</h2>
-              <p className="text-xs opacity-80">{partyRatings.length} {partyRatings.length === 1 ? 'review' : 'reviews'}</p>
-            </div>
+        {activeTab === 'comments' && (
+          <div className="p-4">
+            <CommentSection entityId={party.id} entityType="party" />
           </div>
-          {partyRatings.length > 0 && (
-            <div className="text-right">
-              <p className="text-lg font-bold">{partyQuality?.toFixed(1) ?? '—'}</p>
-              <p className="text-xs opacity-80">Average</p>
-            </div>
-          )}
-        </div>
-        <div className="p-4">
-          <RatingHistory partyId={party.id} refreshKey={ratingsRefreshKey} />
-        </div>
-      </Card>
-
-      {/* COMMENTS SECTION - Gamified */}
-      <Card className="glass overflow-hidden">
-        <div className="bg-gradient-to-r from-indigo-500 to-purple-500 p-4 flex items-center justify-between text-white">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-white/20 flex items-center justify-center">
-              <MessageCircle className="h-5 w-5" />
-            </div>
-            <div>
-              <h2 className="font-semibold">Discussion</h2>
-              <p className="text-xs opacity-80">Share your experience</p>
-            </div>
-          </div>
-          <Badge className="bg-white/20 text-white border-white/30">
-            💬 Join in
-          </Badge>
-        </div>
-        <div className="p-4">
-          <CommentSection entityId={party.id} entityType="party" />
-        </div>
-      </Card>
+        )}
+      </div>
 
       {/* Rating Form Modal */}
       {showRatingForm && (
