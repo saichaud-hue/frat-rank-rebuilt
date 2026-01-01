@@ -96,10 +96,8 @@ export default function RateFratSheet({
         {/* Header */}
         <DrawerHeader className="px-6 pt-2 pb-4 border-b border-border">
           <DrawerTitle className="text-left">
-            <h2 className="text-2xl font-bold text-foreground">{fraternity.name}</h2>
-            {fraternity.chapter && (
-              <p className="text-sm text-muted-foreground mt-1">{fraternity.chapter}</p>
-            )}
+            <h2 className="text-2xl font-bold text-foreground">{fraternity.chapter}</h2>
+            <p className="text-sm text-muted-foreground mt-1">{fraternity.name}</p>
           </DrawerTitle>
         </DrawerHeader>
 

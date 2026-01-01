@@ -167,10 +167,8 @@ export default function PartyPage() {
             to={createPageUrl(`Fraternity?id=${fraternity.id}`)}
             className="inline-flex items-center gap-2 text-white/80 hover:text-white"
           >
-            <span className="px-2 py-0.5 rounded bg-white/20 text-xs font-medium">
-              {getFratShorthand(fraternity.name)}
-            </span>
-            <span className="text-sm">{fraternity.name}</span>
+            <span className="text-sm font-medium">{fraternity.chapter}</span>
+            <span className="text-xs text-white/60">({fraternity.name})</span>
           </Link>
         )}
 

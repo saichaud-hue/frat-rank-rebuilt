@@ -54,8 +54,8 @@ export default function ReputationRatingForm({
         {/* Header */}
         <DrawerHeader className="px-6 pt-2 pb-4 border-b border-border">
           <DrawerTitle className="text-left">
-            <h2 className="text-2xl font-bold text-foreground">Rate {fraternity.name}</h2>
-            <p className="text-sm text-muted-foreground mt-1">{fraternity.chapter}</p>
+            <h2 className="text-2xl font-bold text-foreground">Rate {fraternity.chapter}</h2>
+            <p className="text-sm text-muted-foreground mt-1">{fraternity.name}</p>
           </DrawerTitle>
         </DrawerHeader>
 

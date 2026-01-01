@@ -155,7 +155,7 @@ export default function RatingHistory() {
                     </div>
                     {rating.fraternity && (
                       <p className="text-sm text-muted-foreground">
-                        {rating.fraternity.name} • {rating.fraternity.chapter}
+                        {rating.fraternity.chapter} • {rating.fraternity.name}
                       </p>
                     )}
                   </div>
@@ -203,7 +203,7 @@ export default function RatingHistory() {
                     <p className="text-xs text-muted-foreground">Reputation Rating</p>
                     {rating.fraternity && (
                       <p className="font-medium">
-                        {rating.fraternity.name} • {rating.fraternity.chapter}
+                        {rating.fraternity.chapter} • {rating.fraternity.name}
                       </p>
                     )}
                   </div>

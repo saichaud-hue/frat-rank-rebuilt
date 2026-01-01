@@ -581,21 +581,8 @@ export default function YourRankings() {
 
                       {/* Info */}
                       <div className="flex-1 min-w-0">
-                        <h3 className="font-semibold text-sm truncate">{item.fraternity.name}</h3>
-                        <div className="flex items-center gap-3 mt-0.5">
-                          <div className="flex items-center gap-1">
-                            <Users className="h-3 w-3 text-primary" />
-                            <span className="text-xs text-muted-foreground">{item.brotherhood.toFixed(1)}</span>
-                          </div>
-                          <div className="flex items-center gap-1">
-                            <Shield className="h-3 w-3 text-primary" />
-                            <span className="text-xs text-muted-foreground">{item.reputation.toFixed(1)}</span>
-                          </div>
-                          <div className="flex items-center gap-1">
-                            <Heart className="h-3 w-3 text-primary" />
-                            <span className="text-xs text-muted-foreground">{item.community.toFixed(1)}</span>
-                          </div>
-                        </div>
+                        <h3 className="font-semibold text-sm truncate">{item.fraternity.chapter}</h3>
+                        <p className="text-xs text-muted-foreground truncate">{item.fraternity.name}</p>
                       </div>
 
                       {/* Score */}

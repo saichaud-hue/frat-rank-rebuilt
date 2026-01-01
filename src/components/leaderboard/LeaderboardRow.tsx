@@ -81,13 +81,13 @@ export default function LeaderboardRow({
         {/* Content */}
         <div className="flex-1 min-w-0">
           <h3 className="font-semibold text-base text-foreground leading-tight truncate">
-            {fraternity.name}
+            {fraternity.chapter}
           </h3>
           <p className={cn(
             "text-sm mt-0.5 truncate",
             displayMode === 'vibes' && tierInfo ? tierInfo.color : "text-muted-foreground"
           )}>
-            {displayMode === 'vibes' && tierInfo ? tierInfo.name : fraternity.chapter}
+            {displayMode === 'vibes' && tierInfo ? tierInfo.name : fraternity.name}
           </p>
         </div>
 
