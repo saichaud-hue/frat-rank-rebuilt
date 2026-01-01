@@ -1483,9 +1483,11 @@ export default function Activity() {
       {/* Floating compose button */}
       <button
         onClick={() => setShowChatComposer(true)}
-        className="fixed bottom-24 right-4 w-14 h-14 rounded-full gradient-primary text-white shadow-lg shadow-primary/30 flex items-center justify-center hover:scale-105 active:scale-95 transition-transform z-40"
+        className="fixed bottom-24 right-4 z-50 flex items-center gap-2 px-5 py-3 rounded-full bg-foreground text-background shadow-lg active:scale-95 transition-transform hover:shadow-xl"
+        style={{ marginBottom: 'env(safe-area-inset-bottom)' }}
       >
-        <Send className="h-6 w-6" />
+        <Plus className="h-5 w-5" />
+        <span className="font-bold">Post</span>
       </button>
 
       {/* Chat Composer Sheet */}
