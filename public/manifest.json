@@ -1,0 +1,28 @@
+{
+  "name": "Touse - Where We Going Tonight?",
+  "short_name": "Touse",
+  "description": "Duke's party coordination app. Find out where the move is tonight.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#001A57",
+  "theme_color": "#001A57",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "/favicon.jpg",
+      "sizes": "192x192",
+      "type": "image/jpeg",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/favicon.jpg",
+      "sizes": "512x512",
+      "type": "image/jpeg",
+      "purpose": "any maskable"
+    }
+  ],
+  "categories": ["social", "entertainment"],
+  "lang": "en-US",
+  "scope": "/",
+  "prefer_related_applications": false
+}

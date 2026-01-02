@@ -157,52 +157,52 @@ export default function Layout({ children }: LayoutProps) {
 
   return (
     <>
-      <div className="min-h-screen flex flex-col w-full bg-background">
-        {/* Mobile Header - Duke Blue Bold */}
+      <div className="min-h-screen flex flex-col w-full max-w-[430px] mx-auto bg-background">
+        {/* Mobile Header - Duke Blue Bold with safe area */}
         <header className="sticky top-0 z-40 gradient-primary pt-safe shadow-duke-lg">
-          <div className="px-4 py-3 flex items-center justify-between gap-3">
+          <div className="px-4 py-3 flex items-center justify-between gap-2">
             {/* Left: Touse logo */}
-            <Link to="/" className="flex items-center gap-2 shrink-0 group">
-              <div className="w-8 h-8 rounded-xl bg-white/20 flex items-center justify-center group-hover:bg-white/30 transition-colors">
+            <Link to="/" className="flex items-center gap-2 shrink-0 tap-bounce tap-target">
+              <div className="w-8 h-8 rounded-xl bg-white/20 flex items-center justify-center">
                 <Zap className="h-5 w-5 text-white" />
               </div>
-              <span className="text-xl font-display font-bold text-white tracking-tight">Touse</span>
+              <span className="text-lg font-display font-bold text-white tracking-tight">Touse</span>
             </Link>
             
             {/* Center: Next Up Party - Bold countdown */}
             {nextParty && (
               <Link 
                 to={`/Party?id=${nextParty.id}`}
-                className="flex items-center gap-2 tap-bounce"
+                className="flex items-center gap-1 tap-bounce tap-target min-w-0 flex-1 justify-center"
               >
-                <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-white/15 backdrop-blur-sm">
-                  <span className="px-1.5 py-0.5 rounded bg-white/20 text-[10px] text-white font-bold uppercase tracking-wider">Next</span>
-                  <span className="text-sm font-bold text-white truncate max-w-[80px]">{nextParty.title}</span>
+                <div className="flex items-center gap-1.5 px-2 py-1.5 rounded-full bg-white/15 backdrop-blur-sm min-w-0">
+                  <span className="px-1 py-0.5 rounded bg-white/20 text-[10px] text-white font-bold uppercase tracking-wider shrink-0">Next</span>
+                  <span className="text-xs font-bold text-white truncate max-w-[60px]">{nextParty.title}</span>
                   
-                  {/* Countdown - bold numbers */}
-                  <div className="flex items-center gap-0.5 text-white font-display">
+                  {/* Countdown - compact */}
+                  <div className="flex items-center gap-0.5 text-white font-display shrink-0">
                     {countdown.days > 0 && (
                       <>
-                        <span className="text-sm font-black tabular-nums">{countdown.days}</span>
-                        <span className="text-[10px] opacity-70 mr-0.5">d</span>
+                        <span className="text-xs font-black tabular-nums">{countdown.days}</span>
+                        <span className="text-[9px] opacity-70">d</span>
                       </>
                     )}
-                    <span className="text-sm font-black tabular-nums">{countdown.hours}</span>
-                    <span className="text-[10px] opacity-70 mr-0.5">h</span>
-                    <span className="text-sm font-black tabular-nums">{countdown.minutes}</span>
-                    <span className="text-[10px] opacity-70">m</span>
+                    <span className="text-xs font-black tabular-nums">{countdown.hours}</span>
+                    <span className="text-[9px] opacity-70">h</span>
+                    <span className="text-xs font-black tabular-nums">{countdown.minutes}</span>
+                    <span className="text-[9px] opacity-70">m</span>
                   </div>
                 </div>
                 <ChevronRight className="h-4 w-4 text-white/60 shrink-0" />
               </Link>
             )}
             
-            {/* Right: Profile button */}
+            {/* Right: Profile button - 44px tap target */}
             {loading ? (
               <Skeleton className="h-10 w-10 rounded-xl bg-white/20 shrink-0" />
             ) : user ? (
-              <Link to="/Profile" className="shrink-0 tap-bounce">
-                <Avatar className="h-10 w-10 ring-2 ring-white/40 hover:ring-white/60 transition-all shadow-duke">
+              <Link to="/Profile" className="shrink-0 tap-bounce tap-target flex items-center justify-center">
+                <Avatar className="h-10 w-10 ring-2 ring-white/40 shadow-duke">
                   <AvatarImage src={user.avatar_url} />
                   <AvatarFallback className="bg-white/20 text-white text-sm font-bold">
                     {user.name?.charAt(0) || 'U'}
@@ -210,21 +210,24 @@ export default function Layout({ children }: LayoutProps) {
                 </Avatar>
               </Link>
             ) : (
-              <Button onClick={handleLogin} size="sm" className="bg-white/20 hover:bg-white/30 text-white h-10 px-4 text-sm font-bold border-0 shrink-0">
+              <Button onClick={handleLogin} size="sm" className="bg-white/20 text-white h-10 px-3 text-sm font-bold border-0 shrink-0 tap-target">
                 Sign in
               </Button>
             )}
           </div>
         </header>
 
-        {/* Main Content */}
-        <main className="flex-1 px-4 py-5 pb-28 overflow-y-auto">
+        {/* Main Content - pb-nav clears bottom nav */}
+        <main className="flex-1 px-4 py-4 pb-nav overflow-y-auto overflow-x-hidden">
           {children}
         </main>
 
-        {/* Mobile Bottom Nav - Bold and expressive */}
-        <nav className="fixed bottom-0 left-0 right-0 bg-background/95 backdrop-blur-xl border-t-2 border-border/50 z-40 shadow-duke-lg" style={{ paddingBottom: 'max(env(safe-area-inset-bottom), 8px)' }}>
-          <div className="grid grid-cols-5 gap-1 px-2 pt-2">
+        {/* Mobile Bottom Nav - Fixed with safe area */}
+        <nav 
+          className="fixed bottom-0 left-0 right-0 bg-background/95 backdrop-blur-xl border-t border-border/50 z-40 shadow-duke-lg"
+          style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}
+        >
+          <div className="max-w-[430px] mx-auto grid grid-cols-5 gap-0.5 px-1 pt-1 pb-1">
             {navItems.map((item) => {
               const active = isActive(item.url);
               const showBadge = item.hasNotification && hasUnreadFeed && !active;
@@ -233,23 +236,23 @@ export default function Layout({ children }: LayoutProps) {
                 <Link
                   key={item.title}
                   to={item.url}
-                  className={`relative flex flex-col items-center justify-center gap-1 py-2.5 min-h-[56px] rounded-2xl transition-all tap-bounce ${
+                  className={`relative flex flex-col items-center justify-center gap-0.5 py-2 min-h-[52px] rounded-xl transition-all tap-bounce tap-target ${
                     active
                       ? 'bg-primary text-primary-foreground shadow-duke'
-                      : 'text-muted-foreground hover:text-foreground hover:bg-muted/50'
+                      : 'text-muted-foreground active:text-foreground active:bg-muted/50'
                   }`}
                 >
                   <div className="relative">
                     <item.icon 
-                      className={`h-6 w-6 transition-all duration-200 ${active ? 'animate-pop' : ''}`}
+                      className={`h-5 w-5 transition-all duration-200 ${active ? 'animate-pop' : ''}`}
                       fill={active ? "currentColor" : "none"} 
                       strokeWidth={active ? 2.5 : 2} 
                     />
                     {showBadge && (
-                      <span className="absolute -top-1 -right-1 h-3 w-3 bg-red-500 rounded-full animate-pulse shadow-lg" />
+                      <span className="absolute -top-1 -right-1 h-2.5 w-2.5 bg-red-500 rounded-full animate-pulse shadow-lg" />
                     )}
                   </div>
-                  <span className={`text-xs font-bold tracking-tight ${active ? '' : 'font-semibold'}`}>{item.title}</span>
+                  <span className={`text-[10px] font-bold tracking-tight ${active ? '' : 'font-semibold'}`}>{item.title}</span>
                 </Link>
               );
             })}
