@@ -2,7 +2,18 @@ import { useState, useEffect } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { ArrowLeft, Calendar, Star, PartyPopper, Users, Shield, Heart, MessageCircle, Trophy, Zap } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
-import { base44, type Fraternity as FraternityType, type Party, type PartyRating, type ReputationRating } from '@/api/base44Client';
+import { 
+  fraternityQueries, 
+  partyQueries, 
+  partyRatingQueries, 
+  reputationRatingQueries, 
+  partyCommentQueries, 
+  fraternityCommentQueries,
+  type Fraternity as FraternityType, 
+  type Party, 
+  type PartyRating, 
+  type ReputationRating 
+} from '@/lib/supabase-data';
 import { recordUserAction } from '@/utils/streak';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -46,22 +57,31 @@ export default function FraternityPage() {
 
   const loadData = async () => {
     try {
-      const [fratData, partiesData, allFrats, allParties, allPartyRatings, repRatings, partyComments, fratComments] = await Promise.all([
-        base44.entities.Fraternity.get(fratId!),
-        base44.entities.Party.filter({ fraternity_id: fratId! }, '-starts_at'),
-        base44.entities.Fraternity.filter({ status: 'active' }),
-        base44.entities.Party.list(),
-        base44.entities.PartyRating.list(),
-        base44.entities.ReputationRating.filter({ fraternity_id: fratId! }),
-        base44.entities.PartyComment.list(),
-        base44.entities.FraternityComment.filter({ fraternity_id: fratId! }),
+      const [allFrats, allParties, allPartyRatings, allRepRatings, allPartyComments, allFratComments] = await Promise.all([
+        fraternityQueries.list(),
+        partyQueries.list(),
+        partyRatingQueries.list(),
+        reputationRatingQueries.list(),
+        partyCommentQueries.list(),
+        fraternityCommentQueries.list(),
       ]);
+
+      const fratData = allFrats.find(f => f.id === fratId);
+      if (!fratData) {
+        setLoading(false);
+        return;
+      }
+
+      const partiesData = allParties.filter(p => p.fraternity_id === fratId);
+      // Sort by starts_at descending
+      partiesData.sort((a, b) => new Date(b.starts_at || 0).getTime() - new Date(a.starts_at || 0).getTime());
       
       setFraternity(fratData);
       setParties(partiesData);
 
-      const campusRepAvg = computeCampusRepAvg(allFrats);
-      const campusPartyAvg = computeCampusPartyAvg(allPartyRatings);
+      const activeFrats = allFrats.filter(f => f.status === 'active');
+      const campusRepAvg = computeCampusRepAvg(activeFrats as any);
+      const campusPartyAvg = computeCampusPartyAvg(allPartyRatings as any);
 
       const fratPartyRatings = allPartyRatings.filter(
         r => partiesData.some(p => p.id === r.party_id)
@@ -77,13 +97,13 @@ export default function FraternityPage() {
       }
 
       const partiesWithRatings: PartyWithRatings[] = partiesData.map(party => ({
-        party,
-        ratings: partyRatingsMap.get(party.id) || [],
+        party: party as any,
+        ratings: (partyRatingsMap.get(party.id) || []) as any,
       }));
 
       const allPartiesWithRatings: PartyWithRatings[] = allParties.map(party => ({
-        party,
-        ratings: allPartyRatings.filter(r => r.party_id === party.id),
+        party: party as any,
+        ratings: (allPartyRatings.filter(r => r.party_id === party.id)) as any,
       }));
       
       const campusBaseline = computeCampusBaseline(allPartiesWithRatings);
@@ -97,21 +117,24 @@ export default function FraternityPage() {
       }
       setPartyScores(perPartyScores);
 
-      const fratPartyComments = partyComments.filter(
+      const fratPartyComments = allPartyComments.filter(
         c => partiesData.some(p => p.id === c.party_id)
       );
 
+      const repRatings = allRepRatings.filter(r => r.fraternity_id === fratId);
+      const fratComments = allFratComments.filter(c => c.fraternity_id === fratId);
+
       const activityData: ActivityData = {
-        repRatings,
-        partyRatings: fratPartyRatings,
-        parties: partiesData,
-        partyComments: fratPartyComments,
-        fratComments,
+        repRatings: repRatings as any,
+        partyRatings: fratPartyRatings as any,
+        parties: partiesData as any,
+        partyComments: fratPartyComments as any,
+        fratComments: fratComments as any,
       };
 
       const scores = await computeFullFraternityScores(
-        fratData,
-        repRatings,
+        fratData as any,
+        repRatings as any,
         partiesWithRatings,
         campusRepAvg,
         campusPartyAvg,
@@ -131,17 +154,17 @@ export default function FraternityPage() {
     try {
       if (!user || !fratId) return;
       
-      const existingRatings = await base44.entities.ReputationRating.filter({
-        fraternity_id: fratId,
-        user_id: user.id,
-      });
+      const allRatings = await reputationRatingQueries.list();
+      const existingRatings = allRatings.filter(
+        r => r.fraternity_id === fratId && r.user_id === user.id
+      );
 
       if (existingRatings.length > 0) {
         const rating = existingRatings[0];
         setUserRating({
-          brotherhood: rating.brotherhood_score ?? 5,
-          reputation: rating.reputation_score ?? 5,
-          community: rating.community_score ?? 5,
+          brotherhood: Number(rating.brotherhood_score) ?? 5,
+          reputation: Number(rating.reputation_score) ?? 5,
+          community: Number(rating.community_score) ?? 5,
         });
       } else {
         setUserRating(null);
@@ -172,10 +195,10 @@ export default function FraternityPage() {
   const handleRateSubmit = async (scores: { brotherhood: number; reputation: number; community: number; combined: number }) => {
     if (!fraternity || !user) return;
 
-    const existingRatings = await base44.entities.ReputationRating.filter({
-      fraternity_id: fraternity.id,
-      user_id: user.id,
-    });
+    const allRatings = await reputationRatingQueries.list();
+    const existingRatings = allRatings.filter(
+      r => r.fraternity_id === fraternity.id && r.user_id === user.id
+    );
 
     const ratingData = {
       brotherhood_score: scores.brotherhood,
@@ -185,9 +208,9 @@ export default function FraternityPage() {
     };
 
     if (existingRatings.length > 0) {
-      await base44.entities.ReputationRating.update(existingRatings[0].id, ratingData);
+      await reputationRatingQueries.update(existingRatings[0].id, ratingData);
     } else {
-      await base44.entities.ReputationRating.create({
+      await reputationRatingQueries.create({
         fraternity_id: fraternity.id,
         user_id: user.id,
         ...ratingData,
@@ -196,15 +219,12 @@ export default function FraternityPage() {
       });
     }
 
-    const allRatings = await base44.entities.ReputationRating.filter({
-      fraternity_id: fraternity.id,
-    });
-
-    const reputationScore = allRatings.length > 0
-      ? allRatings.reduce((sum, r) => sum + (r.combined_score ?? 5), 0) / allRatings.length
+    const fratRatings = allRatings.filter(r => r.fraternity_id === fraternity.id);
+    const reputationScore = fratRatings.length > 0
+      ? fratRatings.reduce((sum, r) => sum + (Number(r.combined_score) ?? 5), 0) / fratRatings.length
       : 5;
 
-    await base44.entities.Fraternity.update(fraternity.id, {
+    await fraternityQueries.update(fraternity.id, {
       reputation_score: clamp(reputationScore, 0, 10),
     });
 
