@@ -1,9 +1,10 @@
 import { useState, useEffect } from 'react';
-import { Link, useLocation } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { Home, Trophy, PartyPopper, User, ChevronRight, Zap, Newspaper } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Skeleton } from '@/components/ui/skeleton';
+import { useAuth } from '@/contexts/AuthContext';
 import { base44, type Party, type Fraternity } from '@/api/base44Client';
 import Tutorial from '@/components/onboarding/Tutorial';
 import NewPostsPopup from '@/components/NewPostsPopup';
@@ -45,8 +46,8 @@ const formatCountdown = (ms: number) => {
 };
 
 export default function Layout({ children }: LayoutProps) {
-  const [user, setUser] = useState<any>(null);
-  const [loading, setLoading] = useState(true);
+  const { user, profile, loading: authLoading } = useAuth();
+  const navigate = useNavigate();
   const [showTutorial, setShowTutorial] = useState(false);
   const [hasUnreadFeed, setHasUnreadFeed] = useState(getHasUnreadFeed());
   const [nextParty, setNextParty] = useState<Party | null>(null);
@@ -56,8 +57,15 @@ export default function Layout({ children }: LayoutProps) {
   const location = useLocation();
 
   useEffect(() => {
-    loadUser();
     loadNextParty();
+    
+    // Check tutorial status
+    const permanentOptOut = localStorage.getItem('touse_tutorial_never_show');
+    const shownThisSession = sessionStorage.getItem('touse_tutorial_shown_this_session');
+    
+    if (!permanentOptOut && !shownThisSession) {
+      setShowTutorial(true);
+    }
   }, []);
 
   // Update countdown every second
@@ -100,24 +108,6 @@ export default function Layout({ children }: LayoutProps) {
     };
   }, []);
 
-  const loadUser = async () => {
-    try {
-      const userData = await base44.auth.me();
-      setUser(userData);
-      
-      const permanentOptOut = localStorage.getItem('touse_tutorial_never_show');
-      const shownThisSession = sessionStorage.getItem('touse_tutorial_shown_this_session');
-      
-      if (!permanentOptOut && !shownThisSession) {
-        setShowTutorial(true);
-      }
-    } catch (error) {
-      console.error('Failed to load user:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
-
   const loadNextParty = async () => {
     try {
       const [parties, fraternities] = await Promise.all([
@@ -140,7 +130,7 @@ export default function Layout({ children }: LayoutProps) {
   };
 
   const handleLogin = () => {
-    base44.auth.redirectToLogin(window.location.href);
+    navigate('/auth');
   };
 
   const handleTutorialComplete = (neverShowAgain: boolean) => {
@@ -198,14 +188,14 @@ export default function Layout({ children }: LayoutProps) {
             )}
             
             {/* Right: Profile button - 44px tap target */}
-            {loading ? (
+            {authLoading ? (
               <Skeleton className="h-10 w-10 rounded-xl bg-white/20 shrink-0" />
             ) : user ? (
               <Link to="/Profile" className="shrink-0 tap-bounce tap-target flex items-center justify-center">
                 <Avatar className="h-10 w-10 ring-2 ring-white/40 shadow-duke">
-                  <AvatarImage src={user.avatar_url} />
+                  <AvatarImage src={profile?.avatar_url || user.user_metadata?.avatar_url} />
                   <AvatarFallback className="bg-white/20 text-white text-sm font-bold">
-                    {user.name?.charAt(0) || 'U'}
+                    {profile?.full_name?.charAt(0) || user.email?.charAt(0) || 'U'}
                   </AvatarFallback>
                 </Avatar>
               </Link>

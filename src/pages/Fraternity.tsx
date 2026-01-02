@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
-import { useParams, Link } from 'react-router-dom';
+import { useParams, Link, useNavigate } from 'react-router-dom';
 import { ArrowLeft, Calendar, Star, PartyPopper, Users, Shield, Heart, MessageCircle, Trophy, Zap } from 'lucide-react';
+import { useAuth } from '@/contexts/AuthContext';
 import { base44, type Fraternity as FraternityType, type Party, type PartyRating, type ReputationRating } from '@/api/base44Client';
 import { recordUserAction } from '@/utils/streak';
 import { Button } from '@/components/ui/button';
@@ -25,6 +26,8 @@ import {
 
 export default function FraternityPage() {
   const { id: fratId } = useParams<{ id: string }>();
+  const navigate = useNavigate();
+  const { user } = useAuth();
   
   const [fraternity, setFraternity] = useState<FraternityType | null>(null);
   const [parties, setParties] = useState<Party[]>([]);
@@ -126,7 +129,6 @@ export default function FraternityPage() {
 
   const loadUserRatings = async () => {
     try {
-      const user = await base44.auth.me();
       if (!user || !fratId) return;
       
       const existingRatings = await base44.entities.ReputationRating.filter({
@@ -150,13 +152,12 @@ export default function FraternityPage() {
   };
 
   useEffect(() => {
-    loadUserRatings();
-  }, [fratId]);
+    if (user) loadUserRatings();
+  }, [fratId, user]);
 
   const handleRate = async () => {
-    const user = await base44.auth.me();
     if (!user) {
-      base44.auth.redirectToLogin(window.location.href);
+      navigate('/auth');
       return;
     }
 
@@ -169,10 +170,7 @@ export default function FraternityPage() {
   };
 
   const handleRateSubmit = async (scores: { brotherhood: number; reputation: number; community: number; combined: number }) => {
-    if (!fraternity) return;
-
-    const user = await base44.auth.me();
-    if (!user) return;
+    if (!fraternity || !user) return;
 
     const existingRatings = await base44.entities.ReputationRating.filter({
       fraternity_id: fraternity.id,

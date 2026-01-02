@@ -6,9 +6,10 @@ import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Skeleton } from '@/components/ui/skeleton';
+import { useAuth } from '@/contexts/AuthContext';
 import { base44, type PartyComment, type PartyCommentVote } from '@/api/base44Client';
 import { formatTimeAgo } from '@/utils';
-import { recordUserAction } from '@/utils/streak';
+import { recordUserAction, addUserPoints } from '@/utils/streak';
 
 interface CommentSectionProps {
   partyId: string;
@@ -26,6 +27,7 @@ const sanitizeCommentText = (text: string): string => {
 };
 
 export default function CommentSection({ partyId }: CommentSectionProps) {
+  const { user } = useAuth();
   const [comments, setComments] = useState<PartyComment[]>([]);
   const [userVotes, setUserVotes] = useState<Record<string, 1 | -1>>({});
   const [loading, setLoading] = useState(true);
@@ -55,7 +57,6 @@ export default function CommentSection({ partyId }: CommentSectionProps) {
 
   const loadUserVotes = useCallback(async () => {
     try {
-      const user = await base44.auth.me();
       if (!user) return;
 
       const votes = await base44.entities.PartyCommentVote.filter({
@@ -71,7 +72,7 @@ export default function CommentSection({ partyId }: CommentSectionProps) {
     } catch (error) {
       console.error('Failed to load user votes:', error);
     }
-  }, [partyId]);
+  }, [partyId, user]);
 
   useEffect(() => {
     loadComments();
@@ -96,13 +97,10 @@ export default function CommentSection({ partyId }: CommentSectionProps) {
   };
 
   const handleSubmitComment = async () => {
-    if (!newComment.trim()) return;
+    if (!newComment.trim() || !user) return;
     
     setSubmitting(true);
     try {
-      const user = await base44.auth.me();
-      if (!user) return;
-
       const sentimentScore = analyzeSentiment(newComment);
       
       await base44.entities.PartyComment.create({
@@ -118,11 +116,10 @@ export default function CommentSection({ partyId }: CommentSectionProps) {
       });
 
       // Update user points and streak
-      await base44.auth.updateMe({ points: (user.points || 0) + 2 });
+      await addUserPoints(2);
       await recordUserAction();
 
       // Recalculate comment-derived score (kept on Party as unquantifiable_score).
-      // IMPORTANT: Do NOT update Party.performance_score here; party quality must be derived from PartyRating aggregation.
       const allComments = await base44.entities.PartyComment.filter({ party_id: partyId });
       const avgSentiment = allComments.reduce((sum, c) => sum + (c.sentiment_score ?? 0), 0) / allComments.length;
       const unquantifiableScore = Math.max(0, Math.min(10, 5 + avgSentiment * 5));
@@ -149,10 +146,9 @@ export default function CommentSection({ partyId }: CommentSectionProps) {
   };
 
   const handleVote = async (commentId: string, value: 1 | -1) => {
-    try {
-      const user = await base44.auth.me();
-      if (!user) return;
+    if (!user) return;
 
+    try {
       // Find existing vote
       const existingVotes = await base44.entities.PartyCommentVote.filter({
         comment_id: commentId,
