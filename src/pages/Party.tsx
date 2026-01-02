@@ -1,7 +1,14 @@
 import { useState, useEffect } from 'react';
 import { useSearchParams, Link } from 'react-router-dom';
 import { ArrowLeft, Calendar, Clock, MapPin, Users, Star, Camera, MessageCircle, Trophy, Zap, Lock, Globe } from 'lucide-react';
-import { base44, type Party, type Fraternity, type PartyRating } from '@/api/base44Client';
+import { 
+  partyQueries, 
+  fraternityQueries, 
+  partyRatingQueries,
+  type Party,
+  type Fraternity,
+  type PartyRating,
+} from '@/lib/supabase-data';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -13,6 +20,12 @@ import { createPageUrl, getScoreColor, getFratShorthand } from '@/utils';
 import { format } from 'date-fns';
 import { computeRawPartyQuality, getPartyConfidenceLevel } from '@/utils/scoring';
 import { ensureAuthed } from '@/utils/auth';
+
+// Adapter to convert Supabase types to scoring types
+const adaptPartyRatingForScoring = (r: PartyRating): any => ({
+  ...r,
+  created_date: r.created_at,
+});
 
 export default function PartyPage() {
   const [searchParams] = useSearchParams();
@@ -41,7 +54,7 @@ export default function PartyPage() {
 
   const loadPartyRatings = async () => {
     try {
-      const ratings = await base44.entities.PartyRating.filter({ party_id: partyId! });
+      const ratings = await partyRatingQueries.listByParty(partyId!);
       setPartyRatings(ratings);
     } catch (error) {
       console.error('Failed to load party ratings:', error);
@@ -50,11 +63,11 @@ export default function PartyPage() {
 
   const loadParty = async () => {
     try {
-      const partyData = await base44.entities.Party.get(partyId!);
+      const partyData = await partyQueries.get(partyId!);
       setParty(partyData);
 
       if (partyData?.fraternity_id) {
-        const fratData = await base44.entities.Fraternity.get(partyData.fraternity_id);
+        const fratData = await fraternityQueries.get(partyData.fraternity_id);
         setFraternity(fratData);
       }
     } catch (error) {
@@ -67,7 +80,7 @@ export default function PartyPage() {
   const getPartyStatus = (): 'live' | 'upcoming' | 'completed' => {
     if (!party) return 'upcoming';
     const now = new Date();
-    const start = new Date(party.starts_at);
+    const start = party.starts_at ? new Date(party.starts_at) : now;
     const end = party.ends_at ? new Date(party.ends_at) : new Date(start.getTime() + 5 * 60 * 60 * 1000);
     
     if (now >= start && now <= end) return 'live';
@@ -112,8 +125,9 @@ export default function PartyPage() {
     );
   }
 
-  const startDate = new Date(party.starts_at);
-  const partyQuality = computeRawPartyQuality(partyRatings);
+  const startDate = party.starts_at ? new Date(party.starts_at) : new Date();
+  const adaptedRatings = partyRatings.map(adaptPartyRatingForScoring);
+  const partyQuality = computeRawPartyQuality(adaptedRatings);
   const confidence = getPartyConfidenceLevel(partyRatings.length);
   const status = getPartyStatus();
 
@@ -295,8 +309,8 @@ export default function PartyPage() {
       {/* Rating Form Modal */}
       {showRatingForm && (
         <PartyRatingForm
-          party={party}
-          fraternity={fraternity || undefined}
+          party={party as any}
+          fraternity={fraternity as any}
           onClose={() => setShowRatingForm(false)}
           onSubmit={handleRatingSubmit}
         />
