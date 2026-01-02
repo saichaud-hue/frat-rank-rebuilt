@@ -1,4 +1,4 @@
-import type { Fraternity, Party, PartyRating, ReputationRating, PartyComment, FraternityComment } from '@/api/base44Client';
+import type { Fraternity, Party, PartyRating, ReputationRating, PartyComment, FraternityComment } from '@/lib/supabase-data';
 
 // ============================================
 // B) PER-RATING PARTY QUALITY FORMULA
@@ -823,8 +823,8 @@ export function computeActivityTrending(
    * Helper to get robust event timestamp with fallbacks
    * Returns null if no valid timestamp found (caller should skip event)
    */
-  function getEventTimestamp(e: { created_date?: string; updated_at?: string; starts_at?: string }): string | null {
-    return e.created_date ?? e.updated_at ?? e.starts_at ?? null;
+  function getEventTimestamp(e: { created_at?: string | null; updated_at?: string | null; starts_at?: string | null }): string | null {
+    return e.created_at ?? e.updated_at ?? e.starts_at ?? null;
   }
   
   /**
@@ -910,7 +910,7 @@ export function computeActivityTrending(
     else if (ratingScore < 5) lowRatings++;
     
     // Need to get frat ID from party - use party_id as proxy if no direct link
-    const cappedPoints = applyPointsWithCap(basePoints, rating.user_id, rating.party_id, rating.created_date);
+    const cappedPoints = applyPointsWithCap(basePoints, rating.user_id, rating.party_id, rating.created_at);
     if (cappedPoints > 0) {
       addToSums(cappedPoints, ageDays);
     }
@@ -935,7 +935,7 @@ export function computeActivityTrending(
     if (ratingScore >= 8) highRatings++;
     else if (ratingScore < 5) lowRatings++;
     
-    const cappedPoints = applyPointsWithCap(basePoints, rating.user_id, rating.fraternity_id, rating.created_date);
+    const cappedPoints = applyPointsWithCap(basePoints, rating.user_id, rating.fraternity_id, rating.created_at);
     if (cappedPoints > 0) {
       addToSums(cappedPoints, ageDays);
     }
@@ -943,7 +943,7 @@ export function computeActivityTrending(
   
   // Process party comments
   for (const comment of activityData.partyComments) {
-    const ageDays = getAgeDays(comment.created_date, referenceDate);
+    const ageDays = getAgeDays(comment.created_at, referenceDate);
     if (ageDays > 30) continue;
     
     const sentimentMultiplier = getSentimentMultiplier(comment.sentiment_score);
@@ -955,7 +955,7 @@ export function computeActivityTrending(
       else if (comment.sentiment_score <= -0.3) negativeComments++;
     }
     
-    const cappedPoints = applyPointsWithCap(basePoints, comment.user_id, comment.party_id, comment.created_date);
+    const cappedPoints = applyPointsWithCap(basePoints, comment.user_id, comment.party_id, comment.created_at);
     if (cappedPoints > 0) {
       addToSums(cappedPoints, ageDays);
     }
@@ -963,7 +963,7 @@ export function computeActivityTrending(
   
   // Process frat comments
   for (const comment of activityData.fratComments) {
-    const ageDays = getAgeDays(comment.created_date, referenceDate);
+    const ageDays = getAgeDays(comment.created_at, referenceDate);
     if (ageDays > 30) continue;
     
     const sentimentMultiplier = getSentimentMultiplier(comment.sentiment_score);
@@ -975,7 +975,7 @@ export function computeActivityTrending(
       else if (comment.sentiment_score <= -0.3) negativeComments++;
     }
     
-    const cappedPoints = applyPointsWithCap(basePoints, comment.user_id, comment.fraternity_id, comment.created_date);
+    const cappedPoints = applyPointsWithCap(basePoints, comment.user_id, comment.fraternity_id, comment.created_at);
     if (cappedPoints > 0) {
       addToSums(cappedPoints, ageDays);
     }

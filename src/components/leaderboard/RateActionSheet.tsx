@@ -4,16 +4,9 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sh
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
-import { base44, type Party } from '@/api/base44Client';
+import { partyQueries, type Party, type Fraternity } from '@/lib/supabase-data';
 import { format } from 'date-fns';
 import { getScoreColor, getFratGreek, getFratShorthand } from '@/utils';
-
-interface Fraternity {
-  id: string;
-  name: string;
-  letters?: string;
-  logo_url?: string;
-}
 
 type Step = 'choose-action' | 'choose-frat' | 'choose-party';
 type ActionType = 'rate' | 'parties';
@@ -67,12 +60,13 @@ export default function RateActionSheet({
       setSelectedFrat(frat);
       setLoadingParties(true);
       try {
-        const allParties = await base44.entities.Party.filter({ fraternity_id: frat.id });
+        const allParties = await partyQueries.list();
+        const fratParties = allParties.filter(p => p.fraternity_id === frat.id);
         // Filter to only past/completed parties
         const now = new Date();
-        const pastParties = allParties.filter(p => new Date(p.ends_at) < now);
+        const pastParties = fratParties.filter(p => p.ends_at && new Date(p.ends_at) < now);
         // Sort by date, most recent first
-        pastParties.sort((a, b) => new Date(b.starts_at).getTime() - new Date(a.starts_at).getTime());
+        pastParties.sort((a, b) => new Date(b.starts_at!).getTime() - new Date(a.starts_at!).getTime());
         setParties(pastParties);
         setStep('choose-party');
       } catch (error) {
@@ -101,10 +95,10 @@ export default function RateActionSheet({
 
   const getPartyStatus = (party: Party): 'live' | 'upcoming' | 'completed' => {
     const now = new Date();
-    const start = new Date(party.starts_at);
-    const end = new Date(party.ends_at);
-    if (now >= start && now <= end) return 'live';
-    if (now > end) return 'completed';
+    const start = party.starts_at ? new Date(party.starts_at) : null;
+    const end = party.ends_at ? new Date(party.ends_at) : null;
+    if (start && end && now >= start && now <= end) return 'live';
+    if (end && now > end) return 'completed';
     return 'upcoming';
   };
 
@@ -217,7 +211,7 @@ export default function RateActionSheet({
               ) : (
                 parties.map((party) => {
                   const status = getPartyStatus(party);
-                  const startDate = new Date(party.starts_at);
+                  const startDate = party.starts_at ? new Date(party.starts_at) : new Date();
                   
                   return (
                     <button

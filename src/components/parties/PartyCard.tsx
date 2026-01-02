@@ -4,7 +4,7 @@ import { Badge } from '@/components/ui/badge';
 import { Link } from 'react-router-dom';
 import { createPageUrl, getScoreColor } from '@/utils';
 import { format } from 'date-fns';
-import type { Party } from '@/api/base44Client';
+import type { Party } from '@/lib/supabase-data';
 import { getPartyConfidenceLevel } from '@/utils/scoring';
 import { cn } from '@/lib/utils';
 
@@ -27,7 +27,7 @@ export default function PartyCard({
   userPartyQuality,
   ratingCount,
 }: PartyCardProps) {
-  const startDate = new Date(party.starts_at);
+  const startDate = party.starts_at ? new Date(party.starts_at) : new Date();
   // Use computedStatus if provided, otherwise fall back to stored status
   const isCompleted = computedStatus === 'completed' || party.status === 'completed';
   // Use ratingCount prop if provided, otherwise fall back to party.total_ratings

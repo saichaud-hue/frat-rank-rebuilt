@@ -6,7 +6,22 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
-import { base44, type PartyRating, type ReputationRating, type Party, type Fraternity, type PartyPhoto } from '@/api/base44Client';
+import { 
+  partyRatingQueries, 
+  reputationRatingQueries, 
+  partyQueries, 
+  fraternityQueries, 
+  partyPhotoQueries,
+  partyCommentQueries,
+  fraternityCommentQueries,
+  chatMessageQueries,
+  getCurrentUser,
+  type PartyRating, 
+  type ReputationRating, 
+  type Party, 
+  type Fraternity, 
+  type PartyPhoto 
+} from '@/lib/supabase-data';
 import { format } from 'date-fns';
 import { formatTimeAgo, getScoreBgColor, createPageUrl, clamp, getFratGreek } from '@/utils';
 import PartyRatingForm from '@/components/rate/PartyRatingForm';
@@ -138,24 +153,31 @@ export default function Profile() {
 
   const loadProfile = async () => {
     try {
-      const userData = await base44.auth.me();
+      const userData = await getCurrentUser();
       setUser(userData);
 
       if (userData) {
-        const [partyRatings, repRatings, partyComments, fratComments, chatMessages, parties, fraternities, allPhotos] = await Promise.all([
-          base44.entities.PartyRating.filter({ user_id: userData.id }, '-created_date'),
-          base44.entities.ReputationRating.filter({ user_id: userData.id }, '-created_date'),
-          base44.entities.PartyComment.filter({ user_id: userData.id }),
-          base44.entities.FraternityComment.filter({ user_id: userData.id }),
-          base44.entities.ChatMessage.filter({ user_id: userData.id }),
-          base44.entities.Party.list(),
-          base44.entities.Fraternity.filter({ status: 'active' }),
-          base44.entities.PartyPhoto.filter({ user_id: userData.id }, '-created_date'),
+        const [allPartyRatings, allRepRatings, allPartyComments, allFratComments, allChatMessages, parties, fraternities, allPhotos] = await Promise.all([
+          partyRatingQueries.list(),
+          reputationRatingQueries.list(),
+          partyCommentQueries.list(),
+          fraternityCommentQueries.list(),
+          chatMessageQueries.list(),
+          partyQueries.list(),
+          fraternityQueries.list(),
+          partyPhotoQueries.list(),
         ]);
 
-        setAllFraternities(fraternities);
+        const partyRatings = allPartyRatings.filter(r => r.user_id === userData.id);
+        const repRatings = allRepRatings.filter(r => r.user_id === userData.id);
+        const partyComments = allPartyComments.filter(c => c.user_id === userData.id);
+        const fratComments = allFratComments.filter(c => c.user_id === userData.id);
+        const chatMessages = allChatMessages.filter(c => c.user_id === userData.id);
+        const userPhotos = allPhotos.filter(p => p.user_id === userData.id);
+
+        const activeFraternities = fraternities.filter(f => f.status === 'active');
+        setAllFraternities(activeFraternities);
         
-        // Filter to only past parties for ranking
         const now = new Date();
         const pastParties = parties.filter(p => {
           if (!p.ends_at) return false;
@@ -163,49 +185,49 @@ export default function Profile() {
         });
         setAllParties(pastParties);
 
-        const userPrivatePhotos = allPhotos.filter((p: any) => p.visibility === 'private');
-        const enrichedPrivatePhotos = userPrivatePhotos.map((photo: any) => {
-          const party = parties.find((p: any) => p.id === photo.party_id);
-          const fraternity = party ? fraternities.find((f: any) => f.id === party.fraternity_id) : null;
+        const userPrivatePhotos = userPhotos.filter(p => p.visibility === 'private');
+        const enrichedPrivatePhotos = userPrivatePhotos.map(photo => {
+          const party = parties.find(p => p.id === photo.party_id);
+          const fraternity = party ? fraternities.find(f => f.id === party.fraternity_id) : null;
           return { ...photo, party: party ?? undefined, fraternity: fraternity ?? undefined };
         });
         setPrivatePhotos(enrichedPrivatePhotos);
 
-        const enrichedPartyRatings = partyRatings.map((r: any) => {
-          const party = parties.find((p: any) => p.id === r.party_id);
-          const fraternity = party ? fraternities.find((f: any) => f.id === party.fraternity_id) : null;
+        const enrichedPartyRatings = partyRatings.map(r => {
+          const party = parties.find(p => p.id === r.party_id);
+          const fraternity = party ? fraternities.find(f => f.id === party.fraternity_id) : null;
           return { ...r, party: party ?? undefined, fraternity: fraternity ?? undefined };
         });
 
-        const enrichedFratRatings = repRatings.map((r: any) => {
-          const fraternity = fraternities.find((f: any) => f.id === r.fraternity_id);
+        const enrichedFratRatings = repRatings.map(r => {
+          const fraternity = fraternities.find(f => f.id === r.fraternity_id);
           return { ...r, fraternity: fraternity ?? undefined };
         });
 
-        const enrichedPartyComments = partyComments.map((c: any) => {
-          const party = parties.find((p: any) => p.id === c.party_id);
-          const frat = party?.fraternity_id ? fraternities.find((f: any) => f.id === party.fraternity_id) : null;
+        const enrichedPartyComments = partyComments.map(c => {
+          const party = parties.find(p => p.id === c.party_id);
+          const frat = party?.fraternity_id ? fraternities.find(f => f.id === party.fraternity_id) : null;
           const entityName = frat ? `${frat.chapter} ${party?.title}` : (party?.title || 'Unknown Party');
-          return { ...c, entityName, type: 'party' };
+          return { ...c, entityName, type: 'party' as const };
         });
-        const enrichedFratComments = fratComments.map((c: any) => {
-          const frat = fraternities.find((f: any) => f.id === c.fraternity_id);
-          return { ...c, entityName: frat?.name || 'Unknown Fraternity', type: 'fraternity' };
+        const enrichedFratComments = fratComments.map(c => {
+          const frat = fraternities.find(f => f.id === c.fraternity_id);
+          return { ...c, entityName: frat?.name || 'Unknown Fraternity', type: 'fraternity' as const };
         });
-        const enrichedChatMessages = chatMessages.map((c: any) => {
-          const mentionedParty = c.mentioned_party_id ? parties.find((p: any) => p.id === c.mentioned_party_id) : null;
-          const mentionedFrat = c.mentioned_fraternity_id ? fraternities.find((f: any) => f.id === c.mentioned_fraternity_id) : null;
-          const partyFrat = mentionedParty?.fraternity_id ? fraternities.find((f: any) => f.id === mentionedParty.fraternity_id) : null;
+        const enrichedChatMessages = chatMessages.map(c => {
+          const mentionedParty = c.mentioned_party_id ? parties.find(p => p.id === c.mentioned_party_id) : null;
+          const mentionedFrat = c.mentioned_fraternity_id ? fraternities.find(f => f.id === c.mentioned_fraternity_id) : null;
+          const partyFrat = mentionedParty?.fraternity_id ? fraternities.find(f => f.id === mentionedParty.fraternity_id) : null;
           const entityName = mentionedParty 
             ? (partyFrat ? `${partyFrat.chapter} ${mentionedParty.title}` : mentionedParty.title)
             : (mentionedFrat?.name || 'Chat');
-          return { ...c, entityName, type: 'chat' };
+          return { ...c, entityName, type: 'chat' as const };
         });
 
         setPartyRatingsData(enrichedPartyRatings);
         setFratRatingsData(enrichedFratRatings);
         setCommentsData([...enrichedPartyComments, ...enrichedFratComments, ...enrichedChatMessages].sort((a, b) => 
-          new Date(b.created_date).getTime() - new Date(a.created_date).getTime()
+          new Date(b.created_at || 0).getTime() - new Date(a.created_at || 0).getTime()
         ));
 
         setStats({
@@ -215,13 +237,11 @@ export default function Profile() {
           privatePhotos: enrichedPrivatePhotos.length,
         });
 
-        // Build rankings data
         setRatedFratCount(repRatings.length);
         setRatedPartyCount(partyRatings.length);
         setRatedFratIds(repRatings.map(r => r.fraternity_id).filter(Boolean) as string[]);
         setRatedPartyIds(partyRatings.map(r => r.party_id).filter(Boolean) as string[]);
 
-        // Build frat rankings from user's reputation ratings
         const fratMap = new Map(fraternities.map(f => [f.id, f]));
         const partyMap = new Map(parties.map(p => [p.id, p]));
 
@@ -229,11 +249,11 @@ export default function Profile() {
           .filter(r => r.fraternity_id && fratMap.has(r.fraternity_id))
           .map(r => ({
             fraternity: fratMap.get(r.fraternity_id!)!,
-            score: r.combined_score ?? 5,
+            score: Number(r.combined_score) ?? 5,
             rank: 0,
-            brotherhood: r.brotherhood_score ?? 5,
-            reputation: r.reputation_score ?? 5,
-            community: r.community_score ?? 5,
+            brotherhood: Number(r.brotherhood_score) ?? 5,
+            reputation: Number(r.reputation_score) ?? 5,
+            community: Number(r.community_score) ?? 5,
           }))
           .sort((a, b) => b.score - a.score);
 
@@ -246,10 +266,8 @@ export default function Profile() {
             item.rank = index + 1;
           }
         });
-
         setRankedFrats(userFratScores);
 
-        // Build party rankings from user's party ratings
         const userPartyScores: RankedParty[] = partyRatings
           .filter(r => r.party_id && partyMap.has(r.party_id))
           .map(r => {
@@ -257,11 +275,11 @@ export default function Profile() {
             return {
               party,
               fraternity: party.fraternity_id ? fratMap.get(party.fraternity_id) : undefined,
-              score: r.party_quality_score ?? 5,
+              score: Number(r.party_quality_score) ?? 5,
               rank: 0,
-              vibe: r.vibe_score ?? 5,
-              music: r.music_score ?? 5,
-              execution: r.execution_score ?? 5,
+              vibe: Number(r.vibe_score) ?? 5,
+              music: Number(r.music_score) ?? 5,
+              execution: Number(r.execution_score) ?? 5,
             };
           })
           .sort((a, b) => b.score - a.score);
@@ -275,7 +293,6 @@ export default function Profile() {
             item.rank = index + 1;
           }
         });
-
         setRankedParties(userPartyScores);
       }
     } catch (error) {
