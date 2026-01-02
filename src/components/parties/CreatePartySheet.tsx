@@ -8,7 +8,7 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { Calendar } from '@/components/ui/calendar';
 import { Badge } from '@/components/ui/badge';
 import { Drawer, DrawerContent, DrawerHeader, DrawerTitle } from '@/components/ui/drawer';
-import { base44, type Fraternity } from '@/api/base44Client';
+import { fraternityQueries, partyQueries, getCurrentUser, type Fraternity } from '@/lib/supabase-data';
 import { getFratShorthand } from '@/utils';
 import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
@@ -110,7 +110,7 @@ export default function CreatePartySheet({ open, onOpenChange, onSuccess }: Crea
 
   const loadFraternities = async () => {
     try {
-      const data = await base44.entities.Fraternity.list();
+      const data = await fraternityQueries.list();
       setFraternities(data);
     } catch (error) {
       console.error('Failed to load fraternities:', error);
@@ -138,10 +138,14 @@ export default function CreatePartySheet({ open, onOpenChange, onSuccess }: Crea
     e.preventDefault();
     if (!isFormValid) return;
 
+    const user = await getCurrentUser();
+    if (!user) return;
+
     setLoading(true);
     try {
-      await base44.entities.Party.create({
+      await partyQueries.create({
         fraternity_id: formData.fraternity_id,
+        user_id: user.id,
         title: formData.title,
         starts_at: formData.starts_at,
         ends_at: formData.ends_at,
@@ -314,72 +318,20 @@ export default function CreatePartySheet({ open, onOpenChange, onSuccess }: Crea
               />
             </div>
 
-            {/* Cover Photo Upload */}
+            {/* Cover Photo Upload - simplified without file upload for now */}
             <div className="space-y-2">
               <Label className="text-sm font-medium flex items-center gap-2">
                 <ImageIcon className="h-4 w-4 text-primary" />
-                Cover Photo
+                Cover Photo URL
               </Label>
-              
-              <input
-                ref={fileInputRef}
-                type="file"
-                accept="image/*"
-                className="hidden"
-                onChange={async (e) => {
-                  const file = e.target.files?.[0];
-                  if (!file) return;
-                  
-                  setUploadingPhoto(true);
-                  try {
-                    const { url } = await base44.integrations.Core.UploadFile({ file });
-                    setFormData(prev => ({ ...prev, cover_photo_url: url }));
-                  } catch (error) {
-                    console.error('Failed to upload photo:', error);
-                  } finally {
-                    setUploadingPhoto(false);
-                  }
-                }}
+              <Input
+                placeholder="https://example.com/image.jpg"
+                value={formData.cover_photo_url}
+                onChange={(e) => setFormData(prev => ({ ...prev, cover_photo_url: e.target.value }))}
+                className="h-12"
               />
-              
-              {formData.cover_photo_url ? (
-                <div className="relative w-full h-32 rounded-xl overflow-hidden border border-border">
-                  <img 
-                    src={formData.cover_photo_url} 
-                    alt="Cover preview" 
-                    className="w-full h-full object-cover"
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setFormData(prev => ({ ...prev, cover_photo_url: '' }))}
-                    className="absolute top-2 right-2 w-8 h-8 rounded-full bg-black/60 flex items-center justify-center hover:bg-black/80 transition-colors"
-                  >
-                    <X className="h-4 w-4 text-white" />
-                  </button>
-                </div>
-              ) : (
-                <button
-                  type="button"
-                  onClick={() => fileInputRef.current?.click()}
-                  disabled={uploadingPhoto}
-                  className="w-full h-24 rounded-xl border-2 border-dashed border-border hover:border-primary/50 transition-colors flex flex-col items-center justify-center gap-2 text-muted-foreground hover:text-foreground"
-                >
-                  {uploadingPhoto ? (
-                    <>
-                      <Loader2 className="h-6 w-6 animate-spin" />
-                      <span className="text-sm">Uploading...</span>
-                    </>
-                  ) : (
-                    <>
-                      <Upload className="h-6 w-6" />
-                      <span className="text-sm font-medium">Upload Cover Photo</span>
-                    </>
-                  )}
-                </button>
-              )}
-              
               <p className="text-xs text-muted-foreground">
-                Add a photo to make your party stand out in the feed
+                Add a photo URL to make your party stand out in the feed
               </p>
             </div>
 
@@ -454,85 +406,73 @@ export default function CreatePartySheet({ open, onOpenChange, onSuccess }: Crea
                 />
               </div>
             </div>
-            
-            {!isEndValid && endError && (
-              <div className="flex items-center gap-1.5 text-destructive text-sm">
-                <AlertCircle className="h-3.5 w-3.5" />
+
+            {!isEndValid && endDate && (
+              <div className="flex items-center gap-2 text-sm text-destructive">
+                <AlertCircle className="h-4 w-4" />
                 <span>{endError}</span>
               </div>
             )}
 
-            {/* Event Type */}
+            {/* Party Type */}
             <div className="space-y-2">
-              <Label className="text-sm font-medium">Event Type</Label>
-              <div className="grid grid-cols-3 gap-2">
-                {[
-                  { value: 'themed', label: 'Themed', icon: '🎭' },
-                  { value: 'formal', label: 'Formal', icon: '🎩' },
-                  { value: 'mixer', label: 'Mixer', icon: '🍹' },
-                ].map(({ value, label, icon }) => (
-                  <button
-                    key={value}
-                    type="button"
-                    onClick={() => setFormData(prev => ({ ...prev, type: value }))}
-                    className={cn(
-                      "p-3 rounded-xl border-2 transition-all text-center",
-                      formData.type === value
-                        ? "border-primary bg-primary/5"
-                        : "border-border hover:border-muted-foreground/50"
-                    )}
-                  >
-                    <span className="text-xl block">{icon}</span>
-                    <span className="text-xs font-medium">{label}</span>
-                  </button>
-                ))}
-              </div>
+              <Label className="text-sm font-medium">Party Type</Label>
+              <Select
+                value={formData.type}
+                onValueChange={(value) => setFormData(prev => ({ ...prev, type: value }))}
+              >
+                <SelectTrigger className="h-12">
+                  <SelectValue placeholder="Select type (optional)" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="casual">Casual</SelectItem>
+                  <SelectItem value="themed">Themed</SelectItem>
+                  <SelectItem value="formal">Formal</SelectItem>
+                  <SelectItem value="mixer">Mixer</SelectItem>
+                  <SelectItem value="darty">Darty</SelectItem>
+                  <SelectItem value="tailgate">Tailgate</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
 
-            {/* Access Type */}
+            {/* Access Type Toggle */}
             <div className="space-y-2">
               <Label className="text-sm font-medium">Access</Label>
-              <div className="grid grid-cols-2 gap-2">
+              <div className="flex gap-2">
                 <button
                   type="button"
                   onClick={() => setFormData(prev => ({ ...prev, invite_only: false }))}
                   className={cn(
-                    "p-3 rounded-xl border-2 transition-all flex items-center gap-2",
-                    !formData.invite_only
-                      ? "border-emerald-500 bg-emerald-50 dark:bg-emerald-950/30"
-                      : "border-border"
+                    "flex-1 flex items-center justify-center gap-2 p-3 rounded-xl border transition-all",
+                    !formData.invite_only 
+                      ? "border-emerald-500 bg-emerald-500/10 text-emerald-700" 
+                      : "border-border text-muted-foreground hover:border-emerald-500/50"
                   )}
                 >
-                  <Globe className={cn("h-5 w-5", !formData.invite_only ? "text-emerald-600" : "text-muted-foreground")} />
-                  <span className="font-medium text-sm">Open</span>
+                  <Globe className="h-4 w-4" />
+                  <span className="font-medium">Open</span>
                 </button>
-                
                 <button
                   type="button"
                   onClick={() => setFormData(prev => ({ ...prev, invite_only: true }))}
                   className={cn(
-                    "p-3 rounded-xl border-2 transition-all flex items-center gap-2",
-                    formData.invite_only
-                      ? "border-amber-500 bg-amber-50 dark:bg-amber-950/30"
-                      : "border-border"
+                    "flex-1 flex items-center justify-center gap-2 p-3 rounded-xl border transition-all",
+                    formData.invite_only 
+                      ? "border-amber-500 bg-amber-500/10 text-amber-700" 
+                      : "border-border text-muted-foreground hover:border-amber-500/50"
                   )}
                 >
-                  <Lock className={cn("h-5 w-5", formData.invite_only ? "text-amber-600" : "text-muted-foreground")} />
-                  <span className="font-medium text-sm">Invite Only</span>
+                  <Lock className="h-4 w-4" />
+                  <span className="font-medium">Invite Only</span>
                 </button>
               </div>
             </div>
 
-            {/* Submit */}
-            <Button 
-              type="submit" 
-              disabled={loading || !isFormValid}
-              className={cn(
-                "w-full h-14 text-lg font-semibold rounded-xl",
-                isFormValid 
-                  ? "gradient-primary text-primary-foreground" 
-                  : "bg-muted text-muted-foreground"
-              )}
+            {/* Submit Button */}
+            <Button
+              type="submit"
+              disabled={!isFormValid || loading}
+              className="w-full h-12 text-base font-semibold"
             >
               {loading ? (
                 <>
@@ -542,7 +482,7 @@ export default function CreatePartySheet({ open, onOpenChange, onSuccess }: Crea
               ) : (
                 <>
                   <PartyPopper className="h-5 w-5 mr-2" />
-                  {isFormValid ? "Launch Party!" : "Complete All Fields"}
+                  Host Party
                 </>
               )}
             </Button>

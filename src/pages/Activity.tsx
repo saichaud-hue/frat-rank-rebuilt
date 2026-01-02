@@ -36,7 +36,22 @@ import {
   BarChart3,
   ArrowLeft
 } from 'lucide-react';
-import base44, { Party, Fraternity, ChatMessage } from '@/api/base44Client';
+import { 
+  partyQueries, 
+  fraternityQueries, 
+  partyRatingQueries,
+  reputationRatingQueries,
+  partyCommentQueries,
+  fraternityCommentQueries,
+  chatMessageQueries,
+  chatMessageVoteQueries,
+  partyCommentVoteQueries,
+  fraternityCommentVoteQueries,
+  getCurrentUser,
+  type Party,
+  type Fraternity,
+  type ChatMessage,
+} from '@/lib/supabase-data';
 import { toast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
 import { format, isToday, isTomorrow, formatDistanceToNow } from 'date-fns';
@@ -376,11 +391,11 @@ export default function Activity() {
     setLoading(true);
     try {
       const [partiesData, fraternitiesData] = await Promise.all([
-        base44.entities.Party.list(),
-        base44.entities.Fraternity.list(),
+        partyQueries.list(),
+        fraternityQueries.list(),
       ]);
-      setParties(partiesData);
-      setFraternities(fraternitiesData);
+      setParties(partiesData as any);
+      setFraternities(fraternitiesData as any);
       
       await Promise.all([loadActivity(), loadChat()]);
     } catch (error) {
@@ -393,30 +408,30 @@ export default function Activity() {
   const loadActivity = async () => {
     try {
       const [partiesData, fraternitiesData, partyRatings, fratRatings, partyComments, fratComments] = await Promise.all([
-        base44.entities.Party.list(),
-        base44.entities.Fraternity.list(),
-        base44.entities.PartyRating.list(),
-        base44.entities.ReputationRating.list(),
-        base44.entities.PartyComment.list(),
-        base44.entities.FraternityComment.list(),
+        partyQueries.list(),
+        fraternityQueries.list(),
+        partyRatingQueries.list(),
+        reputationRatingQueries.list(),
+        partyCommentQueries.list(),
+        fraternityCommentQueries.list(),
       ]);
 
-      const partyMap = new Map(partiesData.map(p => [p.id, p]));
-      const fratMap = new Map(fraternitiesData.map(f => [f.id, f]));
+      const partyMap = new Map(partiesData.map((p: any) => [p.id, p]));
+      const fratMap = new Map(fraternitiesData.map((f: any) => [f.id, f]));
 
-      const user = await base44.auth.me();
+      const user = await getCurrentUser();
       
       let userPartyCommentVotes: any[] = [];
       let userFratCommentVotes: any[] = [];
       if (user) {
         [userPartyCommentVotes, userFratCommentVotes] = await Promise.all([
-          base44.entities.PartyCommentVote.filter({ user_id: user.id }),
-          base44.entities.FraternityCommentVote.filter({ user_id: user.id }),
+          partyCommentVoteQueries.listByUser(user.id),
+          fraternityCommentVoteQueries.listByUser(user.id),
         ]);
       }
 
-      const partyVoteMap = new Map(userPartyCommentVotes.map(v => [v.comment_id, v.value]));
-      const fratVoteMap = new Map(userFratCommentVotes.map(v => [v.comment_id, v.value]));
+      const partyVoteMap = new Map(userPartyCommentVotes.map((v: any) => [v.comment_id, v.value]));
+      const fratVoteMap = new Map(userFratCommentVotes.map((v: any) => [v.comment_id, v.value]));
 
       const items: ActivityItem[] = [];
 
@@ -426,13 +441,13 @@ export default function Activity() {
           items.push({
             id: rating.id,
             type: 'party_rating',
-            created_date: rating.created_date,
-            score: rating.party_quality_score,
-            vibe: rating.vibe_score,
-            music: rating.music_score,
-            execution: rating.execution_score,
-            party,
-            fraternity: fratMap.get(party.fraternity_id),
+            created_date: rating.created_at,
+            score: rating.party_quality_score ?? undefined,
+            vibe: rating.vibe_score ?? undefined,
+            music: rating.music_score ?? undefined,
+            execution: rating.execution_score ?? undefined,
+            party: party as any,
+            fraternity: fratMap.get(party.fraternity_id) as any,
           });
         }
       }
@@ -443,72 +458,72 @@ export default function Activity() {
           items.push({
             id: rating.id,
             type: 'frat_rating',
-            created_date: rating.created_date,
-            score: rating.combined_score,
-            brotherhood: rating.brotherhood_score,
-            reputation: rating.reputation_score,
-            community: rating.community_score,
-            fraternity,
+            created_date: rating.created_at,
+            score: rating.combined_score ?? undefined,
+            brotherhood: rating.brotherhood_score ?? undefined,
+            reputation: rating.reputation_score ?? undefined,
+            community: rating.community_score ?? undefined,
+            fraternity: fraternity as any,
           });
         }
       }
 
-      for (const comment of partyComments.filter(c => !c.parent_comment_id)) {
+      for (const comment of partyComments.filter((c: any) => !c.parent_comment_id)) {
         const party = partyMap.get(comment.party_id);
         if (party) {
           const replies = partyComments
-            .filter(c => c.parent_comment_id === comment.id)
-            .map(c => ({
+            .filter((c: any) => c.parent_comment_id === comment.id)
+            .map((c: any) => ({
               id: c.id,
               type: 'party_comment' as ActivityType,
-              created_date: c.created_date,
+              created_date: c.created_at,
               text: c.text,
-              upvotes: c.upvotes,
-              downvotes: c.downvotes,
-              party,
-              fraternity: fratMap.get(party.fraternity_id),
+              upvotes: c.upvotes ?? 0,
+              downvotes: c.downvotes ?? 0,
+              party: party as any,
+              fraternity: fratMap.get(party.fraternity_id) as any,
               userVote: partyVoteMap.get(c.id) || null,
             }));
 
           items.push({
             id: comment.id,
             type: 'party_comment',
-            created_date: comment.created_date,
+            created_date: comment.created_at,
             text: comment.text,
-            upvotes: comment.upvotes,
-            downvotes: comment.downvotes,
-            party,
-            fraternity: fratMap.get(party.fraternity_id),
+            upvotes: comment.upvotes ?? 0,
+            downvotes: comment.downvotes ?? 0,
+            party: party as any,
+            fraternity: fratMap.get(party.fraternity_id) as any,
             userVote: partyVoteMap.get(comment.id) || null,
             replies,
           });
         }
       }
 
-      for (const comment of fratComments.filter(c => !c.parent_comment_id)) {
+      for (const comment of fratComments.filter((c: any) => !c.parent_comment_id)) {
         const fraternity = fratMap.get(comment.fraternity_id);
         if (fraternity) {
           const replies = fratComments
-            .filter(c => c.parent_comment_id === comment.id)
-            .map(c => ({
+            .filter((c: any) => c.parent_comment_id === comment.id)
+            .map((c: any) => ({
               id: c.id,
               type: 'frat_comment' as ActivityType,
-              created_date: c.created_date,
+              created_date: c.created_at,
               text: c.text,
-              upvotes: c.upvotes,
-              downvotes: c.downvotes,
-              fraternity,
+              upvotes: c.upvotes ?? 0,
+              downvotes: c.downvotes ?? 0,
+              fraternity: fraternity as any,
               userVote: fratVoteMap.get(c.id) || null,
             }));
 
           items.push({
             id: comment.id,
             type: 'frat_comment',
-            created_date: comment.created_date,
+            created_date: comment.created_at,
             text: comment.text,
-            upvotes: comment.upvotes,
-            downvotes: comment.downvotes,
-            fraternity,
+            upvotes: comment.upvotes ?? 0,
+            downvotes: comment.downvotes ?? 0,
+            fraternity: fraternity as any,
             userVote: fratVoteMap.get(comment.id) || null,
             replies,
           });
@@ -525,32 +540,32 @@ export default function Activity() {
   const loadChat = async () => {
     try {
       const [messages, partiesData, fraternitiesData] = await Promise.all([
-        base44.entities.ChatMessage.list(),
-        base44.entities.Party.list(),
-        base44.entities.Fraternity.list(),
+        chatMessageQueries.list(),
+        partyQueries.list(),
+        fraternityQueries.list(),
       ]);
 
-      const partyMap = new Map(partiesData.map(p => [p.id, p]));
-      const fratMap = new Map(fraternitiesData.map(f => [f.id, f]));
+      const partyMap = new Map(partiesData.map((p: any) => [p.id, p]));
+      const fratMap = new Map(fraternitiesData.map((f: any) => [f.id, f]));
 
-      const user = await base44.auth.me();
+      const user = await getCurrentUser();
       let userVotes: any[] = [];
       if (user) {
-        userVotes = await base44.entities.ChatMessageVote.filter({ user_id: user.id });
+        userVotes = await chatMessageVoteQueries.listByUser(user.id);
       }
-      const voteMap = new Map(userVotes.map(v => [v.message_id, v.value]));
+      const voteMap = new Map(userVotes.map((v: any) => [v.message_id, v.value]));
 
-      const topLevelMessages = messages.filter(m => !m.parent_message_id);
+      const topLevelMessages = messages.filter((m: any) => !m.parent_message_id);
       
-      const chatItems: ChatItem[] = topLevelMessages.map(msg => {
+      const chatItems: ChatItem[] = topLevelMessages.map((msg: any) => {
         const replies = messages
-          .filter(m => m.parent_message_id === msg.id)
-          .map(m => ({
+          .filter((m: any) => m.parent_message_id === msg.id)
+          .map((m: any) => ({
             id: m.id,
             text: m.text,
-            upvotes: m.upvotes,
-            downvotes: m.downvotes,
-            created_date: m.created_date,
+            upvotes: m.upvotes ?? 0,
+            downvotes: m.downvotes ?? 0,
+            created_date: m.created_at,
             mentionedFraternity: m.mentioned_fraternity_id ? fratMap.get(m.mentioned_fraternity_id) : undefined,
             mentionedParty: m.mentioned_party_id ? partyMap.get(m.mentioned_party_id) : undefined,
             userVote: voteMap.get(m.id) || null,
@@ -559,9 +574,9 @@ export default function Activity() {
         return {
           id: msg.id,
           text: msg.text,
-          upvotes: msg.upvotes,
-          downvotes: msg.downvotes,
-          created_date: msg.created_date,
+          upvotes: msg.upvotes ?? 0,
+          downvotes: msg.downvotes ?? 0,
+          created_date: msg.created_at,
           mentionedFraternity: msg.mentioned_fraternity_id ? fratMap.get(msg.mentioned_fraternity_id) : undefined,
           mentionedParty: msg.mentioned_party_id ? partyMap.get(msg.mentioned_party_id) : undefined,
           userVote: voteMap.get(msg.id) || null,
@@ -577,29 +592,25 @@ export default function Activity() {
   };
 
   const handleChatVote = async (item: ChatItem, value: 1 | -1) => {
-    const user = await base44.auth.me();
+    const user = await getCurrentUser();
     if (!user) {
       toast({ title: 'Please sign in to vote', variant: 'destructive' });
       return;
     }
 
     try {
-      const existingVotes = await base44.entities.ChatMessageVote.filter({
-        message_id: item.id,
-        user_id: user.id,
-      });
+      const existingVote = await chatMessageVoteQueries.getByUserAndMessage(user.id, item.id);
 
       let upvoteDelta = 0;
       let downvoteDelta = 0;
 
-      if (existingVotes.length > 0) {
-        const existingVote = existingVotes[0];
+      if (existingVote) {
         if (existingVote.value === value) {
-          await base44.entities.ChatMessageVote.delete(existingVote.id);
+          await chatMessageVoteQueries.delete(user.id, item.id);
           if (value === 1) upvoteDelta = -1;
           else downvoteDelta = -1;
         } else {
-          await base44.entities.ChatMessageVote.update(existingVote.id, { value });
+          await chatMessageVoteQueries.upsert(user.id, item.id, value);
           if (value === 1) {
             upvoteDelta = 1;
             downvoteDelta = -1;
@@ -609,16 +620,12 @@ export default function Activity() {
           }
         }
       } else {
-        await base44.entities.ChatMessageVote.create({
-          message_id: item.id,
-          user_id: user.id,
-          value,
-        });
+        await chatMessageVoteQueries.upsert(user.id, item.id, value);
         if (value === 1) upvoteDelta = 1;
         else downvoteDelta = 1;
       }
 
-      await base44.entities.ChatMessage.update(item.id, {
+      await chatMessageQueries.update(item.id, {
         upvotes: item.upvotes + upvoteDelta,
         downvotes: item.downvotes + downvoteDelta,
       });
@@ -633,7 +640,7 @@ export default function Activity() {
   const handleChatReply = async (parentId: string) => {
     if (!replyText.trim()) return;
 
-    const user = await base44.auth.me();
+    const user = await getCurrentUser();
     if (!user) {
       toast({ title: 'Please sign in to reply', variant: 'destructive' });
       return;
@@ -641,10 +648,12 @@ export default function Activity() {
 
     setSubmittingReply(true);
     try {
-      await base44.entities.ChatMessage.create({
+      await chatMessageQueries.create({
         user_id: user.id,
         parent_message_id: parentId,
         text: replyText.trim(),
+        mentioned_fraternity_id: null,
+        mentioned_party_id: null,
         upvotes: 0,
         downvotes: 0,
       });
@@ -663,7 +672,7 @@ export default function Activity() {
   const handleSubmitChat = async () => {
     if (!chatText.trim()) return;
 
-    const user = await base44.auth.me();
+    const user = await getCurrentUser();
     if (!user) {
       toast({ title: 'Please sign in to chat', variant: 'destructive' });
       return;
@@ -671,8 +680,9 @@ export default function Activity() {
 
     setSubmittingChat(true);
     try {
-      await base44.entities.ChatMessage.create({
+      await chatMessageQueries.create({
         user_id: user.id,
+        parent_message_id: null,
         text: chatText.trim(),
         mentioned_fraternity_id: selectedMention?.type === 'frat' ? selectedMention.id : null,
         mentioned_party_id: selectedMention?.type === 'party' ? selectedMention.id : null,
@@ -706,7 +716,7 @@ export default function Activity() {
   };
 
   const handleMoveVote = async (optionId: string) => {
-    const user = await base44.auth.me();
+    const user = await getCurrentUser();
     if (!user) {
       toast({ title: 'Please sign in to vote', variant: 'destructive' });
       return;
@@ -1863,7 +1873,7 @@ export default function Activity() {
                 onClick={async () => {
                   // If poll mode, post the poll
                   if (isPollMode) {
-                    const user = await base44.auth.me();
+                    const user = await getCurrentUser();
                     if (!user) {
                       toast({ title: 'Please sign in to post', variant: 'destructive' });
                       return;
@@ -1880,9 +1890,12 @@ export default function Activity() {
                       // Format poll as a special message with POLL: prefix for detection
                       const pollMessage = `POLL: ${pollQuestion.trim()}\n${validOptions.map((opt, i) => `OPTION:${opt}`).join('\n')}`;
                       
-                      await base44.entities.ChatMessage.create({
+                      await chatMessageQueries.create({
                         user_id: user.id,
+                        parent_message_id: null,
                         text: pollMessage,
+                        mentioned_fraternity_id: null,
+                        mentioned_party_id: null,
                         upvotes: 0,
                         downvotes: 0,
                       });
@@ -1902,7 +1915,7 @@ export default function Activity() {
                   }
                   // If frat ranking mode, post the ranking
                   else if (Object.values(fratRanking).some(Boolean)) {
-                    const user = await base44.auth.me();
+                    const user = await getCurrentUser();
                     if (!user) {
                       toast({ title: 'Please sign in to post', variant: 'destructive' });
                       return;
@@ -1925,9 +1938,12 @@ export default function Activity() {
                         message = `${chatText.trim()}\n\n${message}`;
                       }
                       
-                      await base44.entities.ChatMessage.create({
+                      await chatMessageQueries.create({
                         user_id: user.id,
+                        parent_message_id: null,
                         text: message,
+                        mentioned_fraternity_id: null,
+                        mentioned_party_id: null,
                         upvotes: 0,
                         downvotes: 0,
                       });
@@ -1987,9 +2003,9 @@ export default function Activity() {
         <SheetContent side="bottom" className="rounded-t-3xl max-h-[85vh]" style={{ paddingBottom: 'max(env(safe-area-inset-bottom), 16px)' }}>
           {showFratBattleGame ? (
             <FratBattleGame
-              fraternities={fraternities}
-              onComplete={(ranking) => {
-                const fullRanking: Record<string, Fraternity | null> = {
+              fraternities={fraternities as any}
+              onComplete={(ranking: any) => {
+                const fullRanking: Record<string, any> = {
                   'Upper Touse': ranking['Upper Touse'] || null,
                   'Touse': ranking['Touse'] || null,
                   'Lower Touse': ranking['Lower Touse'] || null,
@@ -2006,8 +2022,8 @@ export default function Activity() {
                 setShowFratRankingPicker(false);
                 setShowChatComposer(true);
               }}
-              onShare={(rankingData) => {
-                const fullRanking: Record<string, Fraternity | null> = {
+              onShare={(rankingData: any) => {
+                const fullRanking: Record<string, any> = {
                   'Upper Touse': null,
                   'Touse': null,
                   'Lower Touse': null,
@@ -2019,8 +2035,8 @@ export default function Activity() {
                   'Bouse': null,
                   'Lower Bouse': null,
                 };
-                rankingData.forEach(r => {
-                  const frat = fraternities.find(f => f.name === r.fratName);
+                rankingData.forEach((r: any) => {
+                  const frat = fraternities.find((f: any) => f.name === r.fratName);
                   if (frat && r.tier in fullRanking) {
                     fullRanking[r.tier] = frat;
                   }
