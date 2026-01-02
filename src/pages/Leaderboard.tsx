@@ -40,7 +40,7 @@ import { ensureAuthed } from '@/utils/auth';
 import { Star, PartyPopper, X, Plus, ArrowUpDown, Search } from 'lucide-react';
 
 type FilterType = 'overall' | 'reputation' | 'party' | 'trending';
-type DisplayMode = 'score' | 'vibes';
+type DisplayMode = 'rank' | 'classification';
 
 // Tier classifications based on rank (1-10 tiers) - with color blocks
 const getTierFromRank = (rank: number, total: number): { name: string; abbrev: string; color: string; bgColor: string; rankBg: string; rowBg: string } => {
@@ -102,7 +102,7 @@ export default function Leaderboard() {
   const [rateExpanded, setRateExpanded] = useState(false);
   const [selectedParty, setSelectedParty] = useState<Party | null>(null);
   const [filter, setFilter] = useState<FilterType>('overall');
-  const [displayMode, setDisplayMode] = useState<DisplayMode>('score');
+  const [displayMode, setDisplayMode] = useState<DisplayMode>('rank');
 
   const handleIntroComplete = (neverShowAgain: boolean) => {
     if (neverShowAgain) {
@@ -346,12 +346,12 @@ export default function Leaderboard() {
       {/* Sort indicator / Display mode toggle */}
       <div className="flex items-center justify-between px-4 mt-6 mb-2">
         <button 
-          onClick={() => setDisplayMode(prev => prev === 'score' ? 'vibes' : 'score')}
+          onClick={() => setDisplayMode(prev => prev === 'rank' ? 'classification' : 'rank')}
           className="flex items-center gap-1.5 text-sm font-medium text-muted-foreground hover:text-foreground transition-all active:scale-95"
         >
           <ArrowUpDown className="h-3.5 w-3.5" />
-          <span>{displayMode === 'score' ? 'Score' : 'Vibes'}</span>
-          {displayMode === 'vibes' && <span className="text-xs">✨</span>}
+          <span>{displayMode === 'rank' ? 'Rank' : 'Classification'}</span>
+          {displayMode === 'classification' && <span className="text-xs">✨</span>}
         </button>
         <button className="p-2 -mr-2 text-muted-foreground hover:text-foreground transition-colors">
           <Search className="h-4 w-4" />
@@ -369,8 +369,8 @@ export default function Leaderboard() {
               fraternity={frat}
               rank={index + 1}
               filter={filter}
-              displayMode={displayMode}
-              tierInfo={displayMode === 'vibes' ? getTierFromRank(index + 1, sortedFraternities.length) : undefined}
+              displayMode={displayMode === 'rank' ? 'score' : 'vibes'}
+              tierInfo={displayMode === 'classification' ? getTierFromRank(index + 1, sortedFraternities.length) : undefined}
             />
             {index < sortedFraternities.length - 1 && (
               <div className="border-t border-border/50" />
