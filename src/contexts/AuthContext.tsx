@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useState, ReactNode } from 'react';
+import { createContext, useContext, useEffect, useState, ReactNode, useCallback } from 'react';
 import { User, Session } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
 
@@ -18,6 +18,7 @@ interface AuthContextType {
   loading: boolean;
   signInWithGoogle: () => Promise<void>;
   signOut: () => Promise<void>;
+  refreshProfile: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -28,30 +29,66 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [profile, setProfile] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(true);
 
-  const fetchProfile = async (userId: string) => {
+  const fetchOrCreateProfile = useCallback(async (authUser: User) => {
+    // Try to fetch existing profile
     const { data, error } = await supabase
       .from('profiles')
       .select('*')
-      .eq('id', userId)
-      .single();
+      .eq('id', authUser.id)
+      .maybeSingle();
     
-    if (!error && data) {
-      setProfile(data);
+    if (error) {
+      console.error('Error fetching profile:', error);
+      return;
     }
-  };
+
+    if (data) {
+      setProfile(data);
+      return;
+    }
+
+    // Profile doesn't exist, create it (upsert)
+    const newProfile = {
+      id: authUser.id,
+      email: authUser.email ?? null,
+      full_name: authUser.user_metadata?.full_name ?? authUser.user_metadata?.name ?? null,
+      avatar_url: authUser.user_metadata?.avatar_url ?? authUser.user_metadata?.picture ?? null,
+    };
+
+    const { data: upsertedProfile, error: upsertError } = await supabase
+      .from('profiles')
+      .upsert(newProfile, { onConflict: 'id' })
+      .select()
+      .maybeSingle();
+
+    if (upsertError) {
+      console.error('Error creating profile:', upsertError);
+      return;
+    }
+
+    if (upsertedProfile) {
+      setProfile(upsertedProfile);
+    }
+  }, []);
+
+  const refreshProfile = useCallback(async () => {
+    if (user) {
+      await fetchOrCreateProfile(user);
+    }
+  }, [user, fetchOrCreateProfile]);
 
   useEffect(() => {
     // Set up auth state listener FIRST
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      (event, session) => {
-        setSession(session);
-        setUser(session?.user ?? null);
+      (event, currentSession) => {
+        setSession(currentSession);
+        setUser(currentSession?.user ?? null);
         setLoading(false);
         
-        // Fetch profile when user changes (deferred to avoid deadlock)
-        if (session?.user) {
+        // Fetch/create profile when user changes (deferred to avoid deadlock)
+        if (currentSession?.user) {
           setTimeout(() => {
-            fetchProfile(session.user.id);
+            fetchOrCreateProfile(currentSession.user);
           }, 0);
         } else {
           setProfile(null);
@@ -60,18 +97,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     );
 
     // THEN check for existing session
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session);
-      setUser(session?.user ?? null);
+    supabase.auth.getSession().then(({ data: { session: existingSession } }) => {
+      setSession(existingSession);
+      setUser(existingSession?.user ?? null);
       setLoading(false);
       
-      if (session?.user) {
-        fetchProfile(session.user.id);
+      if (existingSession?.user) {
+        fetchOrCreateProfile(existingSession.user);
       }
     });
 
     return () => subscription.unsubscribe();
-  }, []);
+  }, [fetchOrCreateProfile]);
 
   const signInWithGoogle = async () => {
     await supabase.auth.signInWithOAuth({
@@ -89,7 +126,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   return (
-    <AuthContext.Provider value={{ user, session, profile, loading, signInWithGoogle, signOut }}>
+    <AuthContext.Provider value={{ user, session, profile, loading, signInWithGoogle, signOut, refreshProfile }}>
       {children}
     </AuthContext.Provider>
   );
