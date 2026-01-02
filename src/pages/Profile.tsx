@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
-import { Link } from 'react-router-dom';
-import { User, PartyPopper, LogIn, Award, ChevronRight, Pencil, Trash2, Trophy, MessageCircle, Flame, Image, Lock, X, ListOrdered, Star, Users, Shield, Heart, Sparkles, Music, Zap, CheckCircle2, Loader2, Share2, Swords, ChevronDown } from 'lucide-react';
+import { Link, useNavigate } from 'react-router-dom';
+import { User, PartyPopper, LogIn, Award, ChevronRight, Pencil, Trash2, Trophy, MessageCircle, Flame, Image, Lock, X, ListOrdered, Star, Users, Shield, Heart, Sparkles, Music, Zap, CheckCircle2, Loader2, Share2, Swords, ChevronDown, LogOut } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
@@ -22,6 +22,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 import { recordUserAction } from '@/utils/streak';
 import ShareBattleDialog from '@/components/share/ShareBattleDialog';
 import FratBattleGame from '@/components/activity/FratBattleGame';
+import { useAuth } from '@/contexts/AuthContext';
 
 type EnrichedPartyRating = PartyRating & { party?: Party; fraternity?: Fraternity };
 type EnrichedRepRating = ReputationRating & { fraternity?: Fraternity };
@@ -53,6 +54,8 @@ interface RankedParty {
 }
 
 export default function Profile() {
+  const navigate = useNavigate();
+  const { signOut } = useAuth();
   const [user, setUser] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [stats, setStats] = useState({ partyRatings: 0, fratRatings: 0, comments: 0, privatePhotos: 0 });
@@ -280,7 +283,12 @@ export default function Profile() {
   };
 
   const handleLogin = () => {
-    base44.auth.redirectToLogin(window.location.href);
+    navigate('/auth');
+  };
+
+  const handleLogout = async () => {
+    await signOut();
+    navigate('/auth');
   };
 
   const handlePartyRatingSubmit = () => {
@@ -652,6 +660,15 @@ export default function Profile() {
               </div>
             </div>
           </div>
+          {/* Logout Button */}
+          <Button 
+            variant="ghost" 
+            size="icon" 
+            onClick={handleLogout}
+            className="h-11 w-11 rounded-xl text-muted-foreground"
+          >
+            <LogOut className="h-5 w-5" />
+          </Button>
         </div>
 
         {/* Points Progress */}

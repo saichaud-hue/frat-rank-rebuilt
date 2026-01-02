@@ -4,6 +4,8 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate, useLocation } from "react-router-dom";
+import { AuthProvider } from "@/contexts/AuthContext";
+import ProtectedRoute from "@/components/auth/ProtectedRoute";
 import Layout from "./components/Layout";
 import Activity from "./pages/Activity";
 import Posts from "./pages/Posts";
@@ -12,9 +14,9 @@ import CategoryRankings from "./pages/CategoryRankings";
 import Parties from "./pages/Parties";
 import Party from "./pages/Party";
 import Fraternity from "./pages/Fraternity";
-
 import Profile from "./pages/Profile";
 import CreateParty from "./pages/CreateParty";
+import Auth from "./pages/Auth";
 import UserNotRegisteredError from "./components/errors/UserNotRegisteredError";
 import NotFound from "./pages/NotFound";
 import { checkStreakStatus } from "./utils/streak";
@@ -37,28 +39,70 @@ const ScrollToTop = () => {
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
-    <TooltipProvider>
-      <Toaster />
-      <Sonner />
-      <BrowserRouter>
-        <ScrollToTop />
-        <Routes>
-          <Route path="/" element={<Navigate to="/Activity" replace />} />
-          <Route path="/Activity" element={<Layout><Activity /></Layout>} />
-          <Route path="/Posts" element={<Layout><Posts /></Layout>} />
-          <Route path="/Leaderboard" element={<Layout><Leaderboard /></Layout>} />
-          <Route path="/Rankings" element={<Layout><CategoryRankings /></Layout>} />
-          <Route path="/Parties" element={<Layout><Parties /></Layout>} />
-          <Route path="/Party" element={<Layout><Party /></Layout>} />
-          <Route path="/Fraternity/:id" element={<Layout><Fraternity /></Layout>} />
-          <Route path="/Rate" element={<Navigate to="/Profile" replace />} />
-          <Route path="/Profile" element={<Layout><Profile /></Layout>} />
-          <Route path="/CreateParty" element={<Layout><CreateParty /></Layout>} />
-          <Route path="/UserNotRegisteredError" element={<UserNotRegisteredError />} />
-          <Route path="*" element={<NotFound />} />
-        </Routes>
-      </BrowserRouter>
-    </TooltipProvider>
+    <AuthProvider>
+      <TooltipProvider>
+        <Toaster />
+        <Sonner />
+        <BrowserRouter>
+          <ScrollToTop />
+          <Routes>
+            {/* Public routes */}
+            <Route path="/auth" element={<Auth />} />
+            <Route path="/UserNotRegisteredError" element={<UserNotRegisteredError />} />
+            
+            {/* Protected routes */}
+            <Route path="/" element={<Navigate to="/Activity" replace />} />
+            <Route path="/Activity" element={
+              <ProtectedRoute>
+                <Layout><Activity /></Layout>
+              </ProtectedRoute>
+            } />
+            <Route path="/Posts" element={
+              <ProtectedRoute>
+                <Layout><Posts /></Layout>
+              </ProtectedRoute>
+            } />
+            <Route path="/Leaderboard" element={
+              <ProtectedRoute>
+                <Layout><Leaderboard /></Layout>
+              </ProtectedRoute>
+            } />
+            <Route path="/Rankings" element={
+              <ProtectedRoute>
+                <Layout><CategoryRankings /></Layout>
+              </ProtectedRoute>
+            } />
+            <Route path="/Parties" element={
+              <ProtectedRoute>
+                <Layout><Parties /></Layout>
+              </ProtectedRoute>
+            } />
+            <Route path="/Party" element={
+              <ProtectedRoute>
+                <Layout><Party /></Layout>
+              </ProtectedRoute>
+            } />
+            <Route path="/Fraternity/:id" element={
+              <ProtectedRoute>
+                <Layout><Fraternity /></Layout>
+              </ProtectedRoute>
+            } />
+            <Route path="/Rate" element={<Navigate to="/Profile" replace />} />
+            <Route path="/Profile" element={
+              <ProtectedRoute>
+                <Layout><Profile /></Layout>
+              </ProtectedRoute>
+            } />
+            <Route path="/CreateParty" element={
+              <ProtectedRoute>
+                <Layout><CreateParty /></Layout>
+              </ProtectedRoute>
+            } />
+            <Route path="*" element={<NotFound />} />
+          </Routes>
+        </BrowserRouter>
+      </TooltipProvider>
+    </AuthProvider>
   </QueryClientProvider>
 );
 
