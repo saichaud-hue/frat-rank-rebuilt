@@ -4,12 +4,25 @@
 
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=Space+Grotesk:wght@500;600;700&display=swap');
 
+/* ==========================================
+   IPHONE-FIRST GLOBAL STYLES
+   Target: 375-430px (iPhone SE to 15 Pro Max)
+   Test: 320px minimum
+   ========================================== */
+
 /* Prevent horizontal scroll and zoom on mobile */
 html, body {
   overflow-x: hidden;
   overscroll-behavior-x: none;
   -webkit-overflow-scrolling: touch;
   touch-action: pan-y;
+  -webkit-text-size-adjust: 100%;
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* Force iPhone viewport constraints */
+html {
+  max-width: 100vw;
 }
 
 body[data-scroll-locked] {
@@ -20,11 +33,11 @@ body[data-scroll-locked] {
 @layer base {
   :root {
     /* Duke Blue & White - Pure palette with depth shades */
-    --duke-deep: 220 100% 15%; /* Deep navy */
-    --duke-navy: 220 100% 22%; /* Navy */
-    --duke-blue: 220 100% 27%; /* Duke Blue primary */
-    --duke-royal: 218 100% 32%; /* Royal */
-    --duke-bright: 216 100% 40%; /* Bright accent */
+    --duke-deep: 220 100% 15%;
+    --duke-navy: 220 100% 22%;
+    --duke-blue: 220 100% 27%;
+    --duke-royal: 218 100% 32%;
+    --duke-bright: 216 100% 40%;
     --white: 0 0% 100%;
     --white-soft: 220 30% 98%;
     --white-muted: 220 20% 94%;
@@ -59,6 +72,15 @@ body[data-scroll-locked] {
 
     --radius: 1rem;
 
+    /* Safe area insets as CSS variables for easier access */
+    --safe-area-top: env(safe-area-inset-top);
+    --safe-area-bottom: env(safe-area-inset-bottom);
+    --safe-area-left: env(safe-area-inset-left);
+    --safe-area-right: env(safe-area-inset-right);
+    
+    /* Bottom nav height for content spacing */
+    --bottom-nav-height: 80px;
+
     /* Strong elevation shadows - Duke Blue tinted */
     --shadow-xs: 0 1px 3px 0 hsl(220 100% 15% / 0.08);
     --shadow-sm: 0 2px 8px -2px hsl(220 100% 15% / 0.12), 0 1px 3px -1px hsl(220 100% 15% / 0.08);
@@ -85,7 +107,6 @@ body[data-scroll-locked] {
   }
 
   .dark {
-    /* Duke Dark Mode - Deep navy */
     --background: 220 60% 6%;
     --foreground: 0 0% 98%;
 
@@ -136,6 +157,8 @@ body[data-scroll-locked] {
 @layer base {
   * {
     @apply border-border;
+    /* Prevent text overflow globally */
+    min-width: 0;
   }
 
   body {
@@ -144,25 +167,34 @@ body[data-scroll-locked] {
     font-feature-settings: 'ss01' on, 'cv01' on;
   }
   
-  /* Bold Typography System */
+  /* Mobile-First Typography Scale
+     xl: 20px - Page titles
+     base: 16px - Body text  
+     sm: 14px - Secondary text
+     xs: 12px - Captions, labels
+  */
   h1 {
     font-family: 'Space Grotesk', 'Inter', system-ui, sans-serif;
-    @apply text-3xl font-black tracking-tight leading-tight;
+    @apply text-xl font-black tracking-tight leading-tight;
   }
   
   h2 {
     font-family: 'Space Grotesk', 'Inter', system-ui, sans-serif;
-    @apply text-2xl font-bold tracking-tight leading-tight;
+    @apply text-lg font-bold tracking-tight leading-tight;
   }
   
   h3, .heading {
     font-family: 'Space Grotesk', 'Inter', system-ui, sans-serif;
-    @apply text-xl font-bold tracking-tight leading-snug;
+    @apply text-base font-bold tracking-tight leading-snug;
   }
   
   h4 {
     font-family: 'Space Grotesk', 'Inter', system-ui, sans-serif;
-    @apply text-lg font-bold tracking-tight leading-snug;
+    @apply text-sm font-bold tracking-tight leading-snug;
+  }
+  
+  p, span, div {
+    @apply text-sm;
   }
 }
 
@@ -175,24 +207,93 @@ body[data-scroll-locked] {
     display: none;
   }
 
-  /* Safe area utilities for iPhone */
-  .pb-safe {
-    padding-bottom: max(env(safe-area-inset-bottom), 1rem);
-  }
-  
+  /* ==========================================
+     SAFE AREA UTILITIES FOR IPHONE
+     ========================================== */
   .pt-safe {
     padding-top: env(safe-area-inset-top);
+  }
+  
+  .pb-safe {
+    padding-bottom: max(env(safe-area-inset-bottom), 1rem);
   }
   
   .px-safe {
     padding-left: env(safe-area-inset-left);
     padding-right: env(safe-area-inset-right);
   }
+  
+  .mt-safe {
+    margin-top: env(safe-area-inset-top);
+  }
+  
+  .mb-safe {
+    margin-bottom: max(env(safe-area-inset-bottom), 1rem);
+  }
+  
+  /* Content padding to clear bottom nav */
+  .pb-nav {
+    padding-bottom: calc(var(--bottom-nav-height) + env(safe-area-inset-bottom) + 16px);
+  }
 
-  /* Bold tap target */
+  /* ==========================================
+     TAP TARGETS - Minimum 44px for iOS
+     ========================================== */
   .tap-target {
+    min-height: 44px;
+    min-width: 44px;
+  }
+  
+  .tap-target-lg {
     min-height: 48px;
     min-width: 48px;
+  }
+
+  /* ==========================================
+     TEXT OVERFLOW UTILITIES
+     ========================================== */
+  .text-ellipsis-1 {
+    @apply truncate;
+  }
+  
+  .text-ellipsis-2 {
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+  
+  .text-ellipsis-3 {
+    display: -webkit-box;
+    -webkit-line-clamp: 3;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+
+  /* ==========================================
+     MOBILE CONTAINER
+     ========================================== */
+  .mobile-container {
+    @apply w-full max-w-[430px] mx-auto;
+  }
+
+  /* ==========================================
+     SKELETON LOADING
+     ========================================== */
+  .skeleton {
+    @apply bg-muted animate-pulse rounded-lg;
+  }
+  
+  .skeleton-text {
+    @apply h-4 bg-muted animate-pulse rounded;
+  }
+  
+  .skeleton-avatar {
+    @apply rounded-full bg-muted animate-pulse;
+  }
+  
+  .skeleton-card {
+    @apply bg-muted animate-pulse rounded-2xl;
   }
 
   /* Glass morphism */
@@ -261,8 +362,10 @@ body[data-scroll-locked] {
     transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
   }
   
-  .card-bold:hover {
-    box-shadow: var(--shadow-hover);
+  /* Remove hover state - tap only */
+  .card-bold:active {
+    box-shadow: var(--shadow-active);
+    transform: scale(0.98);
   }
   
   .card-hero {
@@ -271,17 +374,12 @@ body[data-scroll-locked] {
     border: none;
   }
   
-  /* Vote cards - Interactive with elevation states */
+  /* Vote cards - Interactive with tap states */
   .card-vote {
     @apply bg-card rounded-2xl;
     box-shadow: var(--shadow-sm);
     border: none;
     transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-  }
-  
-  .card-vote:hover {
-    box-shadow: var(--shadow-hover);
-    transform: translateY(-2px) scale(1.01);
   }
   
   .card-vote:active {
@@ -375,7 +473,7 @@ body[data-scroll-locked] {
     animation: float 3s ease-in-out infinite;
   }
   
-  /* Tap feedback */
+  /* Tap feedback - Mobile only, no hover */
   .tap-bounce {
     transition: transform 0.1s ease-out;
   }
@@ -552,6 +650,15 @@ body[data-scroll-locked] {
   }
 }
 
+@keyframes shimmer {
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
+}
+
 .animate-bounce-in {
   animation: bounceIn 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
 }
@@ -566,6 +673,12 @@ body[data-scroll-locked] {
 
 .animate-float-subtle {
   animation: float-subtle 2.5s ease-in-out infinite;
+}
+
+.animate-shimmer {
+  background: linear-gradient(90deg, transparent, hsl(var(--muted)) 50%, transparent);
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite;
 }
 
 /* Vote bar animation */
@@ -592,14 +705,9 @@ body[data-scroll-locked] {
 .stagger-children > *:nth-child(5) { animation-delay: 200ms; }
 .stagger-children > *:nth-child(6) { animation-delay: 250ms; }
 
-/* Interactive card lift */
+/* Interactive card - tap only, no hover */
 .card-interactive {
   transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-}
-
-.card-interactive:hover {
-  transform: translateY(-3px) scale(1.01);
-  box-shadow: var(--shadow-hover);
 }
 
 .card-interactive:active {
