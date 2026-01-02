@@ -80,30 +80,74 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [user, fetchOrCreateProfile]);
 
   useEffect(() => {
-    // Set up auth state listener FIRST
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      (event, currentSession) => {
-        setSession(currentSession);
-        setUser(currentSession?.user ?? null);
-        setLoading(false);
-        
-        // Fetch/create profile when user changes (deferred to avoid deadlock)
-        if (currentSession?.user) {
-          setTimeout(() => {
-            fetchOrCreateProfile(currentSession.user);
-          }, 0);
-        } else {
-          setProfile(null);
+    const syncLegacyLocalUser = (authUser: User | null) => {
+      try {
+        if (!authUser) {
+          localStorage.removeItem('fratrank_user');
+          return;
         }
+
+        const id = authUser.id;
+        const email = authUser.email ?? '';
+        const name = authUser.user_metadata?.full_name ?? authUser.user_metadata?.name ?? 'User';
+        const avatar_url = authUser.user_metadata?.avatar_url ?? authUser.user_metadata?.picture;
+
+        const perUserKey = `fratrank_user_${id}`;
+        const existingPerUser = localStorage.getItem(perUserKey);
+        const existingMeta = existingPerUser ? JSON.parse(existingPerUser) : null;
+
+        const points = typeof existingMeta?.points === 'number' ? existingMeta.points : 0;
+        const streak = typeof existingMeta?.streak === 'number' ? existingMeta.streak : 0;
+        const last_action_at = typeof existingMeta?.last_action_at === 'string' ? existingMeta.last_action_at : null;
+
+        // Legacy (base44) user object used across the app
+        localStorage.setItem(
+          'fratrank_user',
+          JSON.stringify({
+            id,
+            email,
+            name,
+            avatar_url,
+            points,
+            streak,
+            last_action_at,
+            created_at: new Date().toISOString(),
+          })
+        );
+
+        // Also keep the per-user streak/points record in sync
+        localStorage.setItem(perUserKey, JSON.stringify({ id, points, streak, last_action_at }));
+      } catch {
+        // no-op: don't block auth flow on localStorage issues
       }
-    );
+    };
+
+    // Set up auth state listener FIRST
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, currentSession) => {
+      setSession(currentSession);
+      setUser(currentSession?.user ?? null);
+      setLoading(false);
+
+      syncLegacyLocalUser(currentSession?.user ?? null);
+
+      // Fetch/create profile when user changes (deferred to avoid deadlock)
+      if (currentSession?.user) {
+        setTimeout(() => {
+          fetchOrCreateProfile(currentSession.user);
+        }, 0);
+      } else {
+        setProfile(null);
+      }
+    });
 
     // THEN check for existing session
     supabase.auth.getSession().then(({ data: { session: existingSession } }) => {
       setSession(existingSession);
       setUser(existingSession?.user ?? null);
       setLoading(false);
-      
+
+      syncLegacyLocalUser(existingSession?.user ?? null);
+
       if (existingSession?.user) {
         fetchOrCreateProfile(existingSession.user);
       }
@@ -136,6 +180,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const signOut = async () => {
     setProfile(null);
+    localStorage.removeItem('fratrank_user');
     await supabase.auth.signOut();
   };
 

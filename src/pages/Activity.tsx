@@ -62,16 +62,7 @@ import {
   DialogDescription,
 } from '@/components/ui/dialog';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { 
-  base44, 
-  type Party, 
-  type Fraternity, 
-  type ChatMessage 
-} from '@/api/base44Client';
-import { formatDistanceToNow, differenceInSeconds, differenceInMinutes, differenceInHours, differenceInDays, format, isToday, isTomorrow } from 'date-fns';
-import { getScoreColor, getScoreBgColor, createPageUrl } from '@/utils';
-import { toast } from '@/hooks/use-toast';
-import { cn } from '@/lib/utils';
+import { useAuth } from '@/contexts/AuthContext';
 
 type ActivityType = 'party_rating' | 'frat_rating' | 'party_comment' | 'frat_comment';
 
@@ -110,59 +101,21 @@ interface ChatItem {
 }
 
 export default function Activity() {
-  const [activities, setActivities] = useState<ActivityItem[]>([]);
-  const [chatMessages, setChatMessages] = useState<ChatItem[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [replyingTo, setReplyingTo] = useState<string | null>(null);
-  const [replyText, setReplyText] = useState('');
-  const [submittingReply, setSubmittingReply] = useState(false);
-  const [commentsSheetItem, setCommentsSheetItem] = useState<ChatItem | null>(null);
-  
-  // Chat composer
-  const [showChatComposer, setShowChatComposer] = useState(false);
-  const [showFeedView, setShowFeedView] = useState(false);
-  const [chatText, setChatText] = useState('');
-  const [submittingChat, setSubmittingChat] = useState(false);
-  const [showMentionPicker, setShowMentionPicker] = useState(false);
-  const [mentionType, setMentionType] = useState<'frat' | 'party' | null>(null);
-  const [selectedMention, setSelectedMention] = useState<{ type: 'frat' | 'party'; id: string; name: string } | null>(null);
-  const [chatInputEnabled, setChatInputEnabled] = useState(false);
-  
-  // Frat ranking post mode
-  const [showFratRankingPicker, setShowFratRankingPicker] = useState(false);
-  const [showFratBattleGame, setShowFratBattleGame] = useState(false);
-  const [showManualPicker, setShowManualPicker] = useState(false);
-  const [expandedTiers, setExpandedTiers] = useState<Record<string, boolean>>({});
-  const [fratRanking, setFratRanking] = useState<Record<string, Fraternity | null>>({
-    'Upper Touse': null,
-    'Touse': null,
-    'Lower Touse': null,
-    'Upper Mouse': null,
-    'Mouse 1': null,
-    'Mouse 2': null,
-    'Lower Mouse': null,
-    'Upper Bouse': null,
-    'Bouse': null,
-    'Lower Bouse': null,
-  });
-  
-  // Poll mode
-  const [isPollMode, setIsPollMode] = useState(false);
-  const [pollQuestion, setPollQuestion] = useState('');
-  const [pollOptions, setPollOptions] = useState<string[]>(['', '']);
-  
-  // Data for mentions
-  const [fraternities, setFraternities] = useState<Fraternity[]>([]);
-  const [parties, setParties] = useState<Party[]>([]);
+  const { user } = useAuth();
 
-  // Generate/retrieve unique user ID for individual voting
-  const [userId] = useState<string>(() => {
+  // Per-user ID (use auth user id when available; fallback for safety)
+  const userId = useMemo(() => {
+    if (user?.id) {
+      localStorage.setItem('touse_user_id', user.id);
+      return user.id;
+    }
     const existing = localStorage.getItem('touse_user_id');
     if (existing) return existing;
     const newId = `user-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
     localStorage.setItem('touse_user_id', newId);
     return newId;
-  });
+  }, [user?.id]);
+
 
   // What's the move tonight - voting (stores all user votes)
   const [allUserVotes, setAllUserVotes] = useState<Record<string, string>>(() => {
