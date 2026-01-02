@@ -1,7 +1,9 @@
 import { createContext, useContext, useEffect, useState, ReactNode, useCallback } from 'react';
 import { User, Session } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
+import { toast } from '@/hooks/use-toast';
 
+const ALLOWED_AUTH_HOSTS = ['tousefrat.com', 'www.tousefrat.com'];
 interface Profile {
   id: string;
   email: string | null;
@@ -111,6 +113,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [fetchOrCreateProfile]);
 
   const signInWithGoogle = async () => {
+    const currentHost = window.location.hostname;
+    
+    // Block OAuth on non-production domains
+    if (!ALLOWED_AUTH_HOSTS.includes(currentHost)) {
+      toast({
+        title: 'Sign-in unavailable',
+        description: 'Google sign-in is only available on tousefrat.com. Sessions don\'t carry over to preview links.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
     await supabase.auth.signInWithOAuth({
       provider: 'google',
       options: {

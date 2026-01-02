@@ -10,6 +10,35 @@ export default function AuthCallback() {
 
   useEffect(() => {
     const handleCallback = async () => {
+      const params = new URLSearchParams(window.location.search);
+      const code = params.get('code');
+      const errorParam = params.get('error');
+      const errorDescription = params.get('error_description');
+
+      // Case 1: OAuth returned an error
+      if (errorParam) {
+        console.error('OAuth error:', errorParam, errorDescription);
+        toast({
+          title: 'Sign in failed',
+          description: errorDescription || errorParam || 'Authentication was cancelled or failed.',
+          variant: 'destructive',
+        });
+        navigate('/auth', { replace: true });
+        return;
+      }
+
+      // Case 2: No code parameter - check for existing session only
+      if (!code) {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (session) {
+          navigate('/Activity', { replace: true });
+        } else {
+          navigate('/auth', { replace: true });
+        }
+        return;
+      }
+
+      // Case 3: Code exists - exchange for session
       try {
         const { error } = await supabase.auth.exchangeCodeForSession(window.location.href);
         
@@ -18,6 +47,18 @@ export default function AuthCallback() {
           toast({
             title: 'Sign in failed',
             description: error.message || 'Unable to complete sign in. Please try again.',
+            variant: 'destructive',
+          });
+          navigate('/auth', { replace: true });
+          return;
+        }
+
+        // Verify session was created
+        const { data: { session } } = await supabase.auth.getSession();
+        if (!session) {
+          toast({
+            title: 'Sign in failed',
+            description: 'Session could not be established. Please try again.',
             variant: 'destructive',
           });
           navigate('/auth', { replace: true });

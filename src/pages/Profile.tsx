@@ -112,6 +112,9 @@ export default function Profile() {
   const [expandedBattles, setExpandedBattles] = useState<Record<string, boolean>>({});
   const [shareBattleDialogOpen, setShareBattleDialogOpen] = useState(false);
   const [battleToShare, setBattleToShare] = useState<SavedBattleRanking | null>(null);
+  
+  // Sign-out confirmation
+  const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
 
   useEffect(() => {
     loadProfile();
@@ -661,14 +664,29 @@ export default function Profile() {
             </div>
           </div>
           {/* Logout Button */}
-          <Button 
-            variant="ghost" 
-            size="icon" 
-            onClick={handleLogout}
-            className="h-11 w-11 rounded-xl text-muted-foreground"
-          >
-            <LogOut className="h-5 w-5" />
-          </Button>
+          <AlertDialog open={showLogoutConfirm} onOpenChange={setShowLogoutConfirm}>
+            <AlertDialogTrigger asChild>
+              <Button 
+                variant="ghost" 
+                size="icon" 
+                className="h-11 w-11 rounded-xl text-muted-foreground"
+              >
+                <LogOut className="h-5 w-5" />
+              </Button>
+            </AlertDialogTrigger>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>Sign out?</AlertDialogTitle>
+                <AlertDialogDescription>
+                  Are you sure you want to sign out of your account?
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                <AlertDialogAction onClick={handleLogout}>Sign out</AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
         </div>
 
         {/* Points Progress */}
