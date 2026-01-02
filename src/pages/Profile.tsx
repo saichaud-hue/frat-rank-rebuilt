@@ -318,7 +318,7 @@ export default function Profile() {
 
   const handleDeletePartyRating = async (ratingId: string) => {
     try {
-      await base44.entities.PartyRating.delete(ratingId);
+      await partyRatingQueries.delete(ratingId);
       loadProfile();
     } catch (error) {
       console.error('Failed to delete rating:', error);
@@ -330,7 +330,7 @@ export default function Profile() {
     if (!editingFratRating) return;
     
     try {
-      await base44.entities.ReputationRating.update(editingFratRating.id, {
+      await reputationRatingQueries.update(editingFratRating.id, {
         brotherhood_score: scores.brotherhood,
         reputation_score: scores.reputation,
         community_score: scores.community,
@@ -338,15 +338,13 @@ export default function Profile() {
       });
       
       if (editingFratRating.fraternity_id) {
-        const allRepRatings = await base44.entities.ReputationRating.filter({
-          fraternity_id: editingFratRating.fraternity_id
-        });
+        const allRepRatings = await reputationRatingQueries.listByFraternity(editingFratRating.fraternity_id);
         
         const avgReputation = allRepRatings.length > 0
           ? allRepRatings.reduce((sum, r) => sum + (r.combined_score ?? 5), 0) / allRepRatings.length
           : 5;
         
-        await base44.entities.Fraternity.update(editingFratRating.fraternity_id, {
+        await fraternityQueries.update(editingFratRating.fraternity_id, {
           reputation_score: Math.min(10, Math.max(0, avgReputation)),
         });
       }
@@ -360,18 +358,16 @@ export default function Profile() {
 
   const handleDeleteFratRating = async (ratingId: string, fraternityId?: string) => {
     try {
-      await base44.entities.ReputationRating.delete(ratingId);
+      await reputationRatingQueries.delete(ratingId);
       
       if (fraternityId) {
-        const allRepRatings = await base44.entities.ReputationRating.filter({
-          fraternity_id: fraternityId
-        });
+        const allRepRatings = await reputationRatingQueries.listByFraternity(fraternityId);
         
         const avgReputation = allRepRatings.length > 0
           ? allRepRatings.reduce((sum, r) => sum + (r.combined_score ?? 5), 0) / allRepRatings.length
           : 5;
         
-        await base44.entities.Fraternity.update(fraternityId, {
+        await fraternityQueries.update(fraternityId, {
           reputation_score: Math.min(10, Math.max(0, avgReputation)),
         });
       }
@@ -386,11 +382,11 @@ export default function Profile() {
   const handleDeleteComment = async (comment: any) => {
     try {
       if (comment.type === 'party') {
-        await base44.entities.PartyComment.delete(comment.id);
+        await partyCommentQueries.delete(comment.id);
       } else if (comment.type === 'fraternity') {
-        await base44.entities.FraternityComment.delete(comment.id);
+        await fraternityCommentQueries.delete(comment.id);
       } else if (comment.type === 'chat') {
-        await base44.entities.ChatMessage.delete(comment.id);
+        await chatMessageQueries.delete(comment.id);
       }
       setCommentsData(prev => prev.filter(c => c.id !== comment.id));
       setStats(prev => ({ ...prev, comments: prev.comments - 1 }));
@@ -414,17 +410,13 @@ export default function Profile() {
 
     setRatingFromIntro(fromIntro);
 
-    const existingRatings = await base44.entities.ReputationRating.filter({
-      fraternity_id: fraternity.id,
-      user_id: user.id,
-    });
+    const existingRating = await reputationRatingQueries.getByUserAndFraternity(user.id, fraternity.id);
 
-    if (existingRatings.length > 0) {
-      const rating = existingRatings[0];
+    if (existingRating) {
       setExistingFratScores({
-        brotherhood: rating.brotherhood_score ?? 5,
-        reputation: rating.reputation_score ?? 5,
-        community: rating.community_score ?? 5,
+        brotherhood: existingRating.brotherhood_score ?? 5,
+        reputation: existingRating.reputation_score ?? 5,
+        community: existingRating.community_score ?? 5,
       });
     } else {
       setExistingFratScores(undefined);
@@ -435,13 +427,10 @@ export default function Profile() {
   const handleNewFratRatingSubmit = async (scores: { brotherhood: number; reputation: number; community: number; combined: number }) => {
     if (!selectedFrat) return;
 
-    const user = await base44.auth.me();
+    const user = await getCurrentUser();
     if (!user) return;
 
-    const existingRatings = await base44.entities.ReputationRating.filter({
-      fraternity_id: selectedFrat.id,
-      user_id: user.id,
-    });
+    const existingRating = await reputationRatingQueries.getByUserAndFraternity(user.id, selectedFrat.id);
 
     const ratingData = {
       brotherhood_score: scores.brotherhood,
@@ -450,15 +439,12 @@ export default function Profile() {
       combined_score: scores.combined,
     };
 
-    const isNewRating = existingRatings.length === 0;
+    const isNewRating = !existingRating;
 
-    if (existingRatings.length > 0) {
-      await base44.entities.ReputationRating.update(existingRatings[0].id, {
-        ...ratingData,
-        created_date: new Date().toISOString(),
-      });
+    if (existingRating) {
+      await reputationRatingQueries.update(existingRating.id, ratingData);
     } else {
-      await base44.entities.ReputationRating.create({
+      await reputationRatingQueries.create({
         fraternity_id: selectedFrat.id,
         user_id: user.id,
         ...ratingData,
@@ -468,15 +454,13 @@ export default function Profile() {
     }
 
     // Update fraternity reputation score
-    const allRatings = await base44.entities.ReputationRating.filter({
-      fraternity_id: selectedFrat.id,
-    });
+    const allRatings = await reputationRatingQueries.listByFraternity(selectedFrat.id);
 
     const reputationScore = allRatings.length > 0
       ? allRatings.reduce((sum, r) => sum + (r.combined_score ?? 5), 0) / allRatings.length
       : 5;
 
-    await base44.entities.Fraternity.update(selectedFrat.id, {
+    await fraternityQueries.update(selectedFrat.id, {
       reputation_score: clamp(reputationScore, 0, 10),
     });
 
@@ -505,12 +489,13 @@ export default function Profile() {
   const postCompletionToFeed = async (userId: string) => {
     try {
       const [repRatings, fraternities] = await Promise.all([
-        base44.entities.ReputationRating.filter({ user_id: userId }),
-        base44.entities.Fraternity.filter({ status: 'active' }),
+        reputationRatingQueries.list(),
+        fraternityQueries.listActive(),
       ]);
       
+      const userRepRatings = repRatings.filter(r => r.user_id === userId);
       const fratMap = new Map(fraternities.map(f => [f.id, f]));
-      const sortedRatings = repRatings
+      const sortedRatings = userRepRatings
         .filter(r => r.fraternity_id && fratMap.has(r.fraternity_id))
         .map(r => ({
           frat: fratMap.get(r.fraternity_id!)!,
@@ -540,11 +525,14 @@ export default function Profile() {
       
       const message = `Just completed ranking all ${fraternities.length} fraternities.\n\n${tierLines.join('\n')}`;
       
-      await base44.entities.ChatMessage.create({
+      await chatMessageQueries.create({
         user_id: userId,
         text: message,
         upvotes: 0,
         downvotes: 0,
+        parent_message_id: null,
+        mentioned_fraternity_id: null,
+        mentioned_party_id: null,
       });
       
       toast({
@@ -566,7 +554,7 @@ export default function Profile() {
   const handleNewPartyRatingSubmit = async () => {
     setSelectedParty(null);
     
-    const user = await base44.auth.me();
+    const user = await getCurrentUser();
     const prevPartyCount = ratedPartyCount;
     
     await loadProfile();
@@ -947,7 +935,7 @@ export default function Profile() {
                       setShowFratBattleGame(false);
                     }}
                     onShare={async (ranking) => {
-                      const userData = await base44.auth.me();
+                      const userData = await getCurrentUser();
                       if (!userData) {
                         toast({ title: "Please sign in to share", variant: "destructive" });
                         return;
@@ -957,11 +945,14 @@ export default function Profile() {
                         return `${displayTier}: ${r.fratName}`;
                       });
                       const message = `🎮 Frat Battle Results\n\n${tierLines.join('\n')}`;
-                      await base44.entities.ChatMessage.create({
+                      await chatMessageQueries.create({
                         user_id: userData.id,
                         text: message,
                         upvotes: 0,
                         downvotes: 0,
+                        parent_message_id: null,
+                        mentioned_fraternity_id: null,
+                        mentioned_party_id: null,
                       });
                       toast({ title: "Shared to Feed!" });
                     }}
@@ -1114,7 +1105,7 @@ export default function Profile() {
                       <div className="flex-1 min-w-0">
                         <p className="font-medium truncate">{rating.fraternity?.name || 'Fraternity'}</p>
                         <p className="text-xs text-muted-foreground">
-                          {rating.fraternity?.chapter} · {formatTimeAgo(rating.created_date)}
+                          {rating.fraternity?.chapter} · {formatTimeAgo(rating.created_at)}
                         </p>
                       </div>
                       <Badge className={`${getScoreBgColor(rating.combined_score ?? 0)} text-white`}>
@@ -1170,7 +1161,7 @@ export default function Profile() {
                       <div className="flex-1 min-w-0">
                         <p className="font-medium truncate">{rating.party?.title || 'Party'}</p>
                         <p className="text-xs text-muted-foreground">
-                          {rating.fraternity?.name} · {formatTimeAgo(rating.created_date)}
+                          {rating.fraternity?.name} · {formatTimeAgo(rating.created_at)}
                         </p>
                       </div>
                       <Badge className={`${getScoreBgColor(rating.party_quality_score ?? 0)} text-white`}>
@@ -1248,13 +1239,13 @@ export default function Profile() {
                           <Link to={link} className="flex-1 min-w-0 cursor-pointer">
                             <p className="font-medium text-sm truncate hover:text-primary transition-colors">{comment.entityName}</p>
                             <p className="text-sm text-foreground mt-1 line-clamp-2">{comment.text}</p>
-                            <p className="text-xs text-muted-foreground mt-1">{format(new Date(comment.created_date), 'MMM d, yyyy')}</p>
+                            <p className="text-xs text-muted-foreground mt-1">{format(new Date(comment.created_at || Date.now()), 'MMM d, yyyy')}</p>
                           </Link>
                         ) : (
                           <div className="flex-1 min-w-0">
                             <p className="font-medium text-sm truncate">{comment.entityName}</p>
                             <p className="text-sm text-foreground mt-1 line-clamp-2">{comment.text}</p>
-                            <p className="text-xs text-muted-foreground mt-1">{format(new Date(comment.created_date), 'MMM d, yyyy')}</p>
+                            <p className="text-xs text-muted-foreground mt-1">{format(new Date(comment.created_at || Date.now()), 'MMM d, yyyy')}</p>
                           </div>
                         )}
                         <Badge variant="outline" className="text-xs capitalize shrink-0">
@@ -1362,7 +1353,7 @@ export default function Profile() {
               </Link>
               {viewingPhoto.fraternity && <p className="text-sm text-white/70">{viewingPhoto.fraternity.name}</p>}
               {viewingPhoto.caption && <p className="text-sm mt-2">{viewingPhoto.caption}</p>}
-              <p className="text-xs text-white/50 mt-2">{formatTimeAgo(viewingPhoto.created_date)}</p>
+              <p className="text-xs text-white/50 mt-2">{formatTimeAgo(viewingPhoto.created_at)}</p>
             </div>
             <Button variant="outline" size="sm" className="mt-4 text-red-400 border-red-400/50 hover:bg-red-500/20" onClick={() => setDeletingPhotoId(viewingPhoto.id)}>
               <Trash2 className="h-4 w-4 mr-2" />
@@ -1386,7 +1377,7 @@ export default function Profile() {
               onClick={async () => {
                 if (deletingPhotoId) {
                   try {
-                    await base44.entities.PartyPhoto.delete(deletingPhotoId);
+                    await partyPhotoQueries.delete(deletingPhotoId);
                     setPrivatePhotos(prev => prev.filter(p => p.id !== deletingPhotoId));
                     setStats(prev => ({ ...prev, privatePhotos: prev.privatePhotos - 1 }));
                     if (viewingPhoto?.id === deletingPhotoId) setViewingPhoto(null);
