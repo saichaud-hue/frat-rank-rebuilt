@@ -1,12 +1,13 @@
 import { useState, useEffect } from 'react';
-import { Loader2, Zap, Music, Settings, Star, GripHorizontal } from 'lucide-react';
+import { Loader2, Zap, Music, Settings, Star } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Slider } from '@/components/ui/slider';
 import { Drawer, DrawerContent, DrawerHeader, DrawerTitle, DrawerFooter } from '@/components/ui/drawer';
-import { base44, type Party, type Fraternity, type PartyRating } from '@/api/base44Client';
 import { clamp, getScoreColor } from '@/utils';
 import { computePartyQuality } from '@/utils/scoring';
 import { recordUserAction } from '@/utils/streak';
+import { partyRatingQueries, partyQueries, getCurrentUser } from '@/lib/supabase-data';
+import type { Party, Fraternity } from '@/lib/supabase-data';
 
 interface PartyRatingFormProps {
   party: Party;
@@ -21,7 +22,7 @@ export default function PartyRatingForm({ party, fraternity, onClose, onSubmit }
   const [execution, setExecution] = useState(5);
   const [submitting, setSubmitting] = useState(false);
   const [hasLoaded, setHasLoaded] = useState(false);
-  const [existingRating, setExistingRating] = useState<PartyRating | null>(null);
+  const [existingRatingId, setExistingRatingId] = useState<string | null>(null);
 
   useEffect(() => {
     loadExistingRating();
@@ -29,20 +30,16 @@ export default function PartyRatingForm({ party, fraternity, onClose, onSubmit }
 
   const loadExistingRating = async () => {
     try {
-      const user = await base44.auth.me();
+      const user = await getCurrentUser();
       if (!user) {
         onClose();
         return;
       }
 
-      const ratings = await base44.entities.PartyRating.filter({
-        party_id: party.id,
-        user_id: user.id,
-      });
+      const rating = await partyRatingQueries.getByUserAndParty(user.id, party.id);
 
-      if (ratings.length > 0) {
-        const rating = ratings[0];
-        setExistingRating(rating);
+      if (rating) {
+        setExistingRatingId(rating.id);
         setVibe(rating.vibe_score ?? 5);
         setMusic(rating.music_score ?? 5);
         setExecution(rating.execution_score ?? 5);
@@ -59,7 +56,7 @@ export default function PartyRatingForm({ party, fraternity, onClose, onSubmit }
   const handleSubmit = async () => {
     setSubmitting(true);
     try {
-      const user = await base44.auth.me();
+      const user = await getCurrentUser();
       if (!user) return;
 
       const ratingData = {
@@ -72,22 +69,18 @@ export default function PartyRatingForm({ party, fraternity, onClose, onSubmit }
         weight: 1,
       };
 
-      if (existingRating) {
-        await base44.entities.PartyRating.update(existingRating.id, ratingData);
+      if (existingRatingId) {
+        await partyRatingQueries.update(existingRatingId, ratingData);
       } else {
-        await base44.entities.PartyRating.create(ratingData);
+        await partyRatingQueries.create(ratingData);
       }
       
-      // Record action for streak tracking
       await recordUserAction();
 
-      // Recalculate party total ratings (keep PartyRating.party_quality_score as raw user score)
-      const allRatings = await base44.entities.PartyRating.filter({ party_id: party.id });
+      const allRatings = await partyRatingQueries.listByParty(party.id);
       const totalRatingsCount = allRatings.length;
 
-      // IMPORTANT: Do NOT write any user-derived or aggregated scores back onto Party.
-      // Party list displays must be derived from PartyRating aggregation only.
-      await base44.entities.Party.update(party.id, {
+      await partyQueries.update(party.id, {
         total_ratings: totalRatingsCount,
       });
 
@@ -135,12 +128,10 @@ export default function PartyRatingForm({ party, fraternity, onClose, onSubmit }
   return (
     <Drawer open={true} onOpenChange={(open) => !open && onClose()}>
       <DrawerContent className="h-[95vh] max-h-[95vh] flex flex-col">
-        {/* Drag Handle */}
         <div className="flex justify-center pt-2 pb-1">
           <div className="w-12 h-1.5 rounded-full bg-muted-foreground/30" />
         </div>
 
-        {/* Header */}
         <DrawerHeader className="px-6 pt-2 pb-4 border-b border-border">
           <DrawerTitle className="text-left">
             <h2 className="text-2xl font-bold text-foreground">{party.title}</h2>
@@ -152,7 +143,6 @@ export default function PartyRatingForm({ party, fraternity, onClose, onSubmit }
           </DrawerTitle>
         </DrawerHeader>
 
-        {/* Content */}
         <div className="flex-1 overflow-y-auto">
           {!hasLoaded ? (
             <div className="flex items-center justify-center py-12">
@@ -160,7 +150,6 @@ export default function PartyRatingForm({ party, fraternity, onClose, onSubmit }
             </div>
           ) : (
             <>
-              {/* Party Quality Score */}
               <div className="px-6 py-8 text-center bg-muted/30">
                 <p className="text-sm text-muted-foreground mb-3">Party Quality</p>
                 <div className={`text-6xl font-bold ${getScoreColor(partyQualityScore)}`}>
@@ -168,7 +157,6 @@ export default function PartyRatingForm({ party, fraternity, onClose, onSubmit }
                 </div>
               </div>
 
-              {/* Categories */}
               <div className="px-6 py-6 space-y-8">
                 {categories.map(({ key, label, icon: Icon, color, bgColor, value, setValue, description }) => (
                   <div key={key} className="space-y-4">
@@ -199,7 +187,6 @@ export default function PartyRatingForm({ party, fraternity, onClose, onSubmit }
           )}
         </div>
 
-        {/* Footer */}
         <DrawerFooter className="px-6 py-4 border-t border-border">
           <div className="flex gap-3 w-full">
             <Button variant="outline" onClick={onClose} className="flex-1 h-12">
@@ -215,7 +202,7 @@ export default function PartyRatingForm({ party, fraternity, onClose, onSubmit }
               ) : (
                 <>
                   <Star className="h-5 w-5 mr-2" />
-                  {existingRating ? 'Update Rating' : 'Submit Rating'}
+                  {existingRatingId ? 'Update Rating' : 'Submit Rating'}
                 </>
               )}
             </Button>

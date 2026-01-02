@@ -18,7 +18,7 @@ import {
   SheetTitle,
 } from '@/components/ui/sheet';
 import { Trophy, Send } from 'lucide-react';
-import { base44 } from '@/api/base44Client';
+import { chatMessageQueries, getCurrentUser } from '@/lib/supabase-data';
 import { useToast } from '@/hooks/use-toast';
 
 interface BattleRankingItem {
@@ -70,7 +70,7 @@ export default function ShareBattleDialog({ isOpen, onClose, ranking }: ShareBat
   const handlePost = async () => {
     setIsPosting(true);
     try {
-      const userData = await base44.auth.me();
+      const userData = await getCurrentUser();
       if (!userData) {
         toast({ title: 'Please sign in to share', variant: 'destructive' });
         return;
@@ -86,11 +86,14 @@ export default function ShareBattleDialog({ isOpen, onClose, ranking }: ShareBat
         message += `\n\n💬 ${comment.trim()}`;
       }
 
-      await base44.entities.ChatMessage.create({
+      await chatMessageQueries.create({
         user_id: userData.id,
         text: message,
         upvotes: 0,
         downvotes: 0,
+        parent_message_id: null,
+        mentioned_fraternity_id: null,
+        mentioned_party_id: null,
       });
 
       toast({ title: 'Shared to Feed!' });

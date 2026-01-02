@@ -3,7 +3,7 @@ import { createPageUrl, getScoreColor } from '@/utils';
 import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
 import { Radio, Camera } from 'lucide-react';
-import type { Party } from '@/api/base44Client';
+import type { Party } from '@/lib/supabase-data';
 import { getPartyConfidenceLevel } from '@/utils/scoring';
 
 interface PartyRowProps {
