@@ -7,6 +7,7 @@ import { Sheet, SheetContent } from '@/components/ui/sheet';
 import { cn } from '@/lib/utils';
 import PostCard, { type Post } from './PostCard';
 import ThreadView, { type Comment } from './ThreadView';
+import { useAuth } from '@/contexts/AuthContext';
 
 type SortType = 'hot' | 'new' | 'top';
 
@@ -24,17 +25,8 @@ const generateAnonymousName = (seed: string) => {
   return `${adjectives[adjIndex]}${animals[animalIndex]}`;
 };
 
-// Get or create user's anonymous identity
-const getUserAnonymousName = () => {
-  const existing = localStorage.getItem('touse_anon_name');
-  if (existing) return existing;
-  const userId = localStorage.getItem('touse_user_id') || `anon-${Date.now()}`;
-  const name = generateAnonymousName(userId);
-  localStorage.setItem('touse_anon_name', name);
-  return name;
-};
-
 export default function AnonymousFeed() {
+  const { user } = useAuth();
   const [posts, setPosts] = useState<Post[]>([]);
   const [comments, setComments] = useState<Record<string, Comment[]>>({});
   const [loading, setLoading] = useState(true);
@@ -44,7 +36,12 @@ export default function AnonymousFeed() {
   const [submitting, setSubmitting] = useState(false);
   const [selectedPost, setSelectedPost] = useState<Post | null>(null);
 
-  const userAnonName = getUserAnonymousName();
+  const userAnonName = useMemo(() => {
+    const seed = user?.id || localStorage.getItem('touse_user_id') || `anon-${Date.now()}`;
+    const name = generateAnonymousName(seed);
+    localStorage.setItem('touse_anon_name', name);
+    return name;
+  }, [user?.id]);
 
   // Load posts from localStorage (mock data layer)
   useEffect(() => {
