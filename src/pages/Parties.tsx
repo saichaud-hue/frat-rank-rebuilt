@@ -1,6 +1,13 @@
 import { useState, useEffect } from 'react';
 import { PartyPopper, Plus, Flame, Calendar, Clock } from 'lucide-react';
-import { base44, seedInitialData, type Party, type Fraternity, type PartyRating } from '@/api/base44Client';
+import { 
+  partyQueries, 
+  fraternityQueries, 
+  partyRatingQueries,
+  type Party,
+  type Fraternity,
+  type PartyRating,
+} from '@/lib/supabase-data';
 import PartyRow from '@/components/parties/PartyRow';
 import PartyFilters from '@/components/parties/PartyFilters';
 import PartiesIntro from '@/components/onboarding/PartiesIntro';
@@ -14,6 +21,12 @@ interface Filters {
   type: string;
   timeframe: string;
 }
+
+// Adapter to convert Supabase types to scoring types
+const adaptPartyRatingForScoring = (r: PartyRating): any => ({
+  ...r,
+  created_date: r.created_at,
+});
 
 export default function Parties() {
   const [parties, setParties] = useState<Party[]>([]);
@@ -33,21 +46,16 @@ export default function Parties() {
   });
 
   useEffect(() => {
-    initAndLoad();
+    loadData();
   }, []);
 
-  const initAndLoad = async () => {
-    await seedInitialData();
-    await loadData();
-    setLoading(false);
-  };
-
   const loadData = async () => {
+    setLoading(true);
     try {
       const [partiesData, fraternityData, allPartyRatings] = await Promise.all([
-        base44.entities.Party.list('starts_at'),
-        base44.entities.Fraternity.list(),
-        base44.entities.PartyRating.list(),
+        partyQueries.listByStartDate(),
+        fraternityQueries.list(),
+        partyRatingQueries.list(),
       ]);
       
       setParties(partiesData);
@@ -68,7 +76,8 @@ export default function Parties() {
       const perPartyScores = new Map<string, number>();
       for (const party of partiesData) {
         const ratings = partyRatingsMap.get(party.id) || [];
-        const rawQuality = computeRawPartyQuality(ratings);
+        const adaptedRatings = ratings.map(adaptPartyRatingForScoring);
+        const rawQuality = computeRawPartyQuality(adaptedRatings);
         if (rawQuality !== null) {
           perPartyScores.set(party.id, rawQuality);
         }
@@ -76,17 +85,20 @@ export default function Parties() {
       setPartyScores(perPartyScores);
     } catch (error) {
       console.error('Failed to load data:', error);
+    } finally {
+      setLoading(false);
     }
   };
 
-  const getFraternityName = (id: string) => {
+  const getFraternityName = (id: string | null) => {
+    if (!id) return 'Unknown';
     const frat = fraternities.find(f => f.id === id);
-    return frat ? frat.chapter : 'Unknown';
+    return frat ? (frat.chapter || frat.name) : 'Unknown';
   };
 
   const getPartyStatus = (party: Party): 'live' | 'upcoming' | 'completed' => {
     const now = new Date();
-    const start = new Date(party.starts_at);
+    const start = party.starts_at ? new Date(party.starts_at) : now;
     const end = party.ends_at ? new Date(party.ends_at) : new Date(start.getTime() + 5 * 60 * 60 * 1000);
     
     if (now >= start && now <= end) {
@@ -109,7 +121,7 @@ export default function Parties() {
       }
 
       if (filters.timeframe !== 'all') {
-        const partyDate = new Date(party.starts_at);
+        const partyDate = party.starts_at ? new Date(party.starts_at) : new Date();
         const now = new Date();
 
         switch (filters.timeframe) {
@@ -141,11 +153,6 @@ export default function Parties() {
   const completedParties = filteredParties
     .filter(p => getPartyStatus(p) === 'completed')
     .sort((a, b) => (partyScores.get(b.id) ?? 0) - (partyScores.get(a.id) ?? 0));
-
-  const totalRatings = Array.from(partyRatingCounts.values()).reduce((a, b) => a + b, 0);
-  const avgScore = partyScores.size > 0 
-    ? Array.from(partyScores.values()).reduce((a, b) => a + b, 0) / partyScores.size 
-    : 0;
 
   if (loading) {
     return (
@@ -188,7 +195,7 @@ export default function Parties() {
         <PartyFilters
           filters={filters}
           onFiltersChange={setFilters}
-          fraternities={fraternities}
+          fraternities={fraternities as any}
         />
       </div>
 
@@ -206,7 +213,7 @@ export default function Parties() {
           {liveParties.map((party, index) => (
             <div key={party.id}>
               <PartyRow
-                party={party}
+                party={party as any}
                 fraternityName={getFraternityName(party.fraternity_id)}
                 isLive
                 computedStatus="live"
@@ -233,7 +240,7 @@ export default function Parties() {
           {upcomingParties.map((party, index) => (
             <div key={party.id}>
               <PartyRow
-                party={party}
+                party={party as any}
                 fraternityName={getFraternityName(party.fraternity_id)}
                 computedStatus="upcoming"
                 overallPartyQuality={partyScores.get(party.id)}
@@ -259,7 +266,7 @@ export default function Parties() {
           {completedParties.map((party, index) => (
             <div key={party.id}>
               <PartyRow
-                party={party}
+                party={party as any}
                 fraternityName={getFraternityName(party.fraternity_id)}
                 computedStatus="completed"
                 overallPartyQuality={partyScores.get(party.id)}
