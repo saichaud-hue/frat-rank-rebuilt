@@ -50,6 +50,7 @@ export default function FraternityPage() {
   const [partyScores, setPartyScores] = useState<Map<string, number>>(new Map());
   const [selectedParty, setSelectedParty] = useState<Party | null>(null);
   const [activeTab, setActiveTab] = useState<'overview' | 'parties' | 'comments'>('overview');
+  const [fratRank, setFratRank] = useState<number | null>(null);
 
   useEffect(() => {
     if (fratId) loadData();
@@ -142,6 +143,52 @@ export default function FraternityPage() {
         campusBaseline
       );
       setComputedScores(scores);
+
+      // Calculate rank among all active frats
+      const allScoresPromises = activeFrats.map(async (frat) => {
+        const fratPartiesData = allParties.filter(p => p.fraternity_id === frat.id);
+        const fratPartyRatingsData = allPartyRatings.filter(
+          r => fratPartiesData.some(p => p.id === r.party_id)
+        );
+        const fratRepRatings = allRepRatings.filter(r => r.fraternity_id === frat.id);
+        const fratPartyComments = allPartyComments.filter(
+          c => fratPartiesData.some(p => p.id === c.party_id)
+        );
+        const fratCommentsData = allFratComments.filter(c => c.fraternity_id === frat.id);
+
+        const fratPartiesWithRatings: PartyWithRatings[] = fratPartiesData.map(party => ({
+          party: party as any,
+          ratings: (fratPartyRatingsData.filter(r => r.party_id === party.id)) as any,
+        }));
+
+        const fratActivityData: ActivityData = {
+          repRatings: fratRepRatings as any,
+          partyRatings: fratPartyRatingsData as any,
+          parties: fratPartiesData as any,
+          partyComments: fratPartyComments as any,
+          fratComments: fratCommentsData as any,
+        };
+
+        const fratScores = await computeFullFraternityScores(
+          frat as any,
+          fratRepRatings as any,
+          fratPartiesWithRatings,
+          campusRepAvg,
+          campusPartyAvg,
+          fratActivityData,
+          campusBaseline
+        );
+
+        return { fratId: frat.id, overall: fratScores.hasOverallData ? fratScores.overall : null };
+      });
+
+      const allScoresResults = await Promise.all(allScoresPromises);
+      const rankedFrats = allScoresResults
+        .filter(f => f.overall !== null)
+        .sort((a, b) => (b.overall ?? 0) - (a.overall ?? 0));
+      
+      const rank = rankedFrats.findIndex(f => f.fratId === fratId) + 1;
+      setFratRank(rank > 0 ? rank : null);
 
     } catch (error) {
       console.error('Failed to load data:', error);
@@ -313,6 +360,11 @@ export default function FraternityPage() {
             <h1 className="text-xl font-bold truncate">{fraternity.chapter}</h1>
             <p className="text-primary-foreground/80 text-sm mt-0.5">{fraternity.name}</p>
             <div className="flex items-center gap-2 mt-2 flex-wrap">
+              {fratRank && (
+                <Badge className="bg-primary-foreground/20 text-primary-foreground border-0">
+                  #{fratRank} Ranked
+                </Badge>
+              )}
               {fraternity.founded_year && (
                 <span className="text-primary-foreground/70 text-xs flex items-center gap-1">
                   <Calendar className="h-3 w-3" />
