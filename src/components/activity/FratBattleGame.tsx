@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
-import { type Fraternity } from '@/api/base44Client';
+import { type Fraternity } from '@/lib/supabase-data';
 import { getFratGreek } from '@/utils';
 
 interface SavedBattleRanking {

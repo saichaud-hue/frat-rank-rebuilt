@@ -325,6 +325,15 @@ export const partyRatingQueries = {
     return data;
   },
 
+  async delete(id: string): Promise<boolean> {
+    const { error } = await supabase
+      .from('party_ratings')
+      .delete()
+      .eq('id', id);
+    if (error) throw error;
+    return true;
+  },
+
   async upsert(rating: Omit<PartyRating, 'id' | 'created_at'>): Promise<PartyRating> {
     const existing = await this.getByUserAndParty(rating.user_id, rating.party_id);
     if (existing) {
@@ -391,6 +400,15 @@ export const reputationRatingQueries = {
     return data;
   },
 
+  async delete(id: string): Promise<boolean> {
+    const { error } = await supabase
+      .from('reputation_ratings')
+      .delete()
+      .eq('id', id);
+    if (error) throw error;
+    return true;
+  },
+
   async upsert(rating: Omit<ReputationRating, 'id' | 'created_at'>): Promise<ReputationRating> {
     const existing = await this.getByUserAndFraternity(rating.user_id, rating.fraternity_id);
     if (existing) {
@@ -445,6 +463,15 @@ export const partyCommentQueries = {
     if (error) throw error;
     return data;
   },
+
+  async delete(id: string): Promise<boolean> {
+    const { error } = await supabase
+      .from('party_comments')
+      .delete()
+      .eq('id', id);
+    if (error) throw error;
+    return true;
+  },
 };
 
 // ==========================================
@@ -490,6 +517,15 @@ export const fraternityCommentQueries = {
       .maybeSingle();
     if (error) throw error;
     return data;
+  },
+
+  async delete(id: string): Promise<boolean> {
+    const { error } = await supabase
+      .from('fraternity_comments')
+      .delete()
+      .eq('id', id);
+    if (error) throw error;
+    return true;
   },
 };
 
@@ -591,6 +627,15 @@ export const chatMessageVoteQueries = {
 // ==========================================
 
 export const partyPhotoQueries = {
+  async list(): Promise<PartyPhoto[]> {
+    const { data, error } = await supabase
+      .from('party_photos')
+      .select('*')
+      .order('created_at', { ascending: false });
+    if (error) throw error;
+    return data || [];
+  },
+
   async listByParty(partyId: string): Promise<PartyPhoto[]> {
     const { data, error } = await supabase
       .from('party_photos')
@@ -620,6 +665,15 @@ export const partyPhotoQueries = {
       .maybeSingle();
     if (error) throw error;
     return data;
+  },
+
+  async delete(id: string): Promise<boolean> {
+    const { error } = await supabase
+      .from('party_photos')
+      .delete()
+      .eq('id', id);
+    if (error) throw error;
+    return true;
   },
 };
 
