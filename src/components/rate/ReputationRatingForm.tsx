@@ -5,7 +5,7 @@ import { Slider } from '@/components/ui/slider';
 import { Textarea } from '@/components/ui/textarea';
 import { Drawer, DrawerContent, DrawerHeader, DrawerTitle, DrawerFooter } from '@/components/ui/drawer';
 import { clamp, getScoreColor } from '@/utils';
-import type { Fraternity } from '@/api/base44Client';
+import type { Fraternity } from '@/lib/supabase-data';
 
 interface ReputationRatingFormProps {
   fraternity: Fraternity;
@@ -46,12 +46,10 @@ export default function ReputationRatingForm({
   return (
     <Drawer open={true} onOpenChange={(open) => !open && onClose()}>
       <DrawerContent className="h-[95vh] max-h-[95vh] flex flex-col">
-        {/* Drag Handle */}
         <div className="flex justify-center pt-2 pb-1">
           <div className="w-12 h-1.5 rounded-full bg-muted-foreground/30" />
         </div>
 
-        {/* Header */}
         <DrawerHeader className="px-6 pt-2 pb-4 border-b border-border">
           <DrawerTitle className="text-left">
             <h2 className="text-2xl font-bold text-foreground">Rate {fraternity.chapter}</h2>
@@ -59,9 +57,7 @@ export default function ReputationRatingForm({
           </DrawerTitle>
         </DrawerHeader>
 
-        {/* Content */}
         <div className="flex-1 overflow-y-auto">
-          {/* Score Display */}
           <div className="px-6 py-8 text-center bg-muted/30">
             <p className="text-sm text-muted-foreground mb-3">Overall Rating</p>
             <div className={`text-6xl font-bold ${getScoreColor(score)}`}>
@@ -69,7 +65,6 @@ export default function ReputationRatingForm({
             </div>
           </div>
 
-          {/* Slider */}
           <div className="px-6 py-6 space-y-4">
             <Slider
               value={[score]}
@@ -86,7 +81,6 @@ export default function ReputationRatingForm({
             </div>
           </div>
 
-          {/* Factors */}
           <div className="px-6 pb-6">
             <p className="text-sm font-medium text-muted-foreground mb-4">Consider these factors:</p>
             <div className="grid grid-cols-1 gap-3">
@@ -104,7 +98,6 @@ export default function ReputationRatingForm({
             </div>
           </div>
 
-          {/* Feedback */}
           <div className="px-6 pb-6">
             <Textarea
               placeholder="Additional feedback (optional)..."
@@ -116,7 +109,6 @@ export default function ReputationRatingForm({
           </div>
         </div>
 
-        {/* Footer */}
         <DrawerFooter className="px-6 py-4 border-t border-border">
           <div className="flex gap-3 w-full">
             <Button variant="outline" onClick={onClose} className="flex-1 h-12">

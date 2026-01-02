@@ -6,11 +6,18 @@ import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Skeleton } from '@/components/ui/skeleton';
-import { base44, type PartyComment, type FraternityComment, type PartyCommentVote, type FraternityCommentVote } from '@/api/base44Client';
 import { formatTimeAgo } from '@/utils';
+import { 
+  partyCommentQueries, 
+  fraternityCommentQueries, 
+  partyCommentVoteQueries, 
+  fraternityCommentVoteQueries,
+  getCurrentUser,
+  type PartyComment,
+  type FraternityComment
+} from '@/lib/supabase-data';
 
 type Comment = PartyComment | FraternityComment;
-type CommentVote = PartyCommentVote | FraternityCommentVote;
 
 interface CommentSectionProps {
   entityId: string;
@@ -41,15 +48,8 @@ export default function CommentSection({ entityId, entityType }: CommentSectionP
   const [replyingTo, setReplyingTo] = useState<ReplyingTo | null>(null);
   const [myVotesByCommentId, setMyVotesByCommentId] = useState<Record<string, 1 | -1>>({});
 
-  const entityClient = entityType === 'party'
-    ? base44.entities.PartyComment
-    : base44.entities.FraternityComment;
-
-  const voteClient = entityType === 'party'
-    ? base44.entities.PartyCommentVote
-    : base44.entities.FraternityCommentVote;
-
-  const filterKey = entityType === 'party' ? 'party_id' : 'fraternity_id';
+  const commentQueries = entityType === 'party' ? partyCommentQueries : fraternityCommentQueries;
+  const voteQueries = entityType === 'party' ? partyCommentVoteQueries : fraternityCommentVoteQueries;
 
   const computeScore = useCallback((c: any) => (c?.upvotes ?? 0) - (c?.downvotes ?? 0), []);
 
@@ -58,19 +58,23 @@ export default function CommentSection({ entityId, entityType }: CommentSectionP
       const scoreA = computeScore(a);
       const scoreB = computeScore(b);
       if (scoreB !== scoreA) return scoreB - scoreA;
-      return new Date(b.created_date).getTime() - new Date(a.created_date).getTime();
+      return new Date(b.created_at || '').getTime() - new Date(a.created_at || '').getTime();
     });
   }, [computeScore]);
 
   const loadComments = useCallback(async () => {
     try {
-      const data = await entityClient.filter({ [filterKey]: entityId });
+      let data: Comment[];
+      if (entityType === 'party') {
+        data = await partyCommentQueries.listByParty(entityId);
+      } else {
+        data = await fraternityCommentQueries.listByFraternity(entityId);
+      }
 
-      // Ensure comments have upvotes/downvotes fields populated in-memory
-      const normalized = (data as Comment[]).map((c) => ({
+      const normalized = data.map((c) => ({
         ...c,
-        upvotes: (c as any).upvotes ?? 0,
-        downvotes: (c as any).downvotes ?? 0,
+        upvotes: c.upvotes ?? 0,
+        downvotes: c.downvotes ?? 0,
       }));
 
       setComments(sortByScoreThenNewest(normalized));
@@ -79,27 +83,26 @@ export default function CommentSection({ entityId, entityType }: CommentSectionP
     } finally {
       setLoading(false);
     }
-  }, [entityClient, entityId, filterKey, sortByScoreThenNewest]);
+  }, [entityId, entityType, sortByScoreThenNewest]);
 
   const loadMyVotes = useCallback(async () => {
     try {
-      const user = await base44.auth.me();
+      const user = await getCurrentUser();
       if (!user) return;
 
-      const votes = await voteClient.filter({
-        [filterKey]: entityId,
-        user_id: user.id,
-      });
+      const votes = await voteQueries.listByUser(user.id);
 
       const map: Record<string, 1 | -1> = {};
-      (votes as CommentVote[]).forEach((v) => {
-        map[v.comment_id] = v.value;
+      votes.forEach((v) => {
+        if (v.value === 1 || v.value === -1) {
+          map[v.comment_id] = v.value;
+        }
       });
       setMyVotesByCommentId(map);
     } catch (error) {
       console.error('Failed to load comment votes:', error);
     }
-  }, [entityId, filterKey, voteClient]);
+  }, [voteQueries]);
 
   useEffect(() => {
     loadComments();
@@ -128,28 +131,36 @@ export default function CommentSection({ entityId, entityType }: CommentSectionP
 
     setSubmitting(true);
     try {
-      const user = await base44.auth.me();
+      const user = await getCurrentUser();
       if (!user) return;
 
       const sentimentScore = analyzeSentiment(newComment);
 
-      const basePayload: any = {
-        [filterKey]: entityId,
-        user_id: user.id,
-        text: newComment.trim(),
-        parent_comment_id: replyingTo?.commentId || null,
-        sentiment_score: sentimentScore,
-        toxicity_label: 'safe',
-        upvotes: 0,
-        moderated: false,
-      };
-
-      // Both entity types now use downvotes
-      basePayload.downvotes = 0;
-
-      await entityClient.create(basePayload);
-
-      await base44.auth.updateMe({ points: (user.points || 0) + 2 });
+      if (entityType === 'party') {
+        await partyCommentQueries.create({
+          party_id: entityId,
+          user_id: user.id,
+          text: newComment.trim(),
+          parent_comment_id: replyingTo?.commentId || null,
+          sentiment_score: sentimentScore,
+          toxicity_label: 'safe',
+          upvotes: 0,
+          downvotes: 0,
+          moderated: false,
+        });
+      } else {
+        await fraternityCommentQueries.create({
+          fraternity_id: entityId,
+          user_id: user.id,
+          text: newComment.trim(),
+          parent_comment_id: replyingTo?.commentId || null,
+          sentiment_score: sentimentScore,
+          toxicity_label: 'safe',
+          upvotes: 0,
+          downvotes: 0,
+          moderated: false,
+        });
+      }
 
       setNewComment('');
       setReplyingTo(null);
@@ -161,53 +172,45 @@ export default function CommentSection({ entityId, entityType }: CommentSectionP
     }
   };
 
-  // Recompute counts from vote records
-  const recalculateCommentCounts = useCallback(async (commentId: string) => {
-    const votes = await voteClient.filter({ comment_id: commentId });
-    const upvotes = (votes as CommentVote[]).filter((v) => v.value === 1).length;
-    const downvotes = (votes as CommentVote[]).filter((v) => v.value === -1).length;
-    await entityClient.update(commentId, { upvotes, downvotes });
-    return { upvotes, downvotes };
-  }, [voteClient, entityClient]);
-
   const handleVote = useCallback(async (commentId: string, value: 1 | -1) => {
     try {
-      const me = await base44.auth.me();
-      if (!me) return;
+      const user = await getCurrentUser();
+      if (!user) return;
 
-      const existing = await voteClient.filter({ comment_id: commentId, user_id: me.id });
-      const existingVote = (existing as CommentVote[])[0];
+      const currentVote = myVotesByCommentId[commentId];
+      const newVote = currentVote === value ? 0 : value;
 
-      if (!existingVote) {
-        await voteClient.create({
-          comment_id: commentId,
-          [filterKey]: entityId,
-          user_id: me.id,
-          value,
-        });
-        setMyVotesByCommentId((prev) => ({ ...prev, [commentId]: value }));
-      } else if (existingVote.value === value) {
-        await voteClient.delete(existingVote.id);
+      await voteQueries.upsert(user.id, commentId, newVote);
+
+      if (newVote === 0) {
         setMyVotesByCommentId((prev) => {
           const next = { ...prev };
           delete next[commentId];
           return next;
         });
       } else {
-        await voteClient.update(existingVote.id, { value });
-        setMyVotesByCommentId((prev) => ({ ...prev, [commentId]: value }));
+        setMyVotesByCommentId((prev) => ({ ...prev, [commentId]: newVote as 1 | -1 }));
       }
 
-      // Update counts deterministically from votes table
-      await recalculateCommentCounts(commentId);
+      // Update comment counts
+      const comment = comments.find(c => c.id === commentId);
+      if (comment) {
+        let upvotes = comment.upvotes ?? 0;
+        let downvotes = comment.downvotes ?? 0;
+        
+        if (currentVote === 1) upvotes--;
+        if (currentVote === -1) downvotes--;
+        if (newVote === 1) upvotes++;
+        if (newVote === -1) downvotes++;
 
-      // Refresh list + vote map so UI never diverges
+        await commentQueries.update(commentId, { upvotes, downvotes });
+      }
+
       await loadComments();
-      await loadMyVotes();
     } catch (error) {
       console.error('Failed to vote:', error);
     }
-  }, [entityId, filterKey, voteClient, loadComments, loadMyVotes, recalculateCommentCounts]);
+  }, [comments, myVotesByCommentId, voteQueries, commentQueries, loadComments]);
 
   const handleStartReply = (comment: Comment) => {
     const snippet = sanitizeCommentText(comment.text ?? '').slice(0, 50);
@@ -280,8 +283,8 @@ export default function CommentSection({ entityId, entityType }: CommentSectionP
     const replies = repliesByParent[comment.id] || [];
     const displayText = sanitizeCommentText(comment.text ?? '');
 
-    const upvotes = (comment as any).upvotes ?? 0;
-    const downvotes = (comment as any).downvotes ?? 0;
+    const upvotes = comment.upvotes ?? 0;
+    const downvotes = comment.downvotes ?? 0;
     const netScore = upvotes - downvotes;
 
     const myVote = myVotesByCommentId[comment.id];
@@ -298,7 +301,7 @@ export default function CommentSection({ entityId, entityType }: CommentSectionP
               </Avatar>
               <div>
                 <p className="text-sm font-medium">Anonymous Duke Student</p>
-                <p className="text-xs text-muted-foreground">{formatTimeAgo(comment.created_date)}</p>
+                <p className="text-xs text-muted-foreground">{formatTimeAgo(comment.created_at || '')}</p>
               </div>
             </div>
             <div className="flex items-center gap-2">

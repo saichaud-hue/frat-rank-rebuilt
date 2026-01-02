@@ -3,7 +3,7 @@ import { Loader2, Users, Shield, Heart, Star } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Slider } from '@/components/ui/slider';
 import { Drawer, DrawerContent, DrawerHeader, DrawerTitle, DrawerFooter } from '@/components/ui/drawer';
-import type { Fraternity } from '@/api/base44Client';
+import type { Fraternity } from '@/lib/supabase-data';
 import { computeCombinedReputation } from '@/utils/scoring';
 import { getScoreColor, clamp } from '@/utils';
 
