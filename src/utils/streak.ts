@@ -1,6 +1,49 @@
+import { supabase } from '@/integrations/supabase/client';
 import { base44 } from '@/api/base44Client';
 
 const TWENTY_FOUR_HOURS_MS = 24 * 60 * 60 * 1000;
+
+// Get current Supabase user ID
+async function getSupabaseUserId(): Promise<string | null> {
+  const { data: { session } } = await supabase.auth.getSession();
+  return session?.user?.id ?? null;
+}
+
+// Get/create base44 user data linked to Supabase user
+async function getOrCreateBase44User() {
+  const supabaseUserId = await getSupabaseUserId();
+  if (!supabaseUserId) return null;
+  
+  // Check if we already have user data in localStorage with this Supabase ID
+  const storageKey = `fratrank_user_${supabaseUserId}`;
+  const existingData = localStorage.getItem(storageKey);
+  
+  if (existingData) {
+    return JSON.parse(existingData);
+  }
+  
+  // Create new user data linked to Supabase ID
+  const newUserData = {
+    id: supabaseUserId,
+    points: 0,
+    streak: 0,
+    last_action_at: null as string | null,
+  };
+  localStorage.setItem(storageKey, JSON.stringify(newUserData));
+  return newUserData;
+}
+
+async function updateBase44User(updates: Partial<{ points: number; streak: number; last_action_at: string }>) {
+  const supabaseUserId = await getSupabaseUserId();
+  if (!supabaseUserId) return;
+  
+  const storageKey = `fratrank_user_${supabaseUserId}`;
+  const existingData = localStorage.getItem(storageKey);
+  const userData = existingData ? JSON.parse(existingData) : { id: supabaseUserId, points: 0, streak: 0 };
+  
+  const updatedData = { ...userData, ...updates };
+  localStorage.setItem(storageKey, JSON.stringify(updatedData));
+}
 
 /**
  * Updates the user's streak when they perform an action.
@@ -9,7 +52,7 @@ const TWENTY_FOUR_HOURS_MS = 24 * 60 * 60 * 1000;
  * - If last action was more than 48 hours ago: streak resets to 1
  */
 export async function recordUserAction(): Promise<void> {
-  const user = await base44.auth.me();
+  const user = await getOrCreateBase44User();
   if (!user) return;
 
   const now = new Date();
@@ -36,7 +79,7 @@ export async function recordUserAction(): Promise<void> {
     }
   }
   
-  await base44.auth.updateMe({
+  await updateBase44User({
     streak: newStreak,
     last_action_at: now.toISOString(),
   });
@@ -47,7 +90,7 @@ export async function recordUserAction(): Promise<void> {
  * Call this on app load to reset streak if needed.
  */
 export async function checkStreakStatus(): Promise<void> {
-  const user = await base44.auth.me();
+  const user = await getOrCreateBase44User();
   if (!user || !user.last_action_at) return;
 
   const now = new Date();
@@ -56,8 +99,33 @@ export async function checkStreakStatus(): Promise<void> {
   
   // If more than 48 hours have passed, reset the streak
   if (timeSinceLastAction > TWENTY_FOUR_HOURS_MS * 2) {
-    await base44.auth.updateMe({
+    await updateBase44User({
       streak: 0,
     });
   }
+}
+
+/**
+ * Add points to the user's data
+ */
+export async function addUserPoints(points: number): Promise<void> {
+  const user = await getOrCreateBase44User();
+  if (!user) return;
+  
+  await updateBase44User({
+    points: (user.points || 0) + points,
+  });
+}
+
+/**
+ * Get current user's streak and points data
+ */
+export async function getUserStreakData(): Promise<{ streak: number; points: number; last_action_at: string | null } | null> {
+  const user = await getOrCreateBase44User();
+  if (!user) return null;
+  return {
+    streak: user.streak || 0,
+    points: user.points || 0,
+    last_action_at: user.last_action_at || null,
+  };
 }
