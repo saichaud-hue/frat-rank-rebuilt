@@ -36,6 +36,10 @@ import {
   BarChart3,
   ArrowLeft
 } from 'lucide-react';
+import base44, { Party, Fraternity, ChatMessage } from '@/api/base44Client';
+import { toast } from '@/hooks/use-toast';
+import { cn } from '@/lib/utils';
+import { format, isToday, isTomorrow, formatDistanceToNow } from 'date-fns';
 import FratBattleGame from '@/components/activity/FratBattleGame';
 import RankingPostCard, { parseRankingFromText } from '@/components/activity/RankingPostCard';
 import PollCard, { parsePollFromText } from '@/components/activity/PollCard';
@@ -100,6 +104,9 @@ interface ChatItem {
   parent_message_id?: string | null;
 }
 
+// Helper function for page URLs
+const createPageUrl = (path: string) => path;
+
 export default function Activity() {
   const { user } = useAuth();
 
@@ -116,6 +123,40 @@ export default function Activity() {
     return newId;
   }, [user?.id]);
 
+  // Core data states
+  const [loading, setLoading] = useState(true);
+  const [parties, setParties] = useState<Party[]>([]);
+  const [fraternities, setFraternities] = useState<Fraternity[]>([]);
+  const [activities, setActivities] = useState<ActivityItem[]>([]);
+  const [chatMessages, setChatMessages] = useState<ChatItem[]>([]);
+
+  // Chat composer states
+  const [chatText, setChatText] = useState('');
+  const [selectedMention, setSelectedMention] = useState<{type: 'frat' | 'party', id: string, name: string} | null>(null);
+  const [showChatComposer, setShowChatComposer] = useState(false);
+  const [submittingChat, setSubmittingChat] = useState(false);
+
+  // Reply states
+  const [replyText, setReplyText] = useState('');
+  const [replyingTo, setReplyingTo] = useState<string | null>(null);
+  const [submittingReply, setSubmittingReply] = useState(false);
+
+  // View states
+  const [showFeedView, setShowFeedView] = useState(false);
+  const [commentsSheetItem, setCommentsSheetItem] = useState<ChatItem | null>(null);
+
+  // Poll and ranking states
+  const [chatInputEnabled, setChatInputEnabled] = useState(true);
+  const [isPollMode, setIsPollMode] = useState(false);
+  const [pollQuestion, setPollQuestion] = useState('');
+  const [pollOptions, setPollOptions] = useState<string[]>(['', '']);
+  const [fratRanking, setFratRanking] = useState<Record<string, Fraternity>>({});
+  const [showFratRankingPicker, setShowFratRankingPicker] = useState(false);
+  const [showFratBattleGame, setShowFratBattleGame] = useState(false);
+  const [showManualPicker, setShowManualPicker] = useState(false);
+  const [expandedTiers, setExpandedTiers] = useState<Record<string, boolean>>({});
+  const [mentionType, setMentionType] = useState<'frat' | 'party'>('frat');
+  const [showMentionPicker, setShowMentionPicker] = useState(false);
 
   // What's the move tonight - voting (stores all user votes)
   const [allUserVotes, setAllUserVotes] = useState<Record<string, string>>(() => {
