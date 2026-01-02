@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo, useEffect, useCallback } from 'react';
 import { Plus, Flame, Clock, TrendingUp, Loader2, Send } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
@@ -8,6 +8,9 @@ import { cn } from '@/lib/utils';
 import PostCard, { type Post } from './PostCard';
 import ThreadView, { type Comment } from './ThreadView';
 import { useAuth } from '@/contexts/AuthContext';
+import { chatMessageQueries, chatMessageVoteQueries, getCurrentUser } from '@/lib/supabase-data';
+import { supabase } from '@/integrations/supabase/client';
+import { toast } from 'sonner';
 
 type SortType = 'hot' | 'new' | 'top';
 
@@ -29,6 +32,7 @@ export default function AnonymousFeed() {
   const { user } = useAuth();
   const [posts, setPosts] = useState<Post[]>([]);
   const [comments, setComments] = useState<Record<string, Comment[]>>({});
+  const [userVotes, setUserVotes] = useState<Record<string, number>>({});
   const [loading, setLoading] = useState(true);
   const [sortBy, setSortBy] = useState<SortType>('hot');
   const [showComposer, setShowComposer] = useState(false);
@@ -37,88 +41,95 @@ export default function AnonymousFeed() {
   const [selectedPost, setSelectedPost] = useState<Post | null>(null);
 
   const userAnonName = useMemo(() => {
-    const seed = user?.id || localStorage.getItem('touse_user_id') || `anon-${Date.now()}`;
-    const name = generateAnonymousName(seed);
-    localStorage.setItem('touse_anon_name', name);
-    return name;
+    const seed = user?.id || `anon-${Date.now()}`;
+    return generateAnonymousName(seed);
   }, [user?.id]);
 
-  // Load posts from localStorage (mock data layer)
-  useEffect(() => {
-    const loadData = () => {
-      const savedPosts = localStorage.getItem('touse_anon_posts');
-      const savedComments = localStorage.getItem('touse_anon_comments');
+  // Load posts and comments from Supabase
+  const loadData = useCallback(async () => {
+    try {
+      const messages = await chatMessageQueries.list();
       
-      if (savedPosts) {
-        setPosts(JSON.parse(savedPosts));
-      } else {
-        // Seed with sample posts
-        const samplePosts: Post[] = [
-          {
-            id: '1',
-            text: "anyone else feel like the dining hall has been mid lately? like what happened to the good pasta 😭",
-            anonymous_name: generateAnonymousName('user1'),
-            upvotes: 24,
-            downvotes: 3,
-            comment_count: 5,
-            created_date: new Date(Date.now() - 1000 * 60 * 30).toISOString(),
-          },
-          {
-            id: '2',
-            text: "finals szn hitting different this semester. library was packed at 2am",
-            anonymous_name: generateAnonymousName('user2'),
-            upvotes: 18,
-            downvotes: 1,
-            comment_count: 3,
-            created_date: new Date(Date.now() - 1000 * 60 * 60 * 2).toISOString(),
-          },
-          {
-            id: '3',
-            text: "hot take: shooters on a tuesday is elite and i will not be taking criticism",
-            anonymous_name: generateAnonymousName('user3'),
-            upvotes: 45,
-            downvotes: 12,
-            comment_count: 8,
-            created_date: new Date(Date.now() - 1000 * 60 * 60 * 4).toISOString(),
-            is_hot: true,
-          },
-          {
-            id: '4',
-            text: "just saw someone bring their emotional support peacock to class. duke really is different",
-            anonymous_name: generateAnonymousName('user4'),
-            upvotes: 67,
-            downvotes: 2,
-            comment_count: 12,
-            created_date: new Date(Date.now() - 1000 * 60 * 60 * 6).toISOString(),
-            is_hot: true,
-          },
-        ];
-        setPosts(samplePosts);
-        localStorage.setItem('touse_anon_posts', JSON.stringify(samplePosts));
+      // Separate top-level posts from comments
+      const topLevelPosts = messages.filter(m => !m.parent_message_id);
+      const allComments = messages.filter(m => m.parent_message_id);
+
+      // Load user's votes if logged in
+      let votesMap: Record<string, number> = {};
+      if (user?.id) {
+        const votes = await chatMessageVoteQueries.listByUser(user.id);
+        votes.forEach(v => {
+          votesMap[v.message_id] = v.value || 0;
+        });
       }
-      
-      if (savedComments) {
-        setComments(JSON.parse(savedComments));
-      }
-      
+      setUserVotes(votesMap);
+
+      // Transform to Post format
+      const transformedPosts: Post[] = topLevelPosts.map(msg => {
+        const commentCount = allComments.filter(c => c.parent_message_id === msg.id).length;
+        const netVotes = (msg.upvotes || 0) - (msg.downvotes || 0);
+        return {
+          id: msg.id,
+          text: msg.text,
+          anonymous_name: generateAnonymousName(msg.user_id),
+          upvotes: msg.upvotes || 0,
+          downvotes: msg.downvotes || 0,
+          comment_count: commentCount,
+          created_date: msg.created_at || new Date().toISOString(),
+          user_vote: votesMap[msg.id] as 1 | -1 | null | undefined,
+          is_hot: netVotes >= 20,
+        };
+      });
+
+      setPosts(transformedPosts);
+
+      // Group comments by parent post
+      const commentsMap: Record<string, Comment[]> = {};
+      allComments.forEach(msg => {
+        const postId = msg.parent_message_id!;
+        if (!commentsMap[postId]) commentsMap[postId] = [];
+        commentsMap[postId].push({
+          id: msg.id,
+          text: msg.text,
+          anonymous_name: generateAnonymousName(msg.user_id),
+          upvotes: msg.upvotes || 0,
+          downvotes: msg.downvotes || 0,
+          created_date: msg.created_at || new Date().toISOString(),
+          user_vote: votesMap[msg.id] as 1 | -1 | null | undefined,
+          parent_id: null, // For nested replies we'd need another field
+        });
+      });
+      setComments(commentsMap);
+
+    } catch (error) {
+      console.error('Failed to load posts:', error);
+      toast.error('Failed to load posts');
+    } finally {
       setLoading(false);
-    };
-    
+    }
+  }, [user?.id]);
+
+  useEffect(() => {
     loadData();
-  }, []);
+  }, [loadData]);
 
-  // Save posts to localStorage whenever they change
+  // Subscribe to realtime updates
   useEffect(() => {
-    if (!loading) {
-      localStorage.setItem('touse_anon_posts', JSON.stringify(posts));
-    }
-  }, [posts, loading]);
+    const channel = supabase
+      .channel('anonymous-feed')
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'chat_messages' },
+        () => {
+          loadData();
+        }
+      )
+      .subscribe();
 
-  useEffect(() => {
-    if (!loading) {
-      localStorage.setItem('touse_anon_comments', JSON.stringify(comments));
-    }
-  }, [comments, loading]);
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [loadData]);
 
   // Sort posts
   const sortedPosts = useMemo(() => {
@@ -131,10 +142,9 @@ export default function AnonymousFeed() {
           return (b.upvotes - b.downvotes) - (a.upvotes - a.downvotes);
         case 'hot':
         default:
-          // Hot algorithm: score + recency bonus
           const aScore = (a.upvotes - a.downvotes) + a.comment_count * 2;
           const bScore = (b.upvotes - b.downvotes) + b.comment_count * 2;
-          const aAge = (now - new Date(a.created_date).getTime()) / (1000 * 60 * 60); // hours
+          const aAge = (now - new Date(a.created_date).getTime()) / (1000 * 60 * 60);
           const bAge = (now - new Date(b.created_date).getTime()) / (1000 * 60 * 60);
           const aHot = aScore / Math.pow(aAge + 2, 1.5);
           const bHot = bScore / Math.pow(bAge + 2, 1.5);
@@ -145,106 +155,176 @@ export default function AnonymousFeed() {
 
   const handleCreatePost = async () => {
     if (!newPostText.trim()) return;
+    
+    const currentUser = await getCurrentUser();
+    if (!currentUser) {
+      toast.error('Please sign in to post');
+      return;
+    }
+
     setSubmitting(true);
-    
-    const newPost: Post = {
-      id: `post-${Date.now()}`,
-      text: newPostText.trim(),
-      anonymous_name: userAnonName,
-      upvotes: 0,
-      downvotes: 0,
-      comment_count: 0,
-      created_date: new Date().toISOString(),
-    };
-    
-    setPosts(prev => [newPost, ...prev]);
-    setNewPostText('');
-    setShowComposer(false);
-    setSubmitting(false);
+    try {
+      await chatMessageQueries.create({
+        text: newPostText.trim(),
+        user_id: currentUser.id,
+        parent_message_id: null,
+        mentioned_fraternity_id: null,
+        mentioned_party_id: null,
+        upvotes: 0,
+        downvotes: 0,
+      });
+      
+      setNewPostText('');
+      setShowComposer(false);
+      toast.success('Post created!');
+      loadData();
+    } catch (error) {
+      console.error('Failed to create post:', error);
+      toast.error('Failed to create post');
+    } finally {
+      setSubmitting(false);
+    }
   };
 
-  const handlePostVote = (postId: string, direction: 1 | -1) => {
+  const handlePostVote = async (postId: string, direction: 1 | -1) => {
+    const currentUser = await getCurrentUser();
+    if (!currentUser) {
+      toast.error('Please sign in to vote');
+      return;
+    }
+
+    const currentVote = userVotes[postId] || 0;
+    const newVote = currentVote === direction ? 0 : direction;
+
+    // Optimistic update
     setPosts(prev => prev.map(p => {
       if (p.id !== postId) return p;
-      const currentVote = p.user_vote;
       let upvotes = p.upvotes;
       let downvotes = p.downvotes;
       
-      // Remove previous vote
       if (currentVote === 1) upvotes--;
       if (currentVote === -1) downvotes--;
-      
-      // Apply new vote (or remove if same direction)
-      const newVote = currentVote === direction ? null : direction;
       if (newVote === 1) upvotes++;
       if (newVote === -1) downvotes++;
       
-      return { ...p, upvotes, downvotes, user_vote: newVote };
+      return { ...p, upvotes, downvotes, user_vote: newVote === 0 ? null : newVote as 1 | -1 };
     }));
     
+    setUserVotes(prev => ({ ...prev, [postId]: newVote }));
+
     // Update selected post if viewing thread
     if (selectedPost?.id === postId) {
       setSelectedPost(prev => {
         if (!prev) return null;
-        const currentVote = prev.user_vote;
         let upvotes = prev.upvotes;
         let downvotes = prev.downvotes;
         if (currentVote === 1) upvotes--;
         if (currentVote === -1) downvotes--;
-        const newVote = currentVote === direction ? null : direction;
         if (newVote === 1) upvotes++;
         if (newVote === -1) downvotes++;
-        return { ...prev, upvotes, downvotes, user_vote: newVote };
+        return { ...prev, upvotes, downvotes, user_vote: newVote === 0 ? null : newVote as 1 | -1 };
       });
+    }
+
+    try {
+      await chatMessageVoteQueries.upsert(currentUser.id, postId, newVote);
+
+      // Update the message's vote counts
+      const post = posts.find(p => p.id === postId);
+      if (post) {
+        let upvotes = post.upvotes;
+        let downvotes = post.downvotes;
+        if (currentVote === 1) upvotes--;
+        if (currentVote === -1) downvotes--;
+        if (newVote === 1) upvotes++;
+        if (newVote === -1) downvotes++;
+        
+        await chatMessageQueries.update(postId, { upvotes, downvotes });
+      }
+    } catch (error) {
+      console.error('Failed to vote:', error);
+      loadData(); // Revert on error
     }
   };
 
-  const handleCommentVote = (commentId: string, direction: 1 | -1) => {
+  const handleCommentVote = async (commentId: string, direction: 1 | -1) => {
     if (!selectedPost) return;
-    
+
+    const currentUser = await getCurrentUser();
+    if (!currentUser) {
+      toast.error('Please sign in to vote');
+      return;
+    }
+
+    const currentVote = userVotes[commentId] || 0;
+    const newVote = currentVote === direction ? 0 : direction;
+
+    // Optimistic update
     setComments(prev => {
       const postComments = prev[selectedPost.id] || [];
       const updated = postComments.map(c => {
         if (c.id !== commentId) return c;
-        const currentVote = c.user_vote;
         let upvotes = c.upvotes;
         let downvotes = c.downvotes;
         if (currentVote === 1) upvotes--;
         if (currentVote === -1) downvotes--;
-        const newVote = currentVote === direction ? null : direction;
         if (newVote === 1) upvotes++;
         if (newVote === -1) downvotes++;
-        return { ...c, upvotes, downvotes, user_vote: newVote };
+        return { ...c, upvotes, downvotes, user_vote: newVote === 0 ? null : newVote as 1 | -1 };
       });
       return { ...prev, [selectedPost.id]: updated };
     });
+    
+    setUserVotes(prev => ({ ...prev, [commentId]: newVote }));
+
+    try {
+      await chatMessageVoteQueries.upsert(currentUser.id, commentId, newVote);
+
+      // Update the comment's vote counts
+      const postComments = comments[selectedPost.id] || [];
+      const comment = postComments.find(c => c.id === commentId);
+      if (comment) {
+        let upvotes = comment.upvotes;
+        let downvotes = comment.downvotes;
+        if (currentVote === 1) upvotes--;
+        if (currentVote === -1) downvotes--;
+        if (newVote === 1) upvotes++;
+        if (newVote === -1) downvotes++;
+        
+        await chatMessageQueries.update(commentId, { upvotes, downvotes });
+      }
+    } catch (error) {
+      console.error('Failed to vote:', error);
+      loadData();
+    }
   };
 
   const handleAddComment = async (text: string, parentId?: string) => {
     if (!selectedPost) return;
     
-    const newComment: Comment = {
-      id: `comment-${Date.now()}`,
-      text,
-      anonymous_name: userAnonName,
-      upvotes: 0,
-      downvotes: 0,
-      created_date: new Date().toISOString(),
-      parent_id: parentId || null,
-    };
-    
-    setComments(prev => ({
-      ...prev,
-      [selectedPost.id]: [...(prev[selectedPost.id] || []), newComment],
-    }));
-    
-    // Update comment count on post
-    setPosts(prev => prev.map(p => 
-      p.id === selectedPost.id 
-        ? { ...p, comment_count: p.comment_count + 1 }
-        : p
-    ));
-    setSelectedPost(prev => prev ? { ...prev, comment_count: prev.comment_count + 1 } : null);
+    const currentUser = await getCurrentUser();
+    if (!currentUser) {
+      toast.error('Please sign in to comment');
+      return;
+    }
+
+    try {
+      await chatMessageQueries.create({
+        text,
+        user_id: currentUser.id,
+        parent_message_id: selectedPost.id,
+        mentioned_fraternity_id: null,
+        mentioned_party_id: null,
+        upvotes: 0,
+        downvotes: 0,
+      });
+
+      toast.success('Comment added!');
+      loadData();
+    } catch (error) {
+      console.error('Failed to add comment:', error);
+      toast.error('Failed to add comment');
+    }
   };
 
   const sortOptions: { value: SortType; label: string; icon: typeof Flame }[] = [
