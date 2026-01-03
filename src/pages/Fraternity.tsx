@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
-import { ArrowLeft, Calendar, Star, PartyPopper, Users, Shield, Heart, MessageCircle, Trophy, Zap } from 'lucide-react';
+import { ArrowLeft, Calendar, Star, PartyPopper, Users, Shield, Heart, MessageCircle, Trophy, Zap, Info } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { 
   fraternityQueries, 
@@ -22,6 +22,7 @@ import PartyCard from '@/components/parties/PartyCard';
 import RateFratSheet from '@/components/leaderboard/RateFratSheet';
 import PartyRatingForm from '@/components/rate/PartyRatingForm';
 import CommentSection from '@/components/comments/CommentSection';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { createPageUrl, clamp, getScoreColor, getFratGreek, getFratShorthand } from '@/utils';
 import { 
   computeFullFraternityScores, 
@@ -493,13 +494,20 @@ export default function FraternityPage() {
               </div>
               <div className="p-3 rounded-xl bg-background border border-primary/30 text-center">
                 <Zap className="h-4 w-4 mx-auto mb-1 text-emerald-500" />
-                <p className={`text-xl font-bold ${computedScores.activityTrending > 0 ? 'text-emerald-600' : 'text-muted-foreground'}`}>
-                  {computedScores.activityTrending > 0 ? '+' : ''}{computedScores.activityTrending.toFixed(1)}
+                <p className={`text-xl font-bold ${activityRank ? 'text-emerald-600' : 'text-muted-foreground'}`}>
+                  {activityRank ? `#${activityRank}` : '—'}
                 </p>
-                <p className="text-xs text-muted-foreground">Activity</p>
-                {activityRank && (
-                  <p className="text-xs text-emerald-600 font-medium mt-0.5">Rank: #{activityRank}</p>
-                )}
+                <div className="flex items-center justify-center gap-1">
+                  <p className="text-xs text-muted-foreground">Trending</p>
+                  <Tooltip>
+                    <TooltipTrigger>
+                      <Info className="h-3 w-3 text-muted-foreground/70" />
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p className="text-xs max-w-48">Measures recent activity: party frequency, rating volume, and week-over-week momentum</p>
+                    </TooltipContent>
+                  </Tooltip>
+                </div>
               </div>
             </div>
 
