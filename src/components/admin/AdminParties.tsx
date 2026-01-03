@@ -1,8 +1,9 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Check, X, Loader2, Mail } from "lucide-react";
 import { format } from "date-fns";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 
 type Party = {
   id: string;
@@ -18,51 +19,50 @@ type Fraternity = {
   name: string;
 };
 
+async function fetchAdminParties() {
+  const [partiesRes, fratsRes] = await Promise.all([
+    supabase
+      .from("parties")
+      .select("id,title,starts_at,status,fraternity_id,contact_email")
+      .eq("status", "pending")
+      .order("starts_at", { ascending: true }),
+    supabase.from("fraternities").select("id,name"),
+  ]);
+
+  if (partiesRes.error) throw partiesRes.error;
+  if (fratsRes.error) throw fratsRes.error;
+
+  const fratMap: Record<string, string> = {};
+  (fratsRes.data ?? []).forEach((f: Fraternity) => {
+    fratMap[f.id] = f.name;
+  });
+
+  return {
+    parties: (partiesRes.data as Party[]) ?? [],
+    fraternities: fratMap,
+  };
+}
+
 export function AdminParties() {
-  const [items, setItems] = useState<Party[]>([]);
-  const [fraternities, setFraternities] = useState<Record<string, string>>({});
-  const [loading, setLoading] = useState(true);
+  const queryClient = useQueryClient();
   const [actionLoading, setActionLoading] = useState<string | null>(null);
 
-  const load = async () => {
-    setLoading(true);
-    
-    const [partiesRes, fratsRes] = await Promise.all([
-      supabase
-        .from("parties")
-        .select("id,title,starts_at,status,fraternity_id,contact_email")
-        .eq("status", "pending")
-        .order("starts_at", { ascending: true }),
-      supabase.from("fraternities").select("id,name")
-    ]);
-
-    if (partiesRes.error) console.error(partiesRes.error);
-    if (fratsRes.error) console.error(fratsRes.error);
-
-    setItems((partiesRes.data as Party[]) ?? []);
-    
-    const fratMap: Record<string, string> = {};
-    (fratsRes.data ?? []).forEach((f: Fraternity) => {
-      fratMap[f.id] = f.name;
-    });
-    setFraternities(fratMap);
-    
-    setLoading(false);
-  };
+  const { data, isLoading, error } = useQuery({
+    queryKey: ["admin", "parties"],
+    queryFn: fetchAdminParties,
+    staleTime: 30000, // 30 seconds
+    refetchOnWindowFocus: true,
+  });
 
   const setStatus = async (id: string, status: "upcoming" | "rejected") => {
     setActionLoading(id);
     const { error } = await supabase.from("parties").update({ status }).eq("id", id);
     if (error) console.error(error);
-    await load();
+    await queryClient.invalidateQueries({ queryKey: ["admin", "parties"] });
     setActionLoading(null);
   };
 
-  useEffect(() => {
-    load();
-  }, []);
-
-  if (loading) {
+  if (isLoading) {
     return (
       <div className="flex items-center justify-center py-8">
         <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
@@ -70,7 +70,17 @@ export function AdminParties() {
     );
   }
 
-  if (!items.length) {
+  if (error) {
+    return (
+      <div className="text-center py-8 text-muted-foreground">
+        Failed to load parties.
+      </div>
+    );
+  }
+
+  const { parties, fraternities } = data ?? { parties: [], fraternities: {} };
+
+  if (!parties.length) {
     return (
       <div className="text-center py-8 text-muted-foreground">
         No pending parties.
@@ -80,11 +90,8 @@ export function AdminParties() {
 
   return (
     <div className="space-y-3">
-      {items.map((p) => (
-        <div
-          key={p.id}
-          className="p-4 rounded-xl border bg-card"
-        >
+      {parties.map((p) => (
+        <div key={p.id} className="p-4 rounded-xl border bg-card">
           <div className="flex items-start justify-between gap-3">
             <div className="flex-1 min-w-0">
               <p className="font-semibold truncate">{p.title ?? "Untitled party"}</p>
@@ -94,10 +101,12 @@ export function AdminParties() {
                 </p>
               )}
               <p className="text-xs text-muted-foreground mt-1">
-                {p.starts_at ? format(new Date(p.starts_at), "MMM d, yyyy 'at' h:mm a") : "No time set"}
+                {p.starts_at
+                  ? format(new Date(p.starts_at), "MMM d, yyyy 'at' h:mm a")
+                  : "No time set"}
               </p>
               {p.contact_email && (
-                <a 
+                <a
                   href={`mailto:${p.contact_email}`}
                   className="flex items-center gap-1 text-xs text-primary mt-1 hover:underline"
                 >
@@ -106,7 +115,7 @@ export function AdminParties() {
                 </a>
               )}
             </div>
-            
+
             <div className="flex gap-2 shrink-0">
               <Button
                 size="sm"

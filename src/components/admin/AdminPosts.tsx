@@ -1,8 +1,9 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Trash2, Loader2, ThumbsUp, ThumbsDown } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 
 type Post = {
   id: string;
@@ -12,41 +13,48 @@ type Post = {
   downvotes: number | null;
 };
 
+async function fetchAdminPosts() {
+  const { data, error } = await supabase
+    .from("chat_messages")
+    .select("id,text,created_at,upvotes,downvotes")
+    .order("created_at", { ascending: false })
+    .limit(50);
+
+  if (error) throw error;
+  return data ?? [];
+}
+
 export function AdminPosts() {
-  const [items, setItems] = useState<Post[]>([]);
-  const [loading, setLoading] = useState(true);
+  const queryClient = useQueryClient();
   const [actionLoading, setActionLoading] = useState<string | null>(null);
 
-  const load = async () => {
-    setLoading(true);
-
-    const { data, error } = await supabase
-      .from("chat_messages")
-      .select("id,text,created_at,upvotes,downvotes")
-      .order("created_at", { ascending: false })
-      .limit(50);
-
-    if (error) console.error(error);
-    setItems(data ?? []);
-    setLoading(false);
-  };
+  const { data: items = [], isLoading, error } = useQuery({
+    queryKey: ["admin", "posts"],
+    queryFn: fetchAdminPosts,
+    staleTime: 30000,
+    refetchOnWindowFocus: true,
+  });
 
   const deletePost = async (id: string) => {
     setActionLoading(id);
     const { error } = await supabase.from("chat_messages").delete().eq("id", id);
     if (error) console.error(error);
-    await load();
+    await queryClient.invalidateQueries({ queryKey: ["admin", "posts"] });
     setActionLoading(null);
   };
 
-  useEffect(() => {
-    load();
-  }, []);
-
-  if (loading) {
+  if (isLoading) {
     return (
       <div className="flex items-center justify-center py-8">
         <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="text-center py-8 text-muted-foreground">
+        Failed to load posts.
       </div>
     );
   }
@@ -62,10 +70,7 @@ export function AdminPosts() {
   return (
     <div className="space-y-3">
       {items.map((p) => (
-        <div
-          key={p.id}
-          className="p-4 rounded-xl border bg-card"
-        >
+        <div key={p.id} className="p-4 rounded-xl border bg-card">
           <div className="flex items-start justify-between gap-3">
             <div className="flex-1 min-w-0">
               <p className="text-sm line-clamp-3">{p.text}</p>

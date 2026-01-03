@@ -1,9 +1,10 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { EyeOff, Trash2, Loader2 } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 
 type Comment = {
   id: string;
@@ -14,58 +15,58 @@ type Comment = {
   type: "party" | "fraternity";
 };
 
+async function fetchAdminComments() {
+  const [partyRes, fratRes] = await Promise.all([
+    supabase
+      .from("party_comments")
+      .select("id,text,created_at,toxicity_label,moderated")
+      .eq("moderated", false)
+      .order("created_at", { ascending: false })
+      .limit(50),
+    supabase
+      .from("fraternity_comments")
+      .select("id,text,created_at,toxicity_label,moderated")
+      .eq("moderated", false)
+      .order("created_at", { ascending: false })
+      .limit(50),
+  ]);
+
+  if (partyRes.error) throw partyRes.error;
+  if (fratRes.error) throw fratRes.error;
+
+  const partyComments: Comment[] = (partyRes.data ?? []).map((c) => ({
+    ...c,
+    type: "party" as const,
+  }));
+  const fratComments: Comment[] = (fratRes.data ?? []).map((c) => ({
+    ...c,
+    type: "fraternity" as const,
+  }));
+
+  return [...partyComments, ...fratComments].sort((a, b) => {
+    const dateA = a.created_at ? new Date(a.created_at).getTime() : 0;
+    const dateB = b.created_at ? new Date(b.created_at).getTime() : 0;
+    return dateB - dateA;
+  });
+}
+
 export function AdminComments() {
-  const [items, setItems] = useState<Comment[]>([]);
-  const [loading, setLoading] = useState(true);
+  const queryClient = useQueryClient();
   const [actionLoading, setActionLoading] = useState<string | null>(null);
 
-  const load = async () => {
-    setLoading(true);
-
-    const [partyRes, fratRes] = await Promise.all([
-      supabase
-        .from("party_comments")
-        .select("id,text,created_at,toxicity_label,moderated")
-        .eq("moderated", false)
-        .order("created_at", { ascending: false })
-        .limit(50),
-      supabase
-        .from("fraternity_comments")
-        .select("id,text,created_at,toxicity_label,moderated")
-        .eq("moderated", false)
-        .order("created_at", { ascending: false })
-        .limit(50),
-    ]);
-
-    if (partyRes.error) console.error(partyRes.error);
-    if (fratRes.error) console.error(fratRes.error);
-
-    const partyComments: Comment[] = (partyRes.data ?? []).map((c) => ({
-      ...c,
-      type: "party" as const,
-    }));
-    const fratComments: Comment[] = (fratRes.data ?? []).map((c) => ({
-      ...c,
-      type: "fraternity" as const,
-    }));
-
-    // Merge and sort by date
-    const all = [...partyComments, ...fratComments].sort((a, b) => {
-      const dateA = a.created_at ? new Date(a.created_at).getTime() : 0;
-      const dateB = b.created_at ? new Date(b.created_at).getTime() : 0;
-      return dateB - dateA;
-    });
-
-    setItems(all);
-    setLoading(false);
-  };
+  const { data: items = [], isLoading, error } = useQuery({
+    queryKey: ["admin", "comments"],
+    queryFn: fetchAdminComments,
+    staleTime: 30000,
+    refetchOnWindowFocus: true,
+  });
 
   const hideComment = async (id: string, type: "party" | "fraternity") => {
     setActionLoading(id);
     const table = type === "party" ? "party_comments" : "fraternity_comments";
     const { error } = await supabase.from(table).update({ moderated: true }).eq("id", id);
     if (error) console.error(error);
-    await load();
+    await queryClient.invalidateQueries({ queryKey: ["admin", "comments"] });
     setActionLoading(null);
   };
 
@@ -74,18 +75,22 @@ export function AdminComments() {
     const table = type === "party" ? "party_comments" : "fraternity_comments";
     const { error } = await supabase.from(table).delete().eq("id", id);
     if (error) console.error(error);
-    await load();
+    await queryClient.invalidateQueries({ queryKey: ["admin", "comments"] });
     setActionLoading(null);
   };
 
-  useEffect(() => {
-    load();
-  }, []);
-
-  if (loading) {
+  if (isLoading) {
     return (
       <div className="flex items-center justify-center py-8">
         <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="text-center py-8 text-muted-foreground">
+        Failed to load comments.
       </div>
     );
   }
@@ -101,10 +106,7 @@ export function AdminComments() {
   return (
     <div className="space-y-3">
       {items.map((c) => (
-        <div
-          key={`${c.type}-${c.id}`}
-          className="p-4 rounded-xl border bg-card"
-        >
+        <div key={`${c.type}-${c.id}`} className="p-4 rounded-xl border bg-card">
           <div className="flex items-start justify-between gap-3">
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-2 mb-1">
