@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ListOrdered, Trophy, PartyPopper, Star, ChevronLeft, Lock, CheckCircle2, Sparkles } from 'lucide-react';
+import { ListOrdered, Trophy, PartyPopper, Star, ChevronLeft, Lock, CheckCircle2, Sparkles, BarChart3, Heart } from 'lucide-react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -92,12 +92,9 @@ export default function YourListsIntro({
   return (
     <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-end sm:items-center justify-center">
       <Card 
-        className="w-full sm:max-w-md rounded-t-3xl sm:rounded-2xl animate-slide-up sm:animate-scale-in max-h-[85vh] flex flex-col overflow-hidden" 
+        className="w-full sm:max-w-md rounded-t-3xl sm:rounded-2xl p-6 animate-slide-up sm:animate-scale-in" 
+        style={{ paddingBottom: 'max(env(safe-area-inset-bottom), 32px)' }}
       >
-        <div 
-          className="flex-1 overflow-y-auto p-6"
-          style={{ paddingBottom: 'max(env(safe-area-inset-bottom), 24px)' }}
-        >
         {step === 'main' && (
           <div className="space-y-6">
             {/* Icon */}
@@ -113,51 +110,48 @@ export default function YourListsIntro({
               </p>
             </div>
 
-            {/* Options */}
-            <div className="space-y-3">
-              <button
-                onClick={handleViewFrats}
-                className="w-full flex items-center gap-4 p-4 rounded-xl bg-muted/50 hover:bg-muted active:scale-[0.98] transition-all text-left"
-              >
-                <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center">
-                  <Trophy className="h-6 w-6 text-primary" />
+            {/* Features - matching LeaderboardIntro style */}
+            <div className="space-y-3 text-left">
+              <div className="flex items-start gap-3">
+                <div className="w-8 h-8 rounded-full bg-blue-500/10 flex items-center justify-center flex-shrink-0">
+                  <Trophy className="h-4 w-4 text-blue-500" />
                 </div>
-                <div className="flex-1">
-                  <p className="font-semibold">Your Fraternities</p>
-                  <p className="text-sm text-muted-foreground">
-                    {fratUnlocked 
-                      ? `${ratedFratCount} rated` 
-                      : `Rate 5 frats to unlock`}
-                  </p>
+                <p className="text-sm text-muted-foreground pt-1">
+                  <span className="font-semibold text-foreground">Fraternities</span> — {fratUnlocked ? `${ratedFratCount} rated` : 'Rate 5 frats to unlock'}
+                </p>
+              </div>
+              <div className="flex items-start gap-3">
+                <div className="w-8 h-8 rounded-full bg-purple-500/10 flex items-center justify-center flex-shrink-0">
+                  <PartyPopper className="h-4 w-4 text-purple-500" />
                 </div>
-                {fratUnlocked ? (
-                  <CheckCircle2 className="h-6 w-6 text-green-500" />
-                ) : (
-                  <Lock className="h-5 w-5 text-muted-foreground" />
-                )}
-              </button>
-
-              <button
-                onClick={handleViewParties}
-                className="w-full flex items-center gap-4 p-4 rounded-xl bg-muted/50 hover:bg-muted active:scale-[0.98] transition-all text-left"
-              >
-                <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center">
-                  <PartyPopper className="h-6 w-6 text-primary" />
+                <p className="text-sm text-muted-foreground pt-1">
+                  <span className="font-semibold text-foreground">Parties</span> — {partyUnlocked ? `${ratedPartyCount} rated` : 'Rate 3 parties to unlock'}
+                </p>
+              </div>
+              <div className="flex items-start gap-3">
+                <div className="w-8 h-8 rounded-full bg-pink-500/10 flex items-center justify-center flex-shrink-0">
+                  <BarChart3 className="h-4 w-4 text-pink-500" />
                 </div>
-                <div className="flex-1">
-                  <p className="font-semibold">Your Parties</p>
-                  <p className="text-sm text-muted-foreground">
-                    {partyUnlocked 
-                      ? `${ratedPartyCount} rated` 
-                      : `Rate 3 parties to unlock`}
-                  </p>
+                <p className="text-sm text-muted-foreground pt-1">
+                  <span className="font-semibold text-foreground">Rankings</span> — Your personalized order from #1 to last
+                </p>
+              </div>
+              <div className="flex items-start gap-3">
+                <div className="w-8 h-8 rounded-full bg-orange-500/10 flex items-center justify-center flex-shrink-0">
+                  <Heart className="h-4 w-4 text-orange-500" />
                 </div>
-                {partyUnlocked ? (
-                  <CheckCircle2 className="h-6 w-6 text-green-500" />
-                ) : (
-                  <Lock className="h-5 w-5 text-muted-foreground" />
-                )}
-              </button>
+                <p className="text-sm text-muted-foreground pt-1">
+                  <span className="font-semibold text-foreground">Favorites</span> — Track what you love most
+                </p>
+              </div>
+              <div className="flex items-start gap-3">
+                <div className="w-8 h-8 rounded-full bg-amber-500/10 flex items-center justify-center flex-shrink-0">
+                  <Star className="h-4 w-4 text-amber-500" />
+                </div>
+                <p className="text-sm text-muted-foreground pt-1">
+                  Rate more to <span className="font-semibold text-foreground">unlock your lists</span>
+                </p>
+              </div>
             </div>
 
             {/* Checkbox */}
@@ -172,23 +166,31 @@ export default function YourListsIntro({
               </Label>
             </div>
 
-            {/* Skip or View Rankings button */}
-            {fratUnlocked && partyUnlocked ? (
-              <Button 
-                onClick={() => onComplete(neverShowAgain)} 
-                className="w-full min-h-[52px] text-base font-semibold bg-primary hover:bg-primary/90 text-primary-foreground active:scale-[0.98] transition-all shadow-lg"
-              >
-                View Your Rankings!
-              </Button>
-            ) : (
+            {/* Buttons */}
+            <div className="space-y-3">
+              {fratUnlocked && partyUnlocked ? (
+                <Button 
+                  onClick={() => onComplete(neverShowAgain)} 
+                  className="w-full min-h-[52px] text-base font-semibold gradient-primary text-white active:scale-[0.98] transition-all"
+                >
+                  View Your Rankings
+                </Button>
+              ) : (
+                <Button 
+                  onClick={() => setStep('frat-list')} 
+                  className="w-full min-h-[52px] text-base font-semibold gradient-primary text-white active:scale-[0.98] transition-transform"
+                >
+                  Start Rating
+                </Button>
+              )}
               <Button 
                 onClick={() => onComplete(neverShowAgain)} 
                 variant="outline"
                 className="w-full min-h-[52px] text-base font-medium active:scale-[0.98] transition-transform"
               >
-                Skip for Now
+                {fratUnlocked && partyUnlocked ? 'Close' : 'Skip for Now'}
               </Button>
-            )}
+            </div>
           </div>
         )}
 
@@ -430,7 +432,6 @@ export default function YourListsIntro({
             </ScrollArea>
           </div>
         )}
-        </div>
       </Card>
     </div>
   );
