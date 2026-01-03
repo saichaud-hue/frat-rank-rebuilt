@@ -476,7 +476,7 @@ export async function seedInitialData(): Promise<void> {
     'Winter Formal', 'Spring Fling', 'Halloween Havoc', 'Tailgate Throwdown'
   ];
 
-  const themes = ['casual', 'formal', 'themed', 'mixer'];
+  const themes = ['late-night', 'formal', 'themed', 'mixer'];
   const now = new Date();
 
   for (let i = 0; i < 8; i++) {

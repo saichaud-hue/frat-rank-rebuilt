@@ -630,7 +630,7 @@ export default function CreatePartySheet({ open, onOpenChange, onSuccess }: Crea
                   <SelectValue placeholder="Select type (optional)" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="casual">Casual</SelectItem>
+                  <SelectItem value="late-night">Late Night</SelectItem>
                   <SelectItem value="themed">Themed</SelectItem>
                   <SelectItem value="formal">Formal</SelectItem>
                   <SelectItem value="mixer">Mixer</SelectItem>
