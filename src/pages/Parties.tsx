@@ -55,27 +55,19 @@ export default function Parties() {
     loadData();
   }, []);
 
-  // Listen for tutorial event to auto-navigate to party details
+  // Listen for tutorial event to auto-navigate to party details (demo mode)
   useEffect(() => {
     const handleTutorialOpenPartyDetails = () => {
-      // Find an upcoming party (or any party if none upcoming)
-      const upcomingParties = parties.filter(p => {
-        const now = new Date();
-        const start = p.starts_at ? new Date(p.starts_at) : now;
-        return now < start;
-      });
-      const targetParty = upcomingParties[0] || parties[0];
-      if (targetParty) {
-        navigate(`/Party?id=${targetParty.id}`);
-        // Dispatch completion event after navigation
-        setTimeout(() => {
-          window.dispatchEvent(new CustomEvent('touse:tutorial:party-viewed'));
-        }, 500);
-      }
+      // Navigate to demo party page for tutorial
+      navigate('/Party?demo=true');
+      // Dispatch completion event after navigation
+      setTimeout(() => {
+        window.dispatchEvent(new CustomEvent('touse:tutorial:party-viewed'));
+      }, 500);
     };
     window.addEventListener('touse:tutorial:open-party-details', handleTutorialOpenPartyDetails);
     return () => window.removeEventListener('touse:tutorial:open-party-details', handleTutorialOpenPartyDetails);
-  }, [parties, navigate]);
+  }, [navigate]);
 
   const loadData = async () => {
     setLoading(true);
