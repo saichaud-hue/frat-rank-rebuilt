@@ -31,6 +31,7 @@ const generateAnonymousName = (seed: string) => {
 export default function AnonymousFeed() {
   const { user } = useAuth();
   const [posts, setPosts] = useState<Post[]>([]);
+  const [frozenPostOrder, setFrozenPostOrder] = useState<string[]>([]); // Order frozen at load time
   const [comments, setComments] = useState<Record<string, Comment[]>>({});
   const [userVotes, setUserVotes] = useState<Record<string, number>>({});
   const [loading, setLoading] = useState(true);
@@ -116,14 +117,11 @@ export default function AnonymousFeed() {
     loadData();
   }, [loadData]);
 
-  // NOTE: Removed realtime subscription to prevent posts from rearranging while users vote
-  // Users will see updates when they manually refresh or navigate back to the feed
-
-  // Sort posts
-  const sortedPosts = useMemo(() => {
+  // Sort posts and freeze order on load - recalculates only when sortBy changes or data reloads
+  const sortPosts = useCallback((postsToSort: Post[], sortType: SortType): Post[] => {
     const now = Date.now();
-    return [...posts].sort((a, b) => {
-      switch (sortBy) {
+    return [...postsToSort].sort((a, b) => {
+      switch (sortType) {
         case 'new':
           return new Date(b.created_date).getTime() - new Date(a.created_date).getTime();
         case 'top':
@@ -139,7 +137,45 @@ export default function AnonymousFeed() {
           return bHot - aHot;
       }
     });
-  }, [posts, sortBy]);
+  }, []);
+
+  // Freeze post order when data loads - this order stays fixed until next reload
+  useEffect(() => {
+    if (posts.length > 0 && frozenPostOrder.length === 0) {
+      const sorted = sortPosts(posts, sortBy);
+      setFrozenPostOrder(sorted.map(p => p.id));
+    }
+  }, [posts, sortBy, frozenPostOrder.length, sortPosts]);
+
+  // When sort type changes, re-freeze the order
+  const handleSortChange = (newSort: SortType) => {
+    setSortBy(newSort);
+    const sorted = sortPosts(posts, newSort);
+    setFrozenPostOrder(sorted.map(p => p.id));
+  };
+
+  // Display posts in frozen order, but with updated vote data
+  const sortedPosts = useMemo(() => {
+    if (frozenPostOrder.length === 0) return posts;
+    
+    const postsMap = new Map(posts.map(p => [p.id, p]));
+    const ordered: Post[] = [];
+    
+    // Add posts in frozen order
+    for (const id of frozenPostOrder) {
+      const post = postsMap.get(id);
+      if (post) ordered.push(post);
+    }
+    
+    // Add any new posts that aren't in frozen order (e.g., just created)
+    for (const post of posts) {
+      if (!frozenPostOrder.includes(post.id)) {
+        ordered.unshift(post); // New posts go to top
+      }
+    }
+    
+    return ordered;
+  }, [posts, frozenPostOrder]);
 
   const handleCreatePost = async () => {
     if (!newPostText.trim()) return;
@@ -402,7 +438,7 @@ export default function AnonymousFeed() {
           {sortOptions.map(opt => (
             <button
               key={opt.value}
-              onClick={() => setSortBy(opt.value)}
+              onClick={() => handleSortChange(opt.value)}
               className={cn(
                 "flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg text-sm font-medium transition-all",
                 sortBy === opt.value 
