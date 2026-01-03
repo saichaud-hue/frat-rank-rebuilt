@@ -166,6 +166,7 @@ export default function CreatePartySheet({ open, onOpenChange, onSuccess }: Crea
 
     setLoading(true);
     try {
+      // contact_email is a new column - using type assertion until types regenerate
       await partyQueries.create({
         fraternity_id: formData.fraternity_id,
         user_id: user.id,
@@ -182,7 +183,8 @@ export default function CreatePartySheet({ open, onOpenChange, onSuccess }: Crea
         unquantifiable_score: 5,
         total_ratings: 0,
         status: 'pending',
-      });
+        contact_email: formData.contact_email.trim(),
+      } as any);
 
       resetForm();
       onOpenChange(false);

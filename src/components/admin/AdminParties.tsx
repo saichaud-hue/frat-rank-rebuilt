@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
-import { Check, X, Loader2 } from "lucide-react";
+import { Check, X, Loader2, Mail } from "lucide-react";
 import { format } from "date-fns";
 
 type Party = {
@@ -10,6 +10,7 @@ type Party = {
   starts_at: string | null;
   status: string | null;
   fraternity_id: string | null;
+  contact_email: string | null;
 };
 
 type Fraternity = {
@@ -29,7 +30,7 @@ export function AdminParties() {
     const [partiesRes, fratsRes] = await Promise.all([
       supabase
         .from("parties")
-        .select("id,title,starts_at,status,fraternity_id")
+        .select("id,title,starts_at,status,fraternity_id,contact_email")
         .eq("status", "pending")
         .order("starts_at", { ascending: true }),
       supabase.from("fraternities").select("id,name")
@@ -38,7 +39,7 @@ export function AdminParties() {
     if (partiesRes.error) console.error(partiesRes.error);
     if (fratsRes.error) console.error(fratsRes.error);
 
-    setItems(partiesRes.data ?? []);
+    setItems((partiesRes.data as Party[]) ?? []);
     
     const fratMap: Record<string, string> = {};
     (fratsRes.data ?? []).forEach((f: Fraternity) => {
@@ -95,6 +96,15 @@ export function AdminParties() {
               <p className="text-xs text-muted-foreground mt-1">
                 {p.starts_at ? format(new Date(p.starts_at), "MMM d, yyyy 'at' h:mm a") : "No time set"}
               </p>
+              {p.contact_email && (
+                <a 
+                  href={`mailto:${p.contact_email}`}
+                  className="flex items-center gap-1 text-xs text-primary mt-1 hover:underline"
+                >
+                  <Mail className="h-3 w-3" />
+                  {p.contact_email}
+                </a>
+              )}
             </div>
             
             <div className="flex gap-2 shrink-0">

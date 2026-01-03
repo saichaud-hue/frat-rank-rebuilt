@@ -337,6 +337,7 @@ export type Database = {
       parties: {
         Row: {
           access_type: string | null
+          contact_email: string | null
           created_at: string | null
           display_photo_url: string | null
           ends_at: string | null
@@ -356,6 +357,7 @@ export type Database = {
         }
         Insert: {
           access_type?: string | null
+          contact_email?: string | null
           created_at?: string | null
           display_photo_url?: string | null
           ends_at?: string | null
@@ -375,6 +377,7 @@ export type Database = {
         }
         Update: {
           access_type?: string | null
+          contact_email?: string | null
           created_at?: string | null
           display_photo_url?: string | null
           ends_at?: string | null
