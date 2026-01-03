@@ -4,7 +4,8 @@ import { AdminParties } from "@/components/admin/AdminParties";
 import { AdminComments } from "@/components/admin/AdminComments";
 import { AdminPosts } from "@/components/admin/AdminPosts";
 import { AdminOffenders } from "@/components/admin/AdminOffenders";
-import { ChevronLeft, Shield, RefreshCw, AlertTriangle } from "lucide-react";
+import { AdminSemesterReset } from "@/components/admin/AdminSemesterReset";
+import { ChevronLeft, Shield, RefreshCw, AlertTriangle, RotateCcw } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { useQueryClient } from "@tanstack/react-query";
@@ -70,13 +71,15 @@ export default function Admin() {
           </CardHeader>
           <CardContent>
             <Tabs defaultValue="parties" className="w-full">
-              <TabsList className="w-full grid grid-cols-4">
+              <TabsList className="w-full grid grid-cols-5">
                 <TabsTrigger value="parties">Parties</TabsTrigger>
                 <TabsTrigger value="comments">Comments</TabsTrigger>
                 <TabsTrigger value="posts">Posts</TabsTrigger>
                 <TabsTrigger value="offenders" className="flex items-center gap-1">
                   <AlertTriangle className="h-3 w-3" />
-                  <span className="hidden sm:inline">Offenders</span>
+                </TabsTrigger>
+                <TabsTrigger value="reset" className="flex items-center gap-1">
+                  <RotateCcw className="h-3 w-3" />
                 </TabsTrigger>
               </TabsList>
 
@@ -94,6 +97,10 @@ export default function Admin() {
 
               <TabsContent value="offenders" className="mt-4">
                 <AdminOffenders />
+              </TabsContent>
+
+              <TabsContent value="reset" className="mt-4">
+                <AdminSemesterReset />
               </TabsContent>
             </Tabs>
           </CardContent>
