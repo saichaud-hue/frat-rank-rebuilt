@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect, useCallback } from 'react';
+import { useState, useMemo, useEffect, useCallback, useRef } from 'react';
 import { Plus, Flame, Clock, TrendingUp, Loader2, Send } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
@@ -39,6 +39,9 @@ export default function AnonymousFeed() {
   const [newPostText, setNewPostText] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [selectedPost, setSelectedPost] = useState<Post | null>(null);
+  
+  // Lock to prevent rapid clicking from causing duplicate votes
+  const votingLock = useRef<Set<string>>(new Set());
 
   const userAnonName = useMemo(() => {
     const seed = user?.id || `anon-${Date.now()}`;
@@ -113,23 +116,8 @@ export default function AnonymousFeed() {
     loadData();
   }, [loadData]);
 
-  // Subscribe to realtime updates
-  useEffect(() => {
-    const channel = supabase
-      .channel('anonymous-feed')
-      .on(
-        'postgres_changes',
-        { event: '*', schema: 'public', table: 'chat_messages' },
-        () => {
-          loadData();
-        }
-      )
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  }, [loadData]);
+  // NOTE: Removed realtime subscription to prevent posts from rearranging while users vote
+  // Users will see updates when they manually refresh or navigate back to the feed
 
   // Sort posts
   const sortedPosts = useMemo(() => {
@@ -187,37 +175,36 @@ export default function AnonymousFeed() {
   };
 
   const handlePostVote = async (postId: string, direction: 1 | -1) => {
+    // Prevent rapid clicking - check if already voting on this post
+    if (votingLock.current.has(postId)) {
+      return;
+    }
+
     const currentUser = await getCurrentUser();
     if (!currentUser) {
       toast.error('Please sign in to vote');
       return;
     }
 
+    // Lock this post from further votes until complete
+    votingLock.current.add(postId);
+
     const currentVote = userVotes[postId] || 0;
     
     // Determine next vote using deterministic state machine
-    // Rule A: Clicking UP - if +1 -> 0, if 0 -> +1, if -1 -> +1
-    // Rule B: Clicking DOWN - if -1 -> 0, if 0 -> -1, if +1 -> -1
     let nextVote: number;
     if (direction === 1) {
-      // Clicking UP
       nextVote = currentVote === 1 ? 0 : 1;
     } else {
-      // Clicking DOWN  
       nextVote = currentVote === -1 ? 0 : -1;
     }
 
     // Calculate delta for upvotes and downvotes
-    // Step 1: Remove current vote
-    // Step 2: Apply next vote
     let upvoteDelta = 0;
     let downvoteDelta = 0;
     
-    // Remove current vote
     if (currentVote === 1) upvoteDelta -= 1;
     if (currentVote === -1) downvoteDelta -= 1;
-    
-    // Apply next vote
     if (nextVote === 1) upvoteDelta += 1;
     if (nextVote === -1) downvoteDelta += 1;
 
@@ -259,29 +246,43 @@ export default function AnonymousFeed() {
         await chatMessageVoteQueries.upsert(currentUser.id, postId, nextVote);
       }
 
-      // Fetch the current message state from server to get accurate counts
-      const { data: currentMessage } = await supabase
-        .from('chat_messages')
-        .select('upvotes, downvotes')
-        .eq('id', postId)
-        .single();
+      // Count actual votes from the database to get accurate counts
+      const { data: allVotes } = await supabase
+        .from('chat_message_votes')
+        .select('value')
+        .eq('message_id', postId);
+      
+      const newUpvotes = allVotes?.filter(v => v.value === 1).length || 0;
+      const newDownvotes = allVotes?.filter(v => v.value === -1).length || 0;
+      
+      await chatMessageQueries.update(postId, { upvotes: newUpvotes, downvotes: newDownvotes });
 
-      if (currentMessage) {
-        // Apply the delta to the server's current state
-        const newUpvotes = Math.max(0, (currentMessage.upvotes || 0) + upvoteDelta);
-        const newDownvotes = Math.max(0, (currentMessage.downvotes || 0) + downvoteDelta);
-        
-        await chatMessageQueries.update(postId, { upvotes: newUpvotes, downvotes: newDownvotes });
+      // Update local state with server truth
+      setPosts(prev => prev.map(p => {
+        if (p.id !== postId) return p;
+        return { ...p, upvotes: newUpvotes, downvotes: newDownvotes };
+      }));
+      
+      if (selectedPost?.id === postId) {
+        setSelectedPost(prev => prev ? { ...prev, upvotes: newUpvotes, downvotes: newDownvotes } : null);
       }
     } catch (error) {
       console.error('Failed to vote:', error);
       toast.error('Failed to save vote');
       loadData(); // Revert on error
+    } finally {
+      // Unlock this post
+      votingLock.current.delete(postId);
     }
   };
 
   const handleCommentVote = async (commentId: string, direction: 1 | -1) => {
     if (!selectedPost) return;
+
+    // Prevent rapid clicking
+    if (votingLock.current.has(commentId)) {
+      return;
+    }
 
     const currentUser = await getCurrentUser();
     if (!currentUser) {
@@ -289,9 +290,10 @@ export default function AnonymousFeed() {
       return;
     }
 
+    votingLock.current.add(commentId);
+
     const currentVote = userVotes[commentId] || 0;
     
-    // Determine next vote using deterministic state machine
     let nextVote: number;
     if (direction === 1) {
       nextVote = currentVote === 1 ? 0 : 1;
@@ -299,7 +301,6 @@ export default function AnonymousFeed() {
       nextVote = currentVote === -1 ? 0 : -1;
     }
 
-    // Calculate delta
     let upvoteDelta = 0;
     let downvoteDelta = 0;
     
@@ -328,30 +329,37 @@ export default function AnonymousFeed() {
     setUserVotes(prev => ({ ...prev, [commentId]: nextVote }));
 
     try {
-      // Save the vote
       if (nextVote === 0) {
         await chatMessageVoteQueries.delete(currentUser.id, commentId);
       } else {
         await chatMessageVoteQueries.upsert(currentUser.id, commentId, nextVote);
       }
 
-      // Fetch current server state and apply delta
-      const { data: currentMessage } = await supabase
-        .from('chat_messages')
-        .select('upvotes, downvotes')
-        .eq('id', commentId)
-        .single();
+      // Count actual votes from database
+      const { data: allVotes } = await supabase
+        .from('chat_message_votes')
+        .select('value')
+        .eq('message_id', commentId);
+      
+      const newUpvotes = allVotes?.filter(v => v.value === 1).length || 0;
+      const newDownvotes = allVotes?.filter(v => v.value === -1).length || 0;
+      
+      await chatMessageQueries.update(commentId, { upvotes: newUpvotes, downvotes: newDownvotes });
 
-      if (currentMessage) {
-        const newUpvotes = Math.max(0, (currentMessage.upvotes || 0) + upvoteDelta);
-        const newDownvotes = Math.max(0, (currentMessage.downvotes || 0) + downvoteDelta);
-        
-        await chatMessageQueries.update(commentId, { upvotes: newUpvotes, downvotes: newDownvotes });
-      }
+      // Update local state with server truth
+      setComments(prev => {
+        const postComments = prev[selectedPost.id] || [];
+        const updated = postComments.map(c => 
+          c.id === commentId ? { ...c, upvotes: newUpvotes, downvotes: newDownvotes } : c
+        );
+        return { ...prev, [selectedPost.id]: updated };
+      });
     } catch (error) {
       console.error('Failed to vote:', error);
       toast.error('Failed to save vote');
       loadData();
+    } finally {
+      votingLock.current.delete(commentId);
     }
   };
 
