@@ -85,14 +85,14 @@ const tutorialSteps: TutorialStep[] = [
   },
   {
     id: 'rate-frat',
-    title: 'Try It: Rate a Fraternity',
-    description: 'Tap any frat card to rate them! Your rating is completely anonymous.',
+    title: 'Try It: Rate Your First Frat',
+    description: 'Tap the Rate button, then choose “Frat” to submit your first anonymous rating.',
     icon: Star,
     route: '/Leaderboard',
-    highlightSelector: '[data-tutorial="leaderboard-list"]',
+    highlightSelector: '[data-tutorial="rate-fab"]',
     position: 'bottom',
     interactive: true,
-    actionHint: 'Tap any frat to rate it, or tap Next to skip',
+    actionHint: 'Tap “Rate” → “Frat”, then submit your rating',
   },
   {
     id: 'filters',
@@ -103,7 +103,7 @@ const tutorialSteps: TutorialStep[] = [
     highlightSelector: '[data-tutorial="leaderboard-filters"]',
     position: 'bottom',
     interactive: true,
-    actionHint: 'Tap a filter tab to try it, or tap Next to continue',
+    actionHint: 'Tap a filter tab (All/Frats/Parties/Hot)',
   },
   {
     id: 'parties',
@@ -266,10 +266,34 @@ export default function SpotlightTutorial({ onComplete }: SpotlightTutorialProps
     return () => window.removeEventListener('resize', handleResize);
   }, [findAndHighlight]);
 
+  // Track interaction: when in interaction mode, advance after the user actually interacts
+  useEffect(() => {
+    if (!interactionMode) return;
+    if (!step.highlightSelector) return;
+
+    const el = document.querySelector(step.highlightSelector) as HTMLElement | null;
+    if (!el) return;
+
+    const handleInteract = () => {
+      // Give the UI a moment to respond (open sheet, change filter, navigate)
+      setTimeout(() => {
+        setInteractionMode(false);
+        setCurrentStep(prev => prev + 1);
+      }, 250);
+    };
+
+    el.addEventListener('click', handleInteract, { once: true });
+    el.addEventListener('pointerup', handleInteract, { once: true } as any);
+
+    return () => {
+      el.removeEventListener('click', handleInteract);
+      el.removeEventListener('pointerup', handleInteract as any);
+    };
+  }, [interactionMode, step.highlightSelector]);
+
   // Detect when user navigates away during interaction mode (e.g., clicked a party)
   useEffect(() => {
     if (interactionMode && location.pathname !== previousPathRef.current) {
-      // User navigated, auto-advance tutorial
       setInteractionMode(false);
       setCurrentStep(prev => prev + 1);
     }
