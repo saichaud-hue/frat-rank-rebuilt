@@ -51,6 +51,7 @@ export default function FraternityPage() {
   const [selectedParty, setSelectedParty] = useState<Party | null>(null);
   const [activeTab, setActiveTab] = useState<'overview' | 'parties' | 'comments'>('overview');
   const [fratRank, setFratRank] = useState<number | null>(null);
+  const [activityRank, setActivityRank] = useState<number | null>(null);
 
   useEffect(() => {
     if (fratId) loadData();
@@ -179,7 +180,7 @@ export default function FraternityPage() {
           campusBaseline
         );
 
-        return { fratId: frat.id, overall: fratScores.hasOverallData ? fratScores.overall : null };
+        return { fratId: frat.id, overall: fratScores.hasOverallData ? fratScores.overall : null, activityTrending: fratScores.activityTrending };
       });
 
       const allScoresResults = await Promise.all(allScoresPromises);
@@ -189,6 +190,12 @@ export default function FraternityPage() {
       
       const rank = rankedFrats.findIndex(f => f.fratId === fratId) + 1;
       setFratRank(rank > 0 ? rank : null);
+
+      // Calculate activity rank
+      const activityRanked = [...allScoresResults]
+        .sort((a, b) => (b.activityTrending ?? 0) - (a.activityTrending ?? 0));
+      const actRank = activityRanked.findIndex(f => f.fratId === fratId) + 1;
+      setActivityRank(actRank > 0 ? actRank : null);
 
     } catch (error) {
       console.error('Failed to load data:', error);
@@ -490,6 +497,9 @@ export default function FraternityPage() {
                   {computedScores.activityTrending > 0 ? '+' : ''}{computedScores.activityTrending.toFixed(1)}
                 </p>
                 <p className="text-xs text-muted-foreground">Activity</p>
+                {activityRank && (
+                  <p className="text-xs text-emerald-600 font-medium mt-0.5">Rank: #{activityRank}</p>
+                )}
               </div>
             </div>
 
