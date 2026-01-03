@@ -200,6 +200,40 @@ Deno.serve(async (req) => {
     if (fratResetError) console.error('Error resetting fraternity scores:', fratResetError);
     else console.log('Reset fraternity scores to defaults');
 
+    // 15. Delete any existing reset_complete announcements first
+    const { error: deleteAnnouncementError } = await supabaseAdmin
+      .from('semester_announcements')
+      .delete()
+      .eq('type', 'reset_complete');
+    if (deleteAnnouncementError) console.error('Error deleting old announcements:', deleteAnnouncementError);
+
+    // 16. Create welcome announcement for the new semester
+    const nextMonth = now.getMonth();
+    const nextYear = now.getFullYear();
+    const nextSemester = nextMonth >= 0 && nextMonth <= 4 ? 'Spring' : 'Fall';
+    const newSemesterName = `${nextSemester} ${nextYear}`;
+
+    const { error: announcementError } = await supabaseAdmin
+      .from('semester_announcements')
+      .insert({
+        type: 'reset_complete',
+        title: `Welcome to ${newSemesterName}! 🎉`,
+        message: `A new semester means a fresh start! All previous ratings, parties, photos, and comments have been cleared.`,
+        semester_name: newSemesterName,
+        created_by: user.id,
+        expires_at: null // Never expires, users just dismiss it
+      });
+    if (announcementError) console.error('Error creating welcome announcement:', announcementError);
+    else console.log('Created welcome announcement for new semester');
+
+    // 17. Clear all user dismissals so everyone sees the new announcement
+    const { error: clearDismissalsError } = await supabaseAdmin
+      .from('user_dismissed_announcements')
+      .delete()
+      .neq('id', '00000000-0000-0000-0000-000000000000');
+    if (clearDismissalsError) console.error('Error clearing dismissals:', clearDismissalsError);
+    else console.log('Cleared user dismissals');
+
     console.log(`Semester reset completed successfully at ${new Date().toISOString()}`);
 
     return new Response(
