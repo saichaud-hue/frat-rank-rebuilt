@@ -246,25 +246,19 @@ export default function AnonymousFeed() {
         await chatMessageVoteQueries.upsert(currentUser.id, postId, nextVote);
       }
 
-      // Count actual votes from the database to get accurate counts
-      const { data: allVotes } = await supabase
-        .from('chat_message_votes')
-        .select('value')
-        .eq('message_id', postId);
+      // Use database function to recalculate votes (bypasses RLS for accurate counts)
+      const { data, error } = await supabase.rpc('recalculate_message_votes', { p_message_id: postId });
       
-      const newUpvotes = allVotes?.filter(v => v.value === 1).length || 0;
-      const newDownvotes = allVotes?.filter(v => v.value === -1).length || 0;
-      
-      await chatMessageQueries.update(postId, { upvotes: newUpvotes, downvotes: newDownvotes });
-
-      // Update local state with server truth
-      setPosts(prev => prev.map(p => {
-        if (p.id !== postId) return p;
-        return { ...p, upvotes: newUpvotes, downvotes: newDownvotes };
-      }));
-      
-      if (selectedPost?.id === postId) {
-        setSelectedPost(prev => prev ? { ...prev, upvotes: newUpvotes, downvotes: newDownvotes } : null);
+      if (!error && data && data.length > 0) {
+        const { new_upvotes, new_downvotes } = data[0];
+        // Update local state with server truth
+        setPosts(prev => prev.map(p => 
+          p.id === postId ? { ...p, upvotes: new_upvotes, downvotes: new_downvotes } : p
+        ));
+        
+        if (selectedPost?.id === postId) {
+          setSelectedPost(prev => prev ? { ...prev, upvotes: new_upvotes, downvotes: new_downvotes } : null);
+        }
       }
     } catch (error) {
       console.error('Failed to vote:', error);
@@ -335,25 +329,20 @@ export default function AnonymousFeed() {
         await chatMessageVoteQueries.upsert(currentUser.id, commentId, nextVote);
       }
 
-      // Count actual votes from database
-      const { data: allVotes } = await supabase
-        .from('chat_message_votes')
-        .select('value')
-        .eq('message_id', commentId);
+      // Use database function to recalculate votes
+      const { data, error } = await supabase.rpc('recalculate_message_votes', { p_message_id: commentId });
       
-      const newUpvotes = allVotes?.filter(v => v.value === 1).length || 0;
-      const newDownvotes = allVotes?.filter(v => v.value === -1).length || 0;
-      
-      await chatMessageQueries.update(commentId, { upvotes: newUpvotes, downvotes: newDownvotes });
-
-      // Update local state with server truth
-      setComments(prev => {
-        const postComments = prev[selectedPost.id] || [];
-        const updated = postComments.map(c => 
-          c.id === commentId ? { ...c, upvotes: newUpvotes, downvotes: newDownvotes } : c
-        );
-        return { ...prev, [selectedPost.id]: updated };
-      });
+      if (!error && data && data.length > 0) {
+        const { new_upvotes, new_downvotes } = data[0];
+        // Update local state with server truth
+        setComments(prev => {
+          const postComments = prev[selectedPost.id] || [];
+          const updated = postComments.map(c => 
+            c.id === commentId ? { ...c, upvotes: new_upvotes, downvotes: new_downvotes } : c
+          );
+          return { ...prev, [selectedPost.id]: updated };
+        });
+      }
     } catch (error) {
       console.error('Failed to vote:', error);
       toast.error('Failed to save vote');

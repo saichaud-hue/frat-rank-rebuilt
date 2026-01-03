@@ -748,7 +748,13 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      recalculate_message_votes: {
+        Args: { p_message_id: string }
+        Returns: {
+          new_downvotes: number
+          new_upvotes: number
+        }[]
+      }
     }
     Enums: {
       [_ in never]: never
