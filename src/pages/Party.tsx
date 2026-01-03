@@ -278,36 +278,36 @@ export default function PartyPage() {
           </div>
         ) : (
           // Before/during party: Show "Are you going?" buttons
-          <div className="mt-4 space-y-2">
-            <p className="text-sm text-center opacity-80 font-medium">Are you going?</p>
-            <div className="grid grid-cols-2 gap-2">
+          <div className="mt-5 space-y-3">
+            <p className="text-base text-center font-semibold">Are you going?</p>
+            <div className="grid grid-cols-2 gap-3">
               <button
                 onClick={() => handleAttendanceVote(true)}
                 disabled={attendanceLoading}
                 className={cn(
-                  "flex flex-col items-center gap-1 p-3 rounded-xl transition-all active:scale-95",
+                  "flex flex-col items-center gap-1 p-4 rounded-xl transition-all active:scale-95 shadow-lg",
                   userAttendance === true 
-                    ? "bg-white text-emerald-600 font-bold" 
-                    : "bg-white/15 hover:bg-white/25"
+                    ? "bg-emerald-500 text-white ring-2 ring-white" 
+                    : "bg-white text-emerald-600 hover:bg-emerald-50"
                 )}
               >
-                <Check className="h-5 w-5" />
-                <span className="text-lg font-bold">{attendanceCounts.going}</span>
-                <span className="text-xs opacity-70">Yes</span>
+                <Check className="h-6 w-6" />
+                <span className="text-2xl font-bold">{attendanceCounts.going}</span>
+                <span className="text-xs font-medium">Yes</span>
               </button>
               <button
                 onClick={() => handleAttendanceVote(false)}
                 disabled={attendanceLoading}
                 className={cn(
-                  "flex flex-col items-center gap-1 p-3 rounded-xl transition-all active:scale-95",
+                  "flex flex-col items-center gap-1 p-4 rounded-xl transition-all active:scale-95 shadow-lg",
                   userAttendance === false 
-                    ? "bg-white text-red-500 font-bold" 
-                    : "bg-white/15 hover:bg-white/25"
+                    ? "bg-rose-500 text-white ring-2 ring-white" 
+                    : "bg-white text-rose-500 hover:bg-rose-50"
                 )}
               >
-                <X className="h-5 w-5" />
-                <span className="text-lg font-bold">{attendanceCounts.notGoing}</span>
-                <span className="text-xs opacity-70">No</span>
+                <X className="h-6 w-6" />
+                <span className="text-2xl font-bold">{attendanceCounts.notGoing}</span>
+                <span className="text-xs font-medium">No</span>
               </button>
             </div>
           </div>
