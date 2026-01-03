@@ -14,6 +14,10 @@ import { toast } from 'sonner';
 
 type SortType = 'hot' | 'new' | 'top';
 
+interface AnonymousFeedProps {
+  initialSort?: SortType;
+}
+
 // Anonymous name generator
 const adjectives = ['Swift', 'Brave', 'Clever', 'Mighty', 'Silent', 'Wild', 'Bold', 'Calm', 'Wise', 'Quick', 'Noble', 'Proud', 'Fierce', 'Keen', 'Sly'];
 const animals = ['Fox', 'Wolf', 'Bear', 'Eagle', 'Hawk', 'Lion', 'Tiger', 'Owl', 'Falcon', 'Panther', 'Lynx', 'Raven', 'Badger', 'Stag', 'Viper'];
@@ -28,14 +32,14 @@ const generateAnonymousName = (seed: string) => {
   return `${adjectives[adjIndex]}${animals[animalIndex]}`;
 };
 
-export default function AnonymousFeed() {
+export default function AnonymousFeed({ initialSort }: AnonymousFeedProps) {
   const { user } = useAuth();
   const [posts, setPosts] = useState<Post[]>([]);
   const [frozenPostOrder, setFrozenPostOrder] = useState<string[]>([]); // Order frozen at load time
   const [comments, setComments] = useState<Record<string, Comment[]>>({});
   const [userVotes, setUserVotes] = useState<Record<string, number>>({});
   const [loading, setLoading] = useState(true);
-  const [sortBy, setSortBy] = useState<SortType>('hot');
+  const [sortBy, setSortBy] = useState<SortType>(initialSort || 'hot');
   const [showComposer, setShowComposer] = useState(false);
   const [newPostText, setNewPostText] = useState('');
   const [submitting, setSubmitting] = useState(false);

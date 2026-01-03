@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo, useRef, useCallback } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { 
   ThumbsUp, 
   ThumbsDown, 
@@ -128,6 +128,7 @@ interface ChatItem {
 const createPageUrl = (path: string) => path;
 
 export default function Activity() {
+  const navigate = useNavigate();
   const { user } = useAuth();
 
   // Per-user ID (use auth user id when available; fallback for safety)
@@ -962,7 +963,7 @@ export default function Activity() {
               What People Are Saying
             </h3>
             <button
-              onClick={() => setShowFeedView(true)}
+              onClick={() => navigate('/Posts', { state: { initialSort: 'hot' } })}
               className="text-xs font-semibold text-primary hover:underline"
             >
               See all
@@ -970,7 +971,7 @@ export default function Activity() {
           </div>
           
           <div className="space-y-2">
-            {topPosts.slice(0, 2).map((post) => {
+            {topPosts.slice(0, 3).map((post) => {
               const netVotes = post.upvotes - post.downvotes;
               const isHot = netVotes >= 3 || (post.replies?.length || 0) >= 2;
               
