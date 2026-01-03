@@ -277,6 +277,7 @@ export default function Leaderboard() {
 
     await recordUserAction();
     await loadFraternities();
+    window.dispatchEvent(new CustomEvent('touse:tutorial:frat-rated'));
   };
 
   const handleRateParty = async (party: any) => {
