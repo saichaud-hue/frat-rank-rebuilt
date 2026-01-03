@@ -1,5 +1,5 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
-import { MessageSquare, ThumbsUp, ThumbsDown, Reply, Send, Smile, Meh, Frown, X } from 'lucide-react';
+import { useCallback, useEffect, useMemo, useState, useRef } from 'react';
+import { MessageSquare, ChevronUp, ChevronDown, Reply, Send, Smile, Meh, Frown, X, CornerDownRight } from 'lucide-react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
@@ -7,6 +7,7 @@ import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Skeleton } from '@/components/ui/skeleton';
 import { formatTimeAgo } from '@/utils';
+import { cn } from '@/lib/utils';
 import { 
   partyCommentQueries, 
   fraternityCommentQueries, 
@@ -47,6 +48,9 @@ export default function CommentSection({ entityId, entityType }: CommentSectionP
   const [submitting, setSubmitting] = useState(false);
   const [replyingTo, setReplyingTo] = useState<ReplyingTo | null>(null);
   const [myVotesByCommentId, setMyVotesByCommentId] = useState<Record<string, 1 | -1>>({});
+  
+  // Lock to prevent rapid clicking from causing duplicate votes
+  const votingLock = useRef<Set<string>>(new Set());
 
   const commentQueries = entityType === 'party' ? partyCommentQueries : fraternityCommentQueries;
   const voteQueries = entityType === 'party' ? partyCommentVoteQueries : fraternityCommentVoteQueries;
@@ -172,45 +176,76 @@ export default function CommentSection({ entityId, entityType }: CommentSectionP
     }
   };
 
-  const handleVote = useCallback(async (commentId: string, value: 1 | -1) => {
+  const handleVote = useCallback(async (commentId: string, direction: 1 | -1) => {
+    // Prevent rapid clicking
+    if (votingLock.current.has(commentId)) {
+      return;
+    }
+
+    const user = await getCurrentUser();
+    if (!user) return;
+
+    votingLock.current.add(commentId);
+
+    const currentVote = myVotesByCommentId[commentId] || 0;
+    
+    // Determine next vote using deterministic state machine
+    let nextVote: number;
+    if (direction === 1) {
+      nextVote = currentVote === 1 ? 0 : 1;
+    } else {
+      nextVote = currentVote === -1 ? 0 : -1;
+    }
+
+    // Calculate delta for upvotes and downvotes
+    let upvoteDelta = 0;
+    let downvoteDelta = 0;
+    
+    if (currentVote === 1) upvoteDelta -= 1;
+    if (currentVote === -1) downvoteDelta -= 1;
+    if (nextVote === 1) upvoteDelta += 1;
+    if (nextVote === -1) downvoteDelta += 1;
+
+    // Optimistic update
+    setComments(prev => prev.map(c => {
+      if (c.id !== commentId) return c;
+      return {
+        ...c,
+        upvotes: Math.max(0, (c.upvotes ?? 0) + upvoteDelta),
+        downvotes: Math.max(0, (c.downvotes ?? 0) + downvoteDelta),
+      };
+    }));
+
+    if (nextVote === 0) {
+      setMyVotesByCommentId(prev => {
+        const next = { ...prev };
+        delete next[commentId];
+        return next;
+      });
+    } else {
+      setMyVotesByCommentId(prev => ({ ...prev, [commentId]: nextVote as 1 | -1 }));
+    }
+
     try {
-      const user = await getCurrentUser();
-      if (!user) return;
+      // Update vote in database
+      await voteQueries.upsert(user.id, commentId, nextVote);
 
-      const currentVote = myVotesByCommentId[commentId];
-      const newVote = currentVote === value ? 0 : value;
-
-      await voteQueries.upsert(user.id, commentId, newVote);
-
-      if (newVote === 0) {
-        setMyVotesByCommentId((prev) => {
-          const next = { ...prev };
-          delete next[commentId];
-          return next;
-        });
-      } else {
-        setMyVotesByCommentId((prev) => ({ ...prev, [commentId]: newVote as 1 | -1 }));
-      }
-
-      // Update comment counts
+      // Update comment counts in database
       const comment = comments.find(c => c.id === commentId);
       if (comment) {
-        let upvotes = comment.upvotes ?? 0;
-        let downvotes = comment.downvotes ?? 0;
-        
-        if (currentVote === 1) upvotes--;
-        if (currentVote === -1) downvotes--;
-        if (newVote === 1) upvotes++;
-        if (newVote === -1) downvotes++;
-
-        await commentQueries.update(commentId, { upvotes, downvotes });
+        const newUpvotes = Math.max(0, (comment.upvotes ?? 0) + upvoteDelta);
+        const newDownvotes = Math.max(0, (comment.downvotes ?? 0) + downvoteDelta);
+        await commentQueries.update(commentId, { upvotes: newUpvotes, downvotes: newDownvotes });
       }
-
-      await loadComments();
     } catch (error) {
       console.error('Failed to vote:', error);
+      // Revert on error
+      await loadComments();
+      await loadMyVotes();
+    } finally {
+      votingLock.current.delete(commentId);
     }
-  }, [comments, myVotesByCommentId, voteQueries, commentQueries, loadComments]);
+  }, [comments, myVotesByCommentId, voteQueries, commentQueries, loadComments, loadMyVotes]);
 
   const handleStartReply = (comment: Comment) => {
     const snippet = sanitizeCommentText(comment.text ?? '').slice(0, 50);
@@ -316,35 +351,40 @@ export default function CommentSection({ entityId, entityType }: CommentSectionP
 
           <p className="text-sm mt-2">{displayText}</p>
 
-          <div className="flex items-center gap-2 mt-2">
-            <Button
-              variant="ghost"
-              size="sm"
+          {/* Vote controls - matching posts section style */}
+          <div className="flex items-center gap-3 mt-2">
+            <button
               onClick={() => handleVote(comment.id, 1)}
-              className={`h-8 text-xs ${myVote === 1 ? 'text-emerald-600 bg-emerald-50' : ''}`}
+              className={cn(
+                "flex items-center text-xs font-medium transition-all active:scale-90",
+                myVote === 1 ? "text-emerald-500" : "text-muted-foreground hover:text-emerald-500"
+              )}
             >
-              <ThumbsUp className="h-3.5 w-3.5 mr-1" />
-              {upvotes}
-            </Button>
-            <Button
-              variant="ghost"
-              size="sm"
+              <ChevronUp className="h-4 w-4" />
+            </button>
+            <span className={cn(
+              "text-xs font-bold min-w-[20px] text-center",
+              netScore > 0 ? "text-emerald-500" : netScore < 0 ? "text-red-500" : "text-muted-foreground"
+            )}>
+              {netScore > 0 ? `+${netScore}` : netScore}
+            </span>
+            <button
               onClick={() => handleVote(comment.id, -1)}
-              className={`h-8 text-xs ${myVote === -1 ? 'text-red-500 bg-red-50' : ''}`}
+              className={cn(
+                "flex items-center text-xs font-medium transition-all active:scale-90",
+                myVote === -1 ? "text-red-500" : "text-muted-foreground hover:text-red-500"
+              )}
             >
-              <ThumbsDown className="h-3.5 w-3.5 mr-1" />
-              {downvotes}
-            </Button>
+              <ChevronDown className="h-4 w-4" />
+            </button>
 
-            <Button
-              variant="ghost"
-              size="sm"
+            <button
               onClick={() => handleStartReply(comment)}
-              className="h-8 text-xs"
+              className="flex items-center gap-1 text-xs font-medium text-muted-foreground hover:text-primary transition-all ml-2"
             >
-              <Reply className="h-3.5 w-3.5 mr-1" />
+              <CornerDownRight className="h-3 w-3" />
               Reply
-            </Button>
+            </button>
           </div>
         </div>
 
