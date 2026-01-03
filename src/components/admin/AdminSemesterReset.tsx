@@ -1,41 +1,22 @@
 import { useState } from 'react';
 import { AlertTriangle, RotateCcw, Check } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { AdminSemesterWarning } from './AdminSemesterWarning';
 
 export function AdminSemesterReset() {
-  const [confirmText, setConfirmText] = useState('');
   const [isResetting, setIsResetting] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
 
-  // Generate expected confirmation text based on current semester
-  const getExpectedConfirmation = () => {
-    const now = new Date();
-    const month = now.getMonth();
-    const year = now.getFullYear();
-    // Spring: Jan-May, Fall: Aug-Dec
-    const semester = month >= 0 && month <= 4 ? 'SPRING' : 'FALL';
-    return `RESET ${semester} ${year}`;
-  };
-
-  const expectedText = getExpectedConfirmation();
-  const isConfirmValid = confirmText.trim().toUpperCase() === expectedText;
-
   const handleReset = async () => {
-    if (!isConfirmValid) {
-      toast.error('Please type the confirmation text exactly');
-      return;
-    }
-
     setIsResetting(true);
     try {
       const { data, error } = await supabase.functions.invoke('semester-reset', {
-        body: { confirmationText: confirmText.trim().toUpperCase() }
+        body: { confirm: true },
       });
 
       if (error) {
@@ -44,7 +25,6 @@ export function AdminSemesterReset() {
 
       if (data?.success) {
         setShowSuccess(true);
-        setConfirmText('');
         toast.success('Semester reset completed successfully!');
       } else {
         throw new Error(data?.error || 'Reset failed');
@@ -130,37 +110,46 @@ export function AdminSemesterReset() {
             </p>
           </div>
 
-          <div className="space-y-2 pt-2">
-            <label className="text-sm font-medium">
-              Type <span className="font-mono bg-muted px-1.5 py-0.5 rounded text-destructive">{expectedText}</span> to confirm:
-            </label>
-            <Input
-              value={confirmText}
-              onChange={(e) => setConfirmText(e.target.value)}
-              placeholder="Type confirmation here..."
-              className="font-mono"
-              disabled={isResetting}
-            />
-          </div>
-
-          <Button
-            variant="destructive"
-            className="w-full"
-            disabled={!isConfirmValid || isResetting}
-            onClick={handleReset}
-          >
-            {isResetting ? (
-              <>
-                <RotateCcw className="h-4 w-4 mr-2 animate-spin" />
-                Resetting...
-              </>
-            ) : (
-              <>
-                <RotateCcw className="h-4 w-4 mr-2" />
-                Reset Semester
-              </>
-            )}
-          </Button>
+          <AlertDialog>
+            <AlertDialogTrigger asChild>
+              <Button
+                variant="destructive"
+                className="w-full"
+                disabled={isResetting}
+              >
+                {isResetting ? (
+                  <>
+                    <RotateCcw className="h-4 w-4 mr-2 animate-spin" />
+                    Resetting...
+                  </>
+                ) : (
+                  <>
+                    <RotateCcw className="h-4 w-4 mr-2" />
+                    Reset Semester
+                  </>
+                )}
+              </Button>
+            </AlertDialogTrigger>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>Confirm semester reset</AlertDialogTitle>
+                <AlertDialogDescription>
+                  This will permanently delete this semester’s parties, ratings, photos, comments, chat, votes, and attendance.
+                  User accounts will remain.
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel disabled={isResetting}>Cancel</AlertDialogCancel>
+                <AlertDialogAction
+                  onClick={handleReset}
+                  disabled={isResetting}
+                  className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                >
+                  Yes, reset now
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
         </CardContent>
       </Card>
       </div>
