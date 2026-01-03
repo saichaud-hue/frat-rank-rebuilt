@@ -48,7 +48,7 @@ export default function PartyFilters({ filters, onFiltersChange, fraternities }:
         </SelectTrigger>
         <SelectContent className="rounded-xl border-primary/20 bg-popover">
           <SelectItem value="all">All Types</SelectItem>
-          <SelectItem value="casual">Casual</SelectItem>
+          <SelectItem value="late-night">Late Night</SelectItem>
           <SelectItem value="themed">Themed</SelectItem>
           <SelectItem value="formal">Formal</SelectItem>
           <SelectItem value="mixer">Mixer</SelectItem>
