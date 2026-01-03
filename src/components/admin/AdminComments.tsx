@@ -2,7 +2,7 @@ import { useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { EyeOff, Trash2, Loader2, Mail, UserX } from "lucide-react";
+import { EyeOff, Trash2, Loader2, Mail } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { UserActionSheet } from "./UserActionSheet";
@@ -142,7 +142,16 @@ export function AdminComments() {
           const userEmail = emails[c.user_id];
           
           return (
-            <div key={`${c.type}-${c.id}`} className="p-4 rounded-xl border bg-card">
+            <div 
+              key={`${c.type}-${c.id}`} 
+              className="p-4 rounded-xl border bg-card cursor-pointer hover:bg-accent/50 transition-colors"
+              onClick={() => setSelectedUser({
+                userId: c.user_id,
+                email: userEmail || "Unknown",
+                contentId: c.id,
+                contentType: "comment",
+              })}
+            >
               <div className="flex items-start justify-between gap-3">
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 mb-1 flex-wrap">
@@ -157,19 +166,11 @@ export function AdminComments() {
                   </div>
                   <p className="text-sm line-clamp-3">{c.text}</p>
                   
-                  {/* User info */}
                   <div className="flex items-center gap-2 mt-2 flex-wrap">
-                    {userEmail ? (
-                      <a
-                        href={`mailto:${userEmail}`}
-                        className="flex items-center gap-1 text-xs text-primary hover:underline"
-                      >
-                        <Mail className="h-3 w-3" />
-                        {userEmail}
-                      </a>
-                    ) : (
-                      <span className="text-xs text-muted-foreground">Unknown user</span>
-                    )}
+                    <span className="flex items-center gap-1 text-xs text-primary">
+                      <Mail className="h-3 w-3" />
+                      {userEmail || "Unknown user"}
+                    </span>
                     <span className="text-xs text-muted-foreground">•</span>
                     <span className="text-xs text-muted-foreground">
                       {c.created_at
@@ -179,49 +180,37 @@ export function AdminComments() {
                   </div>
                 </div>
 
-                <div className="flex flex-col gap-2 shrink-0">
-                  <div className="flex gap-2">
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      className="h-9 w-9 p-0"
-                      disabled={actionLoading === c.id}
-                      onClick={() => hideComment(c.id, c.type)}
-                      title="Hide comment"
-                    >
-                      {actionLoading === c.id ? (
-                        <Loader2 className="h-4 w-4 animate-spin" />
-                      ) : (
-                        <EyeOff className="h-4 w-4" />
-                      )}
-                    </Button>
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      className="h-9 w-9 p-0"
-                      disabled={actionLoading === c.id}
-                      onClick={() => deleteComment(c.id, c.type)}
-                      title="Delete comment"
-                    >
-                      <Trash2 className="h-4 w-4 text-red-600" />
-                    </Button>
-                  </div>
-                  {userEmail && (
-                    <Button
-                      size="sm"
-                      variant="ghost"
-                      className="h-8 text-xs"
-                      onClick={() => setSelectedUser({
-                        userId: c.user_id,
-                        email: userEmail,
-                        contentId: c.id,
-                        contentType: "comment",
-                      })}
-                    >
-                      <UserX className="h-3 w-3 mr-1" />
-                      Actions
-                    </Button>
-                  )}
+                <div className="flex gap-2 shrink-0">
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="h-9 w-9 p-0"
+                    disabled={actionLoading === c.id}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      hideComment(c.id, c.type);
+                    }}
+                    title="Hide comment"
+                  >
+                    {actionLoading === c.id ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : (
+                      <EyeOff className="h-4 w-4" />
+                    )}
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="h-9 w-9 p-0"
+                    disabled={actionLoading === c.id}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      deleteComment(c.id, c.type);
+                    }}
+                    title="Delete comment"
+                  >
+                    <Trash2 className="h-4 w-4 text-red-600" />
+                  </Button>
                 </div>
               </div>
             </div>
@@ -229,16 +218,14 @@ export function AdminComments() {
         })}
       </div>
 
-      {selectedUser && (
-        <UserActionSheet
-          open={!!selectedUser}
-          onOpenChange={(open) => !open && setSelectedUser(null)}
-          userId={selectedUser.userId}
-          userEmail={selectedUser.email}
-          contentId={selectedUser.contentId}
-          contentType="comment"
-        />
-      )}
+      <UserActionSheet
+        open={!!selectedUser}
+        onOpenChange={(open) => !open && setSelectedUser(null)}
+        userId={selectedUser?.userId || ""}
+        userEmail={selectedUser?.email || ""}
+        contentId={selectedUser?.contentId}
+        contentType="comment"
+      />
     </>
   );
 }

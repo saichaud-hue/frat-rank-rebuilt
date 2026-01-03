@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
-import { Check, X, Loader2, Mail, UserX } from "lucide-react";
+import { Check, X, Loader2, Mail } from "lucide-react";
 import { format } from "date-fns";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { UserActionSheet } from "./UserActionSheet";
@@ -125,7 +125,19 @@ export function AdminParties() {
           const userEmail = p.user_id ? emails[p.user_id] : p.contact_email;
           
           return (
-            <div key={p.id} className="p-4 rounded-xl border bg-card">
+            <div 
+              key={p.id} 
+              className="p-4 rounded-xl border bg-card cursor-pointer hover:bg-accent/50 transition-colors"
+              onClick={() => {
+                if (p.user_id) {
+                  setSelectedUser({
+                    userId: p.user_id,
+                    email: userEmail || "Unknown",
+                    contentId: p.id,
+                  });
+                }
+              }}
+            >
               <div className="flex items-start justify-between gap-3">
                 <div className="flex-1 min-w-0">
                   <p className="font-semibold truncate">{p.title ?? "Untitled party"}</p>
@@ -140,65 +152,43 @@ export function AdminParties() {
                       : "No time set"}
                   </p>
                   
-                  {/* Submitter info */}
-                  <div className="mt-2 p-2 rounded-lg bg-muted/50">
-                    <p className="text-xs text-muted-foreground font-medium mb-1">Submitted by:</p>
-                    {userEmail ? (
-                      <a
-                        href={`mailto:${userEmail}`}
-                        className="flex items-center gap-1 text-xs text-primary hover:underline"
-                      >
-                        <Mail className="h-3 w-3" />
-                        {userEmail}
-                      </a>
-                    ) : (
-                      <p className="text-xs text-muted-foreground">Unknown user</p>
-                    )}
+                  <div className="flex items-center gap-1 mt-2 text-xs text-primary">
+                    <Mail className="h-3 w-3" />
+                    {userEmail || "Unknown user"}
                   </div>
                 </div>
 
-                <div className="flex flex-col gap-2 shrink-0">
-                  <div className="flex gap-2">
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      className="h-9 w-9 p-0"
-                      disabled={actionLoading === p.id}
-                      onClick={() => setStatus(p.id, "upcoming")}
-                      title="Approve"
-                    >
-                      {actionLoading === p.id ? (
-                        <Loader2 className="h-4 w-4 animate-spin" />
-                      ) : (
-                        <Check className="h-4 w-4 text-green-600" />
-                      )}
-                    </Button>
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      className="h-9 w-9 p-0"
-                      disabled={actionLoading === p.id}
-                      onClick={() => setStatus(p.id, "rejected")}
-                      title="Reject"
-                    >
-                      <X className="h-4 w-4 text-red-600" />
-                    </Button>
-                  </div>
-                  {p.user_id && userEmail && (
-                    <Button
-                      size="sm"
-                      variant="ghost"
-                      className="h-8 text-xs"
-                      onClick={() => setSelectedUser({
-                        userId: p.user_id!,
-                        email: userEmail,
-                        contentId: p.id,
-                      })}
-                    >
-                      <UserX className="h-3 w-3 mr-1" />
-                      Actions
-                    </Button>
-                  )}
+                <div className="flex gap-2 shrink-0">
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="h-9 w-9 p-0"
+                    disabled={actionLoading === p.id}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setStatus(p.id, "upcoming");
+                    }}
+                    title="Approve"
+                  >
+                    {actionLoading === p.id ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : (
+                      <Check className="h-4 w-4 text-green-600" />
+                    )}
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="h-9 w-9 p-0"
+                    disabled={actionLoading === p.id}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setStatus(p.id, "rejected");
+                    }}
+                    title="Reject"
+                  >
+                    <X className="h-4 w-4 text-red-600" />
+                  </Button>
                 </div>
               </div>
             </div>
@@ -206,16 +196,14 @@ export function AdminParties() {
         })}
       </div>
 
-      {selectedUser && (
-        <UserActionSheet
-          open={!!selectedUser}
-          onOpenChange={(open) => !open && setSelectedUser(null)}
-          userId={selectedUser.userId}
-          userEmail={selectedUser.email}
-          contentId={selectedUser.contentId}
-          contentType="party"
-        />
-      )}
+      <UserActionSheet
+        open={!!selectedUser}
+        onOpenChange={(open) => !open && setSelectedUser(null)}
+        userId={selectedUser?.userId || ""}
+        userEmail={selectedUser?.email || ""}
+        contentId={selectedUser?.contentId}
+        contentType="party"
+      />
     </>
   );
 }
