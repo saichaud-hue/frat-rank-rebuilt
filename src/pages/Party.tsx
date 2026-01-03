@@ -226,9 +226,9 @@ export default function PartyPage() {
   const status = getPartyStatus();
 
   const statusConfig = {
-    live: { bg: 'bg-red-500', text: 'Live Now', headerBg: 'bg-gradient-to-br from-red-500 to-orange-500' },
-    upcoming: { bg: 'bg-emerald-500', text: 'Upcoming', headerBg: 'bg-gradient-to-br from-emerald-500 to-teal-500' },
-    completed: { bg: 'bg-primary', text: 'Completed', headerBg: 'bg-gradient-to-br from-primary to-violet-600' },
+    live: { bg: 'bg-red-500', text: 'Live Now', headerBg: 'bg-gradient-to-br from-red-500 to-orange-500', textColor: 'text-white' },
+    upcoming: { bg: 'bg-emerald-500', text: 'Upcoming', headerBg: 'bg-gradient-to-br from-emerald-500 to-teal-500', textColor: 'text-white' },
+    completed: { bg: 'bg-primary', text: 'Completed', headerBg: 'gradient-primary', textColor: 'text-primary-foreground' },
   };
   const config = statusConfig[status];
 
@@ -249,7 +249,7 @@ export default function PartyPage() {
       </Button>
 
       {/* Header Card */}
-      <div className={`rounded-2xl ${config.headerBg} p-5 text-white`}>
+      <div className={`rounded-2xl ${config.headerBg} p-5 ${config.textColor}`}>
         {/* Status & Theme Badges */}
         <div className="flex items-center justify-between mb-3">
           <Badge className={`${config.bg} text-white border-0 ${status === 'live' ? 'animate-pulse' : ''}`}>
