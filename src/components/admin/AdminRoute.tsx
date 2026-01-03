@@ -3,17 +3,30 @@ import { useAdminCheck } from "@/hooks/useAdminCheck";
 import { useAuth } from "@/contexts/AuthContext";
 import { Loader2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 
 export function AdminRoute({ children }: { children: React.ReactNode }) {
   const { user, loading: authLoading } = useAuth();
-  const { isAdmin, loading: adminLoading } = useAdminCheck();
+  const { isAdmin, loading: adminLoading, refreshAdminStatus } = useAdminCheck();
   const { toast } = useToast();
+  const hasShownToast = useRef(false);
 
   const loading = authLoading || adminLoading;
 
+  // Refresh admin status when tab becomes visible
   useEffect(() => {
-    if (!loading && user && !isAdmin) {
+    const handleVisibility = () => {
+      if (document.visibilityState === "visible") {
+        refreshAdminStatus();
+      }
+    };
+    document.addEventListener("visibilitychange", handleVisibility);
+    return () => document.removeEventListener("visibilitychange", handleVisibility);
+  }, [refreshAdminStatus]);
+
+  useEffect(() => {
+    if (!loading && user && !isAdmin && !hasShownToast.current) {
+      hasShownToast.current = true;
       toast({
         title: "Access denied",
         description: "You don't have admin access.",

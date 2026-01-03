@@ -3,30 +3,62 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { AdminParties } from "@/components/admin/AdminParties";
 import { AdminComments } from "@/components/admin/AdminComments";
 import { AdminPosts } from "@/components/admin/AdminPosts";
-import { ChevronLeft, Shield } from "lucide-react";
+import { ChevronLeft, Shield, RefreshCw } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
+import { useQueryClient } from "@tanstack/react-query";
+import { useCallback, useEffect, useState } from "react";
 
 export default function Admin() {
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
+  const [isRefreshing, setIsRefreshing] = useState(false);
+
+  const handleRefresh = useCallback(async () => {
+    setIsRefreshing(true);
+    await queryClient.invalidateQueries({ queryKey: ["admin"] });
+    setIsRefreshing(false);
+  }, [queryClient]);
+
+  // Refresh data when tab becomes visible
+  useEffect(() => {
+    const handleVisibility = () => {
+      if (document.visibilityState === "visible") {
+        queryClient.invalidateQueries({ queryKey: ["admin"] });
+      }
+    };
+    document.addEventListener("visibilitychange", handleVisibility);
+    return () => document.removeEventListener("visibilitychange", handleVisibility);
+  }, [queryClient]);
 
   return (
     <div className="min-h-screen bg-background pb-24">
       {/* Header */}
       <div className="sticky top-0 z-10 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 border-b">
-        <div className="flex items-center gap-3 px-4 h-14">
+        <div className="flex items-center justify-between px-4 h-14">
+          <div className="flex items-center gap-3">
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-9 w-9"
+              onClick={() => navigate(-1)}
+            >
+              <ChevronLeft className="h-5 w-5" />
+            </Button>
+            <div className="flex items-center gap-2">
+              <Shield className="h-5 w-5 text-primary" />
+              <h1 className="text-lg font-semibold">Admin</h1>
+            </div>
+          </div>
           <Button
             variant="ghost"
             size="icon"
             className="h-9 w-9"
-            onClick={() => navigate(-1)}
+            onClick={handleRefresh}
+            disabled={isRefreshing}
           >
-            <ChevronLeft className="h-5 w-5" />
+            <RefreshCw className={`h-4 w-4 ${isRefreshing ? "animate-spin" : ""}`} />
           </Button>
-          <div className="flex items-center gap-2">
-            <Shield className="h-5 w-5 text-primary" />
-            <h1 className="text-lg font-semibold">Admin</h1>
-          </div>
         </div>
       </div>
 
