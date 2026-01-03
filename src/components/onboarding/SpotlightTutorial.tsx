@@ -54,6 +54,8 @@ const tutorialSteps: TutorialStep[] = [
     highlightSelector: '[data-tutorial="where-going"]',
     position: 'bottom',
     tip: 'Voting resets daily at 5 AM',
+    interactive: true,
+    actionHint: 'Tap any option to cast your vote',
   },
   {
     id: 'add-option',
