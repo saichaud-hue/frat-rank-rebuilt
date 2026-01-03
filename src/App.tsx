@@ -33,11 +33,55 @@ checkStreakStatus();
 // Scroll to top on route change
 const ScrollToTop = () => {
   const { pathname } = useLocation();
-  
+
   useEffect(() => {
     window.scrollTo(0, 0);
   }, [pathname]);
-  
+
+  return null;
+};
+
+// Safety: if an overlay leaves the app "frozen" (pointer-events:none), restore interactivity
+const PointerEventsSafety = () => {
+  const { pathname } = useLocation();
+
+  useEffect(() => {
+    const fix = () => {
+      const bodyPE = window.getComputedStyle(document.body).pointerEvents;
+      const htmlPE = window.getComputedStyle(document.documentElement).pointerEvents;
+
+      if (bodyPE === 'none' || document.body.style.pointerEvents === 'none') {
+        document.body.style.pointerEvents = 'auto';
+      }
+      if (htmlPE === 'none' || document.documentElement.style.pointerEvents === 'none') {
+        document.documentElement.style.pointerEvents = 'auto';
+      }
+
+      // Sometimes children or inert attribute can block interactions
+      Array.from(document.body.children).forEach((el) => {
+        const h = el as HTMLElement;
+        if (h.style.pointerEvents === 'none') h.style.pointerEvents = 'auto';
+        if (h.hasAttribute('inert')) h.removeAttribute('inert');
+      });
+    };
+
+    // Run immediately + a few times after route changes
+    fix();
+    const id = window.setInterval(fix, 400);
+    const timeout = window.setTimeout(() => window.clearInterval(id), 4000);
+
+    const onFocus = () => fix();
+    window.addEventListener('focus', onFocus);
+    document.addEventListener('visibilitychange', onFocus);
+
+    return () => {
+      window.clearInterval(id);
+      window.clearTimeout(timeout);
+      window.removeEventListener('focus', onFocus);
+      document.removeEventListener('visibilitychange', onFocus);
+    };
+  }, [pathname]);
+
   return null;
 };
 
@@ -50,6 +94,7 @@ const App = () => (
         <SemesterAnnouncementPopup />
         <BrowserRouter>
           <ScrollToTop />
+          <PointerEventsSafety />
           <Routes>
             {/* Public routes */}
             <Route path="/auth" element={<Auth />} />
