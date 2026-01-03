@@ -146,6 +146,7 @@ export default function PartyPage() {
     setShowRatingForm(false);
     loadParty();
     setRatingsRefreshKey((k) => k + 1);
+    window.dispatchEvent(new CustomEvent('touse:tutorial:party-rated'));
   };
 
   const handleRateClick = async () => {
