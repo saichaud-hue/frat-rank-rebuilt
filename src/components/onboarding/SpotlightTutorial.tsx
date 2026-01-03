@@ -205,6 +205,47 @@ export default function SpotlightTutorial({ onComplete }: SpotlightTutorialProps
   const isCenteredStep = step.position === 'center';
   const isInteractiveStep = step.interactive === true;
 
+  // Safety: Radix (Sheet/Drawer/Dialog) can occasionally leave `pointer-events: none` behind on the body,
+  // which makes the whole app feel "frozen". While in interaction mode, force clicks back on.
+  useEffect(() => {
+    if (!interactionMode) return;
+
+    const prevBodyPE = document.body.style.pointerEvents;
+    const prevHtmlPE = document.documentElement.style.pointerEvents;
+
+    document.body.style.pointerEvents = 'auto';
+    document.documentElement.style.pointerEvents = 'auto';
+
+    // Also ensure direct children aren't stuck
+    const prevChildPE = new Map<Element, string>();
+    Array.from(document.body.children).forEach((el) => {
+      prevChildPE.set(el, (el as HTMLElement).style.pointerEvents);
+      (el as HTMLElement).style.pointerEvents = 'auto';
+      (el as HTMLElement).removeAttribute('inert');
+    });
+
+    // Debug: capture clicks while in interaction mode
+    const logClick = (e: MouseEvent) => {
+      const t = e.target as HTMLElement | null;
+      if (!t) return;
+      // eslint-disable-next-line no-console
+      console.log('[tutorial] click', { tag: t.tagName, id: t.id, class: t.className });
+    };
+    window.addEventListener('click', logClick, true);
+
+    return () => {
+      window.removeEventListener('click', logClick, true);
+
+      // If the page was frozen (prev was none), do NOT restore the frozen state.
+      document.body.style.pointerEvents = prevBodyPE === 'none' ? 'auto' : prevBodyPE;
+      document.documentElement.style.pointerEvents = prevHtmlPE === 'none' ? 'auto' : prevHtmlPE;
+
+      prevChildPE.forEach((val, el) => {
+        (el as HTMLElement).style.pointerEvents = val === 'none' ? 'auto' : val;
+      });
+    };
+  }, [interactionMode]);
+
   // Find and highlight element
   const findAndHighlight = useCallback(() => {
     if (!step.highlightSelector) {
@@ -217,7 +258,7 @@ export default function SpotlightTutorial({ onComplete }: SpotlightTutorialProps
       const rect = element.getBoundingClientRect();
       setHighlightRect(rect);
       setIsNavigating(false);
-      
+
       // Scroll element into view if needed
       element.scrollIntoView({ behavior: 'smooth', block: 'center' });
     } else {
