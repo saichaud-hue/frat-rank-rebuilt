@@ -1,9 +1,13 @@
 import { useState, useMemo } from 'react';
-import { Check, Plus, X, Zap, Users, Beer, Coffee, Moon, Sparkles, PartyPopper } from 'lucide-react';
+import { Check, Plus, Zap, Users, Beer, Coffee, Moon, Sparkles, PartyPopper, ChevronDown } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Badge } from '@/components/ui/badge';
-import { Input } from '@/components/ui/input';
-import { Button } from '@/components/ui/button';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import { format, isToday } from 'date-fns';
 import type { Party, Fraternity } from '@/lib/supabase-data';
 
@@ -34,9 +38,6 @@ export default function WhereWeGoingCard({
   onAddSuggestion,
   customSuggestions,
 }: WhereWeGoingCardProps) {
-  const [showSuggestionInput, setShowSuggestionInput] = useState(false);
-  const [suggestionText, setSuggestionText] = useState('');
-
   const userMoveVote = allUserVotes[userId] || null;
   
   const moveVotes = useMemo(() => {
@@ -48,6 +49,14 @@ export default function WhereWeGoingCard({
   }, [allUserVotes]);
 
   const totalMoveVotes = Object.keys(allUserVotes).length;
+
+  // Get active fraternities for the dropdown (filter out ones already added)
+  const availableFrats = useMemo(() => {
+    const addedFratIds = new Set(customSuggestions.map(s => s.id));
+    return fraternities
+      .filter(f => f.status === 'active' && !addedFratIds.has(`frat-${f.id}`))
+      .slice(0, 10);
+  }, [fraternities, customSuggestions]);
 
   // Build all options sorted by votes
   const allOptions = useMemo(() => {
@@ -76,7 +85,7 @@ export default function WhereWeGoingCard({
       });
     });
 
-    // Add custom suggestions
+    // Add custom suggestions (frats added by users)
     customSuggestions.forEach(suggestion => {
       options.push({
         id: suggestion.id,
@@ -90,19 +99,17 @@ export default function WhereWeGoingCard({
     return options.sort((a, b) => b.votes - a.votes);
   }, [todaysParties, fraternities, moveVotes, customSuggestions]);
 
-  const handleAddSuggestion = () => {
-    if (!suggestionText.trim()) return;
-    onAddSuggestion(suggestionText.trim());
-    setSuggestionText('');
-    setShowSuggestionInput(false);
-  };
-
   const handleOptionVote = (option: typeof allOptions[0]) => {
     if (option.type === 'custom') {
       onCustomVote(option.id);
     } else {
       onVote(option.id);
     }
+  };
+
+  const handleAddFrat = (frat: Fraternity) => {
+    // Add frat as a custom suggestion with a prefixed ID
+    onAddSuggestion(frat.chapter || frat.name);
   };
 
   return (
@@ -116,7 +123,7 @@ export default function WhereWeGoingCard({
           <div className="flex items-center gap-2">
             <h2 className="text-lg font-display font-black tracking-tight">Where we going?</h2>
             <Badge variant="secondary" className="text-[10px] px-2 py-0.5 bg-primary/10 text-primary border-0">
-              {isToday(new Date()) && new Date().getHours() >= 17 ? 'Tonight' : 'Tonight'}
+              Tonight
             </Badge>
           </div>
           <p className="text-xs text-muted-foreground flex items-center gap-1.5">
@@ -132,8 +139,8 @@ export default function WhereWeGoingCard({
         )}
       </div>
 
-      {/* Options - compact list */}
-      <div className="px-4 pb-4 space-y-2">
+      {/* Options - compact list with fixed height container */}
+      <div className="px-4 pb-4 space-y-1.5 max-h-[320px] overflow-y-auto">
         {allOptions.map((option, index) => {
           const percentage = totalMoveVotes > 0 ? (option.votes / totalMoveVotes) * 100 : 0;
           const isSelected = userMoveVote === option.id;
@@ -145,7 +152,7 @@ export default function WhereWeGoingCard({
               key={option.id}
               onClick={() => handleOptionVote(option)}
               className={cn(
-                "w-full min-h-[52px] px-3 py-2.5 rounded-xl text-left relative overflow-hidden transition-all duration-200",
+                "w-full h-11 px-3 rounded-xl text-left relative overflow-hidden transition-all duration-200",
                 isSelected 
                   ? "bg-primary text-white" 
                   : "bg-muted/50 hover:bg-muted"
@@ -159,10 +166,10 @@ export default function WhereWeGoingCard({
                 />
               )}
               
-              <div className="relative flex items-center gap-3">
-                {/* Rank/Check indicator */}
+              <div className="relative flex items-center gap-2.5 h-full">
+                {/* Icon indicator */}
                 <div className={cn(
-                  "w-10 h-10 rounded-lg flex items-center justify-center shrink-0 font-display font-bold text-sm",
+                  "w-8 h-8 rounded-lg flex items-center justify-center shrink-0 text-xs font-bold",
                   isSelected 
                     ? "bg-white/20 text-white" 
                     : isLeading
@@ -170,13 +177,13 @@ export default function WhereWeGoingCard({
                       : "bg-background text-muted-foreground"
                 )}>
                   {isSelected ? (
-                    <Check className="h-5 w-5" strokeWidth={3} />
+                    <Check className="h-4 w-4" strokeWidth={3} />
                   ) : option.type === 'party' ? (
-                    <PartyPopper className="h-4 w-4" />
+                    <PartyPopper className="h-3.5 w-3.5" />
                   ) : Icon ? (
-                    <Icon className="h-4 w-4" />
+                    <Icon className="h-3.5 w-3.5" />
                   ) : option.type === 'custom' ? (
-                    <Sparkles className="h-4 w-4" />
+                    <Sparkles className="h-3.5 w-3.5" />
                   ) : (
                     index + 1
                   )}
@@ -184,20 +191,14 @@ export default function WhereWeGoingCard({
                 
                 <div className="flex-1 min-w-0">
                   <p className={cn(
-                    "font-semibold text-sm truncate",
+                    "font-semibold text-sm truncate leading-tight",
                     isSelected ? "text-white" : ""
                   )}>{option.label}</p>
-                  {option.subLabel && (
-                    <p className={cn(
-                      "text-xs truncate",
-                      isSelected ? "text-white/70" : "text-muted-foreground"
-                    )}>{option.subLabel}</p>
-                  )}
                 </div>
                 
                 {/* Vote stats */}
                 <span className={cn(
-                  "text-lg font-display font-bold tabular-nums",
+                  "text-base font-display font-bold tabular-nums",
                   isSelected ? "text-white" : "text-foreground"
                 )}>{percentage.toFixed(0)}%</span>
               </div>
@@ -205,42 +206,35 @@ export default function WhereWeGoingCard({
           );
         })}
 
-        {/* Add custom suggestion */}
-        {showSuggestionInput ? (
-          <div className="flex gap-2">
-            <Input
-              value={suggestionText}
-              onChange={(e) => setSuggestionText(e.target.value)}
-              placeholder="Add your own..."
-              className="flex-1 h-10 rounded-lg text-sm"
-              onKeyDown={(e) => e.key === 'Enter' && handleAddSuggestion()}
-              autoFocus
-            />
-            <Button
-              onClick={handleAddSuggestion}
-              disabled={!suggestionText.trim()}
-              size="sm"
-              className="h-10 w-10 rounded-lg gradient-primary"
+        {/* Add frat dropdown */}
+        {availableFrats.length > 0 && (
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <button
+                className="w-full h-10 rounded-xl border-2 border-dashed border-muted-foreground/30 flex items-center justify-center gap-2 text-muted-foreground hover:border-primary hover:text-primary transition-all"
+              >
+                <Plus className="h-4 w-4" />
+                <span className="font-medium text-sm">Add your own</span>
+                <ChevronDown className="h-3.5 w-3.5" />
+              </button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent 
+              align="center" 
+              className="w-56 bg-background border shadow-lg z-50"
+              sideOffset={4}
             >
-              <Check className="h-4 w-4" />
-            </Button>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => { setShowSuggestionInput(false); setSuggestionText(''); }}
-              className="h-10 w-10 rounded-lg"
-            >
-              <X className="h-4 w-4" />
-            </Button>
-          </div>
-        ) : (
-          <button
-            onClick={() => setShowSuggestionInput(true)}
-            className="w-full min-h-[44px] p-3 rounded-xl border-2 border-dashed border-muted-foreground/30 flex items-center justify-center gap-2 text-muted-foreground hover:border-primary hover:text-primary transition-all"
-          >
-            <Plus className="h-4 w-4" />
-            <span className="font-medium text-sm">Add your own</span>
-          </button>
+              {availableFrats.map((frat) => (
+                <DropdownMenuItem
+                  key={frat.id}
+                  onClick={() => handleAddFrat(frat)}
+                  className="flex items-center gap-2 cursor-pointer"
+                >
+                  <Sparkles className="h-4 w-4 text-primary" />
+                  <span className="font-medium">{frat.chapter || frat.name}</span>
+                </DropdownMenuItem>
+              ))}
+            </DropdownMenuContent>
+          </DropdownMenu>
         )}
       </div>
     </div>
