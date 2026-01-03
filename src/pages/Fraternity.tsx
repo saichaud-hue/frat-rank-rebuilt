@@ -51,6 +51,7 @@ export default function FraternityPage() {
   const [selectedParty, setSelectedParty] = useState<Party | null>(null);
   const [activeTab, setActiveTab] = useState<'overview' | 'parties' | 'comments'>('overview');
   const [fratRank, setFratRank] = useState<number | null>(null);
+  const [activityRank, setActivityRank] = useState<number | null>(null);
 
   useEffect(() => {
     if (fratId) loadData();
@@ -179,7 +180,7 @@ export default function FraternityPage() {
           campusBaseline
         );
 
-        return { fratId: frat.id, overall: fratScores.hasOverallData ? fratScores.overall : null };
+        return { fratId: frat.id, overall: fratScores.hasOverallData ? fratScores.overall : null, activityTrending: fratScores.activityTrending };
       });
 
       const allScoresResults = await Promise.all(allScoresPromises);
@@ -189,6 +190,12 @@ export default function FraternityPage() {
       
       const rank = rankedFrats.findIndex(f => f.fratId === fratId) + 1;
       setFratRank(rank > 0 ? rank : null);
+
+      // Calculate activity rank
+      const activityRankedFrats = [...allScoresResults]
+        .sort((a, b) => b.activityTrending - a.activityTrending);
+      const actRank = activityRankedFrats.findIndex(f => f.fratId === fratId) + 1;
+      setActivityRank(actRank > 0 ? actRank : null);
 
     } catch (error) {
       console.error('Failed to load data:', error);
@@ -487,7 +494,7 @@ export default function FraternityPage() {
               <div className="p-3 rounded-xl bg-background border border-primary/30 text-center">
                 <Zap className="h-4 w-4 mx-auto mb-1 text-emerald-500" />
                 <p className={`text-xl font-bold ${computedScores.activityTrending > 0 ? 'text-emerald-600' : 'text-muted-foreground'}`}>
-                  {computedScores.activityTrending > 0 ? '+' : ''}{computedScores.activityTrending.toFixed(1)}
+                  #{activityRank ?? '—'}
                 </p>
                 <p className="text-xs text-muted-foreground">Activity</p>
               </div>
