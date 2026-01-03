@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo, useRef } from 'react';
-import { Plus, MapPin, Loader2, CalendarDays, AlertCircle, PartyPopper, Sparkles, Clock, Users, Music, Lock, Globe, ImageIcon, Upload, X } from 'lucide-react';
+import { Plus, MapPin, Loader2, CalendarDays, AlertCircle, PartyPopper, Sparkles, Clock, Users, Music, Lock, Globe, ImageIcon, Upload, X, Mail, CheckCircle2, ChevronRight, Info } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -22,6 +22,7 @@ interface CreatePartySheetProps {
 export default function CreatePartySheet({ open, onOpenChange, onSuccess }: CreatePartySheetProps) {
   const [fraternities, setFraternities] = useState<Fraternity[]>([]);
   const [loading, setLoading] = useState(false);
+  const [showIntro, setShowIntro] = useState(true);
   const [formData, setFormData] = useState({
     fraternity_id: '',
     title: '',
@@ -31,6 +32,7 @@ export default function CreatePartySheet({ open, onOpenChange, onSuccess }: Crea
     type: '',
     invite_only: false,
     cover_photo_url: '',
+    contact_email: '',
   });
 
   const [startDate, setStartDate] = useState<Date | undefined>();
@@ -38,11 +40,13 @@ export default function CreatePartySheet({ open, onOpenChange, onSuccess }: Crea
   const [endDate, setEndDate] = useState<Date | undefined>();
   const [endTime, setEndTime] = useState('23:00');
   const [uploadingPhoto, setUploadingPhoto] = useState(false);
+  const [emailError, setEmailError] = useState('');
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     if (open) {
       loadFraternities();
+      setShowIntro(true);
     }
   }, [open]);
 
@@ -97,16 +101,33 @@ export default function CreatePartySheet({ open, onOpenChange, onSuccess }: Crea
     if (formData.title.trim()) completedSteps++;
     if (startDate) completedSteps++;
     if (endDate && isEndValid) completedSteps++;
+    if (formData.contact_email.trim() && isValidEmail(formData.contact_email)) completedSteps++;
 
     const isFormValid = 
       !!formData.fraternity_id &&
       !!formData.title.trim() &&
       !!startDate &&
       !!endDate &&
-      isEndValid;
+      isEndValid &&
+      !!formData.contact_email.trim() &&
+      isValidEmail(formData.contact_email);
 
     return { isEndValid, endError, isFormValid, completedSteps };
-  }, [formData.fraternity_id, formData.title, startDate, startTime, endDate, endTime]);
+  }, [formData.fraternity_id, formData.title, formData.contact_email, startDate, startTime, endDate, endTime]);
+
+  const isValidEmail = (email: string) => {
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    return emailRegex.test(email.trim());
+  };
+
+  const handleEmailChange = (value: string) => {
+    setFormData(prev => ({ ...prev, contact_email: value }));
+    if (value.trim() && !isValidEmail(value)) {
+      setEmailError('Please enter a valid email address');
+    } else {
+      setEmailError('');
+    }
+  };
 
   const loadFraternities = async () => {
     try {
@@ -127,11 +148,13 @@ export default function CreatePartySheet({ open, onOpenChange, onSuccess }: Crea
       type: '',
       invite_only: false,
       cover_photo_url: '',
+      contact_email: '',
     });
     setStartDate(undefined);
     setEndDate(undefined);
     setStartTime('20:00');
     setEndTime('23:00');
+    setEmailError('');
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -194,28 +217,92 @@ export default function CreatePartySheet({ open, onOpenChange, onSuccess }: Crea
             WebkitOverflowScrolling: 'touch'
           }}
         >
-          {/* Header */}
-          <div className="gradient-primary p-4 pt-2 text-primary-foreground rounded-t-[10px]">
-            <DrawerHeader className="p-0">
-              <DrawerTitle className="text-lg font-semibold text-primary-foreground text-center">
-                Host a Party
-              </DrawerTitle>
-              
-              {/* Progress */}
-              <div className="mt-3 bg-white/10 rounded-xl p-3">
-                <div className="flex items-center justify-between mb-2">
-                  <span className="text-sm font-medium">Progress</span>
-                  <span className="text-sm font-bold">{completedSteps}/4</span>
+          {showIntro ? (
+            /* Intro Screen */
+            <div className="p-6 space-y-6">
+              <div className="text-center space-y-3">
+                <div className="w-16 h-16 mx-auto rounded-full bg-primary/10 flex items-center justify-center">
+                  <PartyPopper className="h-8 w-8 text-primary" />
                 </div>
-                <div className="h-2 bg-white/20 rounded-full overflow-hidden">
-                  <div 
-                    className="h-full bg-white rounded-full transition-all duration-500"
-                    style={{ width: `${(completedSteps / 4) * 100}%` }}
-                  />
+                <h2 className="text-xl font-bold">Host a Party</h2>
+                <p className="text-muted-foreground text-sm">
+                  Submit your event for review and get it listed on campus.
+                </p>
+              </div>
+
+              {/* Requirements */}
+              <div className="space-y-3">
+                <div className="flex items-start gap-3 p-3 rounded-xl bg-muted/50">
+                  <Users className="h-5 w-5 text-primary mt-0.5 shrink-0" />
+                  <div>
+                    <p className="font-medium text-sm">Must be affiliated with a fraternity</p>
+                    <p className="text-xs text-muted-foreground mt-0.5">
+                      Only registered Greek organizations can host parties on Touse.
+                    </p>
+                  </div>
+                </div>
+
+                <div className="flex items-start gap-3 p-3 rounded-xl bg-muted/50">
+                  <Clock className="h-5 w-5 text-primary mt-0.5 shrink-0" />
+                  <div>
+                    <p className="font-medium text-sm">Approval within 48 hours</p>
+                    <p className="text-xs text-muted-foreground mt-0.5">
+                      Our team reviews all submissions to ensure quality and safety.
+                    </p>
+                  </div>
+                </div>
+
+                <div className="flex items-start gap-3 p-3 rounded-xl bg-muted/50">
+                  <Mail className="h-5 w-5 text-primary mt-0.5 shrink-0" />
+                  <div>
+                    <p className="font-medium text-sm">Contact email required</p>
+                    <p className="text-xs text-muted-foreground mt-0.5">
+                      We need a way to reach you about your submission.
+                    </p>
+                  </div>
                 </div>
               </div>
-            </DrawerHeader>
-          </div>
+
+              {/* Info box */}
+              <div className="flex items-start gap-2 p-3 rounded-xl bg-amber-500/10 border border-amber-500/20">
+                <Info className="h-4 w-4 text-amber-600 mt-0.5 shrink-0" />
+                <p className="text-xs text-amber-700">
+                  By submitting, you confirm you are authorized to host events for the selected fraternity and agree to our community guidelines.
+                </p>
+              </div>
+
+              <Button
+                onClick={() => setShowIntro(false)}
+                className="w-full h-12"
+              >
+                Continue to Form
+                <ChevronRight className="h-4 w-4 ml-1" />
+              </Button>
+            </div>
+          ) : (
+            <>
+              {/* Header */}
+              <div className="gradient-primary p-4 pt-2 text-primary-foreground rounded-t-[10px]">
+                <DrawerHeader className="p-0">
+                  <DrawerTitle className="text-lg font-semibold text-primary-foreground text-center">
+                    Host a Party
+                  </DrawerTitle>
+                  
+                  {/* Progress */}
+                  <div className="mt-3 bg-white/10 rounded-xl p-3">
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="text-sm font-medium">Progress</span>
+                      <span className="text-sm font-bold">{completedSteps}/5</span>
+                    </div>
+                    <div className="h-2 bg-white/20 rounded-full overflow-hidden">
+                      <div 
+                        className="h-full bg-white rounded-full transition-all duration-500"
+                        style={{ width: `${(completedSteps / 5) * 100}%` }}
+                      />
+                    </div>
+                  </div>
+                </DrawerHeader>
+              </div>
 
           <form onSubmit={handleSubmit} className="p-4 space-y-4">
             {/* Live Preview */}
@@ -475,25 +562,56 @@ export default function CreatePartySheet({ open, onOpenChange, onSuccess }: Crea
               </div>
             </div>
 
-            {/* Submit Button */}
-            <Button
-              type="submit"
-              disabled={!isFormValid || loading}
-              className="w-full h-12 text-base font-semibold"
-            >
-              {loading ? (
-                <>
-                  <Loader2 className="h-5 w-5 mr-2 animate-spin" />
-                  Creating...
-                </>
-              ) : (
-                <>
-                  <PartyPopper className="h-5 w-5 mr-2" />
-                  Host Party
-                </>
+            {/* Contact Email */}
+            <div className="space-y-2">
+              <Label className="text-sm font-medium flex items-center gap-2">
+                <Mail className="h-4 w-4 text-primary" />
+                Contact Email<span className="text-destructive">*</span>
+              </Label>
+              <Input
+                type="email"
+                placeholder="your.email@duke.edu"
+                value={formData.contact_email}
+                onChange={(e) => handleEmailChange(e.target.value)}
+                className={cn("h-12", emailError && "border-destructive")}
+              />
+              {emailError && (
+                <p className="text-xs text-destructive flex items-center gap-1">
+                  <AlertCircle className="h-3 w-3" />
+                  {emailError}
+                </p>
               )}
-            </Button>
+              <p className="text-xs text-muted-foreground">
+                We will contact you at this email about your submission.
+              </p>
+            </div>
+
+            {/* Submit Button */}
+            <div className="pt-2 space-y-3">
+              <Button
+                type="submit"
+                disabled={!isFormValid || loading}
+                className="w-full h-12 text-base font-semibold"
+              >
+                {loading ? (
+                  <>
+                    <Loader2 className="h-5 w-5 mr-2 animate-spin" />
+                    Submitting...
+                  </>
+                ) : (
+                  <>
+                    <PartyPopper className="h-5 w-5 mr-2" />
+                    Submit for Approval
+                  </>
+                )}
+              </Button>
+              <p className="text-xs text-center text-muted-foreground">
+                Your party will be reviewed within 48 hours.
+              </p>
+            </div>
           </form>
+            </>
+          )}
         </div>
       </DrawerContent>
     </Drawer>
