@@ -2,6 +2,7 @@ import { Link } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
 import { type FraternityWithScores } from '@/utils/scoring';
 import { cn } from '@/lib/utils';
+import { ArrowUp, ArrowDown, Minus } from 'lucide-react';
 
 type FilterType = 'overall' | 'reputation' | 'party' | 'trending';
 type DisplayMode = 'score' | 'vibes';
@@ -22,6 +23,7 @@ interface LeaderboardRowProps {
   isTied?: boolean;
   displayMode?: DisplayMode;
   tierInfo?: TierInfo;
+  rankChange?: number;
 }
 
 export default function LeaderboardRow({ 
@@ -30,7 +32,8 @@ export default function LeaderboardRow({
   filter = 'overall', 
   isTied = false,
   displayMode = 'score',
-  tierInfo 
+  tierInfo,
+  rankChange 
 }: LeaderboardRowProps) {
   const scores = fraternity.computedScores;
 
@@ -54,6 +57,34 @@ export default function LeaderboardRow({
     if (score >= 7) return 'text-primary border-primary/20 bg-primary/5';
     if (score >= 5) return 'text-amber-600 border-amber-200 bg-amber-50';
     return 'text-muted-foreground border-muted bg-muted/50';
+  };
+
+  // Render rank change indicator for trending filter
+  const renderRankChange = () => {
+    if (rankChange === undefined || rankChange === 0) {
+      return (
+        <div className="flex items-center justify-center w-12 h-12 rounded-full border-2 border-muted bg-muted/30">
+          <Minus className="h-4 w-4 text-muted-foreground" />
+        </div>
+      );
+    }
+    
+    const isPositive = rankChange > 0;
+    return (
+      <div className={cn(
+        "flex items-center justify-center gap-0.5 w-12 h-12 rounded-full border-2 font-bold text-sm",
+        isPositive 
+          ? "text-emerald-600 border-emerald-200 bg-emerald-50" 
+          : "text-red-600 border-red-200 bg-red-50"
+      )}>
+        {isPositive ? (
+          <ArrowUp className="h-3.5 w-3.5" />
+        ) : (
+          <ArrowDown className="h-3.5 w-3.5" />
+        )}
+        <span>{Math.abs(rankChange)}</span>
+      </div>
+    );
   };
 
   return (
@@ -95,14 +126,18 @@ export default function LeaderboardRow({
           </p>
         </div>
 
-        {/* Score Badge - only show in score mode */}
+        {/* Score Badge or Rank Change */}
         {displayMode === 'score' && (
-          <div className={cn(
-            "flex items-center justify-center w-12 h-12 rounded-full border-2 font-bold text-base",
-            getScoreColorClass(score)
-          )}>
-            {score !== null ? score.toFixed(1) : '—'}
-          </div>
+          filter === 'trending' ? (
+            renderRankChange()
+          ) : (
+            <div className={cn(
+              "flex items-center justify-center w-12 h-12 rounded-full border-2 font-bold text-base",
+              getScoreColorClass(score)
+            )}>
+              {score !== null ? score.toFixed(1) : '—'}
+            </div>
+          )
         )}
       </div>
     </Link>
