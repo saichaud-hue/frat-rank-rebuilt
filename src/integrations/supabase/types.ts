@@ -14,6 +14,33 @@ export type Database = {
   }
   public: {
     Tables: {
+      blocked_users: {
+        Row: {
+          blocked_at: string
+          blocked_by: string
+          expires_at: string | null
+          id: string
+          reason: string | null
+          user_id: string
+        }
+        Insert: {
+          blocked_at?: string
+          blocked_by: string
+          expires_at?: string | null
+          id?: string
+          reason?: string | null
+          user_id: string
+        }
+        Update: {
+          blocked_at?: string
+          blocked_by?: string
+          expires_at?: string | null
+          id?: string
+          reason?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       campuses: {
         Row: {
           active: boolean | null
@@ -746,6 +773,39 @@ export type Database = {
           },
         ]
       }
+      user_offenses: {
+        Row: {
+          content_id: string | null
+          content_type: string | null
+          created_at: string
+          description: string | null
+          id: string
+          offense_type: string
+          recorded_by: string
+          user_id: string
+        }
+        Insert: {
+          content_id?: string | null
+          content_type?: string | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          offense_type: string
+          recorded_by: string
+          user_id: string
+        }
+        Update: {
+          content_id?: string | null
+          content_type?: string | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          offense_type?: string
+          recorded_by?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       user_roles: {
         Row: {
           created_at: string | null
@@ -780,6 +840,7 @@ export type Database = {
         Returns: boolean
       }
       is_admin: { Args: never; Returns: boolean }
+      is_user_blocked: { Args: { check_user_id: string }; Returns: boolean }
       recalculate_message_votes: {
         Args: { p_message_id: string }
         Returns: {

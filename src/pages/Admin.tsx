@@ -3,7 +3,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { AdminParties } from "@/components/admin/AdminParties";
 import { AdminComments } from "@/components/admin/AdminComments";
 import { AdminPosts } from "@/components/admin/AdminPosts";
-import { ChevronLeft, Shield, RefreshCw } from "lucide-react";
+import { AdminOffenders } from "@/components/admin/AdminOffenders";
+import { ChevronLeft, Shield, RefreshCw, AlertTriangle } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { useQueryClient } from "@tanstack/react-query";
@@ -69,10 +70,14 @@ export default function Admin() {
           </CardHeader>
           <CardContent>
             <Tabs defaultValue="parties" className="w-full">
-              <TabsList className="w-full grid grid-cols-3">
+              <TabsList className="w-full grid grid-cols-4">
                 <TabsTrigger value="parties">Parties</TabsTrigger>
                 <TabsTrigger value="comments">Comments</TabsTrigger>
                 <TabsTrigger value="posts">Posts</TabsTrigger>
+                <TabsTrigger value="offenders" className="flex items-center gap-1">
+                  <AlertTriangle className="h-3 w-3" />
+                  <span className="hidden sm:inline">Offenders</span>
+                </TabsTrigger>
               </TabsList>
 
               <TabsContent value="parties" className="mt-4">
@@ -85,6 +90,10 @@ export default function Admin() {
 
               <TabsContent value="posts" className="mt-4">
                 <AdminPosts />
+              </TabsContent>
+
+              <TabsContent value="offenders" className="mt-4">
+                <AdminOffenders />
               </TabsContent>
             </Tabs>
           </CardContent>
