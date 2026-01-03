@@ -31,15 +31,15 @@ interface TutorialStep {
   highlightSelector?: string;
   position: 'center' | 'top' | 'bottom';
   tip?: string;
-  interactive?: boolean; // If true, user can interact with the app for this step
-  actionHint?: string; // Hint for what action to take
-  completionEvent?: string; // Window event name that signals the step is completed
+  interactive?: boolean;
+  actionHint?: string;
+  completionEvent?: string;
 }
 
 const tutorialSteps: TutorialStep[] = [
   {
     id: 'welcome',
-    title: 'Welcome to Touse! 🎉',
+    title: 'Welcome to Touse!',
     description: 'Your campus nightlife companion. Let\'s show you around — it\'ll only take a minute!',
     icon: Sparkles,
     route: '/Activity',
@@ -86,26 +86,23 @@ const tutorialSteps: TutorialStep[] = [
   },
   {
     id: 'rate-frat',
-    title: 'Try It: Rate Your First Frat',
-    description: 'Tap the Rate button, then choose “Frat” to submit your first anonymous rating.',
+    title: 'Rate Your First Frat',
+    description: 'We will open the rating form for you. Adjust the sliders and hit Submit!',
     icon: Star,
     route: '/Leaderboard',
-    highlightSelector: '[data-tutorial="rate-fab"]',
-    position: 'bottom',
+    position: 'center',
     interactive: true,
     completionEvent: 'touse:tutorial:frat-rated',
-    actionHint: 'Rate → Frat → Submit Rating',
+    actionHint: 'Adjust sliders, then Submit Rating',
   },
   {
     id: 'filters',
-    title: 'Try It: Filter Rankings',
-    description: 'Try switching between different leaderboard views using these filter tabs.',
+    title: 'Filter Rankings',
+    description: 'Switch between Overall, Reputation, Party Score, or Trending to see different leaderboards.',
     icon: Trophy,
     route: '/Leaderboard',
     highlightSelector: '[data-tutorial="leaderboard-filters"]',
     position: 'bottom',
-    interactive: true,
-    actionHint: 'Tap a filter tab (All/Frats/Parties/Hot)',
   },
   {
     id: 'parties',
@@ -118,15 +115,14 @@ const tutorialSteps: TutorialStep[] = [
   },
   {
     id: 'party-card',
-    title: 'Try It: Rate a Party',
-    description: 'Open a party, then submit a rating. We\'ll continue once you hit Submit Rating.',
+    title: 'Rate a Party',
+    description: 'We will open a party for you. Tap "Rate This Party" and submit your rating!',
     icon: Calendar,
     route: '/Parties',
-    highlightSelector: '[data-tutorial="party-list"]',
-    position: 'bottom',
+    position: 'center',
     interactive: true,
     completionEvent: 'touse:tutorial:party-rated',
-    actionHint: 'Tap a party → Rate This Party → Submit Rating',
+    actionHint: 'Rate This Party, then Submit Rating',
   },
   {
     id: 'posts',
@@ -167,7 +163,7 @@ const tutorialSteps: TutorialStep[] = [
   },
   {
     id: 'done',
-    title: 'You\'re All Set! 🎊',
+    title: 'You\'re All Set!',
     description: 'Explore, rate, vote, and discover the best of campus nightlife. Have fun!',
     icon: Sparkles,
     route: '/Activity',
@@ -184,14 +180,13 @@ export default function SpotlightTutorial({ onComplete }: SpotlightTutorialProps
   const [highlightRect, setHighlightRect] = useState<DOMRect | null>(null);
   const [neverShowAgain, setNeverShowAgain] = useState(false);
   const [isNavigating, setIsNavigating] = useState(false);
-  const [interactionMode, setInteractionMode] = useState(false); // When true, tutorial hides and user can interact
+  const [interactionMode, setInteractionMode] = useState(false);
   const navigate = useNavigate();
   const location = useLocation();
   const observerRef = useRef<MutationObserver | null>(null);
   const previousPathRef = useRef(location.pathname);
   const interactionEnteredAtRef = useRef(0);
 
-  // Mark tutorial as active so section intros don't show
   useEffect(() => {
     sessionStorage.setItem('touse_tutorial_active', 'true');
     return () => {
@@ -205,8 +200,6 @@ export default function SpotlightTutorial({ onComplete }: SpotlightTutorialProps
   const isCenteredStep = step.position === 'center';
   const isInteractiveStep = step.interactive === true;
 
-  // Safety: Radix (Sheet/Drawer/Dialog) can occasionally leave `pointer-events: none` behind on the body,
-  // which makes the whole app feel "frozen". While in interaction mode, force clicks back on.
   useEffect(() => {
     if (!interactionMode) return;
 
@@ -216,7 +209,6 @@ export default function SpotlightTutorial({ onComplete }: SpotlightTutorialProps
     document.body.style.pointerEvents = 'auto';
     document.documentElement.style.pointerEvents = 'auto';
 
-    // Also ensure direct children aren't stuck
     const prevChildPE = new Map<Element, string>();
     Array.from(document.body.children).forEach((el) => {
       prevChildPE.set(el, (el as HTMLElement).style.pointerEvents);
@@ -224,19 +216,7 @@ export default function SpotlightTutorial({ onComplete }: SpotlightTutorialProps
       (el as HTMLElement).removeAttribute('inert');
     });
 
-    // Debug: capture clicks while in interaction mode
-    const logClick = (e: MouseEvent) => {
-      const t = e.target as HTMLElement | null;
-      if (!t) return;
-      // eslint-disable-next-line no-console
-      console.log('[tutorial] click', { tag: t.tagName, id: t.id, class: t.className });
-    };
-    window.addEventListener('click', logClick, true);
-
     return () => {
-      window.removeEventListener('click', logClick, true);
-
-      // If the page was frozen (prev was none), do NOT restore the frozen state.
       document.body.style.pointerEvents = prevBodyPE === 'none' ? 'auto' : prevBodyPE;
       document.documentElement.style.pointerEvents = prevHtmlPE === 'none' ? 'auto' : prevHtmlPE;
 
@@ -246,7 +226,6 @@ export default function SpotlightTutorial({ onComplete }: SpotlightTutorialProps
     };
   }, [interactionMode]);
 
-  // Find and highlight element
   const findAndHighlight = useCallback(() => {
     if (!step.highlightSelector) {
       setHighlightRect(null);
@@ -258,31 +237,25 @@ export default function SpotlightTutorial({ onComplete }: SpotlightTutorialProps
       const rect = element.getBoundingClientRect();
       setHighlightRect(rect);
       setIsNavigating(false);
-
-      // Scroll element into view if needed
       element.scrollIntoView({ behavior: 'smooth', block: 'center' });
     } else {
       setHighlightRect(null);
     }
   }, [step.highlightSelector]);
 
-  // Navigate to step route and find element
   useEffect(() => {
     if (step.route && location.pathname !== step.route) {
       setIsNavigating(true);
       navigate(step.route);
     } else {
-      // Wait for DOM to settle then find element
       const timeout = setTimeout(findAndHighlight, 300);
       return () => clearTimeout(timeout);
     }
   }, [step.route, location.pathname, navigate, findAndHighlight]);
 
-  // Watch for DOM changes to find element after navigation
   useEffect(() => {
     if (!step.highlightSelector) return;
 
-    // Set up mutation observer to watch for element appearing
     observerRef.current = new MutationObserver(() => {
       findAndHighlight();
     });
@@ -292,7 +265,6 @@ export default function SpotlightTutorial({ onComplete }: SpotlightTutorialProps
       subtree: true,
     });
 
-    // Also check periodically for first few seconds
     const intervals = [100, 300, 500, 1000, 1500];
     const timeouts = intervals.map(delay => 
       setTimeout(findAndHighlight, delay)
@@ -304,20 +276,15 @@ export default function SpotlightTutorial({ onComplete }: SpotlightTutorialProps
     };
   }, [step.highlightSelector, findAndHighlight]);
 
-  // Handle window resize
   useEffect(() => {
     const handleResize = () => findAndHighlight();
     window.addEventListener('resize', handleResize);
     return () => window.removeEventListener('resize', handleResize);
   }, [findAndHighlight]);
 
-  // When in interaction mode, either:
-  // - wait for a completion event (best for multi-step flows like rating)
-  // - or advance after a real click on the highlighted element (simple interactions)
   useEffect(() => {
     if (!interactionMode) return;
 
-    // 1) Event-based completion
     if (step.completionEvent) {
       const handler = () => {
         setInteractionMode(false);
@@ -327,10 +294,8 @@ export default function SpotlightTutorial({ onComplete }: SpotlightTutorialProps
       return () => window.removeEventListener(step.completionEvent!, handler as EventListener);
     }
 
-    // 2) Click-based completion
     if (!step.highlightSelector) return;
 
-    // Avoid immediately counting the click that pressed "Try It"
     const delay = Math.max(0, 350 - (Date.now() - interactionEnteredAtRef.current));
 
     const timeout = window.setTimeout(() => {
@@ -345,7 +310,6 @@ export default function SpotlightTutorial({ onComplete }: SpotlightTutorialProps
       };
 
       el.addEventListener('click', handleInteract, { once: true });
-      el.addEventListener('pointerup', handleInteract as any, { once: true } as any);
     }, delay);
 
     return () => {
@@ -353,10 +317,8 @@ export default function SpotlightTutorial({ onComplete }: SpotlightTutorialProps
     };
   }, [interactionMode, step.highlightSelector, step.completionEvent]);
 
-  // Detect when user navigates away during interaction mode (e.g., opened a party)
   useEffect(() => {
     if (interactionMode && location.pathname !== previousPathRef.current) {
-      // For event-based steps (rating), navigation is part of the flow; just keep waiting.
       if (!step.completionEvent) {
         setInteractionMode(false);
         setCurrentStep(prev => prev + 1);
@@ -365,10 +327,9 @@ export default function SpotlightTutorial({ onComplete }: SpotlightTutorialProps
     previousPathRef.current = location.pathname;
   }, [location.pathname, interactionMode, step.completionEvent]);
 
-  // Keyboard navigation
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (interactionMode) return; // Don't handle keys during interaction
+      if (interactionMode) return;
       if (e.key === 'ArrowRight' || e.key === 'Enter') {
         handleNext();
       } else if (e.key === 'ArrowLeft') {
@@ -410,6 +371,14 @@ export default function SpotlightTutorial({ onComplete }: SpotlightTutorialProps
     e?.preventDefault();
     e?.stopPropagation();
     interactionEnteredAtRef.current = Date.now();
+    
+    if (step.id === 'rate-frat') {
+      window.dispatchEvent(new CustomEvent('touse:tutorial:open-frat-rating'));
+    }
+    if (step.id === 'party-card') {
+      window.dispatchEvent(new CustomEvent('touse:tutorial:open-party-rating'));
+    }
+    
     setInteractionMode(true);
   };
 
@@ -420,8 +389,6 @@ export default function SpotlightTutorial({ onComplete }: SpotlightTutorialProps
 
   const Icon = step.icon;
 
-  // If in interaction mode, remove ALL overlays and only show a small helper card.
-  // For multi-step flows (rating), we auto-continue only after the completionEvent fires.
   if (interactionMode) {
     return (
       <motion.div
@@ -438,11 +405,11 @@ export default function SpotlightTutorial({ onComplete }: SpotlightTutorialProps
             <div className="flex-1 min-w-0">
               <p className="font-semibold leading-tight">{step.title}</p>
               <p className="text-sm text-muted-foreground mt-1">
-                {step.actionHint || 'Try it out — we\'ll continue when you\'re done.'}
+                {step.actionHint || 'Try it out — we will continue when you are done.'}
               </p>
               {step.completionEvent && (
                 <p className="text-xs text-muted-foreground mt-2">
-                  Waiting for you to submit…
+                  Waiting for you to submit...
                 </p>
               )}
             </div>
@@ -470,7 +437,6 @@ export default function SpotlightTutorial({ onComplete }: SpotlightTutorialProps
 
   return (
     <div className="fixed inset-0 z-[100] overflow-hidden">
-      {/* Overlay with spotlight cutout */}
       <AnimatePresence mode="wait">
         <motion.div
           key={step.id}
@@ -480,10 +446,8 @@ export default function SpotlightTutorial({ onComplete }: SpotlightTutorialProps
           className="absolute inset-0"
         >
           {isCenteredStep || !highlightRect ? (
-            // Full overlay for centered steps
             <div className="absolute inset-0 bg-black/80 backdrop-blur-sm" />
           ) : (
-            // Spotlight overlay with cutout
             <svg className="absolute inset-0 w-full h-full">
               <defs>
                 <mask id="spotlight-mask">
@@ -509,7 +473,6 @@ export default function SpotlightTutorial({ onComplete }: SpotlightTutorialProps
         </motion.div>
       </AnimatePresence>
 
-      {/* Highlight border pulse */}
       {highlightRect && !isCenteredStep && (
         <motion.div
           initial={{ opacity: 0, scale: 0.95 }}
@@ -522,11 +485,10 @@ export default function SpotlightTutorial({ onComplete }: SpotlightTutorialProps
             height: highlightRect.height + 16,
           }}
         >
-          <div className={`w-full h-full rounded-2xl border-2 ${isInteractiveStep ? 'border-primary animate-pulse shadow-[0_0_30px_hsl(var(--primary)/0.35)]' : 'border-primary animate-pulse shadow-[0_0_30px_hsl(var(--primary)/0.35)]'}`} />
+          <div className="w-full h-full rounded-2xl border-2 border-primary animate-pulse shadow-[0_0_30px_hsl(var(--primary)/0.35)]" />
         </motion.div>
       )}
 
-      {/* Tutorial card */}
       <AnimatePresence mode="wait">
         <motion.div
           key={step.id}
@@ -537,7 +499,6 @@ export default function SpotlightTutorial({ onComplete }: SpotlightTutorialProps
           className="absolute inset-x-4 top-1/2 -translate-y-1/2"
         >
           <div className="bg-card border shadow-2xl rounded-2xl p-5 max-w-md mx-auto">
-            {/* Skip button */}
             <button
               onClick={handleSkip}
               className="absolute top-3 right-3 p-2 rounded-full hover:bg-muted transition-colors"
@@ -545,7 +506,6 @@ export default function SpotlightTutorial({ onComplete }: SpotlightTutorialProps
               <X className="h-4 w-4 text-muted-foreground" />
             </button>
 
-            {/* Progress bar */}
             <div className="flex gap-1 mb-4">
               {tutorialSteps.map((_, index) => (
                 <button
@@ -562,12 +522,10 @@ export default function SpotlightTutorial({ onComplete }: SpotlightTutorialProps
               ))}
             </div>
 
-            {/* Icon */}
-            <div className={`w-14 h-14 rounded-2xl ${isInteractiveStep ? 'bg-primary text-primary-foreground' : 'gradient-primary'} flex items-center justify-center mb-4 mx-auto`}>
+            <div className="w-14 h-14 rounded-2xl gradient-primary flex items-center justify-center mb-4 mx-auto">
               <Icon className="h-7 w-7 text-white" />
             </div>
 
-            {/* Content */}
             <div className="text-center space-y-2 mb-4">
               <h2 className="text-xl font-bold font-display">{step.title}</h2>
               <p className="text-muted-foreground text-sm leading-relaxed">
@@ -575,12 +533,11 @@ export default function SpotlightTutorial({ onComplete }: SpotlightTutorialProps
               </p>
               {step.tip && !isInteractiveStep && (
                 <div className="inline-block px-3 py-1.5 rounded-full bg-primary/10 text-primary text-xs font-medium">
-                  💡 {step.tip}
+                  {step.tip}
                 </div>
               )}
             </div>
 
-            {/* Never show again checkbox on last step */}
             {isLastStep && (
               <div className="flex items-center justify-center gap-2 mb-4">
                 <Checkbox
@@ -597,7 +554,6 @@ export default function SpotlightTutorial({ onComplete }: SpotlightTutorialProps
               </div>
             )}
 
-            {/* Navigation */}
             <div className="flex items-center gap-3">
               {!isFirstStep && (
                 <Button
@@ -641,7 +597,6 @@ export default function SpotlightTutorial({ onComplete }: SpotlightTutorialProps
               )}
             </div>
 
-            {/* Step counter */}
             <p className="text-center text-xs text-muted-foreground mt-3">
               {currentStep + 1} of {tutorialSteps.length}
             </p>
