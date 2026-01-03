@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { Home, Trophy, PartyPopper, User, ChevronRight, Zap, Newspaper } from 'lucide-react';
+import { Home, Trophy, PartyPopper, User, ChevronRight, Newspaper } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -8,6 +8,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { base44, type Party, type Fraternity } from '@/api/base44Client';
 import Tutorial from '@/components/onboarding/Tutorial';
 import NewPostsPopup from '@/components/NewPostsPopup';
+import touseLogo from '@/assets/touse-logo.png';
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -177,8 +178,8 @@ export default function Layout({ children }: LayoutProps) {
           <div className="px-4 py-3 flex items-center justify-between gap-2">
             {/* Left: Touse logo */}
             <Link to="/" className="flex items-center gap-2 shrink-0 tap-bounce tap-target">
-              <div className="w-8 h-8 rounded-xl bg-white/20 flex items-center justify-center">
-                <Zap className="h-5 w-5 text-white" />
+              <div className="w-8 h-8 rounded-xl overflow-hidden flex items-center justify-center">
+                <img src={touseLogo} alt="Touse" className="w-full h-full object-cover" />
               </div>
               <span className="text-lg font-display font-bold text-white tracking-tight">Touse</span>
             </Link>
@@ -195,21 +196,24 @@ export default function Layout({ children }: LayoutProps) {
                   ) : (
                     <span className="px-1 py-0.5 rounded bg-white/20 text-[10px] text-white font-bold uppercase tracking-wider shrink-0">Next</span>
                   )}
-                  <span className="text-xs font-bold text-white truncate max-w-[60px]">{nextParty.title}</span>
+                  <span className={`text-xs font-bold text-white truncate ${countdown.days > 0 ? 'max-w-[100px]' : 'max-w-[60px]'}`}>{nextParty.title}</span>
                   
                   {/* Countdown - only show if not live */}
                   {!isLiveNow && (
                     <div className="flex items-center gap-0.5 text-white font-display shrink-0">
-                      {countdown.days > 0 && (
+                      {countdown.days > 0 ? (
                         <>
                           <span className="text-xs font-black tabular-nums">{countdown.days}</span>
                           <span className="text-[9px] opacity-70">d</span>
                         </>
+                      ) : (
+                        <>
+                          <span className="text-xs font-black tabular-nums">{countdown.hours}</span>
+                          <span className="text-[9px] opacity-70">h</span>
+                          <span className="text-xs font-black tabular-nums">{countdown.minutes}</span>
+                          <span className="text-[9px] opacity-70">m</span>
+                        </>
                       )}
-                      <span className="text-xs font-black tabular-nums">{countdown.hours}</span>
-                      <span className="text-[9px] opacity-70">h</span>
-                      <span className="text-xs font-black tabular-nums">{countdown.minutes}</span>
-                      <span className="text-[9px] opacity-70">m</span>
                     </div>
                   )}
                 </div>
