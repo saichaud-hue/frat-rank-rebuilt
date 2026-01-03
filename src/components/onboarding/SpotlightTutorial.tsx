@@ -466,7 +466,7 @@ export default function SpotlightTutorial({ onComplete }: SpotlightTutorialProps
           className="absolute inset-0"
         >
           {isCenteredStep || !highlightRect ? (
-            <div className="absolute inset-0 bg-black/80 backdrop-blur-sm" />
+            <div className="absolute inset-0 bg-foreground/55" />
           ) : (
             <svg className="absolute inset-0 w-full h-full">
               <defs>
