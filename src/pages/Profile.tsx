@@ -38,6 +38,7 @@ import { recordUserAction } from '@/utils/streak';
 import ShareBattleDialog from '@/components/share/ShareBattleDialog';
 import FratBattleGame from '@/components/activity/FratBattleGame';
 import { useAuth } from '@/contexts/AuthContext';
+import { useAdminCheck } from '@/hooks/useAdminCheck';
 
 type EnrichedPartyRating = PartyRating & { party?: Party; fraternity?: Fraternity };
 type EnrichedRepRating = ReputationRating & { fraternity?: Fraternity };
@@ -71,6 +72,7 @@ interface RankedParty {
 export default function Profile() {
   const navigate = useNavigate();
   const { signOut } = useAuth();
+  const { isAdmin } = useAdminCheck();
   const [user, setUser] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [stats, setStats] = useState({ partyRatings: 0, fratRatings: 0, comments: 0, privatePhotos: 0 });
@@ -712,6 +714,17 @@ export default function Profile() {
             />
           </div>
         </div>
+
+        {/* Admin Dashboard Link */}
+        {isAdmin && (
+          <Link
+            to="/Admin"
+            className="mt-4 w-full h-12 rounded-xl border border-primary/30 bg-primary/5 flex items-center justify-center gap-2 text-sm font-semibold text-primary hover:bg-primary/10 transition-colors"
+          >
+            <Shield className="h-4 w-4" />
+            Open Admin Dashboard
+          </Link>
+        )}
       </div>
 
       {/* Tab Navigation */}

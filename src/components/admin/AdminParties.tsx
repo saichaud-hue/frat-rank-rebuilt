@@ -1,0 +1,129 @@
+import { useEffect, useState } from "react";
+import { supabase } from "@/integrations/supabase/client";
+import { Button } from "@/components/ui/button";
+import { Check, X, Loader2 } from "lucide-react";
+import { format } from "date-fns";
+
+type Party = {
+  id: string;
+  title: string | null;
+  starts_at: string | null;
+  status: string | null;
+  fraternity_id: string | null;
+};
+
+type Fraternity = {
+  id: string;
+  name: string;
+};
+
+export function AdminParties() {
+  const [items, setItems] = useState<Party[]>([]);
+  const [fraternities, setFraternities] = useState<Record<string, string>>({});
+  const [loading, setLoading] = useState(true);
+  const [actionLoading, setActionLoading] = useState<string | null>(null);
+
+  const load = async () => {
+    setLoading(true);
+    
+    const [partiesRes, fratsRes] = await Promise.all([
+      supabase
+        .from("parties")
+        .select("id,title,starts_at,status,fraternity_id")
+        .eq("status", "pending")
+        .order("starts_at", { ascending: true }),
+      supabase.from("fraternities").select("id,name")
+    ]);
+
+    if (partiesRes.error) console.error(partiesRes.error);
+    if (fratsRes.error) console.error(fratsRes.error);
+
+    setItems(partiesRes.data ?? []);
+    
+    const fratMap: Record<string, string> = {};
+    (fratsRes.data ?? []).forEach((f: Fraternity) => {
+      fratMap[f.id] = f.name;
+    });
+    setFraternities(fratMap);
+    
+    setLoading(false);
+  };
+
+  const setStatus = async (id: string, status: "upcoming" | "rejected") => {
+    setActionLoading(id);
+    const { error } = await supabase.from("parties").update({ status }).eq("id", id);
+    if (error) console.error(error);
+    await load();
+    setActionLoading(null);
+  };
+
+  useEffect(() => {
+    load();
+  }, []);
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center py-8">
+        <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+      </div>
+    );
+  }
+
+  if (!items.length) {
+    return (
+      <div className="text-center py-8 text-muted-foreground">
+        No pending parties.
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-3">
+      {items.map((p) => (
+        <div
+          key={p.id}
+          className="p-4 rounded-xl border bg-card"
+        >
+          <div className="flex items-start justify-between gap-3">
+            <div className="flex-1 min-w-0">
+              <p className="font-semibold truncate">{p.title ?? "Untitled party"}</p>
+              {p.fraternity_id && fraternities[p.fraternity_id] && (
+                <p className="text-sm text-muted-foreground">
+                  {fraternities[p.fraternity_id]}
+                </p>
+              )}
+              <p className="text-xs text-muted-foreground mt-1">
+                {p.starts_at ? format(new Date(p.starts_at), "MMM d, yyyy 'at' h:mm a") : "No time set"}
+              </p>
+            </div>
+            
+            <div className="flex gap-2 shrink-0">
+              <Button
+                size="sm"
+                variant="outline"
+                className="h-9 w-9 p-0"
+                disabled={actionLoading === p.id}
+                onClick={() => setStatus(p.id, "upcoming")}
+              >
+                {actionLoading === p.id ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <Check className="h-4 w-4 text-green-600" />
+                )}
+              </Button>
+              <Button
+                size="sm"
+                variant="outline"
+                className="h-9 w-9 p-0"
+                disabled={actionLoading === p.id}
+                onClick={() => setStatus(p.id, "rejected")}
+              >
+                <X className="h-4 w-4 text-red-600" />
+              </Button>
+            </div>
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}

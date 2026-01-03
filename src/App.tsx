@@ -6,6 +6,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate, useLocation } from "react-router-dom";
 import { AuthProvider } from "@/contexts/AuthContext";
 import ProtectedRoute from "@/components/auth/ProtectedRoute";
+import { AdminRoute } from "@/components/admin/AdminRoute";
 import Layout from "./components/Layout";
 import Activity from "./pages/Activity";
 import Posts from "./pages/Posts";
@@ -16,6 +17,7 @@ import Party from "./pages/Party";
 import Fraternity from "./pages/Fraternity";
 import Profile from "./pages/Profile";
 import CreateParty from "./pages/CreateParty";
+import Admin from "./pages/Admin";
 import Auth from "./pages/Auth";
 import AuthCallback from "./pages/AuthCallback";
 import UserNotRegisteredError from "./components/errors/UserNotRegisteredError";
@@ -99,6 +101,11 @@ const App = () => (
               <ProtectedRoute>
                 <Layout><CreateParty /></Layout>
               </ProtectedRoute>
+            } />
+            <Route path="/Admin" element={
+              <AdminRoute>
+                <Layout><Admin /></Layout>
+              </AdminRoute>
             } />
             <Route path="*" element={<NotFound />} />
           </Routes>

@@ -158,12 +158,19 @@ export default function CreatePartySheet({ open, onOpenChange, onSuccess }: Crea
         quantifiable_score: 0,
         unquantifiable_score: 5,
         total_ratings: 0,
-        status: 'upcoming',
+        status: 'pending',
       });
 
       resetForm();
       onOpenChange(false);
       onSuccess();
+      
+      // Show toast about pending approval
+      const { toast } = await import('@/hooks/use-toast');
+      toast({
+        title: "Party submitted for review",
+        description: "You'll be notified when it's approved.",
+      });
     } catch (error) {
       console.error('Failed to create party:', error);
     } finally {

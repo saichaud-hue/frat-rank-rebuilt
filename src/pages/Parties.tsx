@@ -1,9 +1,10 @@
 import { useState, useEffect } from 'react';
-import { PartyPopper, Plus, Flame, Calendar, Clock } from 'lucide-react';
+import { PartyPopper, Plus, Flame, Calendar, Clock, Hourglass } from 'lucide-react';
 import { 
   partyQueries, 
   fraternityQueries, 
   partyRatingQueries,
+  getCurrentUser,
   type Party,
   type Fraternity,
   type PartyRating,
@@ -13,6 +14,7 @@ import PartyFilters from '@/components/parties/PartyFilters';
 import PartiesIntro from '@/components/onboarding/PartiesIntro';
 import CreatePartySheet from '@/components/parties/CreatePartySheet';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Badge } from '@/components/ui/badge';
 import { subDays, addDays, startOfDay, endOfDay } from 'date-fns';
 import { computeRawPartyQuality } from '@/utils/scoring';
 
@@ -30,6 +32,7 @@ const adaptPartyRatingForScoring = (r: PartyRating): any => ({
 
 export default function Parties() {
   const [parties, setParties] = useState<Party[]>([]);
+  const [pendingParties, setPendingParties] = useState<Party[]>([]);
   const [fraternities, setFraternities] = useState<Fraternity[]>([]);
   const [partyScores, setPartyScores] = useState<Map<string, number>>(new Map());
   const [partyRatingCounts, setPartyRatingCounts] = useState<Map<string, number>>(new Map());
@@ -52,13 +55,21 @@ export default function Parties() {
   const loadData = async () => {
     setLoading(true);
     try {
-      const [partiesData, fraternityData, allPartyRatings] = await Promise.all([
+      const [partiesData, fraternityData, allPartyRatings, currentUser] = await Promise.all([
         partyQueries.listByStartDate(),
         fraternityQueries.list(),
         partyRatingQueries.list(),
+        getCurrentUser(),
       ]);
       
-      setParties(partiesData);
+      // Separate user's pending parties from the rest
+      const userPending = currentUser 
+        ? partiesData.filter(p => p.status === 'pending' && p.user_id === currentUser.id)
+        : [];
+      const visibleParties = partiesData.filter(p => p.status !== 'pending' && p.status !== 'rejected');
+      
+      setPendingParties(userPending);
+      setParties(visibleParties);
       setFraternities(fraternityData);
 
       const partyRatingsMap = new Map<string, PartyRating[]>();
@@ -201,6 +212,34 @@ export default function Parties() {
 
       {/* Divider */}
       <div className="mx-4 mt-6 border-t border-border" />
+
+      {/* PENDING APPROVAL (user's own) */}
+      {pendingParties.length > 0 && (
+        <div className="px-4">
+          <div className="flex items-center gap-2 py-3">
+            <Hourglass className="h-4 w-4 text-amber-500" />
+            <span className="text-sm font-semibold text-amber-600">Pending Approval</span>
+            <Badge variant="outline" className="text-xs border-amber-500/50 text-amber-600">
+              {pendingParties.length}
+            </Badge>
+          </div>
+          {pendingParties.map((party, index) => (
+            <div key={party.id} className="opacity-70">
+              <PartyRow
+                party={party as any}
+                fraternityName={getFraternityName(party.fraternity_id)}
+                computedStatus="upcoming"
+                overallPartyQuality={partyScores.get(party.id)}
+                ratingCount={partyRatingCounts.get(party.id) ?? 0}
+              />
+              {index < pendingParties.length - 1 && (
+                <div className="border-t border-border/50" />
+              )}
+            </div>
+          ))}
+          <div className="border-t border-border mt-2" />
+        </div>
+      )}
 
       {/* LIVE PARTIES */}
       {liveParties.length > 0 && (
