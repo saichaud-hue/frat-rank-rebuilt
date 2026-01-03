@@ -53,6 +53,7 @@ export default function Layout({ children }: LayoutProps) {
   const [nextParty, setNextParty] = useState<Party | null>(null);
   const [nextPartyFrat, setNextPartyFrat] = useState<Fraternity | null>(null);
   const [countdown, setCountdown] = useState({ days: 0, hours: 0, minutes: 0, seconds: 0 });
+  const [isLiveNow, setIsLiveNow] = useState(false);
   const [newPostsCount, setNewPostsCount] = useState(getNewPostsCount());
   const location = useLocation();
 
@@ -116,13 +117,36 @@ export default function Layout({ children }: LayoutProps) {
       ]);
       
       const now = new Date();
+      
+      // First check for live parties (started but not ended)
+      const liveParties = parties.filter(p => {
+        const startTime = new Date(p.starts_at);
+        const endTime = p.ends_at ? new Date(p.ends_at) : new Date(startTime.getTime() + 4 * 60 * 60 * 1000); // Default 4 hours if no end time
+        return startTime <= now && endTime >= now;
+      });
+      
+      if (liveParties.length > 0) {
+        // Show the first live party
+        const liveParty = liveParties[0];
+        setNextParty(liveParty);
+        setIsLiveNow(true);
+        const frat = fraternities.find(f => f.id === liveParty.fraternity_id);
+        setNextPartyFrat(frat || null);
+        return;
+      }
+      
+      // Otherwise show the most upcoming party
       const upcoming = parties.filter(p => new Date(p.starts_at) > now);
       
       if (upcoming.length > 0) {
         const next = upcoming[0];
         setNextParty(next);
+        setIsLiveNow(false);
         const frat = fraternities.find(f => f.id === next.fraternity_id);
         setNextPartyFrat(frat || null);
+      } else {
+        setNextParty(null);
+        setIsLiveNow(false);
       }
     } catch (error) {
       console.error('Failed to load next party:', error);
@@ -166,22 +190,28 @@ export default function Layout({ children }: LayoutProps) {
                 className="flex items-center gap-1 tap-bounce tap-target min-w-0 flex-1 justify-center"
               >
                 <div className="flex items-center gap-1.5 px-2 py-1.5 rounded-full bg-white/15 backdrop-blur-sm min-w-0">
-                  <span className="px-1 py-0.5 rounded bg-white/20 text-[10px] text-white font-bold uppercase tracking-wider shrink-0">Next</span>
+                  {isLiveNow ? (
+                    <span className="px-1.5 py-0.5 rounded bg-red-500 text-[10px] text-white font-bold uppercase tracking-wider shrink-0 animate-pulse">NOW</span>
+                  ) : (
+                    <span className="px-1 py-0.5 rounded bg-white/20 text-[10px] text-white font-bold uppercase tracking-wider shrink-0">Next</span>
+                  )}
                   <span className="text-xs font-bold text-white truncate max-w-[60px]">{nextParty.title}</span>
                   
-                  {/* Countdown - compact */}
-                  <div className="flex items-center gap-0.5 text-white font-display shrink-0">
-                    {countdown.days > 0 && (
-                      <>
-                        <span className="text-xs font-black tabular-nums">{countdown.days}</span>
-                        <span className="text-[9px] opacity-70">d</span>
-                      </>
-                    )}
-                    <span className="text-xs font-black tabular-nums">{countdown.hours}</span>
-                    <span className="text-[9px] opacity-70">h</span>
-                    <span className="text-xs font-black tabular-nums">{countdown.minutes}</span>
-                    <span className="text-[9px] opacity-70">m</span>
-                  </div>
+                  {/* Countdown - only show if not live */}
+                  {!isLiveNow && (
+                    <div className="flex items-center gap-0.5 text-white font-display shrink-0">
+                      {countdown.days > 0 && (
+                        <>
+                          <span className="text-xs font-black tabular-nums">{countdown.days}</span>
+                          <span className="text-[9px] opacity-70">d</span>
+                        </>
+                      )}
+                      <span className="text-xs font-black tabular-nums">{countdown.hours}</span>
+                      <span className="text-[9px] opacity-70">h</span>
+                      <span className="text-xs font-black tabular-nums">{countdown.minutes}</span>
+                      <span className="text-[9px] opacity-70">m</span>
+                    </div>
+                  )}
                 </div>
                 <ChevronRight className="h-4 w-4 text-white/60 shrink-0" />
               </Link>
