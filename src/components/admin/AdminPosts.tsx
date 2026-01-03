@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
-import { Trash2, Loader2, ThumbsUp, ThumbsDown, Mail, UserX } from "lucide-react";
+import { Trash2, Loader2, ThumbsUp, ThumbsDown, Mail } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { UserActionSheet } from "./UserActionSheet";
@@ -106,7 +106,15 @@ export function AdminPosts() {
           const userEmail = emails[p.user_id];
           
           return (
-            <div key={p.id} className="p-4 rounded-xl border bg-card">
+            <div 
+              key={p.id} 
+              className="p-4 rounded-xl border bg-card cursor-pointer hover:bg-accent/50 transition-colors"
+              onClick={() => setSelectedUser({
+                userId: p.user_id,
+                email: userEmail || "Unknown",
+                contentId: p.id,
+              })}
+            >
               <div className="flex items-start justify-between gap-3">
                 <div className="flex-1 min-w-0">
                   <p className="text-sm line-clamp-3">{p.text}</p>
@@ -119,17 +127,10 @@ export function AdminPosts() {
                       <ThumbsDown className="h-3 w-3" />
                       {p.downvotes ?? 0}
                     </span>
-                    {userEmail ? (
-                      <a
-                        href={`mailto:${userEmail}`}
-                        className="flex items-center gap-1 text-xs text-primary hover:underline"
-                      >
-                        <Mail className="h-3 w-3" />
-                        {userEmail}
-                      </a>
-                    ) : (
-                      <span className="text-xs text-muted-foreground">Unknown user</span>
-                    )}
+                    <span className="flex items-center gap-1 text-xs text-primary">
+                      <Mail className="h-3 w-3" />
+                      {userEmail || "Unknown user"}
+                    </span>
                     <span className="text-xs text-muted-foreground">
                       {p.created_at
                         ? formatDistanceToNow(new Date(p.created_at), { addSuffix: true })
@@ -138,53 +139,37 @@ export function AdminPosts() {
                   </div>
                 </div>
 
-                <div className="flex flex-col gap-2 shrink-0">
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    className="h-9 w-9 p-0"
-                    disabled={actionLoading === p.id}
-                    onClick={() => deletePost(p.id)}
-                    title="Delete post"
-                  >
-                    {actionLoading === p.id ? (
-                      <Loader2 className="h-4 w-4 animate-spin" />
-                    ) : (
-                      <Trash2 className="h-4 w-4 text-red-600" />
-                    )}
-                  </Button>
-                  {userEmail && (
-                    <Button
-                      size="sm"
-                      variant="ghost"
-                      className="h-8 text-xs"
-                      onClick={() => setSelectedUser({
-                        userId: p.user_id,
-                        email: userEmail,
-                        contentId: p.id,
-                      })}
-                    >
-                      <UserX className="h-3 w-3 mr-1" />
-                      Actions
-                    </Button>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="h-9 w-9 p-0 shrink-0"
+                  disabled={actionLoading === p.id}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    deletePost(p.id);
+                  }}
+                  title="Delete post"
+                >
+                  {actionLoading === p.id ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <Trash2 className="h-4 w-4 text-red-600" />
                   )}
-                </div>
+                </Button>
               </div>
             </div>
           );
         })}
       </div>
 
-      {selectedUser && (
-        <UserActionSheet
-          open={!!selectedUser}
-          onOpenChange={(open) => !open && setSelectedUser(null)}
-          userId={selectedUser.userId}
-          userEmail={selectedUser.email}
-          contentId={selectedUser.contentId}
-          contentType="post"
-        />
-      )}
+      <UserActionSheet
+        open={!!selectedUser}
+        onOpenChange={(open) => !open && setSelectedUser(null)}
+        userId={selectedUser?.userId || ""}
+        userEmail={selectedUser?.email || ""}
+        contentId={selectedUser?.contentId}
+        contentType="post"
+      />
     </>
   );
 }
