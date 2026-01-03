@@ -439,6 +439,41 @@ export type Database = {
           },
         ]
       }
+      party_attendance: {
+        Row: {
+          created_at: string
+          id: string
+          is_going: boolean
+          party_id: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          is_going?: boolean
+          party_id: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          is_going?: boolean
+          party_id?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "party_attendance_party_id_fkey"
+            columns: ["party_id"]
+            isOneToOne: false
+            referencedRelation: "parties"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       party_comment_votes: {
         Row: {
           comment_id: string

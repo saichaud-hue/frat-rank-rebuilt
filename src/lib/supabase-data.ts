@@ -835,6 +835,72 @@ export const moveVoteQueries = {
 };
 
 // ==========================================
+// PARTY ATTENDANCE QUERIES
+// ==========================================
+
+export interface PartyAttendance {
+  id: string;
+  party_id: string;
+  user_id: string;
+  is_going: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export const partyAttendanceQueries = {
+  // Get attendance counts for a party
+  async getCounts(partyId: string): Promise<{ going: number; notGoing: number }> {
+    const { data, error } = await supabase
+      .from('party_attendance')
+      .select('is_going')
+      .eq('party_id', partyId);
+    
+    if (error) throw error;
+    
+    const going = data?.filter(a => a.is_going).length || 0;
+    const notGoing = data?.filter(a => !a.is_going).length || 0;
+    
+    return { going, notGoing };
+  },
+
+  // Get user's attendance for a party
+  async getUserAttendance(partyId: string, userId: string): Promise<boolean | null> {
+    const { data, error } = await supabase
+      .from('party_attendance')
+      .select('is_going')
+      .eq('party_id', partyId)
+      .eq('user_id', userId)
+      .maybeSingle();
+    
+    if (error) throw error;
+    return data?.is_going ?? null;
+  },
+
+  // Set user's attendance (upsert)
+  async setAttendance(partyId: string, userId: string, isGoing: boolean): Promise<void> {
+    const { error } = await supabase
+      .from('party_attendance')
+      .upsert(
+        { party_id: partyId, user_id: userId, is_going: isGoing },
+        { onConflict: 'party_id,user_id' }
+      );
+    
+    if (error) throw error;
+  },
+
+  // Remove user's attendance
+  async removeAttendance(partyId: string, userId: string): Promise<void> {
+    const { error } = await supabase
+      .from('party_attendance')
+      .delete()
+      .eq('party_id', partyId)
+      .eq('user_id', userId);
+    
+    if (error) throw error;
+  },
+};
+
+// ==========================================
 // HELPER: Get current user
 // ==========================================
 

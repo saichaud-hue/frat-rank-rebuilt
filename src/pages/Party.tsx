@@ -1,10 +1,12 @@
 import { useState, useEffect } from 'react';
 import { useSearchParams, Link } from 'react-router-dom';
-import { ArrowLeft, Calendar, Clock, MapPin, Users, Star, Camera, MessageCircle, Trophy, Zap, Lock, Globe } from 'lucide-react';
+import { ArrowLeft, Calendar, Clock, MapPin, Users, Star, Camera, MessageCircle, Trophy, Zap, Lock, Globe, Check, X } from 'lucide-react';
 import { 
   partyQueries, 
   fraternityQueries, 
   partyRatingQueries,
+  partyAttendanceQueries,
+  getCurrentUser,
   type Party,
   type Fraternity,
   type PartyRating,
@@ -20,6 +22,8 @@ import { createPageUrl, getScoreColor, getFratShorthand } from '@/utils';
 import { format } from 'date-fns';
 import { computeRawPartyQuality, getPartyConfidenceLevel } from '@/utils/scoring';
 import { ensureAuthed } from '@/utils/auth';
+import { toast } from 'sonner';
+import { cn } from '@/lib/utils';
 
 // Adapter to convert Supabase types to scoring types
 const adaptPartyRatingForScoring = (r: PartyRating): any => ({
@@ -38,13 +42,61 @@ export default function PartyPage() {
   const [ratingsRefreshKey, setRatingsRefreshKey] = useState(0);
   const [partyRatings, setPartyRatings] = useState<PartyRating[]>([]);
   const [activeTab, setActiveTab] = useState<'photos' | 'ratings' | 'comments'>('photos');
+  
+  // Attendance states
+  const [attendanceCounts, setAttendanceCounts] = useState<{ going: number; notGoing: number }>({ going: 0, notGoing: 0 });
+  const [userAttendance, setUserAttendance] = useState<boolean | null>(null);
+  const [attendanceLoading, setAttendanceLoading] = useState(false);
 
   useEffect(() => {
     if (partyId) {
       loadParty();
       loadPartyRatings();
+      loadAttendance();
     }
   }, [partyId]);
+
+  const loadAttendance = async () => {
+    if (!partyId) return;
+    try {
+      const counts = await partyAttendanceQueries.getCounts(partyId);
+      setAttendanceCounts(counts);
+      
+      const user = await getCurrentUser();
+      if (user) {
+        const attendance = await partyAttendanceQueries.getUserAttendance(partyId, user.id);
+        setUserAttendance(attendance);
+      }
+    } catch (error) {
+      console.error('Failed to load attendance:', error);
+    }
+  };
+
+  const handleAttendanceVote = async (isGoing: boolean) => {
+    const user = await getCurrentUser();
+    if (!user) {
+      toast.error('Please sign in to RSVP');
+      return;
+    }
+    
+    setAttendanceLoading(true);
+    try {
+      // Toggle off if clicking the same button
+      if (userAttendance === isGoing) {
+        await partyAttendanceQueries.removeAttendance(partyId!, user.id);
+        setUserAttendance(null);
+      } else {
+        await partyAttendanceQueries.setAttendance(partyId!, user.id, isGoing);
+        setUserAttendance(isGoing);
+      }
+      await loadAttendance();
+    } catch (error) {
+      console.error('Failed to update attendance:', error);
+      toast.error('Failed to update RSVP');
+    } finally {
+      setAttendanceLoading(false);
+    }
+  };
 
   useEffect(() => {
     if (partyId && ratingsRefreshKey > 0) {
@@ -204,24 +256,62 @@ export default function PartyPage() {
           )}
         </div>
 
-        {/* Stats Row */}
-        <div className="grid grid-cols-3 gap-2 mt-4">
-          <div className="text-center p-3 rounded-xl bg-white/15">
-            <Users className="h-4 w-4 mx-auto mb-1 opacity-80" />
-            <p className="text-xl font-bold">{partyRatings.length}</p>
-            <p className="text-xs opacity-70">Ratings</p>
+        {/* Stats Row - Show attendance before party, stats after */}
+        {status === 'completed' ? (
+          // After party: Show ratings stats
+          <div className="grid grid-cols-3 gap-2 mt-4">
+            <div className="text-center p-3 rounded-xl bg-white/15">
+              <Users className="h-4 w-4 mx-auto mb-1 opacity-80" />
+              <p className="text-xl font-bold">{partyRatings.length}</p>
+              <p className="text-xs opacity-70">Ratings</p>
+            </div>
+            <div className="text-center p-3 rounded-xl bg-white/15">
+              <Star className="h-4 w-4 mx-auto mb-1 opacity-80" />
+              <p className="text-xl font-bold">{partyQuality !== null ? partyQuality.toFixed(1) : '—'}</p>
+              <p className="text-xs opacity-70">Quality</p>
+            </div>
+            <div className="text-center p-3 rounded-xl bg-white/15">
+              <Zap className="h-4 w-4 mx-auto mb-1 opacity-80" />
+              <p className="text-xl font-bold">{confidence.percentage}%</p>
+              <p className="text-xs opacity-70">Confidence</p>
+            </div>
           </div>
-          <div className="text-center p-3 rounded-xl bg-white/15">
-            <Star className="h-4 w-4 mx-auto mb-1 opacity-80" />
-            <p className="text-xl font-bold">{partyQuality !== null ? partyQuality.toFixed(1) : '—'}</p>
-            <p className="text-xs opacity-70">Quality</p>
+        ) : (
+          // Before/during party: Show "Are you going?" buttons
+          <div className="mt-4 space-y-2">
+            <p className="text-sm text-center opacity-80 font-medium">Are you going?</p>
+            <div className="grid grid-cols-2 gap-2">
+              <button
+                onClick={() => handleAttendanceVote(true)}
+                disabled={attendanceLoading}
+                className={cn(
+                  "flex flex-col items-center gap-1 p-3 rounded-xl transition-all active:scale-95",
+                  userAttendance === true 
+                    ? "bg-white text-emerald-600 font-bold" 
+                    : "bg-white/15 hover:bg-white/25"
+                )}
+              >
+                <Check className="h-5 w-5" />
+                <span className="text-lg font-bold">{attendanceCounts.going}</span>
+                <span className="text-xs opacity-70">Yes</span>
+              </button>
+              <button
+                onClick={() => handleAttendanceVote(false)}
+                disabled={attendanceLoading}
+                className={cn(
+                  "flex flex-col items-center gap-1 p-3 rounded-xl transition-all active:scale-95",
+                  userAttendance === false 
+                    ? "bg-white text-red-500 font-bold" 
+                    : "bg-white/15 hover:bg-white/25"
+                )}
+              >
+                <X className="h-5 w-5" />
+                <span className="text-lg font-bold">{attendanceCounts.notGoing}</span>
+                <span className="text-xs opacity-70">No</span>
+              </button>
+            </div>
           </div>
-          <div className="text-center p-3 rounded-xl bg-white/15">
-            <Zap className="h-4 w-4 mx-auto mb-1 opacity-80" />
-            <p className="text-xl font-bold">{confidence.percentage}%</p>
-            <p className="text-xs opacity-70">Confidence</p>
-          </div>
-        </div>
+        )}
       </div>
 
       {/* Rate Button / Status */}
