@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo, useRef } from 'react';
-import { Plus, MapPin, Loader2, CalendarDays, AlertCircle, PartyPopper, Sparkles, Clock, Users, Music, Lock, Globe, ImageIcon, Upload, X, Mail, CheckCircle2, ChevronRight, Info } from 'lucide-react';
+import { Plus, MapPin, Loader2, CalendarDays, AlertCircle, PartyPopper, Sparkles, Clock, Users, Music, Lock, Globe, ImageIcon, Upload, X, Mail, CheckCircle2, ChevronRight, Info, Camera, Image } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -43,6 +43,7 @@ export default function CreatePartySheet({ open, onOpenChange, onSuccess }: Crea
   const [uploadingPhoto, setUploadingPhoto] = useState(false);
   const [emailError, setEmailError] = useState('');
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const cameraInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     if (open) {
@@ -464,10 +465,19 @@ export default function CreatePartySheet({ open, onOpenChange, onSuccess }: Crea
                 Cover Photo
               </Label>
               
+              {/* Hidden file inputs */}
               <input
                 ref={fileInputRef}
                 type="file"
                 accept="image/*"
+                onChange={handlePhotoUpload}
+                className="hidden"
+              />
+              <input
+                ref={cameraInputRef}
+                type="file"
+                accept="image/*"
+                capture="environment"
                 onChange={handlePhotoUpload}
                 className="hidden"
               />
@@ -490,25 +500,40 @@ export default function CreatePartySheet({ open, onOpenChange, onSuccess }: Crea
                   </Button>
                 </div>
               ) : (
-                <Button
-                  type="button"
-                  variant="outline"
-                  className="w-full h-24 flex flex-col gap-2 border-dashed"
-                  onClick={() => fileInputRef.current?.click()}
-                  disabled={uploadingPhoto}
-                >
-                  {uploadingPhoto ? (
-                    <>
-                      <Loader2 className="h-6 w-6 animate-spin text-primary" />
-                      <span className="text-sm text-muted-foreground">Uploading...</span>
-                    </>
-                  ) : (
-                    <>
-                      <Upload className="h-6 w-6 text-muted-foreground" />
-                      <span className="text-sm text-muted-foreground">Tap to upload a photo</span>
-                    </>
-                  )}
-                </Button>
+                <div className="flex gap-2">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="flex-1 h-14 flex flex-col gap-1"
+                    onClick={() => cameraInputRef.current?.click()}
+                    disabled={uploadingPhoto}
+                  >
+                    {uploadingPhoto ? (
+                      <Loader2 className="h-5 w-5 animate-spin text-primary" />
+                    ) : (
+                      <>
+                        <Camera className="h-5 w-5 text-muted-foreground" />
+                        <span className="text-xs text-muted-foreground">Take Photo</span>
+                      </>
+                    )}
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="flex-1 h-14 flex flex-col gap-1"
+                    onClick={() => fileInputRef.current?.click()}
+                    disabled={uploadingPhoto}
+                  >
+                    {uploadingPhoto ? (
+                      <Loader2 className="h-5 w-5 animate-spin text-primary" />
+                    ) : (
+                      <>
+                        <Image className="h-5 w-5 text-muted-foreground" />
+                        <span className="text-xs text-muted-foreground">Photo Library</span>
+                      </>
+                    )}
+                  </Button>
+                </div>
               )}
               <p className="text-xs text-muted-foreground">
                 Add a photo to make your party stand out in the feed
