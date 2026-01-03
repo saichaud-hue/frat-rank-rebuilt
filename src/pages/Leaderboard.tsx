@@ -323,6 +323,24 @@ export default function Leaderboard() {
 
   const sortedFraternities = getSortedFraternities();
 
+  // Calculate rank changes for trending view (overall rank - trending rank)
+  // Positive = moved up, Negative = moved down
+  const rankChangeMap = new Map<string, number>();
+  if (filter === 'trending') {
+    const overallRanked = sortFraternitiesByOverall([...allFraternities]);
+    const trendingRanked = sortedFraternities;
+    
+    const overallRankMap = new Map<string, number>();
+    overallRanked.forEach((f, i) => overallRankMap.set(f.id, i + 1));
+    
+    trendingRanked.forEach((f, i) => {
+      const overallRank = overallRankMap.get(f.id) ?? (i + 1);
+      const trendingRank = i + 1;
+      // Positive means they're doing better in trending than overall
+      rankChangeMap.set(f.id, overallRank - trendingRank);
+    });
+  }
+
   if (loading) {
     return (
       <div className="space-y-6 px-4">
@@ -482,6 +500,7 @@ export default function Leaderboard() {
               filter={filter}
               displayMode={displayMode === 'rank' ? 'score' : 'vibes'}
               tierInfo={displayMode === 'classification' ? getTierFromRank(index + 1, sortedFraternities.length) : undefined}
+              rankChange={filter === 'trending' ? rankChangeMap.get(frat.id) : undefined}
             />
             {index < sortedFraternities.length - 1 && (
               <div className="border-t border-border/50" />
