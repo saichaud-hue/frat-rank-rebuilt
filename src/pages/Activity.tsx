@@ -47,10 +47,12 @@ import {
   chatMessageVoteQueries,
   partyCommentVoteQueries,
   fraternityCommentVoteQueries,
+  moveVoteQueries,
   getCurrentUser,
   type Party,
   type Fraternity,
   type ChatMessage,
+  type MoveVote,
 } from '@/lib/supabase-data';
 import { toast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
@@ -176,47 +178,43 @@ export default function Activity() {
   const [mentionType, setMentionType] = useState<'frat' | 'party'>('frat');
   const [showMentionPicker, setShowMentionPicker] = useState(false);
 
-  // What's the move tonight - voting (stores all user votes)
-  const [allUserVotes, setAllUserVotes] = useState<Record<string, string>>(() => {
-    // Check if we need to reset (daily at 5 AM)
-    const now = new Date();
-    const today5AM = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 5, 0, 0);
-    const lastReset = localStorage.getItem('touse_move_last_reset');
-    const lastResetDate = lastReset ? new Date(lastReset) : null;
-    
-    if (now >= today5AM && (!lastResetDate || lastResetDate < today5AM)) {
-      localStorage.removeItem('touse_all_user_votes');
-      localStorage.setItem('touse_move_last_reset', now.toISOString());
-      return {};
-    }
-    
-    const saved = localStorage.getItem('touse_all_user_votes');
-    return saved ? JSON.parse(saved) : {};
-  });
+  // What's the move tonight - voting (now uses cloud storage)
+  const [allUserVotes, setAllUserVotes] = useState<Record<string, string>>({});
+  const [moveVotesLoading, setMoveVotesLoading] = useState(true);
   
   const [showSuggestionInput, setShowSuggestionInput] = useState(false);
   const [showAllMoveOptions, setShowAllMoveOptions] = useState(false);
   const [suggestionText, setSuggestionText] = useState('');
-  const [customSuggestions, setCustomSuggestions] = useState<{ id: string; text: string }[]>(() => {
-    // Check if we need to reset (daily at 5 AM)
-    const now = new Date();
-    const today5AM = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 5, 0, 0);
-    const lastReset = localStorage.getItem('touse_move_last_reset');
-    const lastResetDate = lastReset ? new Date(lastReset) : null;
-    
-    // If current time is past 5 AM and last reset was before today's 5 AM, clear suggestions
-    if (now >= today5AM && (!lastResetDate || lastResetDate < today5AM)) {
-      localStorage.removeItem('touse_custom_move_suggestions');
-      localStorage.setItem('touse_move_last_reset', now.toISOString());
-      return [];
+  const [customSuggestions, setCustomSuggestions] = useState<{ id: string; text: string }[]>([]);
+  
+  // Load move votes from database
+  const loadMoveVotes = async () => {
+    try {
+      const votes = await moveVoteQueries.listToday();
+      const votesMap: Record<string, string> = {};
+      const suggestions: { id: string; text: string }[] = [];
+      const seenSuggestionIds = new Set<string>();
+      
+      votes.forEach(vote => {
+        votesMap[vote.user_id] = vote.option_id;
+        // Track custom suggestions (frat votes that aren't default options)
+        if (vote.option_id.startsWith('frat-') && !seenSuggestionIds.has(vote.option_id)) {
+          suggestions.push({ id: vote.option_id, text: vote.option_name });
+          seenSuggestionIds.add(vote.option_id);
+        }
+      });
+      
+      setAllUserVotes(votesMap);
+      setCustomSuggestions(suggestions);
+    } catch (error) {
+      console.error('Failed to load move votes:', error);
+    } finally {
+      setMoveVotesLoading(false);
     }
-    
-    const saved = localStorage.getItem('touse_custom_move_suggestions');
-    return saved ? JSON.parse(saved) : [];
-  });
+  };
   
   // Derive current user's vote from allUserVotes
-  const userMoveVote = allUserVotes[userId] || null;
+  const userMoveVote = user?.id ? allUserVotes[user.id] : null;
   
   // Calculate vote counts from all user votes
   const moveVotes = useMemo(() => {
@@ -400,7 +398,7 @@ export default function Activity() {
       setParties(partiesData as any);
       setFraternities(fraternitiesData as any);
       
-      await Promise.all([loadActivity(), loadChat()]);
+      await Promise.all([loadActivity(), loadChat(), loadMoveVotes()]);
     } catch (error) {
       console.error('Failed to load data:', error);
     } finally {
@@ -705,42 +703,61 @@ export default function Activity() {
     }
   };
 
-  // Handle voting for "What's the move"
-  // Helper to update votes and persist to localStorage
-  const updateUserVote = (optionId: string | null) => {
-    const newVotes = { ...allUserVotes };
-    if (optionId === null) {
-      delete newVotes[userId];
-    } else {
-      newVotes[userId] = optionId;
-    }
-    setAllUserVotes(newVotes);
-    localStorage.setItem('touse_all_user_votes', JSON.stringify(newVotes));
-  };
-
-  const handleMoveVote = async (optionId: string) => {
-    const user = await getCurrentUser();
-    if (!user) {
+  // Handle voting for "What's the move" - now uses cloud storage
+  const handleMoveVote = async (optionId: string, optionName?: string) => {
+    const currentUser = await getCurrentUser();
+    if (!currentUser) {
       toast({ title: 'Please sign in to vote', variant: 'destructive' });
       return;
     }
 
-    if (userMoveVote === optionId) {
-      // Unvote
-      updateUserVote(null);
-    } else {
-      // Vote for this option
-      updateUserVote(optionId);
+    try {
+      if (userMoveVote === optionId) {
+        // Unvote
+        await moveVoteQueries.removeVote(currentUser.id);
+        const newVotes = { ...allUserVotes };
+        delete newVotes[currentUser.id];
+        setAllUserVotes(newVotes);
+      } else {
+        // Vote for this option
+        const name = optionName || optionId;
+        await moveVoteQueries.vote(currentUser.id, optionId, name);
+        setAllUserVotes(prev => ({ ...prev, [currentUser.id]: optionId }));
+      }
+    } catch (error) {
+      console.error('Failed to vote:', error);
+      toast({ title: 'Failed to vote', variant: 'destructive' });
     }
   };
 
-  const handleCustomSuggestionVote = (suggestionId: string) => {
-    if (userMoveVote === suggestionId) {
-      // Unvote
-      updateUserVote(null);
-    } else {
-      // Vote for this suggestion
-      updateUserVote(suggestionId);
+  const handleCustomSuggestionVote = async (suggestionId: string, suggestionName?: string) => {
+    const currentUser = await getCurrentUser();
+    if (!currentUser) {
+      toast({ title: 'Please sign in to vote', variant: 'destructive' });
+      return;
+    }
+
+    try {
+      if (userMoveVote === suggestionId) {
+        // Unvote
+        await moveVoteQueries.removeVote(currentUser.id);
+        const newVotes = { ...allUserVotes };
+        delete newVotes[currentUser.id];
+        setAllUserVotes(newVotes);
+      } else {
+        // Vote for this suggestion
+        const name = suggestionName || customSuggestions.find(s => s.id === suggestionId)?.text || suggestionId;
+        await moveVoteQueries.vote(currentUser.id, suggestionId, name);
+        setAllUserVotes(prev => ({ ...prev, [currentUser.id]: suggestionId }));
+        
+        // Add to local suggestions if not already there
+        if (!customSuggestions.find(s => s.id === suggestionId)) {
+          setCustomSuggestions(prev => [...prev, { id: suggestionId, text: name }]);
+        }
+      }
+    } catch (error) {
+      console.error('Failed to vote:', error);
+      toast({ title: 'Failed to vote', variant: 'destructive' });
     }
   };
 
@@ -753,38 +770,44 @@ export default function Activity() {
       .replace(/(.)\1{2,}/g, '$1$1$1'); // Collapse 3+ repeated chars to max 3
   };
 
-  const handleAddSuggestion = () => {
-    if (!suggestionText.trim()) return;
+  const handleAddSuggestion = async (text: string) => {
+    if (!text.trim()) return;
     
-    const normalizedInput = normalizeText(suggestionText);
+    const currentUser = await getCurrentUser();
+    if (!currentUser) {
+      toast({ title: 'Please sign in to add a suggestion', variant: 'destructive' });
+      return;
+    }
+
+    const normalizedInput = normalizeText(text);
     
     // Check if a similar suggestion already exists
     const existingIndex = customSuggestions.findIndex(s => normalizeText(s.text) === normalizedInput);
     
-    let updatedSuggestions: typeof customSuggestions;
-    let selectedId: string;
+    let suggestionId: string;
+    let suggestionName: string;
     
     if (existingIndex !== -1) {
       // Merge with existing - vote for the existing suggestion
-      selectedId = customSuggestions[existingIndex].id;
-      updatedSuggestions = customSuggestions;
+      suggestionId = customSuggestions[existingIndex].id;
+      suggestionName = customSuggestions[existingIndex].text;
       toast({ title: 'Vote added to existing suggestion!' });
     } else {
       // Create new suggestion
-      const newSuggestion = {
-        id: `custom-${Date.now()}`,
-        text: suggestionText.trim()
-      };
-      updatedSuggestions = [...customSuggestions, newSuggestion];
-      selectedId = newSuggestion.id;
+      suggestionId = `frat-${Date.now()}`;
+      suggestionName = text.trim();
+      setCustomSuggestions(prev => [...prev, { id: suggestionId, text: suggestionName }]);
       toast({ title: 'Suggestion added!' });
     }
     
-    setCustomSuggestions(updatedSuggestions);
-    localStorage.setItem('touse_custom_move_suggestions', JSON.stringify(updatedSuggestions));
-    updateUserVote(selectedId);
-    setSuggestionText('');
-    setShowSuggestionInput(false);
+    // Vote for it
+    try {
+      await moveVoteQueries.vote(currentUser.id, suggestionId, suggestionName);
+      setAllUserVotes(prev => ({ ...prev, [currentUser.id]: suggestionId }));
+    } catch (error) {
+      console.error('Failed to vote:', error);
+      toast({ title: 'Failed to vote', variant: 'destructive' });
+    }
   };
 
   const totalMoveVotes = useMemo(() => {
@@ -914,20 +937,10 @@ export default function Activity() {
         todaysParties={todaysParties}
         fraternities={fraternities}
         allUserVotes={allUserVotes}
-        userId={userId}
-        onVote={handleMoveVote}
-        onCustomVote={handleCustomSuggestionVote}
-        onAddSuggestion={(text) => {
-          const newSuggestion = {
-            id: `custom-${Date.now()}`,
-            text
-          };
-          const updated = [...customSuggestions, newSuggestion];
-          setCustomSuggestions(updated);
-          localStorage.setItem('touse_custom_move_suggestions', JSON.stringify(updated));
-          updateUserVote(newSuggestion.id);
-          toast({ title: 'Suggestion added!' });
-        }}
+        userId={user?.id || ''}
+        onVote={(optionId) => handleMoveVote(optionId, optionId)}
+        onCustomVote={(suggestionId) => handleCustomSuggestionVote(suggestionId)}
+        onAddSuggestion={handleAddSuggestion}
         customSuggestions={customSuggestions}
       />
 
@@ -1155,11 +1168,11 @@ export default function Activity() {
                     onChange={(e) => setSuggestionText(e.target.value)}
                     placeholder="Something else?"
                     className="flex-1 h-11 rounded-xl text-sm"
-                    onKeyDown={(e) => e.key === 'Enter' && handleAddSuggestion()}
+                    onKeyDown={(e) => e.key === 'Enter' && suggestionText.trim() && handleAddSuggestion(suggestionText)}
                     autoFocus
                   />
                   <Button
-                    onClick={handleAddSuggestion}
+                    onClick={() => suggestionText.trim() && handleAddSuggestion(suggestionText)}
                     disabled={!suggestionText.trim()}
                     size="sm"
                     className="h-11 w-11 rounded-xl gradient-primary"
