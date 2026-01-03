@@ -12,6 +12,7 @@ import { fraternityQueries, partyQueries, getCurrentUser, type Fraternity } from
 import { getFratShorthand } from '@/utils';
 import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
+import { supabase } from '@/integrations/supabase/client';
 
 interface CreatePartySheetProps {
   open: boolean;
@@ -160,6 +161,43 @@ export default function CreatePartySheet({ open, onOpenChange, onSuccess }: Crea
     setStartTime('20:00');
     setEndTime('23:00');
     setEmailError('');
+  };
+
+  const handlePhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const user = await getCurrentUser();
+    if (!user) {
+      const { toast } = await import('@/hooks/use-toast');
+      toast({ title: "Please sign in to upload photos", variant: "destructive" });
+      return;
+    }
+
+    setUploadingPhoto(true);
+    try {
+      const fileExt = file.name.split('.').pop();
+      const fileName = `${user.id}/${Date.now()}.${fileExt}`;
+
+      const { error: uploadError } = await supabase.storage
+        .from('party-covers')
+        .upload(fileName, file);
+
+      if (uploadError) throw uploadError;
+
+      const { data: { publicUrl } } = supabase.storage
+        .from('party-covers')
+        .getPublicUrl(fileName);
+
+      setFormData(prev => ({ ...prev, cover_photo_url: publicUrl }));
+    } catch (error) {
+      console.error('Failed to upload photo:', error);
+      const { toast } = await import('@/hooks/use-toast');
+      toast({ title: "Failed to upload photo", variant: "destructive" });
+    } finally {
+      setUploadingPhoto(false);
+      if (fileInputRef.current) fileInputRef.current.value = '';
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -419,20 +457,61 @@ export default function CreatePartySheet({ open, onOpenChange, onSuccess }: Crea
               />
             </div>
 
-            {/* Cover Photo Upload - simplified without file upload for now */}
+            {/* Cover Photo Upload */}
             <div className="space-y-2">
               <Label className="text-sm font-medium flex items-center gap-2">
                 <ImageIcon className="h-4 w-4 text-primary" />
-                Cover Photo URL
+                Cover Photo
               </Label>
-              <Input
-                placeholder="https://example.com/image.jpg"
-                value={formData.cover_photo_url}
-                onChange={(e) => setFormData(prev => ({ ...prev, cover_photo_url: e.target.value }))}
-                className="h-12"
+              
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/*"
+                onChange={handlePhotoUpload}
+                className="hidden"
               />
+              
+              {formData.cover_photo_url ? (
+                <div className="relative w-full h-32 rounded-xl overflow-hidden border border-border">
+                  <img 
+                    src={formData.cover_photo_url} 
+                    alt="Cover preview" 
+                    className="w-full h-full object-cover"
+                  />
+                  <Button
+                    type="button"
+                    variant="destructive"
+                    size="icon"
+                    className="absolute top-2 right-2 h-8 w-8"
+                    onClick={() => setFormData(prev => ({ ...prev, cover_photo_url: '' }))}
+                  >
+                    <X className="h-4 w-4" />
+                  </Button>
+                </div>
+              ) : (
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="w-full h-24 flex flex-col gap-2 border-dashed"
+                  onClick={() => fileInputRef.current?.click()}
+                  disabled={uploadingPhoto}
+                >
+                  {uploadingPhoto ? (
+                    <>
+                      <Loader2 className="h-6 w-6 animate-spin text-primary" />
+                      <span className="text-sm text-muted-foreground">Uploading...</span>
+                    </>
+                  ) : (
+                    <>
+                      <Upload className="h-6 w-6 text-muted-foreground" />
+                      <span className="text-sm text-muted-foreground">Tap to upload a photo</span>
+                    </>
+                  )}
+                </Button>
+              )}
               <p className="text-xs text-muted-foreground">
-                Add a photo URL to make your party stand out in the feed
+                Add a photo to make your party stand out in the feed
               </p>
             </div>
 
