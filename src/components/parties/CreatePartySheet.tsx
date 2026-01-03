@@ -68,10 +68,24 @@ export default function CreatePartySheet({ open, onOpenChange, onSuccess }: Crea
     }
   }, [endDate, endTime]);
 
+  function isValidEmail(email: string) {
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    return emailRegex.test(email.trim());
+  }
+
+  const handleEmailChange = (value: string) => {
+    setFormData((prev) => ({ ...prev, contact_email: value }));
+    if (value.trim() && !isValidEmail(value)) {
+      setEmailError("Please enter a valid email address");
+    } else {
+      setEmailError("");
+    }
+  };
+
   const { isEndValid, endError, isFormValid, completedSteps } = useMemo(() => {
     let startTimestamp: number | null = null;
     if (startDate) {
-      const [h, m] = startTime.split(':').map(Number);
+      const [h, m] = startTime.split(":").map(Number);
       const dt = new Date(startDate);
       dt.setHours(h, m, 0, 0);
       startTimestamp = dt.getTime();
@@ -79,55 +93,46 @@ export default function CreatePartySheet({ open, onOpenChange, onSuccess }: Crea
 
     let endTimestamp: number | null = null;
     if (endDate) {
-      const [h, m] = endTime.split(':').map(Number);
+      const [h, m] = endTime.split(":").map(Number);
       const dt = new Date(endDate);
       dt.setHours(h, m, 0, 0);
       endTimestamp = dt.getTime();
     }
 
-    let isEndValid = true;
-    let endError = '';
+    let localIsEndValid = true;
+    let localEndError = "";
 
     if (!endDate) {
-      isEndValid = false;
-      endError = 'End date/time is required.';
+      localIsEndValid = false;
+      localEndError = "End date/time is required.";
     } else if (startTimestamp !== null && endTimestamp !== null && endTimestamp <= startTimestamp) {
-      isEndValid = false;
-      endError = 'Party end must be after start.';
+      localIsEndValid = false;
+      localEndError = "Party end must be after start.";
     }
 
-    let completedSteps = 0;
-    if (formData.fraternity_id) completedSteps++;
-    if (formData.title.trim()) completedSteps++;
-    if (startDate) completedSteps++;
-    if (endDate && isEndValid) completedSteps++;
-    if (formData.contact_email.trim() && isValidEmail(formData.contact_email)) completedSteps++;
+    let localCompletedSteps = 0;
+    if (formData.fraternity_id) localCompletedSteps++;
+    if (formData.title.trim()) localCompletedSteps++;
+    if (startDate) localCompletedSteps++;
+    if (endDate && localIsEndValid) localCompletedSteps++;
+    if (formData.contact_email.trim() && isValidEmail(formData.contact_email)) localCompletedSteps++;
 
-    const isFormValid = 
+    const localIsFormValid =
       !!formData.fraternity_id &&
       !!formData.title.trim() &&
       !!startDate &&
       !!endDate &&
-      isEndValid &&
+      localIsEndValid &&
       !!formData.contact_email.trim() &&
       isValidEmail(formData.contact_email);
 
-    return { isEndValid, endError, isFormValid, completedSteps };
+    return {
+      isEndValid: localIsEndValid,
+      endError: localEndError,
+      isFormValid: localIsFormValid,
+      completedSteps: localCompletedSteps,
+    };
   }, [formData.fraternity_id, formData.title, formData.contact_email, startDate, startTime, endDate, endTime]);
-
-  const isValidEmail = (email: string) => {
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    return emailRegex.test(email.trim());
-  };
-
-  const handleEmailChange = (value: string) => {
-    setFormData(prev => ({ ...prev, contact_email: value }));
-    if (value.trim() && !isValidEmail(value)) {
-      setEmailError('Please enter a valid email address');
-    } else {
-      setEmailError('');
-    }
-  };
 
   const loadFraternities = async () => {
     try {
