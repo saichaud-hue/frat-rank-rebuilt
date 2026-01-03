@@ -1,6 +1,6 @@
 import { useMemo } from 'react';
 import { Link } from 'react-router-dom';
-import { Calendar, ChevronRight, Star, Clock, PartyPopper, TrendingUp } from 'lucide-react';
+import { Calendar, ChevronRight, Clock, PartyPopper, TrendingUp } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Badge } from '@/components/ui/badge';
 import { format, isToday, isTomorrow, isThisWeek, addDays, startOfDay, endOfDay } from 'date-fns';
@@ -111,7 +111,6 @@ export default function PlanningWindow({ parties, fraternities }: PlanningWindow
             <div className="space-y-2">
               {window.parties.map((party) => {
                 const frat = fraternities.find(f => f.id === party.fraternity_id);
-                const fratScore = frat?.display_score || 0;
                 const hasMomentum = frat?.momentum && frat.momentum > 0.1;
                 const partyDate = new Date(party.starts_at);
 
@@ -153,22 +152,6 @@ export default function PlanningWindow({ parties, fraternities }: PlanningWindow
                             {format(partyDate, 'h:mm a')}
                           </span>
                         </div>
-                        {fratScore > 0 && (
-                          <div className="flex items-center gap-1 mt-1.5">
-                            {[...Array(5)].map((_, i) => (
-                              <Star
-                                key={i}
-                                className={cn(
-                                  "h-3 w-3",
-                                  i < Math.floor(fratScore / 2) 
-                                    ? "text-amber-400 fill-amber-400" 
-                                    : "text-muted-foreground/30"
-                                )}
-                              />
-                            ))}
-                            <span className="text-xs font-semibold text-muted-foreground ml-1">{fratScore.toFixed(1)}</span>
-                          </div>
-                        )}
                       </div>
 
                       {/* Arrow */}
