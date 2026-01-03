@@ -258,21 +258,20 @@ export default function Layout({ children }: LayoutProps) {
                   to={item.url}
                   className={`relative flex flex-col items-center justify-center gap-0.5 py-2 min-h-[52px] rounded-xl transition-all tap-bounce tap-target ${
                     active
-                      ? 'bg-primary text-primary-foreground shadow-duke'
+                      ? 'text-primary'
                       : 'text-muted-foreground active:text-foreground active:bg-muted/50'
                   }`}
                 >
                   <div className="relative">
                     <item.icon 
                       className={`h-5 w-5 transition-all duration-200 ${active ? 'animate-pop' : ''}`}
-                      fill={active ? "currentColor" : "none"} 
                       strokeWidth={active ? 2.5 : 2} 
                     />
                     {showBadge && (
                       <span className="absolute -top-1 -right-1 h-2.5 w-2.5 bg-red-500 rounded-full animate-pulse shadow-lg" />
                     )}
                   </div>
-                  <span className={`text-[10px] font-bold tracking-tight ${active ? '' : 'font-semibold'}`}>{item.title}</span>
+                  <span className={`text-[10px] tracking-tight ${active ? 'font-bold' : 'font-medium'}`}>{item.title}</span>
                 </Link>
               );
             })}
