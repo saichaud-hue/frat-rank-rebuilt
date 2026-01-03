@@ -13,6 +13,12 @@ interface PartiesIntroProps {
 export default function PartiesIntro({ onComplete, onSubmitParty }: PartiesIntroProps) {
   const [neverShowAgain, setNeverShowAgain] = useState(false);
 
+  // Don't show if main tutorial is active
+  const tutorialActive = sessionStorage.getItem('touse_tutorial_active') === 'true';
+  if (tutorialActive) {
+    return null;
+  }
+
   const handleSubmitParty = () => {
     if (neverShowAgain) {
       localStorage.setItem('fratrank_parties_intro_never_show', 'true');
