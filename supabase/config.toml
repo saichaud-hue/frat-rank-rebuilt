@@ -1,1 +1,4 @@
 project_id = "oohzxhihnufmkdmfejdg"
+
+[functions.semester-reset]
+verify_jwt = false
