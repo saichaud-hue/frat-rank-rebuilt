@@ -215,37 +215,10 @@ export default function SpotlightTutorial({ onComplete }: SpotlightTutorialProps
     setCurrentStep(index);
   };
 
-  // Calculate tooltip position
-  const getTooltipStyle = () => {
-    if (isCenteredStep || !highlightRect) {
-      return {};
-    }
-
-    const padding = 16;
-    const tooltipHeight = 200; // Approximate
-    const viewportHeight = window.innerHeight;
-
-    if (step.position === 'bottom' || highlightRect.top > viewportHeight / 2) {
-      // Show below the highlight
-      return {
-        top: Math.min(highlightRect.bottom + padding, viewportHeight - tooltipHeight - padding),
-        left: padding,
-        right: padding,
-      };
-    } else {
-      // Show above the highlight
-      return {
-        bottom: viewportHeight - highlightRect.top + padding,
-        left: padding,
-        right: padding,
-      };
-    }
-  };
-
   const Icon = step.icon;
 
   return (
-    <div className="fixed inset-0 z-[100]">
+    <div className="fixed inset-0 z-[100] overflow-hidden">
       {/* Overlay with spotlight cutout */}
       <AnimatePresence mode="wait">
         <motion.div
@@ -302,7 +275,7 @@ export default function SpotlightTutorial({ onComplete }: SpotlightTutorialProps
         </motion.div>
       )}
 
-      {/* Tutorial card */}
+      {/* Tutorial card - always centered for simplicity and visibility */}
       <AnimatePresence mode="wait">
         <motion.div
           key={step.id}
@@ -310,12 +283,7 @@ export default function SpotlightTutorial({ onComplete }: SpotlightTutorialProps
           animate={{ opacity: 1, y: 0, scale: 1 }}
           exit={{ opacity: 0, y: -20, scale: 0.95 }}
           transition={{ type: 'spring', damping: 25, stiffness: 300 }}
-          className={`absolute ${
-            isCenteredStep 
-              ? 'inset-x-4 top-1/2 -translate-y-1/2' 
-              : 'inset-x-4'
-          }`}
-          style={!isCenteredStep ? getTooltipStyle() : undefined}
+          className="absolute inset-x-4 top-1/2 -translate-y-1/2"
         >
           <div className="bg-card border shadow-2xl rounded-2xl p-5 max-w-md mx-auto">
             {/* Skip button */}
