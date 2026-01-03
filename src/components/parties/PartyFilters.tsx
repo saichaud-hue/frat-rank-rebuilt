@@ -48,9 +48,12 @@ export default function PartyFilters({ filters, onFiltersChange, fraternities }:
         </SelectTrigger>
         <SelectContent className="rounded-xl border-primary/20 bg-popover">
           <SelectItem value="all">All Types</SelectItem>
-          <SelectItem value="themed">🎭 Themed</SelectItem>
-          <SelectItem value="formal">🎩 Formal</SelectItem>
-          <SelectItem value="mixer">🎉 Mixer</SelectItem>
+          <SelectItem value="casual">Casual</SelectItem>
+          <SelectItem value="themed">Themed</SelectItem>
+          <SelectItem value="formal">Formal</SelectItem>
+          <SelectItem value="mixer">Mixer</SelectItem>
+          <SelectItem value="darty">Darty</SelectItem>
+          <SelectItem value="tailgate">Tailgate</SelectItem>
         </SelectContent>
       </Select>
 
@@ -63,9 +66,9 @@ export default function PartyFilters({ filters, onFiltersChange, fraternities }:
         </SelectTrigger>
         <SelectContent className="rounded-xl border-primary/20 bg-popover">
           <SelectItem value="all">All Time</SelectItem>
-          <SelectItem value="today">🔥 Today</SelectItem>
-          <SelectItem value="week">📅 Week</SelectItem>
-          <SelectItem value="month">📆 Month</SelectItem>
+          <SelectItem value="today" className="text-center justify-center">Today</SelectItem>
+          <SelectItem value="week" className="text-center justify-center">Week</SelectItem>
+          <SelectItem value="month" className="text-center justify-center">Month</SelectItem>
         </SelectContent>
       </Select>
     </div>
