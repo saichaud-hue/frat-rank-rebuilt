@@ -744,6 +744,97 @@ export const fraternityCommentVoteQueries = {
 };
 
 // ==========================================
+// MOVE VOTES (Where are we going tonight?)
+// ==========================================
+
+export interface MoveVote {
+  id: string;
+  user_id: string;
+  option_id: string;
+  option_name: string;
+  vote_date: string;
+  created_at: string;
+}
+
+export const moveVoteQueries = {
+  // Get today's vote date (resets at 5 AM)
+  getTodayVoteDate(): string {
+    const now = new Date();
+    const today5AM = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 5, 0, 0);
+    // If before 5 AM, use yesterday's date
+    const voteDate = now < today5AM 
+      ? new Date(now.getTime() - 24 * 60 * 60 * 1000) 
+      : now;
+    return voteDate.toISOString().split('T')[0];
+  },
+
+  // List all votes for today
+  async listToday(): Promise<MoveVote[]> {
+    const voteDate = this.getTodayVoteDate();
+    const { data, error } = await supabase
+      .from('move_votes')
+      .select('*')
+      .eq('vote_date', voteDate);
+    if (error) throw error;
+    return data || [];
+  },
+
+  // Get current user's vote for today
+  async getUserVoteToday(userId: string): Promise<MoveVote | null> {
+    const voteDate = this.getTodayVoteDate();
+    const { data, error } = await supabase
+      .from('move_votes')
+      .select('*')
+      .eq('user_id', userId)
+      .eq('vote_date', voteDate)
+      .maybeSingle();
+    if (error) throw error;
+    return data;
+  },
+
+  // Vote or change vote
+  async vote(userId: string, optionId: string, optionName: string): Promise<void> {
+    const voteDate = this.getTodayVoteDate();
+    
+    // Check if user already voted today
+    const { data: existing } = await supabase
+      .from('move_votes')
+      .select('id')
+      .eq('user_id', userId)
+      .eq('vote_date', voteDate)
+      .maybeSingle();
+
+    if (existing) {
+      // Update existing vote
+      await supabase
+        .from('move_votes')
+        .update({ option_id: optionId, option_name: optionName })
+        .eq('id', existing.id);
+    } else {
+      // Insert new vote
+      await supabase
+        .from('move_votes')
+        .insert({ 
+          user_id: userId, 
+          option_id: optionId, 
+          option_name: optionName, 
+          vote_date: voteDate 
+        });
+    }
+  },
+
+  // Remove vote
+  async removeVote(userId: string): Promise<void> {
+    const voteDate = this.getTodayVoteDate();
+    await supabase
+      .from('move_votes')
+      .delete()
+      .eq('user_id', userId)
+      .eq('vote_date', voteDate);
+  },
+};
+
+// ==========================================
 // HELPER: Get current user
 // ==========================================
 
