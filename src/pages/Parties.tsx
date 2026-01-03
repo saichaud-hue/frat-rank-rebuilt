@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { PartyPopper, Plus, Flame, Calendar, Clock, Hourglass } from 'lucide-react';
 import { 
   partyQueries, 
@@ -48,9 +49,29 @@ export default function Parties() {
     timeframe: 'all',
   });
 
+  const navigate = useNavigate();
+
   useEffect(() => {
     loadData();
   }, []);
+
+  // Listen for tutorial event to auto-navigate to a party for rating
+  useEffect(() => {
+    const handleTutorialOpenPartyRating = () => {
+      // Find a completed party to rate (or any party if none completed)
+      const completedParties = parties.filter(p => {
+        const now = new Date();
+        const end = p.ends_at ? new Date(p.ends_at) : null;
+        return end && now > end;
+      });
+      const targetParty = completedParties[0] || parties[0];
+      if (targetParty) {
+        navigate(`/Party?id=${targetParty.id}`);
+      }
+    };
+    window.addEventListener('touse:tutorial:open-party-rating', handleTutorialOpenPartyRating);
+    return () => window.removeEventListener('touse:tutorial:open-party-rating', handleTutorialOpenPartyRating);
+  }, [parties, navigate]);
 
   const loadData = async () => {
     setLoading(true);

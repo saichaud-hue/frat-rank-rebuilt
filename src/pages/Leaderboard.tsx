@@ -119,6 +119,18 @@ export default function Leaderboard() {
     loadFraternities();
   }, []);
 
+  // Listen for tutorial event to auto-open the frat rating sheet
+  useEffect(() => {
+    const handleTutorialOpenRating = () => {
+      // Wait for fraternities to load, then open rating for the first one
+      if (allFraternities.length > 0) {
+        handleRate(allFraternities[0]);
+      }
+    };
+    window.addEventListener('touse:tutorial:open-frat-rating', handleTutorialOpenRating);
+    return () => window.removeEventListener('touse:tutorial:open-frat-rating', handleTutorialOpenRating);
+  }, [allFraternities]);
+
   const loadFraternities = async () => {
     try {
       const [fratsData, partiesData, allPartyRatings, allRepRatings, allPartyComments, allFratComments] = await Promise.all([
