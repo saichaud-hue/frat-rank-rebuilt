@@ -55,19 +55,6 @@ export default function Parties() {
     loadData();
   }, []);
 
-  // Listen for tutorial event to auto-navigate to party details (demo mode)
-  useEffect(() => {
-    const handleTutorialOpenPartyDetails = () => {
-      // Navigate to demo party page for tutorial
-      navigate('/Party?demo=true');
-      // Dispatch completion event after navigation
-      setTimeout(() => {
-        window.dispatchEvent(new CustomEvent('touse:tutorial:party-viewed'));
-      }, 500);
-    };
-    window.addEventListener('touse:tutorial:open-party-details', handleTutorialOpenPartyDetails);
-    return () => window.removeEventListener('touse:tutorial:open-party-details', handleTutorialOpenPartyDetails);
-  }, [navigate]);
 
   const loadData = async () => {
     setLoading(true);
