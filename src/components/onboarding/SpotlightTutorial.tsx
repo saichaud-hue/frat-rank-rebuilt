@@ -116,14 +116,6 @@ const tutorialSteps: TutorialStep[] = [
     position: 'bottom',
   },
   {
-    id: 'party-card',
-    title: 'Party Calendar',
-    description: 'Browse upcoming and past parties. Tap any party to see its details.',
-    icon: Calendar,
-    route: '/Parties',
-    position: 'center',
-  },
-  {
     id: 'posts',
     title: 'Anonymous Posts',
     description: 'See what campus is buzzing about. All posts are completely anonymous.',
