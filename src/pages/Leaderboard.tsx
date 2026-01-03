@@ -37,7 +37,13 @@ import PartyRatingForm from '@/components/rate/PartyRatingForm';
 import { Skeleton } from '@/components/ui/skeleton';
 import { clamp } from '@/utils';
 import { ensureAuthed } from '@/utils/auth';
-import { Star, PartyPopper, X, Plus, ArrowUpDown, Search } from 'lucide-react';
+import { Star, PartyPopper, X, Plus, ArrowUpDown, Search, Info } from 'lucide-react';
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from '@/components/ui/popover';
+import { ScrollArea } from '@/components/ui/scroll-area';
 
 type FilterType = 'overall' | 'reputation' | 'party' | 'trending';
 type DisplayMode = 'rank' | 'classification';
@@ -347,13 +353,105 @@ export default function Leaderboard() {
 
   return (
     <div className="pb-28">
-      {/* Header */}
-      <div className="px-4 pt-2">
-        <LeaderboardHeader
-          filter={filter}
-          onFilterChange={setFilter}
-          campusName="Duke University"
-        />
+      {/* Header with Info */}
+      <div className="px-4 pt-2 flex items-start justify-between">
+        <div className="flex-1">
+          <LeaderboardHeader
+            filter={filter}
+            onFilterChange={setFilter}
+            campusName="Duke University"
+          />
+        </div>
+        
+        {/* Ranking Formula Info */}
+        <Popover>
+          <PopoverTrigger asChild>
+            <button className="p-2 mt-1 rounded-full hover:bg-muted transition-colors text-muted-foreground hover:text-foreground">
+              <Info className="h-5 w-5" />
+            </button>
+          </PopoverTrigger>
+          <PopoverContent align="end" className="w-80 p-0" sideOffset={8}>
+            <ScrollArea className="h-[400px]">
+              <div className="p-4 space-y-4">
+                <div>
+                  <h3 className="font-display font-bold text-lg">How We Rank Fraternities</h3>
+                  <p className="text-xs text-muted-foreground mt-1">Our algorithm ensures fair, data-driven rankings</p>
+                </div>
+                
+                <div className="space-y-3 text-sm">
+                  <div className="p-3 rounded-lg bg-primary/5 border border-primary/20">
+                    <h4 className="font-semibold text-primary mb-1">Overall Score Formula</h4>
+                    <p className="text-xs text-muted-foreground">
+                      <span className="font-mono bg-muted px-1 rounded">Overall = (Rep × 0.5) + (Party × 0.4) + (Momentum × 0.1)</span>
+                    </p>
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <h4 className="font-semibold flex items-center gap-2">
+                      <span className="w-6 h-6 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center text-xs font-bold">1</span>
+                      Reputation Score (50%)
+                    </h4>
+                    <p className="text-xs text-muted-foreground ml-8">
+                      Based on peer ratings across three dimensions: <strong>Brotherhood</strong> (internal culture and member bonds), <strong>Reputation</strong> (campus standing and social perception), and <strong>Community</strong> (philanthropy and campus involvement). Each rating is weighted and averaged, with outlier protection to prevent manipulation.
+                    </p>
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <h4 className="font-semibold flex items-center gap-2">
+                      <span className="w-6 h-6 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center text-xs font-bold">2</span>
+                      Party Score (40%)
+                    </h4>
+                    <p className="text-xs text-muted-foreground ml-8">
+                      Calculated from actual party ratings on: <strong>Vibe</strong> (atmosphere and energy), <strong>Music</strong> (DJ/playlist quality), <strong>Execution</strong> (organization and flow), and <strong>Quality</strong> (overall experience). Uses time-decay weighting so recent parties matter more. Requires minimum 3 ratings per party for statistical validity.
+                    </p>
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <h4 className="font-semibold flex items-center gap-2">
+                      <span className="w-6 h-6 rounded-full bg-amber-100 text-amber-600 flex items-center justify-center text-xs font-bold">3</span>
+                      Momentum Score (10%)
+                    </h4>
+                    <p className="text-xs text-muted-foreground ml-8">
+                      Measures recent activity and engagement: party frequency, rating volume, comment sentiment, and week-over-week improvements. Rewards fraternities that are actively improving and staying engaged with the community.
+                    </p>
+                  </div>
+                  
+                  <div className="border-t pt-3 mt-3">
+                    <h4 className="font-semibold mb-2">Anti-Gaming Protections</h4>
+                    <ul className="text-xs text-muted-foreground space-y-1.5 ml-4">
+                      <li className="flex items-start gap-2">
+                        <span className="text-primary">•</span>
+                        <span><strong>Rate limiting:</strong> One rating per user per frat/party prevents spam</span>
+                      </li>
+                      <li className="flex items-start gap-2">
+                        <span className="text-primary">•</span>
+                        <span><strong>Outlier detection:</strong> Extreme scores are weighted less to prevent brigading</span>
+                      </li>
+                      <li className="flex items-start gap-2">
+                        <span className="text-primary">•</span>
+                        <span><strong>Minimum thresholds:</strong> Fraternities need sufficient data before ranking</span>
+                      </li>
+                      <li className="flex items-start gap-2">
+                        <span className="text-primary">•</span>
+                        <span><strong>Time decay:</strong> Older data gradually loses influence, keeping rankings current</span>
+                      </li>
+                    </ul>
+                  </div>
+                  
+                  <div className="border-t pt-3">
+                    <h4 className="font-semibold mb-2">Sorting Options</h4>
+                    <ul className="text-xs text-muted-foreground space-y-1 ml-4">
+                      <li><strong>All:</strong> Combined overall score</li>
+                      <li><strong>Frats:</strong> Reputation-only ranking</li>
+                      <li><strong>Parties:</strong> Party performance ranking</li>
+                      <li><strong>Hot:</strong> Trending based on recent momentum</li>
+                    </ul>
+                  </div>
+                </div>
+              </div>
+            </ScrollArea>
+          </PopoverContent>
+        </Popover>
       </div>
 
       {/* Sort indicator / Display mode toggle */}
