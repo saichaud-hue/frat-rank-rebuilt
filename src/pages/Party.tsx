@@ -31,30 +31,71 @@ const adaptPartyRatingForScoring = (r: PartyRating): any => ({
   created_date: r.created_at,
 });
 
+// Demo party data for tutorial
+const DEMO_PARTY: Party = {
+  id: 'demo',
+  title: 'Spring Formal',
+  theme: 'formal',
+  starts_at: new Date(Date.now() + 3 * 24 * 60 * 60 * 1000).toISOString(), // 3 days from now
+  ends_at: new Date(Date.now() + 3 * 24 * 60 * 60 * 1000 + 5 * 60 * 60 * 1000).toISOString(),
+  venue: 'Chapter House',
+  access_type: 'open',
+  status: 'active',
+  fraternity_id: null,
+  user_id: null,
+  created_at: new Date().toISOString(),
+  display_photo_url: null,
+  tags: null,
+  performance_score: null,
+  quantifiable_score: null,
+  unquantifiable_score: null,
+  total_ratings: null,
+};
+
+const DEMO_FRATERNITY: Fraternity = {
+  id: 'demo-frat',
+  name: 'Sigma Alpha Epsilon',
+  chapter: 'SAE',
+  description: null,
+  logo_url: null,
+  founded_year: null,
+  campus_id: null,
+  created_at: new Date().toISOString(),
+  base_score: null,
+  display_score: null,
+  historical_party_score: null,
+  momentum: null,
+  reputation_score: null,
+  status: 'active',
+};
+
 export default function PartyPage() {
   const [searchParams] = useSearchParams();
   const partyId = searchParams.get('id');
+  const isDemo = searchParams.get('demo') === 'true';
   
-  const [party, setParty] = useState<Party | null>(null);
-  const [fraternity, setFraternity] = useState<Fraternity | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [party, setParty] = useState<Party | null>(isDemo ? DEMO_PARTY : null);
+  const [fraternity, setFraternity] = useState<Fraternity | null>(isDemo ? DEMO_FRATERNITY : null);
+  const [loading, setLoading] = useState(!isDemo);
   const [showRatingForm, setShowRatingForm] = useState(false);
   const [ratingsRefreshKey, setRatingsRefreshKey] = useState(0);
   const [partyRatings, setPartyRatings] = useState<PartyRating[]>([]);
   const [activeTab, setActiveTab] = useState<'photos' | 'ratings' | 'comments'>('photos');
   
   // Attendance states
-  const [attendanceCounts, setAttendanceCounts] = useState<{ going: number; notGoing: number }>({ going: 0, notGoing: 0 });
+  const [attendanceCounts, setAttendanceCounts] = useState<{ going: number; notGoing: number }>(
+    isDemo ? { going: 47, notGoing: 12 } : { going: 0, notGoing: 0 }
+  );
   const [userAttendance, setUserAttendance] = useState<boolean | null>(null);
   const [attendanceLoading, setAttendanceLoading] = useState(false);
 
   useEffect(() => {
-    if (partyId) {
+    if (partyId && !isDemo) {
       loadParty();
       loadPartyRatings();
       loadAttendance();
     }
-  }, [partyId]);
+  }, [partyId, isDemo]);
 
   const loadAttendance = async () => {
     if (!partyId) return;
