@@ -55,22 +55,26 @@ export default function Parties() {
     loadData();
   }, []);
 
-  // Listen for tutorial event to auto-navigate to a party for rating
+  // Listen for tutorial event to auto-navigate to party details
   useEffect(() => {
-    const handleTutorialOpenPartyRating = () => {
-      // Find a completed party to rate (or any party if none completed)
-      const completedParties = parties.filter(p => {
+    const handleTutorialOpenPartyDetails = () => {
+      // Find an upcoming party (or any party if none upcoming)
+      const upcomingParties = parties.filter(p => {
         const now = new Date();
-        const end = p.ends_at ? new Date(p.ends_at) : null;
-        return end && now > end;
+        const start = p.starts_at ? new Date(p.starts_at) : now;
+        return now < start;
       });
-      const targetParty = completedParties[0] || parties[0];
+      const targetParty = upcomingParties[0] || parties[0];
       if (targetParty) {
         navigate(`/Party?id=${targetParty.id}`);
+        // Dispatch completion event after navigation
+        setTimeout(() => {
+          window.dispatchEvent(new CustomEvent('touse:tutorial:party-viewed'));
+        }, 500);
       }
     };
-    window.addEventListener('touse:tutorial:open-party-rating', handleTutorialOpenPartyRating);
-    return () => window.removeEventListener('touse:tutorial:open-party-rating', handleTutorialOpenPartyRating);
+    window.addEventListener('touse:tutorial:open-party-details', handleTutorialOpenPartyDetails);
+    return () => window.removeEventListener('touse:tutorial:open-party-details', handleTutorialOpenPartyDetails);
   }, [parties, navigate]);
 
   const loadData = async () => {

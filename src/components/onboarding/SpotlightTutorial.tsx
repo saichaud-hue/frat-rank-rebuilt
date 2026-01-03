@@ -115,14 +115,14 @@ const tutorialSteps: TutorialStep[] = [
   },
   {
     id: 'party-card',
-    title: 'Rate a Party',
-    description: 'We will open a party for you. Tap "Rate This Party" and submit your rating!',
+    title: 'View an Upcoming Party',
+    description: 'We will open an upcoming party for you. Check out the details!',
     icon: Calendar,
     route: '/Parties',
     position: 'center',
     interactive: true,
-    completionEvent: 'touse:tutorial:party-rated',
-    actionHint: 'Rate This Party, then Submit Rating',
+    completionEvent: 'touse:tutorial:party-viewed',
+    actionHint: 'Browse the party details',
   },
   {
     id: 'posts',
@@ -376,7 +376,7 @@ export default function SpotlightTutorial({ onComplete }: SpotlightTutorialProps
       window.dispatchEvent(new CustomEvent('touse:tutorial:open-frat-rating'));
     }
     if (step.id === 'party-card') {
-      window.dispatchEvent(new CustomEvent('touse:tutorial:open-party-rating'));
+      window.dispatchEvent(new CustomEvent('touse:tutorial:open-party-details'));
     }
     
     setInteractionMode(true);
