@@ -435,6 +435,7 @@ export default function Leaderboard() {
             </>
           ) : (
             <button
+              data-tutorial="rate-fab"
               onClick={() => setRateExpanded(true)}
               className="flex items-center gap-2 px-5 py-3 rounded-full bg-foreground text-background shadow-lg active:scale-95 transition-transform hover:shadow-xl"
             >
