@@ -476,17 +476,8 @@ export default function Profile() {
     const newRatedCount = isNewRating ? ratedFratCount + 1 : ratedFratCount;
     const allFratsRated = newRatedCount >= allFraternities.length;
     
-    // Check if user just completed 5 frat ratings (unlock threshold)
-    const FRAT_UNLOCK_THRESHOLD = 5;
-    if (isNewRating && newRatedCount >= FRAT_UNLOCK_THRESHOLD && ratedFratCount < FRAT_UNLOCK_THRESHOLD && !completionPostedRef.current) {
-      completionPostedRef.current = true;
-      setShowConfetti(true);
-      setShareType('frats');
-      setPendingShareUserId(user.id);
-      setShowShareDialog(true);
-      // Don't show intro again if showing share dialog
-      setRatingFromIntro(false);
-    } else if (allFratsRated && isNewRating && !completionPostedRef.current) {
+    // Only show confetti/share dialog when ALL frats are rated, not at 5
+    if (allFratsRated && isNewRating && !completionPostedRef.current) {
       // User just rated all frats - show congratulations
       completionPostedRef.current = true;
       setShowConfetti(true);
@@ -495,8 +486,8 @@ export default function Profile() {
       setShowShareDialog(true);
       setRatingFromIntro(false);
     } else if (ratingFromIntro) {
-      // Return to frats progress screen
-      setIntroReturnStep('frats');
+      // Return to frat-list (not frats progress screen) so user can continue rating
+      setIntroReturnStep('frat-list');
       setShowIntro(true);
       setRatingFromIntro(false);
     }
