@@ -647,7 +647,7 @@ export default function Profile() {
   const FRAT_UNLOCK_THRESHOLD = 5;
 
   return (
-    <div className="max-w-2xl mx-auto space-y-4 pb-20">
+    <div data-tutorial="profile-section" className="max-w-2xl mx-auto space-y-4 pb-20">
       {/* Profile Header */}
       <div className="p-5 rounded-2xl bg-muted/50">
         <div className="flex items-center gap-4">

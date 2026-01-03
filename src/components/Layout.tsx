@@ -268,6 +268,7 @@ export default function Layout({ children }: LayoutProps) {
                 <Link
                   key={item.title}
                   to={item.url}
+                  data-tutorial={item.title === 'Rankings' ? 'nav-rankings' : undefined}
                   className={`relative flex flex-col items-center justify-center gap-0.5 py-2 min-h-[52px] rounded-xl transition-all tap-bounce tap-target ${
                     active
                       ? 'text-primary'

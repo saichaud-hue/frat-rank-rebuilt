@@ -27,7 +27,7 @@ export default function LeaderboardHeader({
       </div>
 
       {/* Filter Pills - Beli style */}
-      <div className="flex gap-2 overflow-x-auto no-scrollbar -mx-4 px-4">
+      <div data-tutorial="leaderboard-filters" className="flex gap-2 overflow-x-auto no-scrollbar -mx-4 px-4">
         {filterOptions.map((option) => (
           <button
             key={option.value}
