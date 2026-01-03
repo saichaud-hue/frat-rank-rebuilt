@@ -249,7 +249,10 @@ export default function PartyPage() {
       </Button>
 
       {/* Header Card */}
-      <div className={`rounded-2xl ${config.headerBg} p-5 ${config.textColor}`}>
+      <div className={`rounded-2xl ${config.headerBg} p-5 relative overflow-hidden`}>
+        {/* Dark overlay for text visibility */}
+        <div className="absolute inset-0 bg-black/40" />
+        <div className="relative z-10 text-white">
         {/* Status & Theme Badges */}
         <div className="flex items-center justify-between mb-3">
           <Badge className={`${config.bg} text-white border-0 ${status === 'live' ? 'animate-pulse' : ''}`}>
@@ -354,6 +357,7 @@ export default function PartyPage() {
             </div>
           </div>
         )}
+        </div>
       </div>
 
       {/* Rate Button / Status */}
