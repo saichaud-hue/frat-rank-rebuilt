@@ -52,8 +52,11 @@ export default function Tutorial({ onComplete }: TutorialProps) {
   const Icon = step.icon;
 
   return (
-    <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
-      <Card className="max-w-md w-full p-8 animate-scale-in">
+    <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-end sm:items-center justify-center">
+      <Card 
+        className="w-full sm:max-w-md rounded-t-3xl sm:rounded-2xl p-6 animate-slide-up sm:animate-scale-in max-h-[85vh] overflow-y-auto"
+        style={{ paddingBottom: 'max(env(safe-area-inset-bottom), 24px)' }}
+      >
         <div className="text-center space-y-6">
           {/* Progress dots */}
           <div className="flex justify-center gap-2">

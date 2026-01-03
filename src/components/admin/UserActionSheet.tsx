@@ -117,8 +117,8 @@ export function UserActionSheet({
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent side="bottom" className="rounded-t-2xl">
-        <SheetHeader>
+      <SheetContent side="bottom" className="max-h-[80vh] overflow-y-auto">
+        <SheetHeader className="text-left">
           <SheetTitle className="flex items-center gap-2">
             <Mail className="h-4 w-4" />
             User Actions
