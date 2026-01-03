@@ -833,7 +833,7 @@ export default function Profile() {
                 ) : (
                   rankedFrats.map((item, index) => (
                     <div key={item.fraternity.id}>
-                      <Link to={createPageUrl(`Fraternity?id=${item.fraternity.id}`)}>
+                      <Link to={`/Fraternity/${item.fraternity.id}`}>
                         <div className="flex items-center gap-3 py-3 active:bg-muted/30 transition-colors">
                           <div className="w-6 text-center flex-shrink-0">
                             <span className="text-sm font-semibold text-muted-foreground">
