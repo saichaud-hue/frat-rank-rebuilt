@@ -179,6 +179,14 @@ export default function SpotlightTutorial({ onComplete }: SpotlightTutorialProps
   const location = useLocation();
   const observerRef = useRef<MutationObserver | null>(null);
 
+  // Mark tutorial as active so section intros don't show
+  useEffect(() => {
+    sessionStorage.setItem('touse_tutorial_active', 'true');
+    return () => {
+      sessionStorage.removeItem('touse_tutorial_active');
+    };
+  }, []);
+
   const step = tutorialSteps[currentStep];
   const isFirstStep = currentStep === 0;
   const isLastStep = currentStep === tutorialSteps.length - 1;

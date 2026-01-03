@@ -56,6 +56,12 @@ export default function YourListsIntro({
   const [neverShowAgain, setNeverShowAgain] = useState(false);
   const [step, setStep] = useState<IntroStep>('main');
 
+  // Don't show if main tutorial is active
+  const tutorialActive = sessionStorage.getItem('touse_tutorial_active') === 'true';
+  if (tutorialActive) {
+    return null;
+  }
+
   const FRAT_UNLOCK_THRESHOLD = 5;
   const fratUnlocked = ratedFratCount >= FRAT_UNLOCK_THRESHOLD;
   const partyUnlocked = ratedPartyCount >= 3;

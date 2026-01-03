@@ -26,6 +26,12 @@ export default function LeaderboardIntro({ onComplete, onRate, fraternities }: L
   const [neverShowAgain, setNeverShowAgain] = useState(false);
   const [showFratList, setShowFratList] = useState(false);
 
+  // Don't show if main tutorial is active
+  const tutorialActive = sessionStorage.getItem('touse_tutorial_active') === 'true';
+  if (tutorialActive) {
+    return null;
+  }
+
   const handleExplore = () => {
     onComplete(neverShowAgain);
   };
