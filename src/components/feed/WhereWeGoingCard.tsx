@@ -30,7 +30,7 @@ interface WhereWeGoingCardProps {
 
 // Core options that always show (even with 0 votes)
 const CORE_OPTIONS = ['devines', 'shooters', 'stay_in'];
-const MAX_COVER_OPTIONS = 3;
+const MAX_COVER_OPTIONS = 4;
 
 const defaultMoveOptions = [
   { id: 'devines', label: 'Devines' },
