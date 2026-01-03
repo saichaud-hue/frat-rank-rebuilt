@@ -443,7 +443,7 @@ export default function AnonymousFeed({ initialSort }: AnonymousFeedProps) {
   return (
     <div data-tutorial="post-area" className="flex flex-col h-full">
       {/* Sort tabs */}
-      <div className="sticky top-0 z-10 bg-background/95 backdrop-blur-sm border-b px-4 py-2">
+      <div data-tutorial="post-sort" className="sticky top-0 z-10 bg-background/95 backdrop-blur-sm border-b px-4 py-2">
         <div className="flex gap-1 bg-muted rounded-xl p-1">
           {sortOptions.map(opt => (
             <button
@@ -494,7 +494,7 @@ export default function AnonymousFeed({ initialSort }: AnonymousFeedProps) {
       </ScrollArea>
 
       {/* Floating compose button */}
-      <div className="fixed bottom-20 right-4 z-50">
+      <div data-tutorial="create-post" className="fixed bottom-20 right-4 z-50">
         <Button
           onClick={() => setShowComposer(true)}
           className="rounded-full px-5 h-12 bg-foreground text-background shadow-xl font-semibold text-base hover:bg-foreground/90 gap-1.5"

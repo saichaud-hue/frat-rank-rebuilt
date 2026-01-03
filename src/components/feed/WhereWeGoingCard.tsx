@@ -217,6 +217,7 @@ export default function WhereWeGoingCard({
           <DropdownMenu open={showAddMenu} onOpenChange={setShowAddMenu}>
             <DropdownMenuTrigger asChild>
               <button
+                data-tutorial="add-option"
                 className="flex-1 h-10 rounded-xl border border-dashed border-muted-foreground/30 flex items-center justify-center gap-1.5 text-muted-foreground hover:border-primary hover:text-primary transition-colors"
               >
                 <Plus className="h-4 w-4" />
