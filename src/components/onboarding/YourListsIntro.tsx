@@ -92,9 +92,12 @@ export default function YourListsIntro({
   return (
     <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-end sm:items-center justify-center">
       <Card 
-        className="w-full sm:max-w-md rounded-t-3xl sm:rounded-2xl p-6 pb-8 animate-slide-up sm:animate-scale-in" 
-        style={{ paddingBottom: 'max(env(safe-area-inset-bottom), 32px)' }}
+        className="w-full sm:max-w-md rounded-t-3xl sm:rounded-2xl animate-slide-up sm:animate-scale-in max-h-[85vh] flex flex-col overflow-hidden" 
       >
+        <div 
+          className="flex-1 overflow-y-auto p-6"
+          style={{ paddingBottom: 'max(env(safe-area-inset-bottom), 24px)' }}
+        >
         {step === 'main' && (
           <div className="space-y-6">
             {/* Icon */}
@@ -427,6 +430,7 @@ export default function YourListsIntro({
             </ScrollArea>
           </div>
         )}
+        </div>
       </Card>
     </div>
   );
