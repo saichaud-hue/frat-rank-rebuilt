@@ -307,6 +307,33 @@ export type Database = {
           },
         ]
       }
+      move_votes: {
+        Row: {
+          created_at: string
+          id: string
+          option_id: string
+          option_name: string
+          user_id: string
+          vote_date: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          option_id: string
+          option_name: string
+          user_id: string
+          vote_date?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          option_id?: string
+          option_name?: string
+          user_id?: string
+          vote_date?: string
+        }
+        Relationships: []
+      }
       parties: {
         Row: {
           access_type: string | null
