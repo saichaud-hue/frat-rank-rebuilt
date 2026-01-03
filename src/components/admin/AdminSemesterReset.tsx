@@ -6,6 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
+import { AdminSemesterWarning } from './AdminSemesterWarning';
 
 export function AdminSemesterReset() {
   const [confirmText, setConfirmText] = useState('');
@@ -83,7 +84,12 @@ export function AdminSemesterReset() {
   }
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-6">
+      {/* Warning Notification Section */}
+      <AdminSemesterWarning />
+
+      {/* Danger Zone */}
+      <div className="space-y-4">
       <Alert variant="destructive">
         <AlertTriangle className="h-4 w-4" />
         <AlertTitle>Danger Zone</AlertTitle>
@@ -157,6 +163,7 @@ export function AdminSemesterReset() {
           </Button>
         </CardContent>
       </Card>
+      </div>
     </div>
   );
 }

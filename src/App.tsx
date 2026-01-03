@@ -23,6 +23,7 @@ import AuthCallback from "./pages/AuthCallback";
 import UserNotRegisteredError from "./components/errors/UserNotRegisteredError";
 import NotFound from "./pages/NotFound";
 import { checkStreakStatus } from "./utils/streak";
+import { SemesterAnnouncementPopup } from "./components/announcements/SemesterAnnouncementPopup";
 
 const queryClient = new QueryClient();
 
@@ -46,6 +47,7 @@ const App = () => (
       <TooltipProvider>
         <Toaster />
         <Sonner />
+        <SemesterAnnouncementPopup />
         <BrowserRouter>
           <ScrollToTop />
           <Routes>
