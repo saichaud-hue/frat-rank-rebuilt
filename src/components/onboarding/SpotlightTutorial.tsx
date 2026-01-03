@@ -181,9 +181,11 @@ export default function SpotlightTutorial({ onComplete }: SpotlightTutorialProps
   const [highlightRect, setHighlightRect] = useState<DOMRect | null>(null);
   const [neverShowAgain, setNeverShowAgain] = useState(false);
   const [isNavigating, setIsNavigating] = useState(false);
+  const [interactionMode, setInteractionMode] = useState(false); // When true, tutorial hides and user can interact
   const navigate = useNavigate();
   const location = useLocation();
   const observerRef = useRef<MutationObserver | null>(null);
+  const previousPathRef = useRef(location.pathname);
 
   // Mark tutorial as active so section intros don't show
   useEffect(() => {
@@ -197,6 +199,7 @@ export default function SpotlightTutorial({ onComplete }: SpotlightTutorialProps
   const isFirstStep = currentStep === 0;
   const isLastStep = currentStep === tutorialSteps.length - 1;
   const isCenteredStep = step.position === 'center';
+  const isInteractiveStep = step.interactive === true;
 
   // Find and highlight element
   const findAndHighlight = useCallback(() => {
@@ -263,9 +266,20 @@ export default function SpotlightTutorial({ onComplete }: SpotlightTutorialProps
     return () => window.removeEventListener('resize', handleResize);
   }, [findAndHighlight]);
 
+  // Detect when user navigates away during interaction mode (e.g., clicked a party)
+  useEffect(() => {
+    if (interactionMode && location.pathname !== previousPathRef.current) {
+      // User navigated, auto-advance tutorial
+      setInteractionMode(false);
+      setCurrentStep(prev => prev + 1);
+    }
+    previousPathRef.current = location.pathname;
+  }, [location.pathname, interactionMode]);
+
   // Keyboard navigation
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
+      if (interactionMode) return; // Don't handle keys during interaction
       if (e.key === 'ArrowRight' || e.key === 'Enter') {
         handleNext();
       } else if (e.key === 'ArrowLeft') {
@@ -276,19 +290,21 @@ export default function SpotlightTutorial({ onComplete }: SpotlightTutorialProps
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [currentStep]);
+  }, [currentStep, interactionMode]);
 
   const handleNext = () => {
     if (isLastStep) {
       onComplete(neverShowAgain);
     } else {
       setCurrentStep(prev => prev + 1);
+      setInteractionMode(false);
     }
   };
 
   const handlePrev = () => {
     if (!isFirstStep) {
       setCurrentStep(prev => prev - 1);
+      setInteractionMode(false);
     }
   };
 
@@ -298,14 +314,42 @@ export default function SpotlightTutorial({ onComplete }: SpotlightTutorialProps
 
   const handleDotClick = (index: number) => {
     setCurrentStep(index);
+    setInteractionMode(false);
+  };
+
+  const handleStartInteraction = () => {
+    setInteractionMode(true);
+  };
+
+  const handleContinueTutorial = () => {
+    setInteractionMode(false);
+    setCurrentStep(prev => prev + 1);
   };
 
   const Icon = step.icon;
 
-  const isInteractiveStep = step.interactive === true;
+  // If in interaction mode, show minimal floating button only
+  if (interactionMode) {
+    return (
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="fixed bottom-24 left-1/2 -translate-x-1/2 z-[100]"
+        style={{ marginBottom: 'env(safe-area-inset-bottom)' }}
+      >
+        <Button
+          onClick={handleContinueTutorial}
+          className="shadow-2xl bg-green-500 hover:bg-green-600 text-white px-6 py-3 rounded-full"
+        >
+          <ChevronRight className="h-4 w-4 mr-1" />
+          Continue Tutorial
+        </Button>
+      </motion.div>
+    );
+  }
 
   return (
-    <div className={`fixed inset-0 z-[100] overflow-hidden ${isInteractiveStep ? 'pointer-events-none' : ''}`}>
+    <div className="fixed inset-0 z-[100] overflow-hidden">
       {/* Overlay with spotlight cutout */}
       <AnimatePresence mode="wait">
         <motion.div
@@ -318,32 +362,8 @@ export default function SpotlightTutorial({ onComplete }: SpotlightTutorialProps
           {isCenteredStep || !highlightRect ? (
             // Full overlay for centered steps
             <div className="absolute inset-0 bg-black/80 backdrop-blur-sm" />
-          ) : isInteractiveStep ? (
-            // Interactive step: lighter overlay, no blocking the highlighted area
-            <svg className="absolute inset-0 w-full h-full pointer-events-none">
-              <defs>
-                <mask id="spotlight-mask-interactive">
-                  <rect width="100%" height="100%" fill="white" />
-                  <rect
-                    x={highlightRect.left - 12}
-                    y={highlightRect.top - 12}
-                    width={highlightRect.width + 24}
-                    height={highlightRect.height + 24}
-                    rx="16"
-                    fill="black"
-                  />
-                </mask>
-              </defs>
-              <rect
-                width="100%"
-                height="100%"
-                fill="rgba(0,0,0,0.6)"
-                mask="url(#spotlight-mask-interactive)"
-                className="pointer-events-none"
-              />
-            </svg>
           ) : (
-            // Spotlight overlay with cutout (non-interactive)
+            // Spotlight overlay with cutout
             <svg className="absolute inset-0 w-full h-full">
               <defs>
                 <mask id="spotlight-mask">
@@ -386,7 +406,7 @@ export default function SpotlightTutorial({ onComplete }: SpotlightTutorialProps
         </motion.div>
       )}
 
-      {/* Tutorial card - always centered, but pointer-events enabled */}
+      {/* Tutorial card */}
       <AnimatePresence mode="wait">
         <motion.div
           key={step.id}
@@ -394,7 +414,7 @@ export default function SpotlightTutorial({ onComplete }: SpotlightTutorialProps
           animate={{ opacity: 1, y: 0, scale: 1 }}
           exit={{ opacity: 0, y: -20, scale: 0.95 }}
           transition={{ type: 'spring', damping: 25, stiffness: 300 }}
-          className={`absolute inset-x-4 ${isInteractiveStep && highlightRect ? 'bottom-4' : 'top-1/2 -translate-y-1/2'} pointer-events-auto`}
+          className="absolute inset-x-4 top-1/2 -translate-y-1/2"
         >
           <div className="bg-card border shadow-2xl rounded-2xl p-5 max-w-md mx-auto">
             {/* Skip button */}
@@ -433,11 +453,6 @@ export default function SpotlightTutorial({ onComplete }: SpotlightTutorialProps
               <p className="text-muted-foreground text-sm leading-relaxed">
                 {step.description}
               </p>
-              {step.actionHint && isInteractiveStep && (
-                <div className="inline-block px-3 py-1.5 rounded-full bg-green-500/10 text-green-600 dark:text-green-400 text-xs font-medium">
-                  👆 {step.actionHint}
-                </div>
-              )}
               {step.tip && !isInteractiveStep && (
                 <div className="inline-block px-3 py-1.5 rounded-full bg-primary/10 text-primary text-xs font-medium">
                   💡 {step.tip}
@@ -475,14 +490,35 @@ export default function SpotlightTutorial({ onComplete }: SpotlightTutorialProps
                   Back
                 </Button>
               )}
-              <Button
-                onClick={handleNext}
-                size="sm"
-                className={`flex-1 ${isFirstStep ? 'w-full' : ''}`}
-              >
-                {isLastStep ? 'Get Started' : isFirstStep ? 'Let\'s Go' : isInteractiveStep ? 'Skip' : 'Next'}
-                {!isLastStep && <ChevronRight className="h-4 w-4 ml-1" />}
-              </Button>
+              
+              {isInteractiveStep ? (
+                <>
+                  <Button
+                    onClick={handleStartInteraction}
+                    size="sm"
+                    className="flex-1 bg-green-500 hover:bg-green-600"
+                  >
+                    Try It
+                    <ChevronRight className="h-4 w-4 ml-1" />
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={handleNext}
+                  >
+                    Skip
+                  </Button>
+                </>
+              ) : (
+                <Button
+                  onClick={handleNext}
+                  size="sm"
+                  className={`flex-1 ${isFirstStep ? 'w-full' : ''}`}
+                >
+                  {isLastStep ? 'Get Started' : isFirstStep ? 'Let\'s Go' : 'Next'}
+                  {!isLastStep && <ChevronRight className="h-4 w-4 ml-1" />}
+                </Button>
+              )}
             </div>
 
             {/* Step counter */}
