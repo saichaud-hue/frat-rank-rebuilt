@@ -194,55 +194,88 @@ export default function AnonymousFeed() {
     }
 
     const currentVote = userVotes[postId] || 0;
-    const newVote = currentVote === direction ? 0 : direction;
+    
+    // Determine next vote using deterministic state machine
+    // Rule A: Clicking UP - if +1 -> 0, if 0 -> +1, if -1 -> +1
+    // Rule B: Clicking DOWN - if -1 -> 0, if 0 -> -1, if +1 -> -1
+    let nextVote: number;
+    if (direction === 1) {
+      // Clicking UP
+      nextVote = currentVote === 1 ? 0 : 1;
+    } else {
+      // Clicking DOWN  
+      nextVote = currentVote === -1 ? 0 : -1;
+    }
 
-    // Optimistic update
+    // Calculate delta for upvotes and downvotes
+    // Step 1: Remove current vote
+    // Step 2: Apply next vote
+    let upvoteDelta = 0;
+    let downvoteDelta = 0;
+    
+    // Remove current vote
+    if (currentVote === 1) upvoteDelta -= 1;
+    if (currentVote === -1) downvoteDelta -= 1;
+    
+    // Apply next vote
+    if (nextVote === 1) upvoteDelta += 1;
+    if (nextVote === -1) downvoteDelta += 1;
+
+    // Optimistic update for posts list
     setPosts(prev => prev.map(p => {
       if (p.id !== postId) return p;
-      let upvotes = p.upvotes;
-      let downvotes = p.downvotes;
-      
-      if (currentVote === 1) upvotes--;
-      if (currentVote === -1) downvotes--;
-      if (newVote === 1) upvotes++;
-      if (newVote === -1) downvotes++;
-      
-      return { ...p, upvotes, downvotes, user_vote: newVote === 0 ? null : newVote as 1 | -1 };
+      const newUpvotes = Math.max(0, p.upvotes + upvoteDelta);
+      const newDownvotes = Math.max(0, p.downvotes + downvoteDelta);
+      return { 
+        ...p, 
+        upvotes: newUpvotes, 
+        downvotes: newDownvotes, 
+        user_vote: nextVote === 0 ? null : nextVote as 1 | -1 
+      };
     }));
     
-    setUserVotes(prev => ({ ...prev, [postId]: newVote }));
+    setUserVotes(prev => ({ ...prev, [postId]: nextVote }));
 
     // Update selected post if viewing thread
     if (selectedPost?.id === postId) {
       setSelectedPost(prev => {
         if (!prev) return null;
-        let upvotes = prev.upvotes;
-        let downvotes = prev.downvotes;
-        if (currentVote === 1) upvotes--;
-        if (currentVote === -1) downvotes--;
-        if (newVote === 1) upvotes++;
-        if (newVote === -1) downvotes++;
-        return { ...prev, upvotes, downvotes, user_vote: newVote === 0 ? null : newVote as 1 | -1 };
+        const newUpvotes = Math.max(0, prev.upvotes + upvoteDelta);
+        const newDownvotes = Math.max(0, prev.downvotes + downvoteDelta);
+        return { 
+          ...prev, 
+          upvotes: newUpvotes, 
+          downvotes: newDownvotes, 
+          user_vote: nextVote === 0 ? null : nextVote as 1 | -1 
+        };
       });
     }
 
     try {
-      await chatMessageVoteQueries.upsert(currentUser.id, postId, newVote);
+      // First, save the user's vote (or delete if nextVote is 0)
+      if (nextVote === 0) {
+        await chatMessageVoteQueries.delete(currentUser.id, postId);
+      } else {
+        await chatMessageVoteQueries.upsert(currentUser.id, postId, nextVote);
+      }
 
-      // Update the message's vote counts
-      const post = posts.find(p => p.id === postId);
-      if (post) {
-        let upvotes = post.upvotes;
-        let downvotes = post.downvotes;
-        if (currentVote === 1) upvotes--;
-        if (currentVote === -1) downvotes--;
-        if (newVote === 1) upvotes++;
-        if (newVote === -1) downvotes++;
+      // Fetch the current message state from server to get accurate counts
+      const { data: currentMessage } = await supabase
+        .from('chat_messages')
+        .select('upvotes, downvotes')
+        .eq('id', postId)
+        .single();
+
+      if (currentMessage) {
+        // Apply the delta to the server's current state
+        const newUpvotes = Math.max(0, (currentMessage.upvotes || 0) + upvoteDelta);
+        const newDownvotes = Math.max(0, (currentMessage.downvotes || 0) + downvoteDelta);
         
-        await chatMessageQueries.update(postId, { upvotes, downvotes });
+        await chatMessageQueries.update(postId, { upvotes: newUpvotes, downvotes: newDownvotes });
       }
     } catch (error) {
       console.error('Failed to vote:', error);
+      toast.error('Failed to save vote');
       loadData(); // Revert on error
     }
   };
@@ -257,44 +290,67 @@ export default function AnonymousFeed() {
     }
 
     const currentVote = userVotes[commentId] || 0;
-    const newVote = currentVote === direction ? 0 : direction;
+    
+    // Determine next vote using deterministic state machine
+    let nextVote: number;
+    if (direction === 1) {
+      nextVote = currentVote === 1 ? 0 : 1;
+    } else {
+      nextVote = currentVote === -1 ? 0 : -1;
+    }
+
+    // Calculate delta
+    let upvoteDelta = 0;
+    let downvoteDelta = 0;
+    
+    if (currentVote === 1) upvoteDelta -= 1;
+    if (currentVote === -1) downvoteDelta -= 1;
+    if (nextVote === 1) upvoteDelta += 1;
+    if (nextVote === -1) downvoteDelta += 1;
 
     // Optimistic update
     setComments(prev => {
       const postComments = prev[selectedPost.id] || [];
       const updated = postComments.map(c => {
         if (c.id !== commentId) return c;
-        let upvotes = c.upvotes;
-        let downvotes = c.downvotes;
-        if (currentVote === 1) upvotes--;
-        if (currentVote === -1) downvotes--;
-        if (newVote === 1) upvotes++;
-        if (newVote === -1) downvotes++;
-        return { ...c, upvotes, downvotes, user_vote: newVote === 0 ? null : newVote as 1 | -1 };
+        const newUpvotes = Math.max(0, c.upvotes + upvoteDelta);
+        const newDownvotes = Math.max(0, c.downvotes + downvoteDelta);
+        return { 
+          ...c, 
+          upvotes: newUpvotes, 
+          downvotes: newDownvotes, 
+          user_vote: nextVote === 0 ? null : nextVote as 1 | -1 
+        };
       });
       return { ...prev, [selectedPost.id]: updated };
     });
     
-    setUserVotes(prev => ({ ...prev, [commentId]: newVote }));
+    setUserVotes(prev => ({ ...prev, [commentId]: nextVote }));
 
     try {
-      await chatMessageVoteQueries.upsert(currentUser.id, commentId, newVote);
+      // Save the vote
+      if (nextVote === 0) {
+        await chatMessageVoteQueries.delete(currentUser.id, commentId);
+      } else {
+        await chatMessageVoteQueries.upsert(currentUser.id, commentId, nextVote);
+      }
 
-      // Update the comment's vote counts
-      const postComments = comments[selectedPost.id] || [];
-      const comment = postComments.find(c => c.id === commentId);
-      if (comment) {
-        let upvotes = comment.upvotes;
-        let downvotes = comment.downvotes;
-        if (currentVote === 1) upvotes--;
-        if (currentVote === -1) downvotes--;
-        if (newVote === 1) upvotes++;
-        if (newVote === -1) downvotes++;
+      // Fetch current server state and apply delta
+      const { data: currentMessage } = await supabase
+        .from('chat_messages')
+        .select('upvotes, downvotes')
+        .eq('id', commentId)
+        .single();
+
+      if (currentMessage) {
+        const newUpvotes = Math.max(0, (currentMessage.upvotes || 0) + upvoteDelta);
+        const newDownvotes = Math.max(0, (currentMessage.downvotes || 0) + downvoteDelta);
         
-        await chatMessageQueries.update(commentId, { upvotes, downvotes });
+        await chatMessageQueries.update(commentId, { upvotes: newUpvotes, downvotes: newDownvotes });
       }
     } catch (error) {
       console.error('Failed to vote:', error);
+      toast.error('Failed to save vote');
       loadData();
     }
   };
