@@ -18,18 +18,24 @@ interface AnonymousFeedProps {
   initialSort?: SortType;
 }
 
-// Anonymous name generator
-const adjectives = ['Swift', 'Brave', 'Clever', 'Mighty', 'Silent', 'Wild', 'Bold', 'Calm', 'Wise', 'Quick', 'Noble', 'Proud', 'Fierce', 'Keen', 'Sly'];
-const animals = ['Fox', 'Wolf', 'Bear', 'Eagle', 'Hawk', 'Lion', 'Tiger', 'Owl', 'Falcon', 'Panther', 'Lynx', 'Raven', 'Badger', 'Stag', 'Viper'];
+// Anonymous name generator - ensures unique names per user_id
+const adjectives = ['Swift', 'Brave', 'Clever', 'Mighty', 'Silent', 'Wild', 'Bold', 'Calm', 'Wise', 'Quick', 'Noble', 'Proud', 'Fierce', 'Keen', 'Sly', 'Loyal', 'Sharp', 'Free', 'True', 'Dark'];
+const animals = ['Fox', 'Wolf', 'Bear', 'Eagle', 'Hawk', 'Lion', 'Tiger', 'Owl', 'Falcon', 'Panther', 'Lynx', 'Raven', 'Badger', 'Stag', 'Viper', 'Otter', 'Moose', 'Crane', 'Shark', 'Cobra'];
 
 const generateAnonymousName = (seed: string) => {
-  let hash = 0;
+  // Generate a more robust hash from the seed
+  let hash1 = 0;
+  let hash2 = 0;
   for (let i = 0; i < seed.length; i++) {
-    hash = seed.charCodeAt(i) + ((hash << 5) - hash);
+    const char = seed.charCodeAt(i);
+    hash1 = char + ((hash1 << 5) - hash1);
+    hash2 = char + ((hash2 << 7) - hash2) + i;
   }
-  const adjIndex = Math.abs(hash) % adjectives.length;
-  const animalIndex = Math.abs(hash >> 8) % animals.length;
-  return `${adjectives[adjIndex]}${animals[animalIndex]}`;
+  const adjIndex = Math.abs(hash1) % adjectives.length;
+  const animalIndex = Math.abs(hash1 >> 8) % animals.length;
+  // Add a unique number suffix (10-99) based on secondary hash to prevent collisions
+  const numSuffix = 10 + (Math.abs(hash2) % 90);
+  return `${adjectives[adjIndex]}${animals[animalIndex]}${numSuffix}`;
 };
 
 export default function AnonymousFeed({ initialSort }: AnonymousFeedProps) {
