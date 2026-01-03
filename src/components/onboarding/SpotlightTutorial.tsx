@@ -389,7 +389,42 @@ export default function SpotlightTutorial({ onComplete }: SpotlightTutorialProps
 
   const Icon = step.icon;
 
+  // During interaction mode with completionEvent, show minimal floating pill
   if (interactionMode) {
+    if (step.completionEvent) {
+      // Minimal pill - hidden until needed, just shows skip option
+      return (
+        <motion.div
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="fixed bottom-4 left-1/2 -translate-x-1/2 z-[100]"
+          style={{ marginBottom: 'env(safe-area-inset-bottom)' }}
+        >
+          <div className="flex items-center gap-2 bg-card/95 backdrop-blur-sm border shadow-lg rounded-full px-2 py-1.5">
+            <Button 
+              variant="ghost" 
+              size="sm" 
+              onClick={() => setInteractionMode(false)} 
+              className="h-7 px-3 text-xs rounded-full"
+            >
+              <ChevronLeft className="h-3 w-3 mr-1" />
+              Back
+            </Button>
+            <div className="w-px h-4 bg-border" />
+            <Button 
+              variant="ghost" 
+              size="sm" 
+              onClick={handleContinueTutorial} 
+              className="h-7 px-3 text-xs rounded-full text-muted-foreground"
+            >
+              Skip
+            </Button>
+          </div>
+        </motion.div>
+      );
+    }
+
+    // For non-completion interactive steps, show fuller card
     return (
       <motion.div
         initial={{ opacity: 0, y: 20 }}
@@ -407,11 +442,6 @@ export default function SpotlightTutorial({ onComplete }: SpotlightTutorialProps
               <p className="text-sm text-muted-foreground mt-1">
                 {step.actionHint || 'Try it out — we will continue when you are done.'}
               </p>
-              {step.completionEvent && (
-                <p className="text-xs text-muted-foreground mt-2">
-                  Waiting for you to submit...
-                </p>
-              )}
             </div>
           </div>
 
@@ -419,16 +449,10 @@ export default function SpotlightTutorial({ onComplete }: SpotlightTutorialProps
             <Button variant="outline" size="sm" onClick={() => setInteractionMode(false)} className="flex-1">
               Back
             </Button>
-            {!step.completionEvent ? (
-              <Button size="sm" onClick={handleContinueTutorial} className="flex-1">
-                Continue
-                <ChevronRight className="h-4 w-4 ml-1" />
-              </Button>
-            ) : (
-              <Button variant="outline" size="sm" onClick={handleContinueTutorial} className="flex-1">
-                Skip
-              </Button>
-            )}
+            <Button size="sm" onClick={handleContinueTutorial} className="flex-1">
+              Continue
+              <ChevronRight className="h-4 w-4 ml-1" />
+            </Button>
           </div>
         </div>
       </motion.div>
