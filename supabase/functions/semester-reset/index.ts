@@ -11,12 +11,35 @@ Deno.serve(async (req) => {
     return new Response(null, { headers: corsHeaders });
   }
 
+  console.log('semester-reset invoked', {
+    method: req.method,
+    hasAuthHeader: !!req.headers.get('Authorization'),
+    time: new Date().toISOString(),
+  });
+
   try {
+    const supabaseUrl = Deno.env.get('SUPABASE_URL') ?? '';
+    const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '';
+    const anonKey =
+      Deno.env.get('SUPABASE_ANON_KEY') ??
+      Deno.env.get('SUPABASE_PUBLISHABLE_KEY') ??
+      '';
+
+    if (!supabaseUrl || !serviceRoleKey || !anonKey) {
+      console.error('Missing required env vars', {
+        hasUrl: !!supabaseUrl,
+        hasServiceRole: !!serviceRoleKey,
+        hasAnon: !!anonKey,
+      });
+      return new Response(
+        JSON.stringify({ success: false, error: 'Server is missing required configuration' }),
+        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
     // Create admin client with service role
-    const supabaseAdmin = createClient(
-      Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
-    );
+    const supabaseAdmin = createClient(supabaseUrl, serviceRoleKey);
+
 
     // Get the user from the auth header to verify they're an admin
     const authHeader = req.headers.get('Authorization');
@@ -29,13 +52,9 @@ Deno.serve(async (req) => {
     }
 
     // Create client with user's token to check their role
-    const supabaseUser = createClient(
-      Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_ANON_KEY') ?? '',
-      {
-        global: { headers: { Authorization: authHeader } }
-      }
-    );
+    const supabaseUser = createClient(supabaseUrl, anonKey, {
+      global: { headers: { Authorization: authHeader } },
+    });
 
     const { data: { user }, error: userError } = await supabaseUser.auth.getUser();
     if (userError || !user) {
