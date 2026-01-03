@@ -149,7 +149,7 @@ export default function WhereWeGoingCard({
 
   return (
     <>
-      <div className="rounded-2xl bg-card border shadow-sm overflow-hidden">
+      <div data-tutorial="where-going" className="rounded-2xl bg-card border shadow-sm overflow-hidden">
         {/* Compact header - single line */}
         <div className="px-4 py-3 flex items-center justify-between">
           <div className="flex items-center gap-2">
