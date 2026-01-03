@@ -62,7 +62,7 @@ import RankingPostCard, { parseRankingFromText } from '@/components/activity/Ran
 import PollCard, { parsePollFromText } from '@/components/activity/PollCard';
 import WhereWeGoingCard from '@/components/feed/WhereWeGoingCard';
 import PlanningWindow from '@/components/feed/PlanningWindow';
-import MomentumSnapshot from '@/components/feed/MomentumSnapshot';
+
 import { recordUserAction } from '@/utils/streak';
 import { Progress } from '@/components/ui/progress';
 import { Card } from '@/components/ui/card';
@@ -951,8 +951,6 @@ export default function Activity() {
         fraternities={fraternities}
       />
 
-      {/* 3. Momentum Snapshot - Supporting */}
-      <MomentumSnapshot fraternities={fraternities} />
 
       {/* Relevant Posts - Top 2-3 opinions */}
       {topPosts.length > 0 && (
