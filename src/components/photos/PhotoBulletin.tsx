@@ -35,6 +35,16 @@ export default function PhotoBulletin({ partyId, partyStatus = 'completed' }: Ph
     await loadPhotos(user?.id);
   };
 
+  // Get the start of the current "party day" (resets at 5 AM)
+  const getPartyDayStart = (): Date => {
+    const now = new Date();
+    const today5AM = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 5, 0, 0);
+    // If current time is before 5 AM, use yesterday's 5 AM as start
+    return now < today5AM 
+      ? new Date(today5AM.getTime() - 24 * 60 * 60 * 1000) 
+      : today5AM;
+  };
+
   const loadPhotos = async (userId?: string | null) => {
     try {
       const allPhotos = await base44.entities.PartyPhoto.filter(
@@ -44,6 +54,13 @@ export default function PhotoBulletin({ partyId, partyStatus = 'completed' }: Ph
       
       // Only show public photos in the bulletin
       const publicPhotos = allPhotos.filter(p => p.visibility !== 'private');
+      
+      // Filter to only show photos from the current "party day" (since 5 AM)
+      const partyDayStart = getPartyDayStart();
+      const todaysPhotos = publicPhotos.filter(p => {
+        const photoDate = new Date(p.created_date);
+        return photoDate >= partyDayStart;
+      });
 
       // Get user's votes for these photos
       let userVotes: PartyPhotoVote[] = [];
@@ -55,7 +72,7 @@ export default function PhotoBulletin({ partyId, partyStatus = 'completed' }: Ph
       }
 
       // Merge user votes into photos
-      const photosWithVotes: PhotoWithVote[] = publicPhotos.map(photo => ({
+      const photosWithVotes: PhotoWithVote[] = todaysPhotos.map(photo => ({
         ...photo,
         userVote: userVotes.find(v => v.party_photo_id === photo.id)?.value || null,
       }));
