@@ -35,6 +35,7 @@ interface YourListsIntroProps {
   totalFratCount: number;
   ratedFratIds?: string[];
   ratedPartyIds?: string[];
+  initialStep?: IntroStep;
 }
 
 type IntroStep = 'main' | 'frats' | 'parties' | 'frat-list' | 'party-list';
@@ -51,10 +52,11 @@ export default function YourListsIntro({
   totalFratCount,
   ratedFratIds = [],
   ratedPartyIds = [],
+  initialStep = 'main',
 }: YourListsIntroProps) {
   const navigate = useNavigate();
   const [neverShowAgain, setNeverShowAgain] = useState(false);
-  const [step, setStep] = useState<IntroStep>('main');
+  const [step, setStep] = useState<IntroStep>(initialStep);
 
   // Don't show if main tutorial is active
   const tutorialActive = sessionStorage.getItem('touse_tutorial_active') === 'true';
@@ -213,8 +215,12 @@ export default function YourListsIntro({
                 <ChevronLeft className="h-5 w-5" />
               </Button>
               <div>
-                <h2 className="text-xl font-bold">Unlock Your Frat List</h2>
-                <p className="text-sm text-muted-foreground">Rate all fraternities first</p>
+                <h2 className="text-xl font-bold">
+                  {ratedFratCount >= totalFratCount ? 'All Frats Rated!' : 'Unlock Your Frat List'}
+                </h2>
+                <p className="text-sm text-muted-foreground">
+                  {ratedFratCount >= totalFratCount ? 'Your list is ready' : 'Rate all fraternities first'}
+                </p>
               </div>
             </div>
 
@@ -226,28 +232,48 @@ export default function YourListsIntro({
               </div>
               <Progress value={(ratedFratCount / totalFratCount) * 100} className="h-3" />
               <p className="text-center text-muted-foreground">
-                {fratsRemaining} more {fratsRemaining === 1 ? 'fraternity' : 'fraternities'} to go!
+                {ratedFratCount >= totalFratCount 
+                  ? "You've rated all fraternities!" 
+                  : `${fratsRemaining} more ${fratsRemaining === 1 ? 'fraternity' : 'fraternities'} to go!`}
               </p>
             </div>
 
-            {/* Icon */}
-            <div className="mx-auto w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center">
-              <Lock className="h-8 w-8 text-primary" />
+            {/* Icon - show trophy when complete, lock when incomplete */}
+            <div className={`mx-auto w-16 h-16 rounded-full flex items-center justify-center ${
+              ratedFratCount >= totalFratCount ? 'bg-green-500/10' : 'bg-primary/10'
+            }`}>
+              {ratedFratCount >= totalFratCount ? (
+                <Trophy className="h-8 w-8 text-green-500" />
+              ) : (
+                <Lock className="h-8 w-8 text-primary" />
+              )}
             </div>
 
             {/* Message */}
             <p className="text-center text-muted-foreground">
-              Rate every fraternity to see your personalized ranking from #1 to #{totalFratCount}
+              {ratedFratCount >= totalFratCount 
+                ? 'View your personalized frat ranking now!'
+                : `Rate every fraternity to see your personalized ranking from #1 to #${totalFratCount}`}
             </p>
 
-            {/* Action */}
-            <Button 
-              onClick={() => setStep('frat-list')} 
-              className="w-full min-h-[52px] text-base font-semibold bg-primary hover:bg-primary/90 text-primary-foreground active:scale-[0.98] transition-transform"
-            >
-              <Star className="h-5 w-5 mr-2" />
-              Rate a Fraternity
-            </Button>
+            {/* Action - show "View My List" when complete */}
+            {ratedFratCount >= totalFratCount ? (
+              <Button 
+                onClick={() => onComplete(neverShowAgain)} 
+                className="w-full min-h-[52px] text-base font-semibold bg-green-500 hover:bg-green-600 text-white active:scale-[0.98] transition-transform"
+              >
+                <Trophy className="h-5 w-5 mr-2" />
+                View My Frat List
+              </Button>
+            ) : (
+              <Button 
+                onClick={() => setStep('frat-list')} 
+                className="w-full min-h-[52px] text-base font-semibold bg-primary hover:bg-primary/90 text-primary-foreground active:scale-[0.98] transition-transform"
+              >
+                <Star className="h-5 w-5 mr-2" />
+                Rate a Fraternity
+              </Button>
+            )}
           </div>
         )}
 

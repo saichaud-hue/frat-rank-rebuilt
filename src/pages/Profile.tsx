@@ -115,6 +115,7 @@ export default function Profile() {
   const [existingFratScores, setExistingFratScores] = useState<{ brotherhood: number; reputation: number; community: number } | undefined>();
   const [selectedParty, setSelectedParty] = useState<Party | null>(null);
   const [ratingFromIntro, setRatingFromIntro] = useState(false);
+  const [introReturnStep, setIntroReturnStep] = useState<'main' | 'frats' | 'parties' | 'frat-list' | 'party-list'>('main');
   
   // Confetti and share popup state
   const completionPostedRef = useRef(false);
@@ -471,18 +472,31 @@ export default function Profile() {
     setSelectedFrat(null);
     await loadProfile();
 
+    // Check if user just completed ALL frat ratings (show confetti/share)
+    const newRatedCount = isNewRating ? ratedFratCount + 1 : ratedFratCount;
+    const allFratsRated = newRatedCount >= allFraternities.length;
+    
     // Check if user just completed 5 frat ratings (unlock threshold)
     const FRAT_UNLOCK_THRESHOLD = 5;
-    const newRatedCount = isNewRating ? ratedFratCount + 1 : ratedFratCount;
     if (isNewRating && newRatedCount >= FRAT_UNLOCK_THRESHOLD && ratedFratCount < FRAT_UNLOCK_THRESHOLD && !completionPostedRef.current) {
       completionPostedRef.current = true;
       setShowConfetti(true);
       setShareType('frats');
       setPendingShareUserId(user.id);
       setShowShareDialog(true);
-    }
-
-    if (ratingFromIntro) {
+      // Don't show intro again if showing share dialog
+      setRatingFromIntro(false);
+    } else if (allFratsRated && isNewRating && !completionPostedRef.current) {
+      // User just rated all frats - show congratulations
+      completionPostedRef.current = true;
+      setShowConfetti(true);
+      setShareType('frats');
+      setPendingShareUserId(user.id);
+      setShowShareDialog(true);
+      setRatingFromIntro(false);
+    } else if (ratingFromIntro) {
+      // Return to frats progress screen
+      setIntroReturnStep('frats');
       setShowIntro(true);
       setRatingFromIntro(false);
     }
@@ -1434,7 +1448,10 @@ export default function Profile() {
       {/* Intro Overlay */}
       {showIntro && user && activeTab === 'rankings' && (
         <YourListsIntro
-          onComplete={handleIntroComplete}
+          onComplete={(neverShowAgain) => {
+            handleIntroComplete(neverShowAgain);
+            setIntroReturnStep('main'); // Reset for next time
+          }}
           onRateFrat={handleRateFrat}
           onRateParty={handleRateParty}
           onSwitchToPartiesTab={() => setRankingsSubTab('parties')}
@@ -1445,6 +1462,7 @@ export default function Profile() {
           totalFratCount={allFraternities.length}
           ratedFratIds={ratedFratIds}
           ratedPartyIds={ratedPartyIds}
+          initialStep={introReturnStep}
         />
       )}
 
