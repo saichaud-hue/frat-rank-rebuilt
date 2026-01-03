@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useAuth } from '@/contexts/AuthContext';
-import { base44, type Party, type Fraternity } from '@/api/base44Client';
+import { partyQueries, fraternityQueries, type Party, type Fraternity } from '@/lib/supabase-data';
 import Tutorial from '@/components/onboarding/Tutorial';
 import NewPostsPopup from '@/components/NewPostsPopup';
 import touseLogo from '@/assets/touse-logo.png';
@@ -113,21 +113,26 @@ export default function Layout({ children }: LayoutProps) {
   const loadNextParty = async () => {
     try {
       const [parties, fraternities] = await Promise.all([
-        base44.entities.Party.list('starts_at'),
-        base44.entities.Fraternity.list(),
+        partyQueries.list(),
+        fraternityQueries.list(),
       ]);
       
       const now = new Date();
       
+      // Only show approved/visible parties (upcoming, live, or completed status)
+      const visibleParties = parties.filter(p => 
+        p.status === 'upcoming' || p.status === 'live' || p.status === 'completed'
+      );
+      
       // First check for live parties (started but not ended)
-      const liveParties = parties.filter(p => {
+      const liveParties = visibleParties.filter(p => {
+        if (!p.starts_at) return false;
         const startTime = new Date(p.starts_at);
-        const endTime = p.ends_at ? new Date(p.ends_at) : new Date(startTime.getTime() + 4 * 60 * 60 * 1000); // Default 4 hours if no end time
+        const endTime = p.ends_at ? new Date(p.ends_at) : new Date(startTime.getTime() + 4 * 60 * 60 * 1000);
         return startTime <= now && endTime >= now;
       });
       
       if (liveParties.length > 0) {
-        // Show the first live party
         const liveParty = liveParties[0];
         setNextParty(liveParty);
         setIsLiveNow(true);
@@ -137,7 +142,9 @@ export default function Layout({ children }: LayoutProps) {
       }
       
       // Otherwise show the most upcoming party
-      const upcoming = parties.filter(p => new Date(p.starts_at) > now);
+      const upcoming = visibleParties
+        .filter(p => p.starts_at && new Date(p.starts_at) > now)
+        .sort((a, b) => new Date(a.starts_at!).getTime() - new Date(b.starts_at!).getTime());
       
       if (upcoming.length > 0) {
         const next = upcoming[0];
@@ -151,6 +158,7 @@ export default function Layout({ children }: LayoutProps) {
       }
     } catch (error) {
       console.error('Failed to load next party:', error);
+      setNextParty(null);
     }
   };
 
