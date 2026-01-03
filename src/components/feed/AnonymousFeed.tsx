@@ -441,7 +441,7 @@ export default function AnonymousFeed({ initialSort }: AnonymousFeedProps) {
   }
 
   return (
-    <div className="flex flex-col h-full">
+    <div data-tutorial="post-area" className="flex flex-col h-full">
       {/* Sort tabs */}
       <div className="sticky top-0 z-10 bg-background/95 backdrop-blur-sm border-b px-4 py-2">
         <div className="flex gap-1 bg-muted rounded-xl p-1">

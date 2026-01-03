@@ -204,7 +204,7 @@ export default function LeaderboardPodium({ topThree, ranks = [1, 2, 3], filter 
 
   return (
     <>
-      <div className="space-y-3">
+      <div data-tutorial="leaderboard-podium" className="space-y-3">
         {/* Featured #1 Card */}
         <FeaturedCard frat={first} rank={rank1} />
         
@@ -238,6 +238,7 @@ export default function LeaderboardPodium({ topThree, ranks = [1, 2, 3], filter 
               View Profile
             </Button>
             <Button 
+              data-tutorial="rate-action"
               className="w-full h-14 text-base justify-start gap-3 gradient-primary text-white"
               onClick={handleRateClick}
             >

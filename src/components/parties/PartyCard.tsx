@@ -37,7 +37,7 @@ export default function PartyCard({
 
   return (
     <Link to={createPageUrl(`Party?id=${party.id}`)}>
-      <Card className="glass overflow-hidden hover:shadow-lg transition-all hover:scale-[1.01] cursor-pointer">
+      <Card data-tutorial="party-card" className="glass overflow-hidden hover:shadow-lg transition-all hover:scale-[1.01] cursor-pointer">
         <div className="flex">
           {/* Image */}
           <div className="w-24 sm:w-32 flex-shrink-0 bg-gradient-to-br from-indigo-100 to-purple-100 flex items-center justify-center">

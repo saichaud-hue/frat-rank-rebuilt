@@ -6,7 +6,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useAuth } from '@/contexts/AuthContext';
 import { partyQueries, fraternityQueries, type Party, type Fraternity } from '@/lib/supabase-data';
-import Tutorial from '@/components/onboarding/Tutorial';
+import SpotlightTutorial from '@/components/onboarding/SpotlightTutorial';
 import NewPostsPopup from '@/components/NewPostsPopup';
 import touseLogo from '@/assets/touse-logo.png';
 
@@ -303,7 +303,7 @@ export default function Layout({ children }: LayoutProps) {
 
       {/* Tutorial Overlay */}
       {showTutorial && (
-        <Tutorial onComplete={handleTutorialComplete} />
+        <SpotlightTutorial onComplete={handleTutorialComplete} />
       )}
     </>
   );

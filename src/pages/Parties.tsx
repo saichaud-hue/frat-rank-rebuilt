@@ -194,7 +194,7 @@ export default function Parties() {
   }
 
   return (
-    <div className="pb-28">
+    <div data-tutorial="party-list" className="pb-28">
       {/* Header - Mimics Leaderboard */}
       <div className="px-4 pt-2 space-y-5">
         <div>
