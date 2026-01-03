@@ -58,6 +58,9 @@ import { format, isToday, isTomorrow, formatDistanceToNow } from 'date-fns';
 import FratBattleGame from '@/components/activity/FratBattleGame';
 import RankingPostCard, { parseRankingFromText } from '@/components/activity/RankingPostCard';
 import PollCard, { parsePollFromText } from '@/components/activity/PollCard';
+import WhereWeGoingCard from '@/components/feed/WhereWeGoingCard';
+import PlanningWindow from '@/components/feed/PlanningWindow';
+import MomentumSnapshot from '@/components/feed/MomentumSnapshot';
 import { recordUserAction } from '@/utils/streak';
 import { Progress } from '@/components/ui/progress';
 import { Card } from '@/components/ui/card';
@@ -905,508 +908,39 @@ export default function Activity() {
   }
 
   return (
-    <div className="space-y-5 pb-24">
-      {/* Stories-style horizontal scroll for live/upcoming with quality signals */}
-      {(liveParties.length > 0 || upcomingParties.length > 0) && (
-        <div className="flex gap-3 overflow-x-auto pb-2 no-scrollbar -mx-4 px-4">
-          {/* Live parties first */}
-          {liveParties.map((party) => {
-            const frat = fraternities.find(f => f.id === party.fraternity_id);
-            const fratScore = frat?.display_score || 0;
-            return (
-              <Link
-                key={party.id}
-                to={createPageUrl(`Party?id=${party.id}`)}
-                className="shrink-0 group"
-              >
-                <div className="relative w-20 h-28 rounded-2xl overflow-hidden ring-[3px] ring-red-500 ring-offset-2 ring-offset-background">
-                  <div className="absolute inset-0 bg-primary" />
-                  <div className="absolute inset-0 flex flex-col items-center justify-center p-2 text-white">
-                    <Radio className="h-8 w-8 text-white animate-pulse mb-1" />
-                    <span className="text-[10px] font-bold uppercase tracking-wide">LIVE</span>
-                  </div>
-                  <div className="absolute bottom-0 inset-x-0 p-1.5 bg-black/60 backdrop-blur-sm">
-                    <p className="text-[10px] font-semibold text-white text-center truncate">{frat?.chapter || 'Party'}</p>
-                    {fratScore > 0 && (
-                      <div className="flex items-center justify-center gap-0.5 mt-0.5">
-                        <Star className="h-2.5 w-2.5 text-amber-400 fill-amber-400" />
-                        <span className="text-[9px] text-amber-400 font-bold">{fratScore.toFixed(1)}</span>
-                      </div>
-                    )}
-                  </div>
-                </div>
-              </Link>
-            );
-          })}
-          
-          {/* Upcoming parties with quality signals */}
-          {upcomingParties.map((party) => {
-            const frat = fraternities.find(f => f.id === party.fraternity_id);
-            const fratScore = frat?.display_score || 0;
-            const partyDate = new Date(party.starts_at);
-            const isPartyToday = isToday(partyDate);
-            const isPartyTomorrow = isTomorrow(partyDate);
-            // Momentum indicator based on frat momentum score
-            const hasMomentum = frat?.momentum && frat.momentum > 0.1;
-            
-            return (
-              <Link
-                key={party.id}
-                to={createPageUrl(`Party?id=${party.id}`)}
-                className="shrink-0 group"
-              >
-                <div className={cn(
-                  "relative w-20 h-28 rounded-2xl overflow-hidden ring-2 transition-all",
-                  hasMomentum ? "ring-amber-500/50" : "ring-border hover:ring-primary/50"
-                )}>
-                  {/* Cover photo or fallback gradient */}
-                  {party.display_photo_url ? (
-                    <img 
-                      src={party.display_photo_url} 
-                      alt={party.title}
-                      className="absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-transform"
-                    />
-                  ) : (
-                    <div className="absolute inset-0 bg-primary" />
-                  )}
-                  {/* Overlay for text readability */}
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent" />
-                  {/* Day label with momentum badge */}
-                  <div className="absolute top-2 left-1/2 -translate-x-1/2 flex items-center gap-1">
-                    <div className="px-2 py-0.5 rounded-full bg-black/60 backdrop-blur-sm">
-                      <span className="text-[10px] font-semibold text-white">
-                        {isPartyToday ? 'Tonight' : isPartyTomorrow ? 'Tmrw' : format(partyDate, 'EEE')}
-                      </span>
-                    </div>
-                    {hasMomentum && (
-                      <div className="w-4 h-4 rounded-full bg-amber-500/80 flex items-center justify-center">
-                        <TrendingUp className="h-2.5 w-2.5 text-white" />
-                      </div>
-                    )}
-                  </div>
-                  {/* If no cover photo, show icon */}
-                  {!party.display_photo_url && (
-                    <div className="absolute inset-0 flex items-center justify-center">
-                      <PartyPopper className="h-8 w-8 text-white/80" />
-                    </div>
-                  )}
-                  {/* Frat name + rating at bottom */}
-                  <div className="absolute bottom-0 inset-x-0 p-1.5">
-                    <p className="text-[10px] font-semibold text-white text-center truncate">{frat?.chapter || party.title}</p>
-                    {fratScore > 0 && (
-                      <div className="flex items-center justify-center gap-0.5 mt-0.5">
-                        <Star className="h-2.5 w-2.5 text-amber-400 fill-amber-400" />
-                        <span className="text-[9px] text-amber-400 font-bold">{fratScore.toFixed(1)}</span>
-                      </div>
-                    )}
-                  </div>
-                </div>
-              </Link>
-            );
-          })}
-          
-          {/* Add party CTA */}
-          <Link to="/Parties" className="shrink-0">
-            <div className="w-20 h-28 rounded-2xl border-2 border-dashed border-muted-foreground/30 flex flex-col items-center justify-center text-muted-foreground hover:border-primary hover:text-primary transition-all">
-              <Plus className="h-6 w-6 mb-1" />
-              <span className="text-[10px] font-medium">See all</span>
-            </div>
-          </Link>
-        </div>
-      )}
+    <div className="space-y-6 pb-24">
+      {/* 1. Where We Going - Compact Voting Card */}
+      <WhereWeGoingCard
+        todaysParties={todaysParties}
+        fraternities={fraternities}
+        allUserVotes={allUserVotes}
+        userId={userId}
+        onVote={handleMoveVote}
+        onCustomVote={handleCustomSuggestionVote}
+        onAddSuggestion={(text) => {
+          const newSuggestion = {
+            id: `custom-${Date.now()}`,
+            text
+          };
+          const updated = [...customSuggestions, newSuggestion];
+          setCustomSuggestions(updated);
+          localStorage.setItem('touse_custom_move_suggestions', JSON.stringify(updated));
+          updateUserVote(newSuggestion.id);
+          toast({ title: 'Suggestion added!' });
+        }}
+        customSuggestions={customSuggestions}
+      />
 
-      {/* What's the move tonight? - BOLD Duke Energy with context */}
-      <div className="relative card-hero overflow-hidden">
-        {/* Background glow effect */}
-        <div className="absolute inset-0 gradient-hero opacity-10" />
-        <div className="absolute top-0 right-0 w-32 h-32 bg-primary/10 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2" />
-        
-        <div className="relative p-6">
-          <div className="flex items-start gap-4 mb-5">
-            <div className="w-14 h-14 rounded-2xl gradient-primary flex items-center justify-center shadow-glow shrink-0 animate-float">
-              <Zap className="h-7 w-7 text-white" />
-            </div>
-            <div className="flex-1">
-              <div className="flex items-center gap-2 mb-0.5">
-                <h2 className="text-xl font-display font-black tracking-tight">Where we going?</h2>
-                <Badge variant="secondary" className="text-[10px] px-2 py-0.5 bg-primary/10 text-primary border-0">
-                  {isToday(new Date()) && new Date().getHours() >= 17 ? 'Tonight' : 'This weekend'}
-                </Badge>
-              </div>
-              <p className="text-sm text-muted-foreground">
-                {totalMoveVotes > 0 ? (
-                  <span className="flex items-center gap-2">
-                    <span className="inline-flex items-center gap-1 text-primary font-bold">
-                      <Users className="h-3.5 w-3.5" />
-                      {totalMoveVotes} {totalMoveVotes === 1 ? 'person' : 'people'}
-                    </span>
-                    <span>voted</span>
-                    {totalMoveVotes >= 10 && <span className="badge-trending">🔥 Hot</span>}
-                  </span>
-                ) : (
-                  'Cast the first vote — be the trendsetter'
-                )}
-              </p>
-            </div>
-            {userMoveVote && (
-              <div className="w-10 h-10 rounded-full bg-positive flex items-center justify-center text-white shadow-duke animate-pop">
-                <Check className="h-5 w-5" strokeWidth={3} />
-              </div>
-            )}
-          </div>
-          
-          {/* Featured Party Cards - Show if there are parties today */}
-          {todaysParties.length > 0 && (
-            <div className="mb-4 space-y-3">
-              <p className="text-xs font-semibold text-primary uppercase tracking-wide flex items-center gap-2">
-                <Sparkles className="h-3 w-3" />
-                Today's Events
-              </p>
-              {todaysParties.slice(0, 2).map((party) => {
-                const frat = fraternities.find(f => f.id === party.fraternity_id);
-                const partyVotes = moveVotes[party.id] || 0;
-                const percentage = totalMoveVotes > 0 ? (partyVotes / totalMoveVotes) * 100 : 0;
-                const isSelected = userMoveVote === party.id;
-                const partyTime = format(new Date(party.starts_at), 'h:mm a');
-                
-                return (
-                  <button
-                    key={party.id}
-                    onClick={() => handleMoveVote(party.id)}
-                    className={cn(
-                      "w-full rounded-2xl overflow-hidden transition-all active:scale-[0.98]",
-                      isSelected 
-                        ? "ring-2 ring-primary ring-offset-2 ring-offset-card" 
-                        : "hover:ring-1 hover:ring-primary/50"
-                    )}
-                  >
-                    <div className="relative">
-                      {/* Party Cover or Gradient */}
-                      <div className="h-20 bg-gradient-to-br from-primary via-pink-500 to-amber-500 relative overflow-hidden">
-                        {party.display_photo_url && (
-                          <img 
-                            src={party.display_photo_url} 
-                            alt={party.title}
-                            className="absolute inset-0 w-full h-full object-cover"
-                          />
-                        )}
-                        <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/20 to-transparent" />
-                        
-                        {/* Vote percentage bar */}
-                        {userMoveVote && percentage > 0 && (
-                          <div 
-                            className="absolute bottom-0 left-0 h-1 bg-white/80 transition-all duration-500"
-                            style={{ width: `${percentage}%` }}
-                          />
-                        )}
-                        
-                        {/* Selected checkmark */}
-                        {isSelected && (
-                          <div className="absolute top-2 right-2 w-6 h-6 rounded-full bg-green-500 flex items-center justify-center text-white shadow-lg">
-                            <Check className="h-3.5 w-3.5" />
-                          </div>
-                        )}
-                        
-                        {/* Party details overlay */}
-                        <div className="absolute bottom-0 left-0 right-0 p-3 text-white text-left">
-                          <p className="font-bold text-base truncate">{party.title}</p>
-                          <div className="flex items-center gap-2 text-xs text-white/80">
-                            <span className="font-medium">{frat?.chapter}</span>
-                            <span>·</span>
-                            <span>{partyTime}</span>
-                            {party.venue && (
-                              <>
-                                <span>·</span>
-                                <span className="truncate">{party.venue}</span>
-                              </>
-                            )}
-                          </div>
-                        </div>
-                      </div>
-                      
-                      {/* Vote stats bar */}
-                      {userMoveVote && (
-                        <div className="px-3 py-2 bg-muted/50 flex items-center justify-between">
-                          <div className="flex items-center gap-2">
-                            <PartyPopper className="h-4 w-4 text-primary" />
-                            <span className="text-sm font-medium">{partyVotes} {partyVotes === 1 ? 'vote' : 'votes'}</span>
-                          </div>
-                          <span className="text-sm font-bold text-primary">{percentage.toFixed(0)}%</span>
-                        </div>
-                      )}
-                    </div>
-                  </button>
-                );
-              })}
-            </div>
-          )}
-          
-          {/* Build sorted options list - exclude parties if shown above */}
-          {(() => {
-            // Combine all options with their vote counts
-            const allOptions: { id: string; type: 'party' | 'default' | 'custom'; label: string; subLabel?: string; votes: number; icon?: any; party?: typeof todaysParties[0] }[] = [];
-            
-            // Add default options
-            defaultMoveOptions.forEach(option => {
-              allOptions.push({
-                id: option.id,
-                type: 'default',
-                label: option.label,
-                votes: moveVotes[option.id] || 0,
-                icon: option.icon
-              });
-            });
-            
-            // Add custom suggestions
-            customSuggestions.forEach(suggestion => {
-              allOptions.push({
-                id: suggestion.id,
-                type: 'custom',
-                label: suggestion.text,
-                votes: moveVotes[suggestion.id] || 0
-              });
-            });
-            
-            // Sort by votes descending
-            allOptions.sort((a, b) => b.votes - a.votes);
-            
-            // Get top 3
-            const top3 = allOptions.slice(0, 3);
-            const hasMore = allOptions.length > 3 || todaysParties.length > 2;
-            
-            const renderOption = (option: typeof allOptions[0], index: number) => {
-              const percentage = totalMoveVotes > 0 ? (option.votes / totalMoveVotes) * 100 : 0;
-              const isSelected = userMoveVote === option.id;
-              const isLeading = index === 0 && option.votes > 0;
-              
-              return (
-                <button
-                  key={option.id}
-                  onClick={() => option.type === 'custom' ? handleCustomSuggestionVote(option.id) : handleMoveVote(option.id)}
-                  className={cn(
-                    "w-full min-h-[64px] p-4 rounded-2xl text-left relative overflow-hidden transition-all duration-200 ease-out",
-                    isSelected 
-                      ? "card-vote-selected animate-pop" 
-                      : isLeading
-                        ? "card-vote-leading"
-                        : "card-vote"
-                  )}
-                >
-                  {/* Vote percentage bar */}
-                  {userMoveVote && percentage > 0 && (
-                    <div 
-                      className={cn(
-                        "absolute inset-y-0 left-0 transition-all duration-700 vote-bar",
-                        isSelected ? "bg-white/20" : "bg-primary/10"
-                      )}
-                      style={{ width: `${percentage}%` }}
-                    />
-                  )}
-                  
-                  <div className="relative flex items-center gap-4">
-                    {/* Rank/Check indicator */}
-                    <div className={cn(
-                      "w-12 h-12 rounded-xl flex items-center justify-center shrink-0 font-display font-black text-lg transition-all",
-                      isSelected 
-                        ? "bg-white/20 text-white animate-pop" 
-                        : isLeading
-                          ? "gradient-primary text-white shadow-duke animate-float-subtle"
-                          : "bg-muted text-muted-foreground"
-                    )}>
-                      {isSelected ? <Check className="h-6 w-6" strokeWidth={3} /> : (index + 1)}
-                    </div>
-                    
-                    <div className="flex-1 min-w-0">
-                      <p className={cn(
-                        "font-bold text-base truncate leading-tight",
-                        isSelected ? "text-white" : isLeading ? "text-primary" : ""
-                      )}>{option.label}</p>
-                      {option.subLabel && (
-                        <p className={cn(
-                          "text-xs truncate mt-0.5",
-                          isSelected ? "text-white/70" : "text-muted-foreground"
-                        )}>{option.subLabel}</p>
-                      )}
-                    </div>
-                    
-                    {/* Vote stats */}
-                    <div className="flex items-center gap-3">
-                      {/* Live activity indicator for leading option */}
-                      {isLeading && option.votes >= 3 && !isSelected && (
-                        <div className="flex items-center gap-1.5">
-                          <span className="indicator-live" />
-                          <span className="text-xs font-bold text-primary">{option.votes}</span>
-                        </div>
-                      )}
-                      
-                      {userMoveVote && (
-                        <span className={cn(
-                          "text-xl font-display font-black tabular-nums",
-                          isSelected ? "text-white" : isLeading ? "text-primary" : "text-foreground"
-                        )}>{percentage.toFixed(0)}%</span>
-                      )}
-                    </div>
-                    
-                    {/* Leading badge with pulse */}
-                    {isLeading && !isSelected && option.votes >= 5 && (
-                      <span className="absolute -top-2 -right-2 indicator-trending flex items-center gap-1">
-                        <TrendingUp className="h-3 w-3" />
-                        <span>Top pick</span>
-                      </span>
-                    )}
-                  </div>
-                </button>
-              );
-            };
-            
-            return (
-              <div className="space-y-3 stagger-children">
-                {top3.map((option, index) => renderOption(option, index))}
-                
-                {/* Something else / View all button */}
-                <button
-                  onClick={() => setShowAllMoveOptions(true)}
-                  className="w-full min-h-[56px] p-4 rounded-2xl bg-muted/50 flex items-center justify-center gap-2 text-primary font-bold shadow-sm hover:shadow-duke hover:bg-muted transition-all active:scale-[0.98]"
-                >
-                  <Plus className="h-5 w-5" />
-                  <span>
-                    {hasMore ? `See all ${allOptions.length} options` : 'Add your own'}
-                  </span>
-                </button>
-              </div>
-            );
-          })()}
-        </div>
-      </div>
+      {/* 2. Planning Window - Primary Focus */}
+      <PlanningWindow
+        parties={parties}
+        fraternities={fraternities}
+      />
 
-      {/* Trending Summary - Parties & Frats with inline ratings */}
-      <div className="space-y-3">
-        {/* Quick glance header */}
-        <div className="flex items-center justify-between">
-          <h3 className="text-sm font-bold text-muted-foreground uppercase tracking-wide flex items-center gap-2">
-            <Flame className="h-4 w-4 text-primary" />
-            Trending Now
-          </h3>
-          <Link to="/Leaderboard" className="text-xs font-semibold text-primary hover:underline">
-            View all
-          </Link>
-        </div>
-        
-        {/* Top Frats with star ratings */}
-        <div className="rounded-2xl bg-gradient-to-br from-muted/50 to-muted/30 border border-border/50 p-3 space-y-2">
-          {fraternities
-            .filter(f => f.display_score && f.display_score > 0)
-            .sort((a, b) => (b.display_score || 0) - (a.display_score || 0))
-            .slice(0, 3)
-            .map((frat, index) => {
-              const score = frat.display_score || 0;
-              const fullStars = Math.floor(score / 2);
-              const hasHalfStar = (score / 2) % 1 >= 0.5;
-              const isTrending = frat.momentum && frat.momentum > 0.1;
-              
-              return (
-                <Link
-                  key={frat.id}
-                  to={`/Fraternity/${frat.id}`}
-                  className="flex items-center gap-3 p-2 rounded-xl hover:bg-muted/50 transition-colors group"
-                >
-                  <div className={cn(
-                    "w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold shrink-0",
-                    index === 0 ? "bg-amber-500 text-white" : index === 1 ? "bg-slate-400 text-white" : "bg-amber-700 text-white"
-                  )}>
-                    {index + 1}
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2">
-                      <p className="font-bold text-sm truncate">{frat.chapter}</p>
-                      {isTrending && (
-                        <TrendingUp className="h-3 w-3 text-emerald-500 shrink-0" />
-                      )}
-                    </div>
-                    <div className="flex items-center gap-1 mt-0.5">
-                      {[...Array(5)].map((_, i) => (
-                        <Star
-                          key={i}
-                          className={cn(
-                            "h-3 w-3",
-                            i < fullStars 
-                              ? "text-amber-400 fill-amber-400" 
-                              : i === fullStars && hasHalfStar 
-                                ? "text-amber-400 fill-amber-400/50"
-                                : "text-muted-foreground/30"
-                          )}
-                        />
-                      ))}
-                      <span className="text-xs font-bold text-muted-foreground ml-1">{score.toFixed(1)}</span>
-                    </div>
-                  </div>
-                  <ChevronRight className="h-4 w-4 text-muted-foreground shrink-0" />
-                </Link>
-              );
-            })}
-        </div>
-        
-        {/* Upcoming parties quick list with ratings */}
-        {upcomingParties.length > 0 && (
-          <div className="rounded-2xl bg-muted/30 border border-border/50 p-3 space-y-2">
-            <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide flex items-center gap-2">
-              <Clock className="h-3 w-3" />
-              Coming Up
-            </p>
-            <div className="space-y-1.5">
-              {upcomingParties.slice(0, 3).map((party) => {
-                const frat = fraternities.find(f => f.id === party.fraternity_id);
-                const fratScore = frat?.display_score || 0;
-                const partyDate = new Date(party.starts_at);
-                const dayLabel = isToday(partyDate) ? 'Tonight' : isTomorrow(partyDate) ? 'Tomorrow' : format(partyDate, 'EEE');
-                const isThisWeekend = !isToday(partyDate) && !isTomorrow(partyDate);
-                
-                return (
-                  <Link
-                    key={party.id}
-                    to={`/Party/${party.id}`}
-                    className="flex items-center gap-3 p-2 rounded-xl hover:bg-muted/50 transition-colors group"
-                  >
-                    <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center shrink-0 group-hover:bg-primary/20 transition-colors overflow-hidden">
-                      {party.display_photo_url ? (
-                        <img src={party.display_photo_url} alt="" className="w-full h-full object-cover" />
-                      ) : (
-                        <PartyPopper className="h-4 w-4 text-primary" />
-                      )}
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2">
-                        <p className="font-semibold text-sm truncate">{party.title}</p>
-                        <Badge variant="secondary" className="text-[9px] px-1.5 py-0 h-4 shrink-0">
-                          {dayLabel}
-                        </Badge>
-                      </div>
-                      <div className="flex items-center gap-2 mt-0.5">
-                        <span className="text-xs text-muted-foreground truncate">{frat?.chapter}</span>
-                        {fratScore > 0 && (
-                          <div className="flex items-center gap-0.5 shrink-0">
-                            <Star className="h-2.5 w-2.5 text-amber-400 fill-amber-400" />
-                            <span className="text-[10px] font-bold text-muted-foreground">{fratScore.toFixed(1)}</span>
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                    <ChevronRight className="h-4 w-4 text-muted-foreground shrink-0" />
-                  </Link>
-                );
-              })}
-            </div>
-            <Link
-              to="/Parties"
-              className="block text-center text-xs font-bold text-primary hover:underline pt-1"
-            >
-              See all parties →
-            </Link>
-          </div>
-        )}
-      </div>
+      {/* 3. Momentum Snapshot - Supporting */}
+      <MomentumSnapshot fraternities={fraternities} />
 
-      {/* Relevant Posts - Top 2-3 opinions about parties and frats */}
+      {/* Relevant Posts - Top 2-3 opinions */}
       {topPosts.length > 0 && (
         <div className="space-y-3">
           <div className="flex items-center justify-between">
@@ -1451,9 +985,14 @@ export default function Activity() {
                           </span>
                         )}
                         <span>{formatDistanceToNow(new Date(post.created_date), { addSuffix: true })}</span>
-                        {isHot && <span className="badge-trending text-[9px] px-1.5">Hot</span>}
                       </div>
                     </div>
+                    {isHot && (
+                      <Badge className="bg-orange-500 text-white text-[10px] px-1.5 py-0 shrink-0">
+                        <Flame className="h-2.5 w-2.5 mr-0.5" />
+                        Hot
+                      </Badge>
+                    )}
                   </div>
                 </button>
               );
