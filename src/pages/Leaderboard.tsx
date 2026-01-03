@@ -362,7 +362,7 @@ export default function Leaderboard() {
       <div className="mx-4 border-t border-border" />
 
       {/* Leaderboard List */}
-      <div className="px-4">
+      <div className="px-4" data-tutorial="leaderboard-list">
         {sortedFraternities.map((frat, index) => (
           <div key={frat.id}>
             <LeaderboardRow

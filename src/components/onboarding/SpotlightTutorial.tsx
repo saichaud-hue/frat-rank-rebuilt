@@ -31,6 +31,8 @@ interface TutorialStep {
   highlightSelector?: string;
   position: 'center' | 'top' | 'bottom';
   tip?: string;
+  interactive?: boolean; // If true, user can interact with highlighted element
+  actionHint?: string; // Hint for what action to take
 }
 
 const tutorialSteps: TutorialStep[] = [
@@ -83,22 +85,25 @@ const tutorialSteps: TutorialStep[] = [
   },
   {
     id: 'rate-frat',
-    title: 'Rate Any Fraternity',
-    description: 'Tap any frat card to see options — view their profile or submit an anonymous rating.',
+    title: 'Try It: Rate a Fraternity',
+    description: 'Tap any frat card to rate them! Your rating is completely anonymous.',
     icon: Star,
     route: '/Leaderboard',
-    highlightSelector: '[data-tutorial="leaderboard-podium"]',
+    highlightSelector: '[data-tutorial="leaderboard-list"]',
     position: 'bottom',
-    tip: 'Your ratings are always anonymous',
+    interactive: true,
+    actionHint: 'Tap any frat to rate it, or tap Next to skip',
   },
   {
     id: 'filters',
-    title: 'Filter Rankings',
-    description: 'Switch between Overall, Reputation, Party Score, or Trending to see different leaderboards.',
+    title: 'Try It: Filter Rankings',
+    description: 'Try switching between different leaderboard views using these filter tabs.',
     icon: Trophy,
     route: '/Leaderboard',
     highlightSelector: '[data-tutorial="leaderboard-filters"]',
     position: 'bottom',
+    interactive: true,
+    actionHint: 'Tap a filter tab to try it, or tap Next to continue',
   },
   {
     id: 'parties',
@@ -111,13 +116,14 @@ const tutorialSteps: TutorialStep[] = [
   },
   {
     id: 'party-card',
-    title: 'Party Details',
-    description: 'Each party shows the hosting frat, time, theme, and whether it\'s invite-only or open.',
+    title: 'Try It: View a Party',
+    description: 'Tap any party card to see full details, ratings, and photos.',
     icon: Calendar,
     route: '/Parties',
-    highlightSelector: '[data-tutorial="party-card"]',
+    highlightSelector: '[data-tutorial="party-list"]',
     position: 'bottom',
-    tip: 'Tap a party to see more details and rate it',
+    interactive: true,
+    actionHint: 'Tap a party to explore, or tap Next to skip',
   },
   {
     id: 'posts',
@@ -296,8 +302,10 @@ export default function SpotlightTutorial({ onComplete }: SpotlightTutorialProps
 
   const Icon = step.icon;
 
+  const isInteractiveStep = step.interactive === true;
+
   return (
-    <div className="fixed inset-0 z-[100] overflow-hidden">
+    <div className={`fixed inset-0 z-[100] overflow-hidden ${isInteractiveStep ? 'pointer-events-none' : ''}`}>
       {/* Overlay with spotlight cutout */}
       <AnimatePresence mode="wait">
         <motion.div
@@ -310,8 +318,32 @@ export default function SpotlightTutorial({ onComplete }: SpotlightTutorialProps
           {isCenteredStep || !highlightRect ? (
             // Full overlay for centered steps
             <div className="absolute inset-0 bg-black/80 backdrop-blur-sm" />
+          ) : isInteractiveStep ? (
+            // Interactive step: lighter overlay, no blocking the highlighted area
+            <svg className="absolute inset-0 w-full h-full pointer-events-none">
+              <defs>
+                <mask id="spotlight-mask-interactive">
+                  <rect width="100%" height="100%" fill="white" />
+                  <rect
+                    x={highlightRect.left - 12}
+                    y={highlightRect.top - 12}
+                    width={highlightRect.width + 24}
+                    height={highlightRect.height + 24}
+                    rx="16"
+                    fill="black"
+                  />
+                </mask>
+              </defs>
+              <rect
+                width="100%"
+                height="100%"
+                fill="rgba(0,0,0,0.6)"
+                mask="url(#spotlight-mask-interactive)"
+                className="pointer-events-none"
+              />
+            </svg>
           ) : (
-            // Spotlight overlay with cutout
+            // Spotlight overlay with cutout (non-interactive)
             <svg className="absolute inset-0 w-full h-full">
               <defs>
                 <mask id="spotlight-mask">
@@ -350,11 +382,11 @@ export default function SpotlightTutorial({ onComplete }: SpotlightTutorialProps
             height: highlightRect.height + 16,
           }}
         >
-          <div className="w-full h-full rounded-2xl border-2 border-primary animate-pulse shadow-[0_0_30px_rgba(var(--primary),0.4)]" />
+          <div className={`w-full h-full rounded-2xl border-2 ${isInteractiveStep ? 'border-green-400 animate-pulse shadow-[0_0_30px_rgba(34,197,94,0.5)]' : 'border-primary animate-pulse shadow-[0_0_30px_rgba(var(--primary),0.4)]'}`} />
         </motion.div>
       )}
 
-      {/* Tutorial card - always centered for simplicity and visibility */}
+      {/* Tutorial card - always centered, but pointer-events enabled */}
       <AnimatePresence mode="wait">
         <motion.div
           key={step.id}
@@ -362,7 +394,7 @@ export default function SpotlightTutorial({ onComplete }: SpotlightTutorialProps
           animate={{ opacity: 1, y: 0, scale: 1 }}
           exit={{ opacity: 0, y: -20, scale: 0.95 }}
           transition={{ type: 'spring', damping: 25, stiffness: 300 }}
-          className="absolute inset-x-4 top-1/2 -translate-y-1/2"
+          className={`absolute inset-x-4 ${isInteractiveStep && highlightRect ? 'bottom-4' : 'top-1/2 -translate-y-1/2'} pointer-events-auto`}
         >
           <div className="bg-card border shadow-2xl rounded-2xl p-5 max-w-md mx-auto">
             {/* Skip button */}
@@ -391,7 +423,7 @@ export default function SpotlightTutorial({ onComplete }: SpotlightTutorialProps
             </div>
 
             {/* Icon */}
-            <div className="w-14 h-14 rounded-2xl gradient-primary flex items-center justify-center mb-4 mx-auto">
+            <div className={`w-14 h-14 rounded-2xl ${isInteractiveStep ? 'bg-green-500' : 'gradient-primary'} flex items-center justify-center mb-4 mx-auto`}>
               <Icon className="h-7 w-7 text-white" />
             </div>
 
@@ -401,7 +433,12 @@ export default function SpotlightTutorial({ onComplete }: SpotlightTutorialProps
               <p className="text-muted-foreground text-sm leading-relaxed">
                 {step.description}
               </p>
-              {step.tip && (
+              {step.actionHint && isInteractiveStep && (
+                <div className="inline-block px-3 py-1.5 rounded-full bg-green-500/10 text-green-600 dark:text-green-400 text-xs font-medium">
+                  👆 {step.actionHint}
+                </div>
+              )}
+              {step.tip && !isInteractiveStep && (
                 <div className="inline-block px-3 py-1.5 rounded-full bg-primary/10 text-primary text-xs font-medium">
                   💡 {step.tip}
                 </div>
@@ -443,7 +480,7 @@ export default function SpotlightTutorial({ onComplete }: SpotlightTutorialProps
                 size="sm"
                 className={`flex-1 ${isFirstStep ? 'w-full' : ''}`}
               >
-                {isLastStep ? 'Get Started' : isFirstStep ? 'Let\'s Go' : 'Next'}
+                {isLastStep ? 'Get Started' : isFirstStep ? 'Let\'s Go' : isInteractiveStep ? 'Skip' : 'Next'}
                 {!isLastStep && <ChevronRight className="h-4 w-4 ml-1" />}
               </Button>
             </div>
