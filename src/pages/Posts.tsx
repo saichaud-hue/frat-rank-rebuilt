@@ -1,5 +1,9 @@
-import FeedPage from '@/components/feed/FeedPage';
+import AnonymousFeed from '@/components/feed/AnonymousFeed';
 
 export default function Posts() {
-  return <FeedPage />;
+  return (
+    <div className="min-h-screen -mx-4 -mt-4">
+      <AnonymousFeed />
+    </div>
+  );
 }
