@@ -65,7 +65,7 @@ export default function PartyFilters({ filters, onFiltersChange, fraternities }:
           <SelectValue placeholder="Time" />
         </SelectTrigger>
         <SelectContent className="rounded-xl border-primary/20 bg-popover">
-          <SelectItem value="all">All Time</SelectItem>
+          <SelectItem value="all" className="text-center justify-center">All Time</SelectItem>
           <SelectItem value="today" className="text-center justify-center">Today</SelectItem>
           <SelectItem value="week" className="text-center justify-center">Week</SelectItem>
           <SelectItem value="month" className="text-center justify-center">Month</SelectItem>
