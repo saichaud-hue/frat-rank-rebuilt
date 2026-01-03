@@ -83,15 +83,14 @@ function CommentCard({
             <button
               onClick={() => onVote(1)}
               className={cn(
-                "flex items-center gap-1 text-xs font-medium transition-all active:scale-90",
+                "flex items-center text-xs font-medium transition-all active:scale-90",
                 comment.user_vote === 1 ? "text-emerald-500" : "text-muted-foreground hover:text-emerald-500"
               )}
             >
               <ChevronUp className="h-4 w-4" />
-              {comment.upvotes > 0 && comment.upvotes}
             </button>
             <span className={cn(
-              "text-xs font-bold",
+              "text-xs font-bold min-w-[20px] text-center",
               netVotes > 0 ? "text-emerald-500" : netVotes < 0 ? "text-red-500" : "text-muted-foreground"
             )}>
               {netVotes > 0 ? `+${netVotes}` : netVotes}
@@ -99,7 +98,7 @@ function CommentCard({
             <button
               onClick={() => onVote(-1)}
               className={cn(
-                "flex items-center gap-1 text-xs font-medium transition-all active:scale-90",
+                "flex items-center text-xs font-medium transition-all active:scale-90",
                 comment.user_vote === -1 ? "text-red-500" : "text-muted-foreground hover:text-red-500"
               )}
             >
