@@ -20,16 +20,11 @@ Deno.serve(async (req) => {
   try {
     const supabaseUrl = Deno.env.get('SUPABASE_URL') ?? '';
     const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '';
-    const anonKey =
-      Deno.env.get('SUPABASE_ANON_KEY') ??
-      Deno.env.get('SUPABASE_PUBLISHABLE_KEY') ??
-      '';
 
-    if (!supabaseUrl || !serviceRoleKey || !anonKey) {
+    if (!supabaseUrl || !serviceRoleKey) {
       console.error('Missing required env vars', {
         hasUrl: !!supabaseUrl,
         hasServiceRole: !!serviceRoleKey,
-        hasAnon: !!anonKey,
       });
       return new Response(
         JSON.stringify({ success: false, error: 'Server is missing required configuration' }),
@@ -37,11 +32,10 @@ Deno.serve(async (req) => {
       );
     }
 
-    // Create admin client with service role
+    // Service-role client (used for both auth verification and data reset)
     const supabaseAdmin = createClient(supabaseUrl, serviceRoleKey);
 
-
-    // Get the user from the auth header to verify they're an admin
+    // Get the user from the auth header and verify admin
     const authHeader = req.headers.get('Authorization');
     if (!authHeader) {
       console.error('No authorization header');
@@ -51,27 +45,31 @@ Deno.serve(async (req) => {
       );
     }
 
-    // Create client with user's token to check their role
-    const supabaseUser = createClient(supabaseUrl, anonKey, {
-      global: { headers: { Authorization: authHeader } },
-    });
-
-    const { data: { user }, error: userError } = await supabaseUser.auth.getUser();
-    if (userError || !user) {
-      console.error('Failed to get user:', userError);
+    const token = authHeader.replace(/^Bearer\s+/i, '').trim();
+    if (!token) {
+      console.error('Empty bearer token');
       return new Response(
         JSON.stringify({ success: false, error: 'Unauthorized' }),
         { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
-    // Check if user is admin
+    const { data: userData, error: userError } = await supabaseAdmin.auth.getUser(token);
+    const user = userData?.user;
+    if (userError || !user) {
+      console.error('Failed to get user from token:', userError);
+      return new Response(
+        JSON.stringify({ success: false, error: 'Unauthorized' }),
+        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
     const { data: roleData, error: roleError } = await supabaseAdmin
       .from('user_roles')
       .select('role')
       .eq('user_id', user.id)
       .eq('role', 'admin')
-      .single();
+      .maybeSingle();
 
     if (roleError || !roleData) {
       console.error('User is not admin:', roleError);
@@ -81,18 +79,27 @@ Deno.serve(async (req) => {
       );
     }
 
-    // Validate confirmation text
-    const { confirmationText } = await req.json();
+    // Body can be either { confirm: true } or the old typed confirmation
+    let body: any = {};
+    try {
+      body = await req.json();
+    } catch {
+      body = {};
+    }
+
     const now = new Date();
     const month = now.getMonth();
     const year = now.getFullYear();
     const semester = month >= 0 && month <= 4 ? 'SPRING' : 'FALL';
     const expectedConfirmation = `RESET ${semester} ${year}`;
 
-    if (confirmationText !== expectedConfirmation) {
-      console.error('Invalid confirmation text');
+    const confirmationText = typeof body?.confirmationText === 'string' ? body.confirmationText : '';
+    const confirm = body?.confirm === true;
+
+    if (!confirm && confirmationText !== expectedConfirmation) {
+      console.error('Reset not confirmed');
       return new Response(
-        JSON.stringify({ success: false, error: 'Invalid confirmation text' }),
+        JSON.stringify({ success: false, error: 'Reset not confirmed' }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
