@@ -7,6 +7,9 @@ import { clamp, getScoreColor } from '@/utils';
 import { computePartyQuality } from '@/utils/scoring';
 import { recordUserAction } from '@/utils/streak';
 import { partyRatingQueries, partyQueries, getCurrentUser } from '@/lib/supabase-data';
+import { useRateLimit } from '@/hooks/useRateLimit';
+import { partyRatingSchema, validateInput } from '@/lib/validationSchemas';
+import { toast } from 'sonner';
 import type { Party, Fraternity } from '@/lib/supabase-data';
 
 interface PartyRatingFormProps {
@@ -23,6 +26,7 @@ export default function PartyRatingForm({ party, fraternity, onClose, onSubmit }
   const [submitting, setSubmitting] = useState(false);
   const [hasLoaded, setHasLoaded] = useState(false);
   const [existingRatingId, setExistingRatingId] = useState<string | null>(null);
+  const { withRateLimit } = useRateLimit();
 
   useEffect(() => {
     loadExistingRating();
@@ -54,10 +58,28 @@ export default function PartyRatingForm({ party, fraternity, onClose, onSubmit }
   const partyQualityScore = computePartyQuality(vibe, music, execution);
 
   const handleSubmit = async () => {
+    // Validate input
+    const validation = validateInput(partyRatingSchema, {
+      party_id: party.id,
+      vibe_score: vibe,
+      music_score: music,
+      execution_score: execution,
+      party_quality_score: partyQualityScore,
+    });
+    
+    if (!validation.success) {
+      toast.error('error' in validation ? validation.error : 'Invalid rating');
+      return;
+    }
+
     setSubmitting(true);
-    try {
+    
+    const result = await withRateLimit('vote', async () => {
       const user = await getCurrentUser();
-      if (!user) return;
+      if (!user) {
+        toast.error('Please sign in to rate');
+        return null;
+      }
 
       const ratingData = {
         party_id: party.id,
@@ -84,12 +106,14 @@ export default function PartyRatingForm({ party, fraternity, onClose, onSubmit }
         total_ratings: totalRatingsCount,
       });
 
-      onSubmit(party.id, { vibe, music, execution, partyQuality: partyQualityScore });
-    } catch (error) {
-      console.error('Failed to submit rating:', error);
-    } finally {
-      setSubmitting(false);
+      return { vibe, music, execution, partyQuality: partyQualityScore };
+    });
+
+    if (result) {
+      onSubmit(party.id, result);
     }
+    
+    setSubmitting(false);
   };
 
   const categories = [

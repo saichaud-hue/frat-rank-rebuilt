@@ -11,6 +11,8 @@ import { useAuth } from '@/contexts/AuthContext';
 import { chatMessageQueries, chatMessageVoteQueries, getCurrentUser } from '@/lib/supabase-data';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
+import { useRateLimit } from '@/hooks/useRateLimit';
+import { postSchema, commentSchema, validateInput } from '@/lib/validationSchemas';
 
 type SortType = 'hot' | 'new' | 'top';
 
@@ -40,6 +42,7 @@ const generateAnonymousName = (seed: string) => {
 
 export default function AnonymousFeed({ initialSort }: AnonymousFeedProps) {
   const { user } = useAuth();
+  const { withRateLimit } = useRateLimit();
   const [posts, setPosts] = useState<Post[]>([]);
   const [frozenPostOrder, setFrozenPostOrder] = useState<string[]>([]); // Order frozen at load time
   const [comments, setComments] = useState<Record<string, Comment[]>>({});
@@ -188,7 +191,12 @@ export default function AnonymousFeed({ initialSort }: AnonymousFeedProps) {
   }, [posts, frozenPostOrder]);
 
   const handleCreatePost = async () => {
-    if (!newPostText.trim()) return;
+    // Validate input
+    const validation = validateInput(postSchema, { text: newPostText });
+    if (!validation.success) {
+      toast.error('error' in validation ? validation.error : 'Invalid input');
+      return;
+    }
     
     const currentUser = await getCurrentUser();
     if (!currentUser) {
@@ -197,9 +205,11 @@ export default function AnonymousFeed({ initialSort }: AnonymousFeedProps) {
     }
 
     setSubmitting(true);
-    try {
+    
+    // Apply rate limiting
+    const result = await withRateLimit('post', async () => {
       await chatMessageQueries.create({
-        text: newPostText.trim(),
+        text: validation.data.text,
         user_id: currentUser.id,
         parent_message_id: null,
         mentioned_fraternity_id: null,
@@ -207,17 +217,17 @@ export default function AnonymousFeed({ initialSort }: AnonymousFeedProps) {
         upvotes: 0,
         downvotes: 0,
       });
-      
+      return true;
+    });
+    
+    if (result) {
       setNewPostText('');
       setShowComposer(false);
       toast.success('Post created!');
       loadData();
-    } catch (error) {
-      console.error('Failed to create post:', error);
-      toast.error('Failed to create post');
-    } finally {
-      setSubmitting(false);
     }
+    
+    setSubmitting(false);
   };
 
   const handlePostVote = async (postId: string, direction: 1 | -1) => {
@@ -401,15 +411,23 @@ export default function AnonymousFeed({ initialSort }: AnonymousFeedProps) {
   const handleAddComment = async (text: string, parentId?: string) => {
     if (!selectedPost) return;
     
+    // Validate input
+    const validation = validateInput(commentSchema, { text });
+    if (!validation.success) {
+      toast.error('error' in validation ? validation.error : 'Invalid input');
+      return;
+    }
+    
     const currentUser = await getCurrentUser();
     if (!currentUser) {
       toast.error('Please sign in to comment');
       return;
     }
 
-    try {
+    // Apply rate limiting
+    const result = await withRateLimit('comment', async () => {
       await chatMessageQueries.create({
-        text,
+        text: validation.data.text,
         user_id: currentUser.id,
         parent_message_id: selectedPost.id,
         mentioned_fraternity_id: null,
@@ -417,12 +435,12 @@ export default function AnonymousFeed({ initialSort }: AnonymousFeedProps) {
         upvotes: 0,
         downvotes: 0,
       });
+      return true;
+    });
 
+    if (result) {
       toast.success('Comment added!');
       loadData();
-    } catch (error) {
-      console.error('Failed to add comment:', error);
-      toast.error('Failed to add comment');
     }
   };
 

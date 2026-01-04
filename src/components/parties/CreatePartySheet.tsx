@@ -14,6 +14,8 @@ import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
 import { supabase } from '@/integrations/supabase/client';
 import { validateFile, stripExifData } from '@/lib/fileValidation';
+import { useRateLimit } from '@/hooks/useRateLimit';
+import { partySchema, validateInput } from '@/lib/validationSchemas';
 
 interface CreatePartySheetProps {
   open: boolean;
@@ -45,6 +47,7 @@ export default function CreatePartySheet({ open, onOpenChange, onSuccess }: Crea
   const [emailError, setEmailError] = useState('');
   const fileInputRef = useRef<HTMLInputElement>(null);
   const cameraInputRef = useRef<HTMLInputElement>(null);
+  const { withRateLimit } = useRateLimit();
 
   useEffect(() => {
     if (open) {
@@ -217,46 +220,68 @@ export default function CreatePartySheet({ open, onOpenChange, onSuccess }: Crea
     e.preventDefault();
     if (!isFormValid) return;
 
+    // Validate input with zod
+    const validation = validateInput(partySchema, {
+      title: formData.title,
+      fraternity_id: formData.fraternity_id,
+      venue: formData.venue || undefined,
+      starts_at: formData.starts_at,
+      ends_at: formData.ends_at,
+      contact_email: formData.contact_email,
+      type: formData.type || undefined,
+      invite_only: formData.invite_only,
+    });
+
+    if (!validation.success) {
+      const { toast } = await import('@/hooks/use-toast');
+      toast({
+        title: 'error' in validation ? validation.error : 'Invalid form data',
+        variant: 'destructive',
+      });
+      return;
+    }
+
     const user = await getCurrentUser();
     if (!user) return;
 
     setLoading(true);
-    try {
-      // contact_email is a new column - using type assertion until types regenerate
+    
+    const result = await withRateLimit('post', async () => {
       await partyQueries.create({
-        fraternity_id: formData.fraternity_id,
+        fraternity_id: validation.data.fraternity_id,
         user_id: user.id,
-        title: formData.title,
-        starts_at: formData.starts_at,
-        ends_at: formData.ends_at,
-        venue: formData.venue,
+        title: validation.data.title,
+        starts_at: validation.data.starts_at,
+        ends_at: validation.data.ends_at,
+        venue: validation.data.venue || '',
         theme: formData.type,
-        access_type: formData.invite_only ? 'invite_only' : 'open',
-        tags: [formData.type, formData.invite_only ? 'invite_only' : 'open'].filter(Boolean),
+        access_type: validation.data.invite_only ? 'invite_only' : 'open',
+        tags: [formData.type, validation.data.invite_only ? 'invite_only' : 'open'].filter(Boolean),
         display_photo_url: formData.cover_photo_url,
         performance_score: 0,
         quantifiable_score: 0,
         unquantifiable_score: 5,
         total_ratings: 0,
         status: 'pending',
-        contact_email: formData.contact_email.trim(),
+        contact_email: validation.data.contact_email,
       } as any);
+      
+      return true;
+    });
 
+    if (result) {
       resetForm();
       onOpenChange(false);
       onSuccess();
       
-      // Show toast about pending approval
       const { toast } = await import('@/hooks/use-toast');
       toast({
         title: "Party submitted for review",
         description: "You'll be notified when it's approved.",
       });
-    } catch (error) {
-      console.error('Failed to create party:', error);
-    } finally {
-      setLoading(false);
     }
+    
+    setLoading(false);
   };
 
   const selectedFrat = fraternities.find(f => f.id === formData.fraternity_id);
