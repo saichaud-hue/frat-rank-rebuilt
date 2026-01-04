@@ -10,13 +10,13 @@ import { cn } from '@/lib/utils';
 import PostCard, { type Post } from './PostCard';
 import ThreadView, { type Comment } from './ThreadView';
 import { useAuth } from '@/contexts/AuthContext';
-import { chatMessageQueries, chatMessageVoteQueries, getCurrentUser } from '@/lib/supabase-data';
+import { chatMessageQueries, chatMessageVoteQueries, getCurrentUser, type Fraternity } from '@/lib/supabase-data';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { useRateLimit } from '@/hooks/useRateLimit';
 import { postSchema, commentSchema, validateInput } from '@/lib/validationSchemas';
 import { getFratGreek, getFratShorthand } from '@/utils';
-import { useNavigate } from 'react-router-dom';
+import FratBattleGame from '@/components/activity/FratBattleGame';
 
 type SortType = 'hot' | 'new' | 'top';
 
@@ -54,7 +54,7 @@ export default function AnonymousFeed({ initialSort }: AnonymousFeedProps) {
   const [loading, setLoading] = useState(true);
   const [sortBy, setSortBy] = useState<SortType>(initialSort || 'hot');
   const [showComposer, setShowComposer] = useState(false);
-  const [composerMode, setComposerMode] = useState<'menu' | 'text' | 'mention' | 'ranking' | 'ranking-manual' | 'poll'>('menu');
+  const [composerMode, setComposerMode] = useState<'menu' | 'text' | 'mention' | 'ranking' | 'ranking-battle' | 'ranking-manual' | 'poll'>('menu');
   const [newPostText, setNewPostText] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [selectedPost, setSelectedPost] = useState<Post | null>(null);
@@ -81,19 +81,17 @@ export default function AnonymousFeed({ initialSort }: AnonymousFeedProps) {
   const [mentionText, setMentionText] = useState('');
   const [selectedMention, setSelectedMention] = useState<{ id: string; name: string } | null>(null);
   
-  // Fraternities list
-  const [fraternities, setFraternities] = useState<Array<{ id: string; name: string; chapter?: string; logo_url?: string }>>([]);
+  // Fraternities list (full type for FratBattleGame)
+  const [fraternities, setFraternities] = useState<Fraternity[]>([]);
   
   // Lock to prevent rapid clicking from causing duplicate votes
   const votingLock = useRef<Set<string>>(new Set());
   
-  const navigate = useNavigate();
-  
-  // Load fraternities
+  // Load fraternities with full data for FratBattleGame
   useEffect(() => {
     const loadFrats = async () => {
-      const { data } = await supabase.from('fraternities').select('id, name, chapter, logo_url').order('name');
-      if (data) setFraternities(data);
+      const { data } = await supabase.from('fraternities').select('*').order('name');
+      if (data) setFraternities(data as Fraternity[]);
     };
     loadFrats();
   }, []);
@@ -749,7 +747,7 @@ export default function AnonymousFeed({ initialSort }: AnonymousFeedProps) {
                 <p className="text-sm text-muted-foreground">Choose how to rank frats</p>
                 <div className="grid grid-cols-1 gap-3">
                   <button
-                    onClick={() => navigate('/activity?tab=battle')}
+                    onClick={() => setComposerMode('ranking-battle')}
                     className="flex items-center gap-4 p-4 rounded-xl bg-gradient-to-r from-amber-500/10 to-orange-500/10 border border-amber-500/30 hover:border-amber-500/50 active:scale-[0.98] transition-all text-left"
                   >
                     <div className="h-12 w-12 rounded-xl bg-amber-500/20 flex items-center justify-center">
@@ -774,6 +772,74 @@ export default function AnonymousFeed({ initialSort }: AnonymousFeedProps) {
                   </button>
                 </div>
               </>
+            )}
+
+            {/* Mode: Frat Battle Game */}
+            {composerMode === 'ranking-battle' && (
+              <FratBattleGame
+                fraternities={fraternities}
+                onComplete={async (ranking) => {
+                  // Convert battle result to post text
+                  const tierEntries = Object.entries(ranking).filter(([_, frat]) => frat);
+                  if (tierEntries.length >= 3) {
+                    const postText = `🏆 My Frat Ranking\n${tierEntries.map(([tier, frat]) => `${tier}: ${frat.name}`).join('\n')}`;
+                    setNewPostText(postText);
+                    
+                    // Auto-submit
+                    const currentUser = await getCurrentUser();
+                    if (currentUser) {
+                      setSubmitting(true);
+                      const result = await withRateLimit('post', async () => {
+                        await chatMessageQueries.create({
+                          text: postText,
+                          user_id: currentUser.id,
+                          parent_message_id: null,
+                          mentioned_fraternity_id: null,
+                          mentioned_party_id: null,
+                          upvotes: 0,
+                          downvotes: 0,
+                        });
+                        return true;
+                      });
+                      if (result) {
+                        resetComposer();
+                        setShowComposer(false);
+                        toast.success('Ranking posted!');
+                        loadData();
+                      }
+                      setSubmitting(false);
+                    }
+                  }
+                }}
+                onClose={() => setComposerMode('ranking')}
+                onShare={async (rankingData) => {
+                  // Post to feed
+                  const postText = `🏆 My Frat Ranking\n${rankingData.map(r => `${r.tier}: ${r.fratName}`).join('\n')}`;
+                  const currentUser = await getCurrentUser();
+                  if (currentUser) {
+                    setSubmitting(true);
+                    const result = await withRateLimit('post', async () => {
+                      await chatMessageQueries.create({
+                        text: postText,
+                        user_id: currentUser.id,
+                        parent_message_id: null,
+                        mentioned_fraternity_id: null,
+                        mentioned_party_id: null,
+                        upvotes: 0,
+                        downvotes: 0,
+                      });
+                      return true;
+                    });
+                    if (result) {
+                      resetComposer();
+                      setShowComposer(false);
+                      toast.success('Ranking shared to feed!');
+                      loadData();
+                    }
+                    setSubmitting(false);
+                  }
+                }}
+              />
             )}
 
             {/* Mode: Manual Ranking */}
