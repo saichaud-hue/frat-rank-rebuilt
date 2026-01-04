@@ -12,6 +12,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import ReportContentDialog from '@/components/moderation/ReportContentDialog';
 import PollCard, { parsePollFromText } from '@/components/activity/PollCard';
+import UserLevelBadge from '@/components/feed/UserLevelBadge';
 import { cn } from '@/lib/utils';
 import { formatDistanceToNow } from 'date-fns';
 import { supabase } from '@/integrations/supabase/client';
@@ -22,6 +23,8 @@ export interface Comment {
   id: string;
   text: string;
   anonymous_name: string;
+  user_id: string;
+  user_points?: number;
   upvotes: number;
   downvotes: number;
   created_date: string;
@@ -81,8 +84,9 @@ function CommentCard({
           {comment.anonymous_name.charAt(0).toUpperCase()}
         </div>
         <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-2 mb-1">
+          <div className="flex items-center gap-2 mb-1 flex-wrap">
             <span className="text-sm font-medium">{comment.anonymous_name}</span>
+            <UserLevelBadge points={comment.user_points || 0} compact />
             <span className="text-xs text-muted-foreground flex items-center gap-1">
               <Clock className="h-3 w-3" />
               {formatDistanceToNow(new Date(comment.created_date), { addSuffix: false })}
@@ -371,11 +375,12 @@ export default function ThreadView({
 
                 {/* Content */}
                 <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2 mb-2">
+                  <div className="flex items-center gap-2 mb-2 flex-wrap">
                     <div className={cn("w-8 h-8 rounded-full bg-gradient-to-br flex items-center justify-center text-white text-sm font-bold", colorGradient)}>
                       {post.anonymous_name.charAt(0).toUpperCase()}
                     </div>
                     <span className="text-sm font-medium">{post.anonymous_name}</span>
+                    <UserLevelBadge points={post.user_points || 0} compact />
                     <span className="text-xs text-muted-foreground">
                       {formatDistanceToNow(new Date(post.created_date), { addSuffix: true })}
                     </span>

@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { ChevronUp, ChevronDown, MessageCircle, Flame, Clock, TrendingUp, Flag, MoreHorizontal, Trophy, Crown, ChevronRight } from 'lucide-react';
 import PollCard, { parsePollFromText } from '@/components/activity/PollCard';
+import UserLevelBadge from '@/components/feed/UserLevelBadge';
 import { cn } from '@/lib/utils';
 import { formatDistanceToNow } from 'date-fns';
 import {
@@ -18,6 +19,8 @@ export interface Post {
   id: string;
   text: string;
   anonymous_name: string;
+  user_id: string;
+  user_points?: number;
   upvotes: number;
   downvotes: number;
   comment_count: number;
@@ -274,6 +277,7 @@ export default function PostCard({ post, onUpvote, onDownvote, onOpenThread, isL
               {post.anonymous_name.charAt(0).toUpperCase()}
             </div>
             <span className="text-sm font-medium text-foreground">{post.anonymous_name}</span>
+            <UserLevelBadge points={post.user_points || 0} compact />
             <span className="text-xs text-muted-foreground">•</span>
             <span className="text-xs text-muted-foreground flex items-center gap-1">
               <Clock className="h-3 w-3" />
