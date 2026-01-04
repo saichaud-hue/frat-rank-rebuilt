@@ -277,7 +277,6 @@ export default function PostCard({ post, onUpvote, onDownvote, onOpenThread, isL
               {post.anonymous_name.charAt(0).toUpperCase()}
             </div>
             <span className="text-sm font-medium text-foreground">{post.anonymous_name}</span>
-            <UserLevelBadge points={post.user_points || 0} compact />
             <span className="text-xs text-muted-foreground">•</span>
             <span className="text-xs text-muted-foreground flex items-center gap-1">
               <Clock className="h-3 w-3" />
@@ -374,11 +373,14 @@ export default function PostCard({ post, onUpvote, onDownvote, onOpenThread, isL
 
           {/* Comment count and actions */}
           <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2 text-muted-foreground">
-              <MessageCircle className="h-4 w-4" />
-              <span className="text-sm font-medium">
-                {post.comment_count} {post.comment_count === 1 ? 'comment' : 'comments'}
-              </span>
+            <div className="flex items-center gap-3 text-muted-foreground">
+              <div className="flex items-center gap-2">
+                <MessageCircle className="h-4 w-4" />
+                <span className="text-sm font-medium">
+                  {post.comment_count} {post.comment_count === 1 ? 'comment' : 'comments'}
+                </span>
+              </div>
+              <UserLevelBadge points={post.user_points || 0} compact />
             </div>
             
             <DropdownMenu>
