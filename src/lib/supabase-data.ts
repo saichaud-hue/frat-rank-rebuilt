@@ -543,6 +543,19 @@ export const chatMessageQueries = {
     return data || [];
   },
 
+  async listRecent(days: number = 2): Promise<ChatMessage[]> {
+    const cutoffDate = new Date();
+    cutoffDate.setDate(cutoffDate.getDate() - days);
+    
+    const { data, error } = await supabase
+      .from('chat_messages')
+      .select('*')
+      .gte('created_at', cutoffDate.toISOString())
+      .order('created_at', { ascending: false });
+    if (error) throw error;
+    return data || [];
+  },
+
   async create(message: Omit<ChatMessage, 'id' | 'created_at'>): Promise<ChatMessage> {
     const { data, error } = await supabase
       .from('chat_messages')

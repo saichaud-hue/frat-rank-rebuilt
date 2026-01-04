@@ -106,7 +106,7 @@ export default function AnonymousFeed({ initialSort }: AnonymousFeedProps) {
   // Load posts and comments from Supabase
   const loadData = useCallback(async () => {
     try {
-      const messages = await chatMessageQueries.list();
+      const messages = await chatMessageQueries.listRecent(2);
       
       // Separate top-level posts from comments
       const topLevelPosts = messages.filter(m => !m.parent_message_id);
