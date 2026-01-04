@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import { ChevronUp, ChevronDown, MessageCircle, Flame, Clock, TrendingUp, Flag, MoreHorizontal, Trophy, Crown, ChevronRight } from 'lucide-react';
+import { ChevronUp, ChevronDown, MessageCircle, Flame, Clock, TrendingUp, Flag, MoreHorizontal, Trophy, Crown, ChevronRight, BarChart3 } from 'lucide-react';
+import PollCard, { parsePollFromText } from '@/components/activity/PollCard';
 import { cn } from '@/lib/utils';
 import { formatDistanceToNow } from 'date-fns';
 import {
@@ -86,6 +87,10 @@ export default function PostCard({ post, onUpvote, onDownvote, onOpenThread, isL
   const rankings = parseRankingPost(post.text);
   const isRankingPost = rankings && rankings.length > 0;
   const displayedRankings = showAllRankings ? rankings : rankings?.slice(0, 5);
+  
+  // Check if this is a poll post
+  const pollData = parsePollFromText(post.text);
+  const isPollPost = pollData !== null;
   
   return (
     <>
@@ -213,6 +218,17 @@ export default function PostCard({ post, onUpvote, onDownvote, onOpenThread, isL
                   <ChevronRight className={cn("h-4 w-4 transition-transform", showAllRankings && "rotate-90")} />
                 </button>
               )}
+            </div>
+          ) : isPollPost && pollData ? (
+            /* Poll Post Graphic */
+            <div className="mb-3" onClick={(e) => e.stopPropagation()}>
+              <PollCard
+                question={pollData.question}
+                options={pollData.options}
+                userVote={null}
+                voteCounts={{}}
+                compact
+              />
             </div>
           ) : (
             /* Regular Post text */
