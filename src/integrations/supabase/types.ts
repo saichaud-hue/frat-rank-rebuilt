@@ -1121,7 +1121,100 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      chat_message_votes_aggregated: {
+        Row: {
+          downvote_count: number | null
+          message_id: string | null
+          upvote_count: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "chat_message_votes_message_id_fkey"
+            columns: ["message_id"]
+            isOneToOne: false
+            referencedRelation: "chat_messages"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      move_votes_aggregated: {
+        Row: {
+          option_id: string | null
+          option_name: string | null
+          vote_count: number | null
+          vote_date: string | null
+        }
+        Relationships: []
+      }
+      party_attendance_aggregated: {
+        Row: {
+          going_count: number | null
+          party_id: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "party_attendance_party_id_fkey"
+            columns: ["party_id"]
+            isOneToOne: false
+            referencedRelation: "parties"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      party_ratings_aggregated: {
+        Row: {
+          avg_execution: number | null
+          avg_music: number | null
+          avg_party_quality: number | null
+          avg_vibe: number | null
+          party_id: string | null
+          total_ratings: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "party_ratings_party_id_fkey"
+            columns: ["party_id"]
+            isOneToOne: false
+            referencedRelation: "parties"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      poll_votes_aggregated: {
+        Row: {
+          message_id: string | null
+          option_index: number | null
+          vote_count: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "poll_votes_message_id_fkey"
+            columns: ["message_id"]
+            isOneToOne: false
+            referencedRelation: "chat_messages"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      reputation_ratings_aggregated: {
+        Row: {
+          avg_brotherhood: number | null
+          avg_combined: number | null
+          avg_community: number | null
+          avg_reputation: number | null
+          fraternity_id: string | null
+          total_ratings: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "reputation_ratings_fraternity_id_fkey"
+            columns: ["fraternity_id"]
+            isOneToOne: false
+            referencedRelation: "fraternities"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Functions: {
       admin_seed_party_rating: {
