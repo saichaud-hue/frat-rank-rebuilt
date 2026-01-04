@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { PartyPopper, Megaphone, Users, Star, Calendar, Flame } from 'lucide-react';
+import { PartyPopper, Calendar, Star, Clock, MapPin } from 'lucide-react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -32,64 +32,54 @@ export default function PartiesIntro({ onComplete, onSubmitParty }: PartiesIntro
 
   return (
     <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-end sm:items-center justify-center">
-      <Card className="w-full sm:max-w-md rounded-t-3xl sm:rounded-2xl p-6 animate-slide-up sm:animate-scale-in" style={{ paddingBottom: 'max(env(safe-area-inset-bottom), 32px)' }}>
-        <div className="space-y-6">
-          {/* Icon */}
-          <div className="mx-auto w-20 h-20 rounded-2xl bg-gradient-to-br from-primary to-pink-500 flex items-center justify-center">
-            <Megaphone className="h-10 w-10 text-white" />
+      <Card className="w-full sm:max-w-md rounded-t-3xl sm:rounded-2xl p-5 animate-slide-up sm:animate-scale-in" style={{ paddingBottom: 'max(env(safe-area-inset-bottom), 20px)' }}>
+        <div className="space-y-4">
+          {/* Icon - smaller */}
+          <div className="mx-auto w-14 h-14 rounded-xl bg-gradient-to-br from-primary to-pink-500 flex items-center justify-center">
+            <PartyPopper className="h-7 w-7 text-white" />
           </div>
 
-          {/* Content */}
-          <div className="text-center space-y-3">
-            <h2 className="text-2xl font-bold">Host Your Party</h2>
-            <p className="text-muted-foreground text-lg">
-              Are you in a fraternity? Get your party on the map!
+          {/* Content - more compact */}
+          <div className="text-center space-y-1">
+            <h2 className="text-xl font-bold">Campus Parties</h2>
+            <p className="text-muted-foreground text-sm">
+              Find what's happening tonight
             </p>
           </div>
 
-          {/* Features - matching LeaderboardIntro style */}
-          <div className="space-y-3 text-left">
-            <div className="flex items-start gap-3">
-              <div className="w-8 h-8 rounded-full bg-blue-500/10 flex items-center justify-center flex-shrink-0">
-                <PartyPopper className="h-4 w-4 text-blue-500" />
+          {/* Features - compact grid */}
+          <div className="grid grid-cols-2 gap-2">
+            <div className="flex items-center gap-2 p-2 rounded-lg bg-muted/50">
+              <div className="w-6 h-6 rounded-full bg-blue-500/10 flex items-center justify-center shrink-0">
+                <Clock className="h-3 w-3 text-blue-500" />
               </div>
-              <p className="text-sm text-muted-foreground pt-1">
-                <span className="font-semibold text-foreground">Submit</span> — Share your party details with campus
-              </p>
+              <span className="text-xs"><span className="font-semibold">Live</span> — Happening now</span>
             </div>
-            <div className="flex items-start gap-3">
-              <div className="w-8 h-8 rounded-full bg-purple-500/10 flex items-center justify-center flex-shrink-0">
-                <Users className="h-4 w-4 text-purple-500" />
+            <div className="flex items-center gap-2 p-2 rounded-lg bg-muted/50">
+              <div className="w-6 h-6 rounded-full bg-purple-500/10 flex items-center justify-center shrink-0">
+                <Calendar className="h-3 w-3 text-purple-500" />
               </div>
-              <p className="text-sm text-muted-foreground pt-1">
-                <span className="font-semibold text-foreground">Reputation</span> — Build your frat's image with great events
-              </p>
+              <span className="text-xs"><span className="font-semibold">Upcoming</span> — Soon</span>
             </div>
-            <div className="flex items-start gap-3">
-              <div className="w-8 h-8 rounded-full bg-pink-500/10 flex items-center justify-center flex-shrink-0">
-                <Star className="h-4 w-4 text-pink-500" />
+            <div className="flex items-center gap-2 p-2 rounded-lg bg-muted/50">
+              <div className="w-6 h-6 rounded-full bg-pink-500/10 flex items-center justify-center shrink-0">
+                <Star className="h-3 w-3 text-pink-500" />
               </div>
-              <p className="text-sm text-muted-foreground pt-1">
-                <span className="font-semibold text-foreground">Ratings</span> — Get feedback from party-goers
-              </p>
+              <span className="text-xs"><span className="font-semibold">Ratings</span> — Reviews</span>
             </div>
-            <div className="flex items-start gap-3">
-              <div className="w-8 h-8 rounded-full bg-orange-500/10 flex items-center justify-center flex-shrink-0">
-                <Calendar className="h-4 w-4 text-orange-500" />
+            <div className="flex items-center gap-2 p-2 rounded-lg bg-muted/50">
+              <div className="w-6 h-6 rounded-full bg-orange-500/10 flex items-center justify-center shrink-0">
+                <MapPin className="h-3 w-3 text-orange-500" />
               </div>
-              <p className="text-sm text-muted-foreground pt-1">
-                <span className="font-semibold text-foreground">Upcoming</span> — Let everyone know what's next
-              </p>
-            </div>
-            <div className="flex items-start gap-3">
-              <div className="w-8 h-8 rounded-full bg-amber-500/10 flex items-center justify-center flex-shrink-0">
-                <Flame className="h-4 w-4 text-amber-500" />
-              </div>
-              <p className="text-sm text-muted-foreground pt-1">
-                Tap any party to <span className="font-semibold text-foreground">rate it</span>
-              </p>
+              <span className="text-xs"><span className="font-semibold">Details</span> — Info</span>
             </div>
           </div>
+
+          {/* Tip */}
+          <p className="text-center text-xs text-muted-foreground">
+            <Star className="h-3 w-3 inline mr-1 text-amber-500" />
+            Tap any party to rate it after attending
+          </p>
 
           {/* Checkbox */}
           <div className="flex items-center justify-center gap-2">
@@ -97,26 +87,27 @@ export default function PartiesIntro({ onComplete, onSubmitParty }: PartiesIntro
               id="never-show-parties" 
               checked={neverShowAgain}
               onCheckedChange={(checked) => setNeverShowAgain(checked === true)}
+              className="h-4 w-4"
             />
-            <Label htmlFor="never-show-parties" className="text-sm text-muted-foreground cursor-pointer">
-              Don't show this again
+            <Label htmlFor="never-show-parties" className="text-xs text-muted-foreground cursor-pointer">
+              Don't show again
             </Label>
           </div>
 
-          {/* Buttons */}
-          <div className="space-y-3">
+          {/* Buttons - horizontal layout */}
+          <div className="flex gap-2">
             <Button 
               onClick={handleSubmitParty} 
-              className="w-full min-h-[52px] text-base font-semibold gradient-primary text-white active:scale-[0.98] transition-transform"
+              variant="outline"
+              className="flex-1 h-11 text-sm font-medium active:scale-[0.98] transition-transform"
             >
-              Submit a Party
+              Submit Party
             </Button>
             <Button 
               onClick={handleBrowse} 
-              variant="outline"
-              className="w-full min-h-[52px] text-base font-medium active:scale-[0.98] transition-transform"
+              className="flex-1 h-11 text-sm font-semibold gradient-primary text-white active:scale-[0.98] transition-transform"
             >
-              Browse Parties
+              Browse
             </Button>
           </div>
         </div>
