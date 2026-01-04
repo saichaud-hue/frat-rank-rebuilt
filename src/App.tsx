@@ -93,8 +93,8 @@ const App = () => (
         <Toaster />
         <Sonner />
         <SemesterAnnouncementPopup />
-        <NewPartiesNotification />
         <BrowserRouter>
+          <NewPartiesNotification />
           <ScrollToTop />
           <PointerEventsSafety />
           <Routes>
