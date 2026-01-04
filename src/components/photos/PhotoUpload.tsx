@@ -5,7 +5,8 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
-import { base44 } from '@/api/base44Client';
+import { supabase } from '@/integrations/supabase/client';
+import { partyPhotoQueries, getCurrentUser } from '@/lib/supabase-data';
 import { validateFile, stripExifData, getAllowedFileTypes, getAcceptString, type AllowedFileType } from '@/lib/fileValidation';
 
 interface PhotoUploadProps {
@@ -66,7 +67,7 @@ export default function PhotoUpload({ partyId, onUploadComplete }: PhotoUploadPr
     setError(null);
 
     try {
-      const user = await base44.auth.me();
+      const user = await getCurrentUser();
       if (!user) {
         setError('Please sign in to upload photos');
         return;
@@ -74,23 +75,32 @@ export default function PhotoUpload({ partyId, onUploadComplete }: PhotoUploadPr
 
       // Strip EXIF data before upload
       const cleanedFile = await stripExifData(file);
-      const { url } = await base44.integrations.Core.UploadFile({ file: cleanedFile });
+      
+      // Upload to Supabase Storage
+      const fileName = `${user.id}/${Date.now()}-${Math.random().toString(36).substr(2, 9)}.${cleanedFile.name.split('.').pop()}`;
+      const { data: uploadData, error: uploadError } = await supabase.storage
+        .from('party-photos')
+        .upload(fileName, cleanedFile);
+      
+      if (uploadError) throw uploadError;
+      
+      // Get public URL
+      const { data: { publicUrl } } = supabase.storage
+        .from('party-photos')
+        .getPublicUrl(fileName);
 
-      await base44.entities.PartyPhoto.create({
+      await partyPhotoQueries.create({
         party_id: partyId,
         user_id: user.id,
-        url,
+        url: publicUrl,
         caption,
         consent_verified: true,
         likes: 0,
         dislikes: 0,
         moderation_status: 'approved',
-        faces_detected: 0,
-        faces_blurred: false,
+        visibility: 'public',
+        shared_to_feed: false,
       });
-
-      // Update user points
-      await base44.auth.updateMe({ points: (user.points || 0) + 5 });
 
       clearFile();
       onUploadComplete();
