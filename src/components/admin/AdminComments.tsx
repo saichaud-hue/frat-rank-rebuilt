@@ -2,10 +2,12 @@ import { useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { EyeOff, Trash2, Loader2, Mail } from "lucide-react";
+import { EyeOff, Eye, Trash2, Loader2, Mail } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { UserActionSheet } from "./UserActionSheet";
+import { toast } from "@/hooks/use-toast";
+import { cn } from "@/lib/utils";
 
 type Comment = {
   id: string;
@@ -13,6 +15,8 @@ type Comment = {
   created_at: string | null;
   toxicity_label: string | null;
   moderated: boolean | null;
+  deleted_at: string | null;
+  deleted_by: string | null;
   user_id: string;
   type: "party" | "fraternity";
 };
@@ -23,20 +27,20 @@ type Profile = {
 };
 
 async function fetchAdminComments() {
+  // Note: new columns may not be in types yet
   const [partyRes, fratRes] = await Promise.all([
-    supabase
-      .from("party_comments")
-      .select("id,text,created_at,toxicity_label,moderated,user_id")
-      .eq("moderated", false)
+    (supabase.from("party_comments") as any)
+      .select("id,text,created_at,toxicity_label,moderated,user_id,deleted_at,deleted_by")
       .order("created_at", { ascending: false })
       .limit(50),
-    supabase
-      .from("fraternity_comments")
-      .select("id,text,created_at,toxicity_label,moderated,user_id")
-      .eq("moderated", false)
+    (supabase.from("fraternity_comments") as any)
+      .select("id,text,created_at,toxicity_label,moderated,user_id,deleted_at,deleted_by")
       .order("created_at", { ascending: false })
       .limit(50),
   ]);
+
+  if (partyRes.error) throw partyRes.error;
+  if (fratRes.error) throw fratRes.error;
 
   if (partyRes.error) throw partyRes.error;
   if (fratRes.error) throw fratRes.error;
@@ -91,22 +95,65 @@ export function AdminComments() {
     refetchOnWindowFocus: true,
   });
 
-  const hideComment = async (id: string, type: "party" | "fraternity") => {
+  const logAuditAction = async (action: string, targetType: string, targetId: string) => {
+    const { data: userData } = await supabase.auth.getUser();
+    if (userData.user) {
+      await (supabase.from as any)("audit_logs").insert({
+        actor_id: userData.user.id,
+        action,
+        target_type: targetType,
+        target_id: targetId,
+      });
+    }
+  };
+
+  const softDeleteComment = async (id: string, type: "party" | "fraternity", isDeleted: boolean) => {
     setActionLoading(id);
-    const table = type === "party" ? "party_comments" : "fraternity_comments";
-    const { error } = await supabase.from(table).update({ moderated: true }).eq("id", id);
-    if (error) console.error(error);
-    await queryClient.invalidateQueries({ queryKey: ["admin", "comments"] });
-    setActionLoading(null);
+    try {
+      const { data: userData } = await supabase.auth.getUser();
+      const table = type === "party" ? "party_comments" : "fraternity_comments";
+      
+      const { error } = await (supabase.from(table) as any)
+        .update({
+          deleted_at: isDeleted ? null : new Date().toISOString(),
+          deleted_by: isDeleted ? null : userData.user?.id,
+        })
+        .eq("id", id);
+
+      if (error) throw error;
+
+      await logAuditAction(isDeleted ? "restore" : "soft_delete", `${type}_comment`, id);
+      toast({
+        title: isDeleted ? "Comment restored" : "Comment hidden",
+        description: isDeleted ? "The comment is now visible again." : "The comment is now hidden from users.",
+      });
+
+      await queryClient.invalidateQueries({ queryKey: ["admin", "comments"] });
+    } catch (err) {
+      console.error("Failed to update comment:", err);
+      toast({ title: "Action failed", variant: "destructive" });
+    } finally {
+      setActionLoading(null);
+    }
   };
 
   const deleteComment = async (id: string, type: "party" | "fraternity") => {
     setActionLoading(id);
-    const table = type === "party" ? "party_comments" : "fraternity_comments";
-    const { error } = await supabase.from(table).delete().eq("id", id);
-    if (error) console.error(error);
-    await queryClient.invalidateQueries({ queryKey: ["admin", "comments"] });
-    setActionLoading(null);
+    try {
+      const table = type === "party" ? "party_comments" : "fraternity_comments";
+      const { error } = await supabase.from(table).delete().eq("id", id);
+      if (error) throw error;
+
+      await logAuditAction("hard_delete", `${type}_comment`, id);
+      toast({ title: "Comment permanently deleted" });
+
+      await queryClient.invalidateQueries({ queryKey: ["admin", "comments"] });
+    } catch (err) {
+      console.error("Failed to delete comment:", err);
+      toast({ title: "Delete failed", variant: "destructive" });
+    } finally {
+      setActionLoading(null);
+    }
   };
 
   if (isLoading) {
@@ -140,11 +187,15 @@ export function AdminComments() {
       <div className="space-y-3">
         {items.map((c) => {
           const userEmail = emails[c.user_id];
+          const isDeleted = !!c.deleted_at;
           
           return (
             <div 
               key={`${c.type}-${c.id}`} 
-              className="p-4 rounded-xl border bg-card cursor-pointer hover:bg-accent/50 transition-colors"
+              className={cn(
+                "p-4 rounded-xl border bg-card cursor-pointer hover:bg-accent/50 transition-colors",
+                isDeleted && "opacity-60 bg-muted/30"
+              )}
               onClick={() => setSelectedUser({
                 userId: c.user_id,
                 email: userEmail || "Unknown",
@@ -158,6 +209,12 @@ export function AdminComments() {
                     <Badge variant="outline" className="text-xs">
                       {c.type === "party" ? "Party" : "Frat"}
                     </Badge>
+                    {isDeleted && (
+                      <Badge variant="outline" className="text-xs bg-yellow-500/10 text-yellow-600">
+                        <EyeOff className="h-3 w-3 mr-1" />
+                        Hidden
+                      </Badge>
+                    )}
                     {c.toxicity_label && c.toxicity_label !== "safe" && (
                       <Badge variant="destructive" className="text-xs">
                         {c.toxicity_label}
@@ -180,36 +237,45 @@ export function AdminComments() {
                   </div>
                 </div>
 
-                <div className="flex gap-2 shrink-0">
+                <div className="flex gap-1 shrink-0">
+                  {/* Hide/Show */}
                   <Button
                     size="sm"
-                    variant="outline"
-                    className="h-9 w-9 p-0"
+                    variant="ghost"
+                    className="h-8 w-8 p-0"
                     disabled={actionLoading === c.id}
                     onClick={(e) => {
                       e.stopPropagation();
-                      hideComment(c.id, c.type);
+                      softDeleteComment(c.id, c.type, isDeleted);
                     }}
-                    title="Hide comment"
+                    title={isDeleted ? "Show comment" : "Hide comment"}
+                  >
+                    {isDeleted ? (
+                      <Eye className="h-4 w-4 text-emerald-600" />
+                    ) : (
+                      <EyeOff className="h-4 w-4 text-yellow-600" />
+                    )}
+                  </Button>
+                  
+                  {/* Hard Delete */}
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    className="h-8 w-8 p-0"
+                    disabled={actionLoading === c.id}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      if (confirm("Permanently delete this comment? This cannot be undone.")) {
+                        deleteComment(c.id, c.type);
+                      }
+                    }}
+                    title="Delete permanently"
                   >
                     {actionLoading === c.id ? (
                       <Loader2 className="h-4 w-4 animate-spin" />
                     ) : (
-                      <EyeOff className="h-4 w-4" />
+                      <Trash2 className="h-4 w-4 text-red-600" />
                     )}
-                  </Button>
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    className="h-9 w-9 p-0"
-                    disabled={actionLoading === c.id}
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      deleteComment(c.id, c.type);
-                    }}
-                    title="Delete comment"
-                  >
-                    <Trash2 className="h-4 w-4 text-red-600" />
                   </Button>
                 </div>
               </div>

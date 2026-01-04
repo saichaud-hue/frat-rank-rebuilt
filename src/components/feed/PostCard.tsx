@@ -1,7 +1,14 @@
 import { useState } from 'react';
-import { ChevronUp, ChevronDown, MessageCircle, Flame, Clock, TrendingUp } from 'lucide-react';
+import { ChevronUp, ChevronDown, MessageCircle, Flame, Clock, TrendingUp, Flag, MoreHorizontal } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { formatDistanceToNow } from 'date-fns';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import ReportContentDialog from '@/components/moderation/ReportContentDialog';
 
 export interface Post {
   id: string;
@@ -43,11 +50,13 @@ const getAnonymousColor = (name: string) => {
 };
 
 export default function PostCard({ post, onUpvote, onDownvote, onOpenThread, isLeading }: PostCardProps) {
+  const [showReportDialog, setShowReportDialog] = useState(false);
   const netVotes = post.upvotes - post.downvotes;
   const isHot = post.is_hot || netVotes >= 5;
   const colorGradient = getAnonymousColor(post.anonymous_name);
   
   return (
+    <>
     <button
       onClick={onOpenThread}
       className={cn(
@@ -122,15 +131,49 @@ export default function PostCard({ post, onUpvote, onDownvote, onOpenThread, isL
             {post.text}
           </p>
 
-          {/* Comment count */}
-          <div className="flex items-center gap-2 text-muted-foreground">
-            <MessageCircle className="h-4 w-4" />
-            <span className="text-sm font-medium">
-              {post.comment_count} {post.comment_count === 1 ? 'comment' : 'comments'}
-            </span>
+          {/* Comment count and actions */}
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2 text-muted-foreground">
+              <MessageCircle className="h-4 w-4" />
+              <span className="text-sm font-medium">
+                {post.comment_count} {post.comment_count === 1 ? 'comment' : 'comments'}
+              </span>
+            </div>
+            
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <button 
+                  onClick={(e) => e.stopPropagation()}
+                  className="p-1.5 rounded-lg hover:bg-muted transition-colors"
+                >
+                  <MoreHorizontal className="h-4 w-4 text-muted-foreground" />
+                </button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" onClick={(e) => e.stopPropagation()}>
+                <DropdownMenuItem 
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setShowReportDialog(true);
+                  }}
+                  className="text-destructive focus:text-destructive"
+                >
+                  <Flag className="h-4 w-4 mr-2" />
+                  Report
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
         </div>
       </div>
     </button>
+
+    <ReportContentDialog
+      open={showReportDialog}
+      onOpenChange={setShowReportDialog}
+      contentType="chat_message"
+      contentId={post.id}
+      contentPreview={post.text.slice(0, 100)}
+    />
+    </>
   );
 }
