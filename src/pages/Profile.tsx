@@ -43,6 +43,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useAdminCheck } from '@/hooks/useAdminCheck';
 import { useStreak } from '@/hooks/useStreak';
 import StreakDisplay from '@/components/profile/StreakDisplay';
+import { awardPoints } from '@/utils/points';
 
 type EnrichedPartyRating = PartyRating & { party?: Party; fraternity?: Fraternity };
 type EnrichedRepRating = ReputationRating & { fraternity?: Fraternity };
@@ -77,7 +78,7 @@ export default function Profile() {
   const navigate = useNavigate();
   const { signOut } = useAuth();
   const { isAdmin } = useAdminCheck();
-  const { streak, longestStreak, hoursRemaining, refetch: refetchStreak } = useStreak();
+  const { streak, longestStreak, hoursRemaining, points, levelInfo, refetch: refetchStreak } = useStreak();
   const [user, setUser] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [stats, setStats] = useState({ partyRatings: 0, fratRatings: 0, comments: 0, privatePhotos: 0 });
@@ -506,6 +507,10 @@ export default function Profile() {
       reputation_score: clamp(reputationScore, 0, 10),
     });
 
+    // Award points for rating
+    if (isNewRating) {
+      await awardPoints('rate_fraternity', `Rated ${selectedFrat.name}`);
+    }
     await recordUserAction();
     refetchStreak();
 
@@ -621,14 +626,6 @@ export default function Profile() {
     }
   };
 
-  const getLevel = (points: number) => {
-    if (points >= 500) return { level: 5, title: 'Legend', next: null };
-    if (points >= 200) return { level: 4, title: 'Expert', next: 500 };
-    if (points >= 100) return { level: 3, title: 'Regular', next: 200 };
-    if (points >= 25) return { level: 2, title: 'Active', next: 100 };
-    return { level: 1, title: 'Newbie', next: 25 };
-  };
-
   if (loading) {
     return (
       <div className="max-w-2xl mx-auto space-y-4 p-4">
@@ -678,10 +675,6 @@ export default function Profile() {
     );
   }
 
-  const points = user.points || 0;
-  const levelInfo = getLevel(points);
-  const progressToNext = levelInfo.next ? (points / levelInfo.next) * 100 : 100;
-
   const tabs = [
     { id: 'rankings', label: 'Rankings', icon: ListOrdered },
     { id: 'history', label: 'History', icon: Trophy },
@@ -707,7 +700,7 @@ export default function Profile() {
             <p className="text-sm text-muted-foreground truncate">{user.email}</p>
             <div className="flex items-center gap-3 mt-2">
               <Badge variant="secondary" className="font-medium">
-                Lvl {levelInfo.level} · {levelInfo.title}
+                Lvl {levelInfo.level} · {levelInfo.name}
               </Badge>
               <StreakDisplay 
                 streak={streak} 
@@ -748,14 +741,14 @@ export default function Profile() {
               <Award className="h-4 w-4 text-primary" />
               <span className="font-semibold">{points} pts</span>
             </div>
-            {levelInfo.next && (
-              <span className="text-muted-foreground">{levelInfo.next - points} to level up</span>
+            {levelInfo.nextLevel && (
+              <span className="text-muted-foreground">{levelInfo.pointsToNextLevel} to level up</span>
             )}
           </div>
           <div className="h-2 bg-muted rounded-full overflow-hidden">
             <div 
               className="h-full bg-primary rounded-full transition-all duration-500"
-              style={{ width: `${Math.min(progressToNext, 100)}%` }}
+              style={{ width: `${levelInfo.progressToNext}%` }}
             />
           </div>
         </div>

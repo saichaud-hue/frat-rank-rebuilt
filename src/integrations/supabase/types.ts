@@ -1098,6 +1098,33 @@ export type Database = {
         }
         Relationships: []
       }
+      user_points_history: {
+        Row: {
+          action_type: string
+          created_at: string
+          description: string | null
+          id: string
+          points: number
+          user_id: string
+        }
+        Insert: {
+          action_type: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          points: number
+          user_id: string
+        }
+        Update: {
+          action_type?: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          points?: number
+          user_id?: string
+        }
+        Relationships: []
+      }
       user_roles: {
         Row: {
           created_at: string | null
@@ -1126,6 +1153,7 @@ export type Database = {
           id: string
           last_activity_at: string | null
           longest_streak: number
+          total_points: number
           updated_at: string
           user_id: string
         }
@@ -1135,6 +1163,7 @@ export type Database = {
           id?: string
           last_activity_at?: string | null
           longest_streak?: number
+          total_points?: number
           updated_at?: string
           user_id: string
         }
@@ -1144,6 +1173,7 @@ export type Database = {
           id?: string
           last_activity_at?: string | null
           longest_streak?: number
+          total_points?: number
           updated_at?: string
           user_id?: string
         }
@@ -1267,6 +1297,18 @@ export type Database = {
         }
         Returns: string
       }
+      award_points: {
+        Args: {
+          p_action_type: string
+          p_description?: string
+          p_points: number
+          p_user_id: string
+        }
+        Returns: {
+          new_total: number
+          points_awarded: number
+        }[]
+      }
       check_rate_limit: {
         Args: {
           p_action_type: string
@@ -1275,6 +1317,7 @@ export type Database = {
         }
         Returns: boolean
       }
+      get_user_points: { Args: { p_user_id: string }; Returns: number }
       get_user_streak: {
         Args: { p_user_id: string }
         Returns: {
@@ -1282,6 +1325,7 @@ export type Database = {
           last_activity_at: string
           longest_streak: number
           streak_expires_at: string
+          total_points: number
         }[]
       }
       has_role: {

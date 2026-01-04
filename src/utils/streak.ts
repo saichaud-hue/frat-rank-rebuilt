@@ -3,9 +3,7 @@ import { supabase } from '@/integrations/supabase/client';
 /**
  * Updates the user's streak when they perform an action.
  * Uses database function for proper persistence.
- * - If last action was within 24 hours: streak stays the same (already counted for today)
- * - If last action was between 24-48 hours ago: streak increments by 1
- * - If last action was more than 48 hours ago: streak resets to 1
+ * Also awards daily login points if it's a new day.
  */
 export async function recordUserAction(): Promise<{ newStreak: number; isNewDay: boolean } | null> {
   const { data: { user } } = await supabase.auth.getUser();
@@ -22,10 +20,26 @@ export async function recordUserAction(): Promise<{ newStreak: number; isNewDay:
 
   // The RPC returns an array with one row
   if (data && data.length > 0) {
-    return {
+    const result = {
       newStreak: data[0].new_streak,
       isNewDay: data[0].is_new_day
     };
+    
+    // Award daily login points if it's a new day
+    if (result.isNewDay) {
+      // Import dynamically to avoid circular dependency
+      const { awardPoints } = await import('@/utils/points');
+      await awardPoints('daily_login', 'Daily activity bonus');
+      
+      // Check for streak milestones
+      if (result.newStreak === 7) {
+        await awardPoints('streak_bonus_7', '7-day streak bonus!');
+      } else if (result.newStreak === 30) {
+        await awardPoints('streak_bonus_30', '30-day streak bonus!');
+      }
+    }
+    
+    return result;
   }
 
   return null;
@@ -39,6 +53,7 @@ export async function getUserStreakData(): Promise<{
   longestStreak: number;
   lastActivityAt: string | null;
   streakExpiresAt: string | null;
+  totalPoints: number;
 } | null> {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return null;
@@ -58,7 +73,8 @@ export async function getUserStreakData(): Promise<{
       currentStreak: data[0].current_streak,
       longestStreak: data[0].longest_streak,
       lastActivityAt: data[0].last_activity_at,
-      streakExpiresAt: data[0].streak_expires_at
+      streakExpiresAt: data[0].streak_expires_at,
+      totalPoints: data[0].total_points
     };
   }
 

@@ -6,6 +6,7 @@ import { Drawer, DrawerContent, DrawerHeader, DrawerTitle, DrawerFooter } from '
 import { clamp, getScoreColor } from '@/utils';
 import { computePartyQuality } from '@/utils/scoring';
 import { recordUserAction } from '@/utils/streak';
+import { awardPoints } from '@/utils/points';
 import { partyRatingQueries, partyQueries, getCurrentUser } from '@/lib/supabase-data';
 import { useRateLimit } from '@/hooks/useRateLimit';
 import { partyRatingSchema, validateInput } from '@/lib/validationSchemas';
@@ -96,7 +97,10 @@ export default function PartyRatingForm({ party, fraternity, onClose, onSubmit }
       } else {
         await partyRatingQueries.create(ratingData);
       }
-      
+      // Award points for new ratings only
+      if (!existingRatingId) {
+        await awardPoints('rate_party', `Rated ${party.title}`);
+      }
       await recordUserAction();
 
       const allRatings = await partyRatingQueries.listByParty(party.id);
