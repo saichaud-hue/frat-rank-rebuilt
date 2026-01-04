@@ -51,65 +51,55 @@ export default function LeaderboardIntro({ onComplete, onRate, fraternities }: L
 
   return (
     <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-end sm:items-center justify-center">
-      <Card className="w-full sm:max-w-md rounded-t-3xl sm:rounded-2xl p-6 pb-8 animate-slide-up sm:animate-scale-in" style={{ paddingBottom: 'max(env(safe-area-inset-bottom), 32px)' }}>
+      <Card className="w-full sm:max-w-md rounded-t-3xl sm:rounded-2xl p-5 animate-slide-up sm:animate-scale-in" style={{ paddingBottom: 'max(env(safe-area-inset-bottom), 20px)' }}>
         {!showFratList ? (
-          <div className="space-y-6">
-            {/* Icon */}
-            <div className="mx-auto w-20 h-20 rounded-2xl bg-gradient-to-br from-amber-400 to-orange-500 flex items-center justify-center">
-              <Trophy className="h-10 w-10 text-white" />
+          <div className="space-y-4">
+            {/* Icon - smaller */}
+            <div className="mx-auto w-14 h-14 rounded-xl bg-gradient-to-br from-amber-400 to-orange-500 flex items-center justify-center">
+              <Trophy className="h-7 w-7 text-white" />
             </div>
 
-            {/* Content */}
-            <div className="text-center space-y-3">
-              <h2 className="text-2xl font-bold">See Who's On Top</h2>
-              <p className="text-muted-foreground text-lg">
-                Discover the top fraternities on campus
+            {/* Content - more compact */}
+            <div className="text-center space-y-1">
+              <h2 className="text-xl font-bold">Frat Rankings</h2>
+              <p className="text-muted-foreground text-sm">
+                See which houses are on top
               </p>
             </div>
 
-            {/* Features */}
-            <div className="space-y-3 text-left">
-              <div className="flex items-start gap-3">
-                <div className="w-8 h-8 rounded-full bg-blue-500/10 flex items-center justify-center flex-shrink-0">
-                  <BarChart3 className="h-4 w-4 text-blue-500" />
+            {/* Features - compact grid */}
+            <div className="grid grid-cols-2 gap-2">
+              <div className="flex items-center gap-2 p-2 rounded-lg bg-muted/50">
+                <div className="w-6 h-6 rounded-full bg-blue-500/10 flex items-center justify-center shrink-0">
+                  <BarChart3 className="h-3 w-3 text-blue-500" />
                 </div>
-                <p className="text-sm text-muted-foreground pt-1">
-                  <span className="font-semibold text-foreground">All</span> — Overall scores combining reputation + parties
-                </p>
+                <span className="text-xs"><span className="font-semibold">All</span> — Combined</span>
               </div>
-              <div className="flex items-start gap-3">
-                <div className="w-8 h-8 rounded-full bg-purple-500/10 flex items-center justify-center flex-shrink-0">
-                  <Users className="h-4 w-4 text-purple-500" />
+              <div className="flex items-center gap-2 p-2 rounded-lg bg-muted/50">
+                <div className="w-6 h-6 rounded-full bg-purple-500/10 flex items-center justify-center shrink-0">
+                  <Users className="h-3 w-3 text-purple-500" />
                 </div>
-                <p className="text-sm text-muted-foreground pt-1">
-                  <span className="font-semibold text-foreground">Frats</span> — Brotherhood, reputation & community ratings
-                </p>
+                <span className="text-xs"><span className="font-semibold">Frats</span> — Rep scores</span>
               </div>
-              <div className="flex items-start gap-3">
-                <div className="w-8 h-8 rounded-full bg-pink-500/10 flex items-center justify-center flex-shrink-0">
-                  <PartyPopper className="h-4 w-4 text-pink-500" />
+              <div className="flex items-center gap-2 p-2 rounded-lg bg-muted/50">
+                <div className="w-6 h-6 rounded-full bg-pink-500/10 flex items-center justify-center shrink-0">
+                  <PartyPopper className="h-3 w-3 text-pink-500" />
                 </div>
-                <p className="text-sm text-muted-foreground pt-1">
-                  <span className="font-semibold text-foreground">Parties</span> — Ranked by party quality scores
-                </p>
+                <span className="text-xs"><span className="font-semibold">Parties</span> — Events</span>
               </div>
-              <div className="flex items-start gap-3">
-                <div className="w-8 h-8 rounded-full bg-orange-500/10 flex items-center justify-center flex-shrink-0">
-                  <Flame className="h-4 w-4 text-orange-500" />
+              <div className="flex items-center gap-2 p-2 rounded-lg bg-muted/50">
+                <div className="w-6 h-6 rounded-full bg-orange-500/10 flex items-center justify-center shrink-0">
+                  <Flame className="h-3 w-3 text-orange-500" />
                 </div>
-                <p className="text-sm text-muted-foreground pt-1">
-                  <span className="font-semibold text-foreground">Hot</span> — Who's trending with recent activity
-                </p>
-              </div>
-              <div className="flex items-start gap-3">
-                <div className="w-8 h-8 rounded-full bg-amber-500/10 flex items-center justify-center flex-shrink-0">
-                  <Star className="h-4 w-4 text-amber-500" />
-                </div>
-                <p className="text-sm text-muted-foreground pt-1">
-                  Tap any fraternity to <span className="font-semibold text-foreground">rate them</span>
-                </p>
+                <span className="text-xs"><span className="font-semibold">Hot</span> — Trending</span>
               </div>
             </div>
+
+            {/* Tip */}
+            <p className="text-center text-xs text-muted-foreground">
+              <Star className="h-3 w-3 inline mr-1 text-amber-500" />
+              Tap any frat to rate them
+            </p>
 
             {/* Checkbox */}
             <div className="flex items-center justify-center gap-2">
@@ -117,67 +107,68 @@ export default function LeaderboardIntro({ onComplete, onRate, fraternities }: L
                 id="never-show-leaderboard" 
                 checked={neverShowAgain}
                 onCheckedChange={(checked) => setNeverShowAgain(checked === true)}
+                className="h-4 w-4"
               />
-              <Label htmlFor="never-show-leaderboard" className="text-sm text-muted-foreground cursor-pointer">
-                Don't show this again
+              <Label htmlFor="never-show-leaderboard" className="text-xs text-muted-foreground cursor-pointer">
+                Don't show again
               </Label>
             </div>
 
-            {/* Buttons */}
-            <div className="space-y-3">
-              <Button 
-                onClick={handleExplore} 
-                className="w-full min-h-[52px] text-base font-semibold gradient-primary text-white active:scale-[0.98] transition-transform"
-              >
-                Start Exploring
-              </Button>
+            {/* Buttons - horizontal layout */}
+            <div className="flex gap-2">
               <Button 
                 onClick={handleShowFrats} 
                 variant="outline"
-                className="w-full min-h-[52px] text-base font-medium active:scale-[0.98] transition-transform"
+                className="flex-1 h-11 text-sm font-medium active:scale-[0.98] transition-transform"
               >
                 Rate a Frat
+              </Button>
+              <Button 
+                onClick={handleExplore} 
+                className="flex-1 h-11 text-sm font-semibold gradient-primary text-white active:scale-[0.98] transition-transform"
+              >
+                Explore
               </Button>
             </div>
           </div>
         ) : (
-          <div className="space-y-4">
+          <div className="space-y-3">
             {/* Header with back button */}
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-2">
               <Button 
                 variant="ghost" 
                 size="icon" 
                 onClick={handleBack}
-                className="h-10 w-10 rounded-full"
+                className="h-8 w-8 rounded-full"
               >
-                <ChevronLeft className="h-5 w-5" />
+                <ChevronLeft className="h-4 w-4" />
               </Button>
               <div>
-                <h2 className="text-xl font-bold">Choose a Frat to Rate</h2>
-                <p className="text-sm text-muted-foreground">Tap to select</p>
+                <h2 className="text-lg font-bold">Rate a Frat</h2>
+                <p className="text-xs text-muted-foreground">Tap to select</p>
               </div>
             </div>
 
             {/* Fraternity List */}
-            <ScrollArea className="h-[320px] -mx-2 px-2">
-              <div className="space-y-2">
+            <ScrollArea className="h-[280px] -mx-2 px-2">
+              <div className="space-y-1.5">
                 {fraternities.map((frat) => (
                   <button
                     key={frat.id}
                     onClick={() => handleSelectFrat(frat)}
-                    className="w-full flex items-center gap-3 p-3 rounded-xl bg-muted/50 hover:bg-muted active:scale-[0.98] transition-all text-left"
+                    className="w-full flex items-center gap-2.5 p-2.5 rounded-xl bg-muted/50 hover:bg-muted active:scale-[0.98] transition-all text-left"
                   >
-                    <Avatar className="h-12 w-12 rounded-xl">
+                    <Avatar className="h-10 w-10 rounded-lg">
                       <AvatarImage src={frat.logo_url} alt={frat.name} />
-                      <AvatarFallback className="rounded-xl bg-primary/10 text-primary font-bold text-xs">
+                      <AvatarFallback className="rounded-lg bg-primary/10 text-primary font-bold text-xs">
                         {getFratGreek(frat.name)}
                       </AvatarFallback>
                     </Avatar>
                     <div className="flex-1 min-w-0">
-                      <p className="font-semibold truncate">{frat.chapter || getFratShorthand(frat.name)}</p>
-                      <p className="text-sm text-muted-foreground">{frat.name}</p>
+                      <p className="font-semibold text-sm truncate">{frat.chapter || getFratShorthand(frat.name)}</p>
+                      <p className="text-xs text-muted-foreground truncate">{frat.name}</p>
                     </div>
-                    <Star className="h-5 w-5 text-amber-500" />
+                    <Star className="h-4 w-4 text-amber-500 shrink-0" />
                   </button>
                 ))}
               </div>
