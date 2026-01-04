@@ -553,7 +553,7 @@ export default function Activity() {
   const loadChat = async () => {
     try {
       const [messages, partiesData, fraternitiesData] = await Promise.all([
-        chatMessageQueries.list(),
+        chatMessageQueries.listRecent(2),
         partyQueries.list(),
         fraternityQueries.list(),
       ]);
