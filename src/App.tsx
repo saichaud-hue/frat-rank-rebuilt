@@ -24,6 +24,7 @@ import UserNotRegisteredError from "./components/errors/UserNotRegisteredError";
 import NotFound from "./pages/NotFound";
 import { checkStreakStatus } from "./utils/streak";
 import { SemesterAnnouncementPopup } from "./components/announcements/SemesterAnnouncementPopup";
+import { NewPartiesNotification } from "./components/notifications/NewPartiesNotification";
 
 const queryClient = new QueryClient();
 
@@ -92,6 +93,7 @@ const App = () => (
         <Toaster />
         <Sonner />
         <SemesterAnnouncementPopup />
+        <NewPartiesNotification />
         <BrowserRouter>
           <ScrollToTop />
           <PointerEventsSafety />
