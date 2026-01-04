@@ -6,7 +6,7 @@ import { AdminPosts } from "@/components/admin/AdminPosts";
 import { AdminOffenders } from "@/components/admin/AdminOffenders";
 import { AdminSemesterReset } from "@/components/admin/AdminSemesterReset";
 import { AdminSeeding } from "@/components/admin/AdminSeeding";
-import { ChevronLeft, Shield, RefreshCw, AlertTriangle, RotateCcw, Sparkles } from "lucide-react";
+import { ChevronLeft, Shield, RefreshCw, AlertTriangle, RotateCcw, Sparkles, MessageSquare, Calendar, FileText } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { useQueryClient } from "@tanstack/react-query";
@@ -72,20 +72,36 @@ export default function Admin() {
           </CardHeader>
           <CardContent>
             <Tabs defaultValue="parties" className="w-full">
-              <TabsList className="w-full grid grid-cols-6">
-                <TabsTrigger value="parties">Parties</TabsTrigger>
-                <TabsTrigger value="comments">Comments</TabsTrigger>
-                <TabsTrigger value="posts">Posts</TabsTrigger>
-                <TabsTrigger value="seed" className="flex items-center gap-1">
-                  <Sparkles className="h-3 w-3" />
-                </TabsTrigger>
-                <TabsTrigger value="offenders" className="flex items-center gap-1">
-                  <AlertTriangle className="h-3 w-3" />
-                </TabsTrigger>
-                <TabsTrigger value="reset" className="flex items-center gap-1">
-                  <RotateCcw className="h-3 w-3" />
-                </TabsTrigger>
-              </TabsList>
+              <div className="space-y-2 mb-4">
+                <TabsList className="w-full grid grid-cols-3">
+                  <TabsTrigger value="parties" className="text-xs gap-1">
+                    <Calendar className="h-3 w-3" />
+                    Parties
+                  </TabsTrigger>
+                  <TabsTrigger value="comments" className="text-xs gap-1">
+                    <MessageSquare className="h-3 w-3" />
+                    Comments
+                  </TabsTrigger>
+                  <TabsTrigger value="posts" className="text-xs gap-1">
+                    <FileText className="h-3 w-3" />
+                    Posts
+                  </TabsTrigger>
+                </TabsList>
+                <TabsList className="w-full grid grid-cols-3">
+                  <TabsTrigger value="seed" className="text-xs gap-1">
+                    <Sparkles className="h-3 w-3" />
+                    Seed
+                  </TabsTrigger>
+                  <TabsTrigger value="offenders" className="text-xs gap-1">
+                    <AlertTriangle className="h-3 w-3" />
+                    Offenders
+                  </TabsTrigger>
+                  <TabsTrigger value="reset" className="text-xs gap-1">
+                    <RotateCcw className="h-3 w-3" />
+                    Reset
+                  </TabsTrigger>
+                </TabsList>
+              </div>
 
               <TabsContent value="parties" className="mt-4">
                 <AdminParties />
