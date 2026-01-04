@@ -242,6 +242,8 @@ export default function AnonymousFeed({ initialSort }: AnonymousFeedProps) {
     setActiveTier(null);
     setMentionText('');
     setSelectedMention(null);
+    // Clear frozen order so new posts show correctly
+    setFrozenPostOrder([]);
   };
 
   const handleCreatePost = async () => {
