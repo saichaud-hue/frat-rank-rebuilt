@@ -983,6 +983,10 @@ export default function Activity() {
             {topPosts.slice(0, 3).map((post) => {
               const netVotes = post.upvotes - post.downvotes;
               const isHot = netVotes >= 3 || (post.replies?.length || 0) >= 2;
+              const parsedPoll = parsePollFromText(post.text);
+              const parsedRanking = parseRankingFromText(post.text);
+              const isPoll = parsedPoll !== null;
+              const isRanking = parsedRanking && parsedRanking.rankings.length >= 3;
               
               return (
                 <button
@@ -991,11 +995,40 @@ export default function Activity() {
                   className="w-full text-left p-3 rounded-2xl bg-muted/30 border border-border/50 hover:border-primary/30 transition-all active:scale-[0.99]"
                 >
                   <div className="flex items-start gap-3">
-                    <div className="w-8 h-8 rounded-full bg-gradient-to-br from-primary/20 to-primary/10 flex items-center justify-center shrink-0">
-                      <MessageCircle className="h-4 w-4 text-primary" />
+                    <div className={cn(
+                      "w-8 h-8 rounded-full flex items-center justify-center shrink-0",
+                      isPoll 
+                        ? "bg-gradient-to-br from-violet-500/20 to-purple-500/10" 
+                        : isRanking 
+                          ? "bg-gradient-to-br from-amber-500/20 to-orange-500/10"
+                          : "bg-gradient-to-br from-primary/20 to-primary/10"
+                    )}>
+                      {isPoll ? (
+                        <BarChart3 className="h-4 w-4 text-violet-500" />
+                      ) : isRanking ? (
+                        <Trophy className="h-4 w-4 text-amber-500" />
+                      ) : (
+                        <MessageCircle className="h-4 w-4 text-primary" />
+                      )}
                     </div>
                     <div className="flex-1 min-w-0">
-                      <p className="text-sm leading-relaxed line-clamp-2">{post.text}</p>
+                      {isPoll && parsedPoll ? (
+                        <div>
+                          <p className="text-sm font-semibold text-violet-600 dark:text-violet-400 mb-1">📊 Poll</p>
+                          <p className="text-sm leading-relaxed line-clamp-1">{parsedPoll.question}</p>
+                          <p className="text-xs text-muted-foreground mt-1">{parsedPoll.options.length} options</p>
+                        </div>
+                      ) : isRanking && parsedRanking ? (
+                        <div>
+                          <p className="text-sm font-semibold text-amber-600 dark:text-amber-400 mb-1">🏆 Frat Ranking</p>
+                          <p className="text-sm leading-relaxed line-clamp-1">
+                            {parsedRanking.rankings.slice(0, 3).map(r => r.fratName).join(' → ')}
+                          </p>
+                          <p className="text-xs text-muted-foreground mt-1">{parsedRanking.rankings.length} frats ranked</p>
+                        </div>
+                      ) : (
+                        <p className="text-sm leading-relaxed line-clamp-2">{post.text}</p>
+                      )}
                       <div className="flex items-center gap-3 mt-2 text-xs text-muted-foreground">
                         <span className="flex items-center gap-1">
                           <ThumbsUp className={cn("h-3 w-3", netVotes > 0 && "text-primary")} />
