@@ -20,21 +20,20 @@ export default function UserLevelBadge({ points, compact = false, className }: U
   if (compact) {
     return (
       <span className={cn(
-        "text-xs text-muted-foreground",
+        "text-xs text-muted-foreground italic",
         className
       )}>
-        Lvl {level.level} · {level.name}
+        {level.name}
       </span>
     );
   }
   
   return (
     <span className={cn(
-      "inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium text-white",
-      level.color,
+      "px-2 py-0.5 rounded-md text-xs font-medium bg-muted/60 text-muted-foreground border border-border/50",
       className
     )}>
-      Lvl {level.level} · {level.name}
+      {level.name}
     </span>
   );
 }
