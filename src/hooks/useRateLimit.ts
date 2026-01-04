@@ -19,7 +19,7 @@ export function useRateLimit() {
       // Type not yet generated for new RPC functions
       const { data, error } = await (supabase.rpc as any)("check_rate_limit", {
         p_action_type: action,
-        p_max_count: config.max,
+        p_limit: config.max,
         p_window_minutes: config.windowMinutes,
       });
 

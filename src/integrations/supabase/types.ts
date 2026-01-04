@@ -14,6 +14,60 @@ export type Database = {
   }
   public: {
     Tables: {
+      allowed_file_types: {
+        Row: {
+          enabled: boolean
+          extension: string
+          id: string
+          max_size_bytes: number
+          mime_type: string
+        }
+        Insert: {
+          enabled?: boolean
+          extension: string
+          id?: string
+          max_size_bytes: number
+          mime_type: string
+        }
+        Update: {
+          enabled?: boolean
+          extension?: string
+          id?: string
+          max_size_bytes?: number
+          mime_type?: string
+        }
+        Relationships: []
+      }
+      audit_logs: {
+        Row: {
+          action: string
+          actor_id: string
+          created_at: string
+          details: Json | null
+          id: string
+          target_id: string | null
+          target_type: string
+        }
+        Insert: {
+          action: string
+          actor_id: string
+          created_at?: string
+          details?: Json | null
+          id?: string
+          target_id?: string | null
+          target_type: string
+        }
+        Update: {
+          action?: string
+          actor_id?: string
+          created_at?: string
+          details?: Json | null
+          id?: string
+          target_id?: string | null
+          target_type?: string
+        }
+        Relationships: []
+      }
       blocked_users: {
         Row: {
           blocked_at: string
@@ -110,8 +164,13 @@ export type Database = {
       chat_messages: {
         Row: {
           created_at: string | null
+          deleted_at: string | null
+          deleted_by: string | null
           downvotes: number | null
           id: string
+          locked: boolean | null
+          locked_at: string | null
+          locked_by: string | null
           mentioned_fraternity_id: string | null
           mentioned_party_id: string | null
           parent_message_id: string | null
@@ -121,8 +180,13 @@ export type Database = {
         }
         Insert: {
           created_at?: string | null
+          deleted_at?: string | null
+          deleted_by?: string | null
           downvotes?: number | null
           id?: string
+          locked?: boolean | null
+          locked_at?: string | null
+          locked_by?: string | null
           mentioned_fraternity_id?: string | null
           mentioned_party_id?: string | null
           parent_message_id?: string | null
@@ -132,8 +196,13 @@ export type Database = {
         }
         Update: {
           created_at?: string | null
+          deleted_at?: string | null
+          deleted_by?: string | null
           downvotes?: number | null
           id?: string
+          locked?: boolean | null
+          locked_at?: string | null
+          locked_by?: string | null
           mentioned_fraternity_id?: string | null
           mentioned_party_id?: string | null
           parent_message_id?: string | null
@@ -171,6 +240,45 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      content_reports: {
+        Row: {
+          content_id: string
+          content_type: string
+          created_at: string
+          description: string | null
+          id: string
+          reason: string
+          reporter_id: string
+          reviewed_at: string | null
+          reviewed_by: string | null
+          status: string
+        }
+        Insert: {
+          content_id: string
+          content_type: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          reason: string
+          reporter_id: string
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: string
+        }
+        Update: {
+          content_id?: string
+          content_type?: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          reason?: string
+          reporter_id?: string
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: string
+        }
+        Relationships: []
       }
       fraternities: {
         Row: {
@@ -273,6 +381,8 @@ export type Database = {
       fraternity_comments: {
         Row: {
           created_at: string | null
+          deleted_at: string | null
+          deleted_by: string | null
           downvotes: number | null
           fraternity_id: string
           id: string
@@ -286,6 +396,8 @@ export type Database = {
         }
         Insert: {
           created_at?: string | null
+          deleted_at?: string | null
+          deleted_by?: string | null
           downvotes?: number | null
           fraternity_id: string
           id?: string
@@ -299,6 +411,8 @@ export type Database = {
         }
         Update: {
           created_at?: string | null
+          deleted_at?: string | null
+          deleted_by?: string | null
           downvotes?: number | null
           fraternity_id?: string
           id?: string
@@ -366,6 +480,8 @@ export type Database = {
           access_type: string | null
           contact_email: string | null
           created_at: string | null
+          deleted_at: string | null
+          deleted_by: string | null
           display_photo_url: string | null
           ends_at: string | null
           fraternity_id: string | null
@@ -386,6 +502,8 @@ export type Database = {
           access_type?: string | null
           contact_email?: string | null
           created_at?: string | null
+          deleted_at?: string | null
+          deleted_by?: string | null
           display_photo_url?: string | null
           ends_at?: string | null
           fraternity_id?: string | null
@@ -406,6 +524,8 @@ export type Database = {
           access_type?: string | null
           contact_email?: string | null
           created_at?: string | null
+          deleted_at?: string | null
+          deleted_by?: string | null
           display_photo_url?: string | null
           ends_at?: string | null
           fraternity_id?: string | null
@@ -516,6 +636,8 @@ export type Database = {
       party_comments: {
         Row: {
           created_at: string | null
+          deleted_at: string | null
+          deleted_by: string | null
           downvotes: number | null
           id: string
           moderated: boolean | null
@@ -529,6 +651,8 @@ export type Database = {
         }
         Insert: {
           created_at?: string | null
+          deleted_at?: string | null
+          deleted_by?: string | null
           downvotes?: number | null
           id?: string
           moderated?: boolean | null
@@ -542,6 +666,8 @@ export type Database = {
         }
         Update: {
           created_at?: string | null
+          deleted_at?: string | null
+          deleted_by?: string | null
           downvotes?: number | null
           id?: string
           moderated?: boolean | null
@@ -621,6 +747,8 @@ export type Database = {
           caption: string | null
           consent_verified: boolean | null
           created_at: string | null
+          deleted_at: string | null
+          deleted_by: string | null
           dislikes: number | null
           id: string
           likes: number | null
@@ -635,6 +763,8 @@ export type Database = {
           caption?: string | null
           consent_verified?: boolean | null
           created_at?: string | null
+          deleted_at?: string | null
+          deleted_by?: string | null
           dislikes?: number | null
           id?: string
           likes?: number | null
@@ -649,6 +779,8 @@ export type Database = {
           caption?: string | null
           consent_verified?: boolean | null
           created_at?: string | null
+          deleted_at?: string | null
+          deleted_by?: string | null
           dislikes?: number | null
           id?: string
           likes?: number | null
@@ -751,6 +883,30 @@ export type Database = {
           full_name?: string | null
           id?: string
           updated_at?: string
+        }
+        Relationships: []
+      }
+      rate_limits: {
+        Row: {
+          action_type: string
+          count: number
+          id: string
+          user_id: string
+          window_start: string
+        }
+        Insert: {
+          action_type: string
+          count?: number
+          id?: string
+          user_id: string
+          window_start?: string
+        }
+        Update: {
+          action_type?: string
+          count?: number
+          id?: string
+          user_id?: string
+          window_start?: string
         }
         Relationships: []
       }
@@ -949,6 +1105,14 @@ export type Database = {
         }
         Returns: string
       }
+      check_rate_limit: {
+        Args: {
+          p_action_type: string
+          p_limit: number
+          p_window_minutes: number
+        }
+        Returns: boolean
+      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
@@ -957,6 +1121,7 @@ export type Database = {
         Returns: boolean
       }
       is_admin: { Args: never; Returns: boolean }
+      is_moderator: { Args: never; Returns: boolean }
       is_user_blocked: { Args: { check_user_id: string }; Returns: boolean }
       recalculate_message_votes: {
         Args: { p_message_id: string }
@@ -965,6 +1130,7 @@ export type Database = {
           new_upvotes: number
         }[]
       }
+      record_rate_limit: { Args: { p_action_type: string }; Returns: undefined }
     }
     Enums: {
       app_role: "admin" | "moderator" | "user"
