@@ -5,6 +5,9 @@ import { Slider } from '@/components/ui/slider';
 import { Textarea } from '@/components/ui/textarea';
 import { Drawer, DrawerContent, DrawerHeader, DrawerTitle, DrawerFooter } from '@/components/ui/drawer';
 import { clamp, getScoreColor } from '@/utils';
+import { useRateLimit } from '@/hooks/useRateLimit';
+import { reputationRatingSchema, validateInput } from '@/lib/validationSchemas';
+import { toast } from 'sonner';
 import type { Fraternity } from '@/lib/supabase-data';
 
 interface ReputationRatingFormProps {
@@ -30,17 +33,32 @@ export default function ReputationRatingForm({
   const [score, setScore] = useState(existingScore ?? 5);
   const [feedback, setFeedback] = useState('');
   const [submitting, setSubmitting] = useState(false);
+  const { withRateLimit } = useRateLimit();
 
   const handleSubmit = async () => {
-    setSubmitting(true);
-    try {
-      await onSubmit(fraternity.id, score);
-      onClose();
-    } catch (error) {
-      console.error('Failed to submit rating:', error);
-    } finally {
-      setSubmitting(false);
+    // Validate input
+    const validation = validateInput(reputationRatingSchema, {
+      fraternity_id: fraternity.id,
+      score,
+    });
+    
+    if (!validation.success) {
+      toast.error('error' in validation ? validation.error : 'Invalid rating');
+      return;
     }
+
+    setSubmitting(true);
+    
+    const result = await withRateLimit('vote', async () => {
+      await onSubmit(fraternity.id, score);
+      return true;
+    });
+    
+    if (result) {
+      onClose();
+    }
+    
+    setSubmitting(false);
   };
 
   return (

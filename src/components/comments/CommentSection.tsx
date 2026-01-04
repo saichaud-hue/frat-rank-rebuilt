@@ -15,6 +15,9 @@ import {
 import ReportContentDialog from '@/components/moderation/ReportContentDialog';
 import { formatTimeAgo } from '@/utils';
 import { cn } from '@/lib/utils';
+import { toast } from 'sonner';
+import { useRateLimit } from '@/hooks/useRateLimit';
+import { commentSchema, validateInput } from '@/lib/validationSchemas';
 import { 
   partyCommentQueries, 
   fraternityCommentQueries, 
@@ -56,6 +59,7 @@ export default function CommentSection({ entityId, entityType }: CommentSectionP
   const [replyingTo, setReplyingTo] = useState<ReplyingTo | null>(null);
   const [myVotesByCommentId, setMyVotesByCommentId] = useState<Record<string, 1 | -1>>({});
   const [reportingComment, setReportingComment] = useState<{ id: string; text: string } | null>(null);
+  const { withRateLimit } = useRateLimit();
   
   // Lock to prevent rapid clicking from causing duplicate votes
   const votingLock = useRef<Set<string>>(new Set());
@@ -139,20 +143,32 @@ export default function CommentSection({ entityId, entityType }: CommentSectionP
   };
 
   const handleSubmitComment = async () => {
-    if (!newComment.trim()) return;
+    // Validate input
+    const validation = validateInput(commentSchema, { 
+      text: newComment, 
+      parent_comment_id: replyingTo?.commentId || null 
+    });
+    if (!validation.success) {
+      toast.error('error' in validation ? validation.error : 'Invalid comment');
+      return;
+    }
 
     setSubmitting(true);
-    try {
+    
+    const result = await withRateLimit('comment', async () => {
       const user = await getCurrentUser();
-      if (!user) return;
+      if (!user) {
+        toast.error('Please sign in to comment');
+        return null;
+      }
 
-      const sentimentScore = analyzeSentiment(newComment);
+      const sentimentScore = analyzeSentiment(validation.data.text);
 
       if (entityType === 'party') {
         await partyCommentQueries.create({
           party_id: entityId,
           user_id: user.id,
-          text: newComment.trim(),
+          text: validation.data.text,
           parent_comment_id: replyingTo?.commentId || null,
           sentiment_score: sentimentScore,
           toxicity_label: 'safe',
@@ -164,7 +180,7 @@ export default function CommentSection({ entityId, entityType }: CommentSectionP
         await fraternityCommentQueries.create({
           fraternity_id: entityId,
           user_id: user.id,
-          text: newComment.trim(),
+          text: validation.data.text,
           parent_comment_id: replyingTo?.commentId || null,
           sentiment_score: sentimentScore,
           toxicity_label: 'safe',
@@ -173,15 +189,17 @@ export default function CommentSection({ entityId, entityType }: CommentSectionP
           moderated: false,
         });
       }
+      
+      return true;
+    });
 
+    if (result) {
       setNewComment('');
       setReplyingTo(null);
       await loadComments();
-    } catch (error) {
-      console.error('Failed to submit comment:', error);
-    } finally {
-      setSubmitting(false);
     }
+    
+    setSubmitting(false);
   };
 
   const handleVote = useCallback(async (commentId: string, direction: 1 | -1) => {
