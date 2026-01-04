@@ -45,6 +45,7 @@ import { useAdminCheck } from '@/hooks/useAdminCheck';
 import { useStreak } from '@/hooks/useStreak';
 import StreakDisplay from '@/components/profile/StreakDisplay';
 import { awardPoints } from '@/utils/points';
+import UserLevelBadge from '@/components/feed/UserLevelBadge';
 
 type EnrichedPartyRating = PartyRating & { party?: Party; fraternity?: Fraternity };
 type EnrichedRepRating = ReputationRating & { fraternity?: Fraternity };
@@ -700,16 +701,7 @@ export default function Profile() {
             <h1 className="text-xl font-bold truncate">{user.name}</h1>
             <p className="text-sm text-muted-foreground truncate">{user.email}</p>
             <div className="flex items-center gap-3 mt-2">
-              <button
-                onClick={() => {}}
-                className={cn(
-                  "px-3 py-1 rounded-full text-xs font-semibold shadow-md transition-all hover:scale-105",
-                  levelInfo.color,
-                  levelInfo.textColor
-                )}
-              >
-                Lvl {levelInfo.level} · {levelInfo.name}
-              </button>
+              <UserLevelBadge points={points} />
               <StreakDisplay 
                 streak={streak} 
                 hoursRemaining={hoursRemaining} 
