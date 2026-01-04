@@ -1,6 +1,8 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useMemo } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { User, PartyPopper, LogIn, Award, ChevronRight, Pencil, Trash2, Trophy, MessageCircle, Flame, Image, Lock, X, ListOrdered, Star, Users, Shield, Heart, Sparkles, Music, Zap, CheckCircle2, Loader2, Share2, Swords, ChevronDown, LogOut } from 'lucide-react';
+import PollCard, { parsePollFromText } from '@/components/activity/PollCard';
+import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
@@ -79,6 +81,7 @@ export default function Profile() {
   const [partyRatingsData, setPartyRatingsData] = useState<EnrichedPartyRating[]>([]);
   const [fratRatingsData, setFratRatingsData] = useState<EnrichedRepRating[]>([]);
   const [commentsData, setCommentsData] = useState<any[]>([]);
+  const [pollVotesData, setPollVotesData] = useState<Record<string, { userVote: number | null; voteCounts: Record<number, number> }>>({});
   const [privatePhotos, setPrivatePhotos] = useState<EnrichedPhoto[]>([]);
   const [activeTab, setActiveTab] = useState<'rankings' | 'history' | 'comments' | 'photos'>('rankings');
   const [viewingPhoto, setViewingPhoto] = useState<EnrichedPhoto | null>(null);
@@ -229,9 +232,42 @@ export default function Profile() {
 
         setPartyRatingsData(enrichedPartyRatings);
         setFratRatingsData(enrichedFratRatings);
-        setCommentsData([...enrichedPartyComments, ...enrichedFratComments, ...enrichedChatMessages].sort((a, b) => 
+        
+        const allUserComments = [...enrichedPartyComments, ...enrichedFratComments, ...enrichedChatMessages].sort((a, b) => 
           new Date(b.created_at || 0).getTime() - new Date(a.created_at || 0).getTime()
-        ));
+        );
+        setCommentsData(allUserComments);
+        
+        // Load poll votes for chat messages that are polls
+        const pollMessageIds = enrichedChatMessages
+          .filter(c => c.text && c.text.includes('POLL:'))
+          .map(c => c.id);
+        
+        if (pollMessageIds.length > 0) {
+          const { data: pollVotes } = await supabase
+            .from('poll_votes')
+            .select('*')
+            .in('message_id', pollMessageIds);
+          
+          const pollVotesMap: Record<string, { userVote: number | null; voteCounts: Record<number, number> }> = {};
+          
+          pollMessageIds.forEach(msgId => {
+            const msgVotes = pollVotes?.filter(v => v.message_id === msgId) || [];
+            const voteCounts: Record<number, number> = {};
+            let userVote: number | null = null;
+            
+            msgVotes.forEach(v => {
+              voteCounts[v.option_index] = (voteCounts[v.option_index] || 0) + 1;
+              if (v.user_id === userData.id) {
+                userVote = v.option_index;
+              }
+            });
+            
+            pollVotesMap[msgId] = { userVote, voteCounts };
+          });
+          
+          setPollVotesData(pollVotesMap);
+        }
 
         setStats({
           partyRatings: partyRatings.length,
@@ -1250,25 +1286,42 @@ export default function Profile() {
                   
                   const link = getCommentLink();
                   
+                  // Check if this is a poll
+                  const pollData = comment.type === 'chat' && comment.text ? parsePollFromText(comment.text) : null;
+                  const pollVoteInfo = pollData ? pollVotesData[comment.id] : null;
+                  
                   return (
                     <div key={comment.id} className="p-4 hover:bg-muted/50 transition-colors">
                       <div className="flex items-start gap-3">
-                        {link ? (
-                          <Link to={link} className="flex-1 min-w-0 cursor-pointer">
-                            <p className="font-medium text-sm truncate hover:text-primary transition-colors">{comment.entityName}</p>
-                            <p className="text-sm text-foreground mt-1 line-clamp-2">{comment.text}</p>
-                            <p className="text-xs text-muted-foreground mt-1">{format(new Date(comment.created_at || Date.now()), 'MMM d, yyyy')}</p>
-                          </Link>
-                        ) : (
-                          <div className="flex-1 min-w-0">
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2 mb-1">
                             <p className="font-medium text-sm truncate">{comment.entityName}</p>
-                            <p className="text-sm text-foreground mt-1 line-clamp-2">{comment.text}</p>
-                            <p className="text-xs text-muted-foreground mt-1">{format(new Date(comment.created_at || Date.now()), 'MMM d, yyyy')}</p>
+                            <Badge variant="outline" className="text-xs capitalize shrink-0">
+                              {pollData ? 'Poll' : comment.type}
+                            </Badge>
                           </div>
-                        )}
-                        <Badge variant="outline" className="text-xs capitalize shrink-0">
-                          {comment.type}
-                        </Badge>
+                          
+                          {pollData ? (
+                            <div className="mt-2">
+                              <PollCard
+                                question={pollData.question}
+                                options={pollData.options}
+                                userVote={pollVoteInfo?.userVote ?? null}
+                                voteCounts={pollVoteInfo?.voteCounts ?? {}}
+                                compact
+                              />
+                            </div>
+                          ) : link ? (
+                            <Link to={link} className="block cursor-pointer">
+                              <p className="text-sm text-foreground mt-1 line-clamp-2 hover:text-primary transition-colors">{comment.text}</p>
+                            </Link>
+                          ) : (
+                            <p className="text-sm text-foreground mt-1 line-clamp-2">{comment.text}</p>
+                          )}
+                          
+                          <p className="text-xs text-muted-foreground mt-2">{format(new Date(comment.created_at || Date.now()), 'MMM d, yyyy')}</p>
+                        </div>
+                        
                         <AlertDialog open={deletingCommentId === comment.id} onOpenChange={(open) => setDeletingCommentId(open ? comment.id : null)}>
                           <AlertDialogTrigger asChild>
                             <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive shrink-0">
