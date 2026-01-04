@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { ChevronUp, ChevronDown, MessageCircle, Flame, Clock, TrendingUp, Flag, MoreHorizontal } from 'lucide-react';
+import { ChevronUp, ChevronDown, MessageCircle, Flame, Clock, TrendingUp, Flag, MoreHorizontal, Trophy, Crown, ChevronRight } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { formatDistanceToNow } from 'date-fns';
 import {
@@ -49,11 +49,43 @@ const getAnonymousColor = (name: string) => {
   return colors[Math.abs(hash) % colors.length];
 };
 
+// Tier colors for ranking graphic
+const TIER_COLORS = [
+  { bg: 'bg-gradient-to-r from-amber-400 to-amber-500', text: 'text-amber-900' }, // 1st - Gold
+  { bg: 'bg-gradient-to-r from-slate-300 to-slate-400', text: 'text-slate-800' }, // 2nd - Silver
+  { bg: 'bg-gradient-to-r from-amber-600 to-amber-700', text: 'text-amber-100' }, // 3rd - Bronze
+  { bg: 'bg-gradient-to-r from-emerald-500 to-emerald-600', text: 'text-white' }, // 4th
+  { bg: 'bg-gradient-to-r from-blue-500 to-blue-600', text: 'text-white' }, // 5th
+];
+
+// Parse ranking post text
+const parseRankingPost = (text: string): { tier: string; frat: string }[] | null => {
+  if (!text.includes('🏆') && !text.toLowerCase().includes('my frat ranking')) return null;
+  
+  const lines = text.split('\n').slice(1); // Skip the header line
+  const rankings: { tier: string; frat: string }[] = [];
+  
+  for (const line of lines) {
+    const match = line.match(/^(.+?):\s*(.+)$/);
+    if (match) {
+      rankings.push({ tier: match[1].trim(), frat: match[2].trim() });
+    }
+  }
+  
+  return rankings.length > 0 ? rankings : null;
+};
+
 export default function PostCard({ post, onUpvote, onDownvote, onOpenThread, isLeading }: PostCardProps) {
   const [showReportDialog, setShowReportDialog] = useState(false);
+  const [showAllRankings, setShowAllRankings] = useState(false);
   const netVotes = post.upvotes - post.downvotes;
   const isHot = post.is_hot || netVotes >= 5;
   const colorGradient = getAnonymousColor(post.anonymous_name);
+  
+  // Check if this is a ranking post
+  const rankings = parseRankingPost(post.text);
+  const isRankingPost = rankings && rankings.length > 0;
+  const displayedRankings = showAllRankings ? rankings : rankings?.slice(0, 5);
   
   return (
     <>
@@ -126,10 +158,68 @@ export default function PostCard({ post, onUpvote, onDownvote, onOpenThread, isL
             )}
           </div>
 
-          {/* Post text */}
-          <p className="text-[15px] leading-relaxed text-foreground line-clamp-4 mb-3">
-            {post.text}
-          </p>
+          {/* Ranking Post Graphic */}
+          {isRankingPost && displayedRankings ? (
+            <div className="mb-3">
+              {/* Ranking Header */}
+              <div className="flex items-center gap-2 mb-3">
+                <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-amber-400 to-amber-600 flex items-center justify-center">
+                  <Trophy className="h-4 w-4 text-white" />
+                </div>
+                <span className="font-bold text-sm">Frat Ranking</span>
+              </div>
+              
+              {/* Ranking List */}
+              <div className="space-y-1.5">
+                {displayedRankings.map((item, idx) => {
+                  const tierColor = TIER_COLORS[idx] || { bg: 'bg-muted', text: 'text-foreground' };
+                  return (
+                    <div 
+                      key={idx}
+                      className={cn(
+                        "flex items-center gap-2 p-2 rounded-lg",
+                        tierColor.bg
+                      )}
+                    >
+                      <div className={cn(
+                        "w-6 h-6 rounded-full bg-white/20 flex items-center justify-center font-bold text-xs",
+                        tierColor.text
+                      )}>
+                        {idx === 0 ? <Crown className="h-3.5 w-3.5" /> : idx + 1}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className={cn("font-semibold text-sm truncate", tierColor.text)}>
+                          {item.frat}
+                        </p>
+                        <p className={cn("text-xs opacity-80", tierColor.text)}>
+                          {item.tier}
+                        </p>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+              
+              {/* See All Button */}
+              {rankings && rankings.length > 5 && (
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setShowAllRankings(!showAllRankings);
+                  }}
+                  className="w-full mt-2 py-2 text-sm font-medium text-primary hover:bg-primary/5 rounded-lg flex items-center justify-center gap-1 transition-colors"
+                >
+                  {showAllRankings ? 'Show Less' : `See All ${rankings.length} Rankings`}
+                  <ChevronRight className={cn("h-4 w-4 transition-transform", showAllRankings && "rotate-90")} />
+                </button>
+              )}
+            </div>
+          ) : (
+            /* Regular Post text */
+            <p className="text-[15px] leading-relaxed text-foreground line-clamp-4 mb-3">
+              {post.text}
+            </p>
+          )}
 
           {/* Comment count and actions */}
           <div className="flex items-center justify-between">
