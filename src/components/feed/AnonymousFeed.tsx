@@ -539,7 +539,6 @@ export default function AnonymousFeed({ initialSort }: AnonymousFeedProps) {
               value={newPostText}
               onChange={(e) => setNewPostText(e.target.value)}
               className="min-h-[120px] resize-none rounded-xl text-base"
-              autoFocus
             />
             <Button
               onClick={handleCreatePost}
