@@ -1,11 +1,18 @@
 import { useCallback, useEffect, useMemo, useState, useRef } from 'react';
-import { MessageSquare, ChevronUp, ChevronDown, Reply, Send, Smile, Meh, Frown, X, CornerDownRight } from 'lucide-react';
+import { MessageSquare, ChevronUp, ChevronDown, Reply, Send, Smile, Meh, Frown, X, CornerDownRight, Flag, MoreHorizontal } from 'lucide-react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Skeleton } from '@/components/ui/skeleton';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import ReportContentDialog from '@/components/moderation/ReportContentDialog';
 import { formatTimeAgo } from '@/utils';
 import { cn } from '@/lib/utils';
 import { 
@@ -48,6 +55,7 @@ export default function CommentSection({ entityId, entityType }: CommentSectionP
   const [submitting, setSubmitting] = useState(false);
   const [replyingTo, setReplyingTo] = useState<ReplyingTo | null>(null);
   const [myVotesByCommentId, setMyVotesByCommentId] = useState<Record<string, 1 | -1>>({});
+  const [reportingComment, setReportingComment] = useState<{ id: string; text: string } | null>(null);
   
   // Lock to prevent rapid clicking from causing duplicate votes
   const votingLock = useRef<Set<string>>(new Set());
@@ -385,6 +393,23 @@ export default function CommentSection({ entityId, entityType }: CommentSectionP
               <CornerDownRight className="h-3 w-3" />
               Reply
             </button>
+
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <button className="p-1 rounded hover:bg-muted transition-colors ml-auto">
+                  <MoreHorizontal className="h-3.5 w-3.5 text-muted-foreground" />
+                </button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem 
+                  onClick={() => setReportingComment({ id: comment.id, text: displayText })}
+                  className="text-destructive focus:text-destructive"
+                >
+                  <Flag className="h-3.5 w-3.5 mr-2" />
+                  Report
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
         </div>
 
@@ -414,6 +439,7 @@ export default function CommentSection({ entityId, entityType }: CommentSectionP
   }
 
   return (
+    <>
     <Card className="glass p-4 space-y-4">
       <div className="flex items-center gap-2">
         <MessageSquare className="h-5 w-5 text-primary" />
@@ -458,5 +484,16 @@ export default function CommentSection({ entityId, entityType }: CommentSectionP
         )}
       </div>
     </Card>
+
+    {reportingComment && (
+      <ReportContentDialog
+        open={!!reportingComment}
+        onOpenChange={(open) => !open && setReportingComment(null)}
+        contentType={entityType === 'party' ? 'party_comment' : 'fraternity_comment'}
+        contentId={reportingComment.id}
+        contentPreview={reportingComment.text.slice(0, 100)}
+      />
+    )}
+    </>
   );
 }

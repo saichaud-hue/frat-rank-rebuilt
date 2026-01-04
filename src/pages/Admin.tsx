@@ -6,7 +6,9 @@ import { AdminPosts } from "@/components/admin/AdminPosts";
 import { AdminOffenders } from "@/components/admin/AdminOffenders";
 import { AdminSemesterReset } from "@/components/admin/AdminSemesterReset";
 import { AdminSeeding } from "@/components/admin/AdminSeeding";
-import { ChevronLeft, Shield, RefreshCw, AlertTriangle, RotateCcw, Sparkles, MessageSquare, Calendar, FileText } from "lucide-react";
+import { AdminReports } from "@/components/admin/AdminReports";
+import { AdminAuditLogs } from "@/components/admin/AdminAuditLogs";
+import { ChevronLeft, Shield, RefreshCw, AlertTriangle, RotateCcw, Sparkles, MessageSquare, Calendar, FileText, Flag, History } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { useQueryClient } from "@tanstack/react-query";
@@ -71,9 +73,13 @@ export default function Admin() {
             <CardTitle className="text-base">Moderation & Ops</CardTitle>
           </CardHeader>
           <CardContent>
-            <Tabs defaultValue="parties" className="w-full">
+            <Tabs defaultValue="reports" className="w-full">
               <div className="space-y-2 mb-4">
-                <TabsList className="w-full grid grid-cols-3">
+                <TabsList className="w-full grid grid-cols-4">
+                  <TabsTrigger value="reports" className="text-xs gap-1">
+                    <Flag className="h-3 w-3" />
+                    Reports
+                  </TabsTrigger>
                   <TabsTrigger value="parties" className="text-xs gap-1">
                     <Calendar className="h-3 w-3" />
                     Parties
@@ -87,14 +93,18 @@ export default function Admin() {
                     Posts
                   </TabsTrigger>
                 </TabsList>
-                <TabsList className="w-full grid grid-cols-3">
-                  <TabsTrigger value="seed" className="text-xs gap-1">
-                    <Sparkles className="h-3 w-3" />
-                    Seed
-                  </TabsTrigger>
+                <TabsList className="w-full grid grid-cols-4">
                   <TabsTrigger value="offenders" className="text-xs gap-1">
                     <AlertTriangle className="h-3 w-3" />
                     Offenders
+                  </TabsTrigger>
+                  <TabsTrigger value="logs" className="text-xs gap-1">
+                    <History className="h-3 w-3" />
+                    Logs
+                  </TabsTrigger>
+                  <TabsTrigger value="seed" className="text-xs gap-1">
+                    <Sparkles className="h-3 w-3" />
+                    Seed
                   </TabsTrigger>
                   <TabsTrigger value="reset" className="text-xs gap-1">
                     <RotateCcw className="h-3 w-3" />
@@ -102,6 +112,10 @@ export default function Admin() {
                   </TabsTrigger>
                 </TabsList>
               </div>
+
+              <TabsContent value="reports" className="mt-4">
+                <AdminReports />
+              </TabsContent>
 
               <TabsContent value="parties" className="mt-4">
                 <AdminParties />
@@ -115,12 +129,16 @@ export default function Admin() {
                 <AdminPosts />
               </TabsContent>
 
-              <TabsContent value="seed" className="mt-4">
-                <AdminSeeding />
-              </TabsContent>
-
               <TabsContent value="offenders" className="mt-4">
                 <AdminOffenders />
+              </TabsContent>
+
+              <TabsContent value="logs" className="mt-4">
+                <AdminAuditLogs />
+              </TabsContent>
+
+              <TabsContent value="seed" className="mt-4">
+                <AdminSeeding />
               </TabsContent>
 
               <TabsContent value="reset" className="mt-4">
