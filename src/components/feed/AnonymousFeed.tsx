@@ -1,9 +1,10 @@
 import { useState, useMemo, useEffect, useCallback, useRef } from 'react';
-import { Plus, Flame, Clock, TrendingUp, Loader2, Send } from 'lucide-react';
+import { Plus, Flame, Clock, TrendingUp, Loader2, Send, AtSign, Trophy, BarChart3, X, ChevronLeft } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Sheet, SheetContent } from '@/components/ui/sheet';
+import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
+import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/utils';
 import PostCard, { type Post } from './PostCard';
 import ThreadView, { type Comment } from './ThreadView';
@@ -50,9 +51,31 @@ export default function AnonymousFeed({ initialSort }: AnonymousFeedProps) {
   const [loading, setLoading] = useState(true);
   const [sortBy, setSortBy] = useState<SortType>(initialSort || 'hot');
   const [showComposer, setShowComposer] = useState(false);
+  const [composerMode, setComposerMode] = useState<'text' | 'mention' | 'ranking' | 'poll'>('text');
   const [newPostText, setNewPostText] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [selectedPost, setSelectedPost] = useState<Post | null>(null);
+  
+  // Poll creation state
+  const [pollQuestion, setPollQuestion] = useState('');
+  const [pollOptions, setPollOptions] = useState(['', '']);
+  
+  // Ranking creation state (simplified - user types frat names)
+  const [rankingTiers, setRankingTiers] = useState<Record<string, string>>({
+    'Upper Touse': '',
+    'Touse': '',
+    'Lower Touse': '',
+    'Upper Mouse': '',
+    'Mouse': '',
+    'Lower Mouse': '',
+    'Upper Bouse': '',
+    'Bouse': '',
+    'Lower Bouse': '',
+  });
+  
+  // Mention state
+  const [mentionText, setMentionText] = useState('');
+  const [selectedMention, setSelectedMention] = useState<{ type: 'frat' | 'party'; id: string; name: string } | null>(null);
   
   // Lock to prevent rapid clicking from causing duplicate votes
   const votingLock = useRef<Set<string>>(new Set());
@@ -190,9 +213,51 @@ export default function AnonymousFeed({ initialSort }: AnonymousFeedProps) {
     return ordered;
   }, [posts, frozenPostOrder]);
 
+  const resetComposer = () => {
+    setNewPostText('');
+    setComposerMode('text');
+    setPollQuestion('');
+    setPollOptions(['', '']);
+    setRankingTiers({
+      'Upper Touse': '', 'Touse': '', 'Lower Touse': '',
+      'Upper Mouse': '', 'Mouse': '', 'Lower Mouse': '',
+      'Upper Bouse': '', 'Bouse': '', 'Lower Bouse': '',
+    });
+    setMentionText('');
+    setSelectedMention(null);
+  };
+
   const handleCreatePost = async () => {
+    let postText = newPostText;
+    let mentionedFratId: string | null = null;
+    let mentionedPartyId: string | null = null;
+
+    // Build text based on mode
+    if (composerMode === 'poll') {
+      if (!pollQuestion.trim() || pollOptions.filter(o => o.trim()).length < 2) {
+        toast.error('Add a question and at least 2 options');
+        return;
+      }
+      const validOptions = pollOptions.filter(o => o.trim());
+      postText = `POLL:${pollQuestion}\n${validOptions.map(o => `OPTION:${o}`).join('\n')}`;
+    } else if (composerMode === 'ranking') {
+      const filledTiers = Object.entries(rankingTiers).filter(([_, frat]) => frat.trim());
+      if (filledTiers.length < 3) {
+        toast.error('Fill in at least 3 tier rankings');
+        return;
+      }
+      postText = `🏆 My Frat Ranking\n${filledTiers.map(([tier, frat]) => `${tier}: ${frat}`).join('\n')}`;
+    } else if (composerMode === 'mention' && selectedMention) {
+      postText = mentionText || `Shoutout to @${selectedMention.name}`;
+      if (selectedMention.type === 'frat') {
+        mentionedFratId = selectedMention.id;
+      } else {
+        mentionedPartyId = selectedMention.id;
+      }
+    }
+
     // Validate input
-    const validation = validateInput(postSchema, { text: newPostText });
+    const validation = validateInput(postSchema, { text: postText });
     if (!validation.success) {
       toast.error('error' in validation ? validation.error : 'Invalid input');
       return;
@@ -212,8 +277,8 @@ export default function AnonymousFeed({ initialSort }: AnonymousFeedProps) {
         text: validation.data.text,
         user_id: currentUser.id,
         parent_message_id: null,
-        mentioned_fraternity_id: null,
-        mentioned_party_id: null,
+        mentioned_fraternity_id: mentionedFratId,
+        mentioned_party_id: mentionedPartyId,
         upvotes: 0,
         downvotes: 0,
       });
@@ -221,13 +286,25 @@ export default function AnonymousFeed({ initialSort }: AnonymousFeedProps) {
     });
     
     if (result) {
-      setNewPostText('');
+      resetComposer();
       setShowComposer(false);
       toast.success('Post created!');
       loadData();
     }
     
     setSubmitting(false);
+  };
+
+  const addPollOption = () => {
+    if (pollOptions.length < 6) {
+      setPollOptions([...pollOptions, '']);
+    }
+  };
+
+  const removePollOption = (index: number) => {
+    if (pollOptions.length > 2) {
+      setPollOptions(pollOptions.filter((_, i) => i !== index));
+    }
   };
 
   const handlePostVote = async (postId: string, direction: 1 | -1) => {
@@ -523,30 +600,189 @@ export default function AnonymousFeed({ initialSort }: AnonymousFeedProps) {
       </div>
 
       {/* Composer sheet */}
-      <Sheet open={showComposer} onOpenChange={setShowComposer}>
+      <Sheet open={showComposer} onOpenChange={(open) => {
+        setShowComposer(open);
+        if (!open) resetComposer();
+      }}>
         <SheetContent 
           side="bottom" 
-          className="rounded-t-3xl"
+          className="rounded-t-3xl max-h-[85vh] overflow-y-auto"
           style={{ touchAction: 'pan-y', overscrollBehavior: 'contain' }}
         >
           <div className="p-4 pt-6 space-y-4">
+            {/* Header */}
             <div className="flex items-center justify-between">
-              <h2 className="text-lg font-bold">New Post</h2>
-              <span className="text-sm text-muted-foreground">Posting as {userAnonName}</span>
+              {composerMode !== 'text' ? (
+                <button onClick={() => setComposerMode('text')} className="flex items-center gap-1 text-muted-foreground">
+                  <ChevronLeft className="h-4 w-4" />
+                  <span className="text-sm">Back</span>
+                </button>
+              ) : (
+                <h2 className="text-lg font-bold">New Post</h2>
+              )}
+              <span className="text-sm text-muted-foreground">as {userAnonName}</span>
             </div>
-            <Textarea
-              placeholder="What's on your mind?"
-              value={newPostText}
-              onChange={(e) => setNewPostText(e.target.value)}
-              className="min-h-[120px] resize-none rounded-xl text-base"
-            />
-            <Button
-              onClick={handleCreatePost}
-              disabled={!newPostText.trim() || submitting}
-              className="w-full rounded-xl gradient-primary h-12"
-            >
-              {submitting ? <Loader2 className="h-4 w-4 animate-spin" /> : <><Send className="h-4 w-4 mr-2" /> Post</>}
-            </Button>
+
+            {/* Mode: Text Post */}
+            {composerMode === 'text' && (
+              <>
+                <Textarea
+                  placeholder="What's on your mind?"
+                  value={newPostText}
+                  onChange={(e) => setNewPostText(e.target.value)}
+                  className="min-h-[100px] resize-none rounded-xl text-base"
+                />
+                
+                {/* Action buttons row */}
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => setComposerMode('mention')}
+                    className="flex-1 flex items-center justify-center gap-2 py-3 rounded-xl bg-muted/50 border border-border/50 hover:bg-muted active:scale-[0.98] transition-all"
+                  >
+                    <AtSign className="h-5 w-5 text-primary" />
+                    <span className="font-medium text-sm">Mention</span>
+                  </button>
+                  <button
+                    onClick={() => setComposerMode('ranking')}
+                    className="flex-1 flex items-center justify-center gap-2 py-3 rounded-xl bg-muted/50 border border-border/50 hover:bg-muted active:scale-[0.98] transition-all"
+                  >
+                    <Trophy className="h-5 w-5 text-amber-500" />
+                    <span className="font-medium text-sm">Ranking</span>
+                  </button>
+                  <button
+                    onClick={() => setComposerMode('poll')}
+                    className="flex-1 flex items-center justify-center gap-2 py-3 rounded-xl bg-muted/50 border border-border/50 hover:bg-muted active:scale-[0.98] transition-all"
+                  >
+                    <BarChart3 className="h-5 w-5 text-primary" />
+                    <span className="font-medium text-sm">Poll</span>
+                  </button>
+                </div>
+
+                <Button
+                  onClick={handleCreatePost}
+                  disabled={!newPostText.trim() || submitting}
+                  className="w-full rounded-xl gradient-primary h-12"
+                >
+                  {submitting ? <Loader2 className="h-4 w-4 animate-spin" /> : <><Send className="h-4 w-4 mr-2" /> Post</>}
+                </Button>
+              </>
+            )}
+
+            {/* Mode: Poll */}
+            {composerMode === 'poll' && (
+              <>
+                <div className="flex items-center gap-2 mb-2">
+                  <BarChart3 className="h-5 w-5 text-primary" />
+                  <h3 className="font-bold">Create Poll</h3>
+                </div>
+                <Input
+                  placeholder="Ask a question..."
+                  value={pollQuestion}
+                  onChange={(e) => setPollQuestion(e.target.value)}
+                  className="rounded-xl"
+                />
+                <div className="space-y-2">
+                  {pollOptions.map((opt, i) => (
+                    <div key={i} className="flex gap-2">
+                      <Input
+                        placeholder={`Option ${i + 1}`}
+                        value={opt}
+                        onChange={(e) => {
+                          const newOpts = [...pollOptions];
+                          newOpts[i] = e.target.value;
+                          setPollOptions(newOpts);
+                        }}
+                        className="flex-1 rounded-xl"
+                      />
+                      {pollOptions.length > 2 && (
+                        <Button variant="ghost" size="icon" onClick={() => removePollOption(i)} className="shrink-0">
+                          <X className="h-4 w-4" />
+                        </Button>
+                      )}
+                    </div>
+                  ))}
+                  {pollOptions.length < 6 && (
+                    <Button variant="outline" onClick={addPollOption} className="w-full rounded-xl">
+                      <Plus className="h-4 w-4 mr-2" /> Add Option
+                    </Button>
+                  )}
+                </div>
+                <Button
+                  onClick={handleCreatePost}
+                  disabled={!pollQuestion.trim() || pollOptions.filter(o => o.trim()).length < 2 || submitting}
+                  className="w-full rounded-xl gradient-primary h-12"
+                >
+                  {submitting ? <Loader2 className="h-4 w-4 animate-spin" /> : <><Send className="h-4 w-4 mr-2" /> Post Poll</>}
+                </Button>
+              </>
+            )}
+
+            {/* Mode: Ranking */}
+            {composerMode === 'ranking' && (
+              <>
+                <div className="flex items-center gap-2 mb-2">
+                  <Trophy className="h-5 w-5 text-amber-500" />
+                  <h3 className="font-bold">Create Frat Ranking</h3>
+                </div>
+                <p className="text-xs text-muted-foreground">Fill in at least 3 tiers with frat names</p>
+                <ScrollArea className="h-[280px] -mx-2 px-2">
+                  <div className="space-y-2">
+                    {Object.entries(rankingTiers).map(([tier, value]) => (
+                      <div key={tier} className="flex items-center gap-2">
+                        <span className={cn(
+                          "w-24 text-xs font-medium shrink-0",
+                          tier.includes('Touse') && "text-emerald-500",
+                          tier.includes('Mouse') && "text-amber-500",
+                          tier.includes('Bouse') && "text-red-500"
+                        )}>{tier}</span>
+                        <Input
+                          placeholder="Frat name..."
+                          value={value}
+                          onChange={(e) => setRankingTiers(prev => ({ ...prev, [tier]: e.target.value }))}
+                          className="flex-1 rounded-lg h-9 text-sm"
+                        />
+                      </div>
+                    ))}
+                  </div>
+                </ScrollArea>
+                <Button
+                  onClick={handleCreatePost}
+                  disabled={Object.values(rankingTiers).filter(v => v.trim()).length < 3 || submitting}
+                  className="w-full rounded-xl gradient-primary h-12"
+                >
+                  {submitting ? <Loader2 className="h-4 w-4 animate-spin" /> : <><Send className="h-4 w-4 mr-2" /> Post Ranking</>}
+                </Button>
+              </>
+            )}
+
+            {/* Mode: Mention */}
+            {composerMode === 'mention' && (
+              <>
+                <div className="flex items-center gap-2 mb-2">
+                  <AtSign className="h-5 w-5 text-primary" />
+                  <h3 className="font-bold">Mention a Frat</h3>
+                </div>
+                <p className="text-xs text-muted-foreground mb-2">Type your message mentioning a fraternity</p>
+                <Textarea
+                  placeholder="What do you want to say about this frat?"
+                  value={mentionText}
+                  onChange={(e) => setMentionText(e.target.value)}
+                  className="min-h-[80px] resize-none rounded-xl text-base"
+                />
+                <Button
+                  onClick={() => {
+                    if (mentionText.trim()) {
+                      setNewPostText(mentionText);
+                      setComposerMode('text');
+                    }
+                  }}
+                  disabled={!mentionText.trim()}
+                  className="w-full rounded-xl gradient-primary h-12"
+                >
+                  <Send className="h-4 w-4 mr-2" /> Add to Post
+                </Button>
+              </>
+            )}
           </div>
         </SheetContent>
       </Sheet>
