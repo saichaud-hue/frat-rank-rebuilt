@@ -113,22 +113,16 @@ export function AdminSeeding() {
     setRatingLoading(true);
 
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) throw new Error("Not authenticated");
-
-      // Insert ratings one by one to avoid any bulk insert issues
+      // Use admin RPC function that generates fake user_ids
       let successCount = 0;
       for (let i = 0; i < count; i++) {
-        const rating = {
-          party_id: selectedParty,
-          user_id: user.id,
-          vibe_score: generateRandomScore(min, max),
-          music_score: generateRandomScore(min, max),
-          execution_score: generateRandomScore(min, max),
-          party_quality_score: generateRandomScore(min, max),
-        };
-
-        const { error } = await supabase.from("party_ratings").insert(rating);
+        const { error } = await supabase.rpc('admin_seed_party_rating', {
+          p_party_id: selectedParty,
+          p_vibe: generateRandomScore(min, max),
+          p_music: generateRandomScore(min, max),
+          p_execution: generateRandomScore(min, max),
+          p_party_quality: generateRandomScore(min, max),
+        });
         if (!error) successCount++;
       }
 
@@ -169,26 +163,21 @@ export function AdminSeeding() {
     setRepRatingLoading(true);
 
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) throw new Error("Not authenticated");
-
+      // Use admin RPC function that generates fake user_ids
       let successCount = 0;
       for (let i = 0; i < count; i++) {
         const brotherhood = generateRandomScore(min, max);
         const community = generateRandomScore(min, max);
         const reputation = generateRandomScore(min, max);
-        const combined = (brotherhood + community + reputation) / 3;
-        
-        const rating = {
-          fraternity_id: selectedFrat,
-          user_id: user.id,
-          brotherhood_score: brotherhood,
-          community_score: community,
-          reputation_score: reputation,
-          combined_score: Math.round(combined * 10) / 10,
-        };
+        const combined = Math.round(((brotherhood + community + reputation) / 3) * 10) / 10;
 
-        const { error } = await supabase.from("reputation_ratings").insert(rating);
+        const { error } = await supabase.rpc('admin_seed_reputation_rating', {
+          p_fraternity_id: selectedFrat,
+          p_brotherhood: brotherhood,
+          p_community: community,
+          p_reputation: reputation,
+          p_combined: combined,
+        });
         if (!error) successCount++;
       }
 

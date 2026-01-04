@@ -929,6 +929,26 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      admin_seed_party_rating: {
+        Args: {
+          p_execution: number
+          p_music: number
+          p_party_id: string
+          p_party_quality: number
+          p_vibe: number
+        }
+        Returns: string
+      }
+      admin_seed_reputation_rating: {
+        Args: {
+          p_brotherhood: number
+          p_combined: number
+          p_community: number
+          p_fraternity_id: string
+          p_reputation: number
+        }
+        Returns: string
+      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
