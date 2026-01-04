@@ -129,12 +129,32 @@ export default function PollCard({
 
 // Helper function to parse poll text format
 export function parsePollFromText(text: string): { question: string; options: string[] } | null {
-  if (!text.startsWith('POLL:')) return null;
-  const lines = text.split('\n');
-  const question = lines[0].replace('POLL:', '').trim();
-  const options = lines.slice(1).filter(l => l.startsWith('OPTION:')).map(l => l.replace('OPTION:', '').trim());
-  if (options.length >= 2) {
-    return { question, options };
+  if (!text.includes('POLL:')) return null;
+  
+  // Handle both newline and space-separated formats
+  // Format 1: "POLL:Question\nOPTION:A\nOPTION:B"
+  // Format 2: "POLL:Question? OPTION:A OPTION:B"
+  
+  // First try newline format
+  if (text.includes('\n')) {
+    const lines = text.split('\n');
+    const question = lines[0].replace('POLL:', '').trim();
+    const options = lines.slice(1).filter(l => l.startsWith('OPTION:')).map(l => l.replace('OPTION:', '').trim());
+    if (options.length >= 2) {
+      return { question, options };
+    }
   }
+  
+  // Try space-separated format: "POLL:Question? OPTION:A OPTION:B"
+  const pollMatch = text.match(/POLL:([^O]+?)(?=\s+OPTION:|$)/);
+  if (pollMatch) {
+    const question = pollMatch[1].trim();
+    const optionMatches = text.matchAll(/OPTION:([^O]+?)(?=\s+OPTION:|$)/g);
+    const options = Array.from(optionMatches).map(m => m[1].trim());
+    if (options.length >= 2) {
+      return { question, options };
+    }
+  }
+  
   return null;
 }
