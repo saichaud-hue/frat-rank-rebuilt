@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { Upload, Image, Loader2, CheckCircle2, AlertCircle, X } from 'lucide-react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -6,6 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
 import { base44 } from '@/api/base44Client';
+import { validateFile, stripExifData, getAllowedFileTypes, getAcceptString, type AllowedFileType } from '@/lib/fileValidation';
 
 interface PhotoUploadProps {
   partyId: string;
@@ -19,20 +20,24 @@ export default function PhotoUpload({ partyId, onUploadComplete }: PhotoUploadPr
   const [consentVerified, setConsentVerified] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [allowedTypes, setAllowedTypes] = useState<AllowedFileType[]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+  // Fetch allowed file types on mount
+  useEffect(() => {
+    getAllowedFileTypes().then(setAllowedTypes);
+  }, []);
+
+  const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const selectedFile = e.target.files?.[0];
     if (!selectedFile) return;
 
     setError(null);
 
-    if (!selectedFile.type.startsWith('image/')) {
-      setError('Please select an image file');
-      return;
-    }
-    if (selectedFile.size > 10 * 1024 * 1024) {
-      setError('File must be less than 10MB');
+    // Validate file type and size against database rules
+    const validation = await validateFile(selectedFile);
+    if (!validation.valid) {
+      setError(validation.error || 'Invalid file');
       return;
     }
 
@@ -67,7 +72,9 @@ export default function PhotoUpload({ partyId, onUploadComplete }: PhotoUploadPr
         return;
       }
 
-      const { url } = await base44.integrations.Core.UploadFile({ file });
+      // Strip EXIF data before upload
+      const cleanedFile = await stripExifData(file);
+      const { url } = await base44.integrations.Core.UploadFile({ file: cleanedFile });
 
       await base44.entities.PartyPhoto.create({
         party_id: partyId,
@@ -128,13 +135,13 @@ export default function PhotoUpload({ partyId, onUploadComplete }: PhotoUploadPr
         >
           <Image className="h-10 w-10 mx-auto text-muted-foreground mb-3" />
           <p className="text-sm text-muted-foreground">Click to select a photo</p>
-          <input
-            ref={fileInputRef}
-            type="file"
-            accept="image/*"
-            onChange={handleFileSelect}
-            className="hidden"
-          />
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept={allowedTypes.length > 0 ? getAcceptString(allowedTypes) : "image/*"}
+              onChange={handleFileSelect}
+              className="hidden"
+            />
         </div>
       )}
 

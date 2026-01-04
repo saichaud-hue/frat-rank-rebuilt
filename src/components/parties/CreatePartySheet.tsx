@@ -13,6 +13,7 @@ import { getFratShorthand } from '@/utils';
 import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
 import { supabase } from '@/integrations/supabase/client';
+import { validateFile, stripExifData } from '@/lib/fileValidation';
 
 interface CreatePartySheetProps {
   open: boolean;
@@ -175,14 +176,25 @@ export default function CreatePartySheet({ open, onOpenChange, onSuccess }: Crea
       return;
     }
 
+    // Validate file type and size
+    const validation = await validateFile(file);
+    if (!validation.valid) {
+      const { toast } = await import('@/hooks/use-toast');
+      toast({ title: validation.error || "Invalid file", variant: "destructive" });
+      return;
+    }
+
     setUploadingPhoto(true);
     try {
+      // Strip EXIF data before upload
+      const cleanedFile = await stripExifData(file);
+      
       const fileExt = file.name.split('.').pop();
       const fileName = `${user.id}/${Date.now()}.${fileExt}`;
 
       const { error: uploadError } = await supabase.storage
         .from('party-covers')
-        .upload(fileName, file);
+        .upload(fileName, cleanedFile);
 
       if (uploadError) throw uploadError;
 

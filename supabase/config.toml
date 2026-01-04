@@ -2,3 +2,6 @@ project_id = "oohzxhihnufmkdmfejdg"
 
 [functions.semester-reset]
 verify_jwt = false
+
+[functions.strip-exif]
+verify_jwt = true
