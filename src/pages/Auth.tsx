@@ -94,7 +94,7 @@ export default function Auth() {
 
       {/* Footer info */}
       <p className="mt-8 text-xs text-muted-foreground text-center max-w-[280px]">
-        Sign in with your Duke email to access Touse. Your ratings stay anonymous.
+        Sign in with your <span className="font-bold">Gmail</span> email to access Touse. Your ratings stay anonymous.
       </p>
     </div>
   );
