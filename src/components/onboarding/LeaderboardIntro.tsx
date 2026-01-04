@@ -50,10 +50,10 @@ export default function LeaderboardIntro({ onComplete, onRate, fraternities }: L
   };
 
   return (
-    <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-end sm:items-center justify-center">
-      <Card className="w-full sm:max-w-md rounded-t-3xl sm:rounded-2xl p-5 animate-slide-up sm:animate-scale-in" style={{ paddingBottom: 'max(env(safe-area-inset-bottom), 20px)' }}>
+    <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-end sm:items-center justify-center p-0 sm:p-4">
+      <Card className="w-full sm:max-w-md max-h-[85vh] overflow-y-auto rounded-t-3xl sm:rounded-2xl p-4 animate-slide-up sm:animate-scale-in" style={{ paddingBottom: 'max(env(safe-area-inset-bottom), 16px)' }}>
         {!showFratList ? (
-          <div className="space-y-4">
+          <div className="space-y-3">
             {/* Icon - smaller */}
             <div className="mx-auto w-14 h-14 rounded-xl bg-gradient-to-br from-amber-400 to-orange-500 flex items-center justify-center">
               <Trophy className="h-7 w-7 text-white" />
