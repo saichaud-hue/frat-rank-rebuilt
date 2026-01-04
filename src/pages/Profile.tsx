@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useMemo } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { User, PartyPopper, LogIn, Award, ChevronRight, Pencil, Trash2, Trophy, MessageCircle, Flame, Image, Lock, X, ListOrdered, Star, Users, Shield, Heart, Sparkles, Music, Zap, CheckCircle2, Loader2, Share2, Swords, ChevronDown, LogOut } from 'lucide-react';
+import { User, PartyPopper, LogIn, Award, ChevronRight, Pencil, Trash2, Trophy, MessageCircle, Image, Lock, X, ListOrdered, Star, Users, Shield, Heart, Sparkles, Music, Zap, CheckCircle2, Loader2, Share2, Swords, ChevronDown, LogOut } from 'lucide-react';
 import PollCard, { parsePollFromText } from '@/components/activity/PollCard';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
@@ -41,6 +41,8 @@ import ShareBattleDialog from '@/components/share/ShareBattleDialog';
 import FratBattleGame from '@/components/activity/FratBattleGame';
 import { useAuth } from '@/contexts/AuthContext';
 import { useAdminCheck } from '@/hooks/useAdminCheck';
+import { useStreak } from '@/hooks/useStreak';
+import StreakDisplay from '@/components/profile/StreakDisplay';
 
 type EnrichedPartyRating = PartyRating & { party?: Party; fraternity?: Fraternity };
 type EnrichedRepRating = ReputationRating & { fraternity?: Fraternity };
@@ -75,6 +77,7 @@ export default function Profile() {
   const navigate = useNavigate();
   const { signOut } = useAuth();
   const { isAdmin } = useAdminCheck();
+  const { streak, longestStreak, hoursRemaining, refetch: refetchStreak } = useStreak();
   const [user, setUser] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [stats, setStats] = useState({ partyRatings: 0, fratRatings: 0, comments: 0, privatePhotos: 0 });
@@ -504,6 +507,7 @@ export default function Profile() {
     });
 
     await recordUserAction();
+    refetchStreak();
 
     setSelectedFrat(null);
     await loadProfile();
@@ -705,13 +709,13 @@ export default function Profile() {
               <Badge variant="secondary" className="font-medium">
                 Lvl {levelInfo.level} · {levelInfo.title}
               </Badge>
-              <div className="flex items-center gap-1 text-sm text-muted-foreground">
-                <Flame className="h-4 w-4 text-orange-500" />
-                <span>{user.streak || 0}d</span>
-              </div>
+              <StreakDisplay 
+                streak={streak} 
+                hoursRemaining={hoursRemaining} 
+                longestStreak={longestStreak}
+              />
             </div>
           </div>
-          {/* Logout Button */}
           <AlertDialog open={showLogoutConfirm} onOpenChange={setShowLogoutConfirm}>
             <AlertDialogTrigger asChild>
               <Button 

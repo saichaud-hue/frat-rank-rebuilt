@@ -1119,6 +1119,36 @@ export type Database = {
         }
         Relationships: []
       }
+      user_streaks: {
+        Row: {
+          created_at: string
+          current_streak: number
+          id: string
+          last_activity_at: string | null
+          longest_streak: number
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          current_streak?: number
+          id?: string
+          last_activity_at?: string | null
+          longest_streak?: number
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          current_streak?: number
+          id?: string
+          last_activity_at?: string | null
+          longest_streak?: number
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       chat_message_votes_aggregated: {
@@ -1245,6 +1275,15 @@ export type Database = {
         }
         Returns: boolean
       }
+      get_user_streak: {
+        Args: { p_user_id: string }
+        Returns: {
+          current_streak: number
+          last_activity_at: string
+          longest_streak: number
+          streak_expires_at: string
+        }[]
+      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
@@ -1263,6 +1302,13 @@ export type Database = {
         }[]
       }
       record_rate_limit: { Args: { p_action_type: string }; Returns: undefined }
+      update_user_streak: {
+        Args: { p_user_id: string }
+        Returns: {
+          is_new_day: boolean
+          new_streak: number
+        }[]
+      }
     }
     Enums: {
       app_role: "admin" | "moderator" | "user"
