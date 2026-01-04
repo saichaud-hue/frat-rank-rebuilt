@@ -11,7 +11,8 @@ import {
   SheetTitle,
   SheetFooter
 } from '@/components/ui/sheet';
-import { base44 } from '@/api/base44Client';
+import { supabase } from '@/integrations/supabase/client';
+import { partyPhotoQueries, getCurrentUser } from '@/lib/supabase-data';
 import { recomputePartyCoverPhoto } from './photoUtils';
 import { toast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
@@ -152,7 +153,7 @@ export default function GlobalPhotoUpload({ partyId, onClose, onUploadSuccess }:
     setError(null);
 
     try {
-      const user = await base44.auth.me();
+      const user = await getCurrentUser();
       if (!user) {
         setError('Please sign in to upload photos');
         setUploading(false);
@@ -166,19 +167,30 @@ export default function GlobalPhotoUpload({ partyId, onClose, onUploadSuccess }:
         try {
           // Strip EXIF data before upload
           const cleanedFile = await stripExifData(file);
-          const { url } = await base44.integrations.Core.UploadFile({ file: cleanedFile });
+          
+          // Upload to Supabase Storage
+          const fileName = `${user.id}/${Date.now()}-${Math.random().toString(36).substr(2, 9)}.${cleanedFile.name.split('.').pop()}`;
+          const { data: uploadData, error: uploadError } = await supabase.storage
+            .from('party-photos')
+            .upload(fileName, cleanedFile);
+          
+          if (uploadError) throw uploadError;
+          
+          // Get public URL
+          const { data: { publicUrl } } = supabase.storage
+            .from('party-photos')
+            .getPublicUrl(fileName);
 
-          await base44.entities.PartyPhoto.create({
+          // Create photo record in database
+          await partyPhotoQueries.create({
             party_id: partyId,
             user_id: user.id,
-            url,
+            url: publicUrl,
             caption,
             consent_verified: mode === 'public',
             likes: 0,
             dislikes: 0,
             moderation_status: 'approved',
-            faces_detected: 0,
-            faces_blurred: false,
             visibility: mode === 'private' ? 'private' : 'public',
             shared_to_feed: mode === 'public' && shareToFeed,
           });
