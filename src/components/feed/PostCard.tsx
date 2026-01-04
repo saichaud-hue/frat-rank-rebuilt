@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { ChevronUp, ChevronDown, MessageCircle, Flame, Clock, TrendingUp, Flag, MoreHorizontal, Trophy, Crown, ChevronRight } from 'lucide-react';
 import PollCard, { parsePollFromText } from '@/components/activity/PollCard';
 import UserLevelBadge from '@/components/feed/UserLevelBadge';
@@ -35,6 +36,7 @@ interface PostCardProps {
   onDownvote: () => void;
   onOpenThread: () => void;
   isLeading?: boolean;
+  fraternities?: { id: string; name: string }[];
 }
 
 // Generate consistent anonymous name from post id
@@ -82,7 +84,79 @@ const parseRankingPost = (text: string): { tier: string; frat: string }[] | null
   return rankings.length > 0 ? rankings : null;
 };
 
-export default function PostCard({ post, onUpvote, onDownvote, onOpenThread, isLeading }: PostCardProps) {
+// Parse text and render @mentions as clickable links
+interface TextWithMentionsProps {
+  text: string;
+  fraternities: { id: string; name: string }[];
+  onMentionClick: (fratId: string) => void;
+}
+
+const TextWithMentions = ({ text, fraternities, onMentionClick }: TextWithMentionsProps) => {
+  // Match @FratName patterns
+  const mentionRegex = /@([A-Za-z\s]+?)(?=\s|$|[.,!?])/g;
+  const parts: (string | { type: 'mention'; name: string; fratId: string | null })[] = [];
+  let lastIndex = 0;
+  let match;
+
+  while ((match = mentionRegex.exec(text)) !== null) {
+    // Add text before the match
+    if (match.index > lastIndex) {
+      parts.push(text.slice(lastIndex, match.index));
+    }
+    
+    const mentionedName = match[1].trim();
+    // Find matching fraternity (case-insensitive)
+    const matchedFrat = fraternities.find(f => 
+      f.name.toLowerCase() === mentionedName.toLowerCase()
+    );
+    
+    parts.push({
+      type: 'mention',
+      name: mentionedName,
+      fratId: matchedFrat?.id || null
+    });
+    
+    lastIndex = match.index + match[0].length;
+  }
+  
+  // Add remaining text
+  if (lastIndex < text.length) {
+    parts.push(text.slice(lastIndex));
+  }
+
+  return (
+    <>
+      {parts.map((part, i) => {
+        if (typeof part === 'string') {
+          return <span key={i}>{part}</span>;
+        }
+        
+        if (part.fratId) {
+          return (
+            <button
+              key={i}
+              onClick={(e) => {
+                e.stopPropagation();
+                onMentionClick(part.fratId!);
+              }}
+              className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-md bg-primary/10 text-primary font-medium hover:bg-primary/20 transition-colors"
+            >
+              @{part.name}
+            </button>
+          );
+        }
+        
+        // Unmatched mention - just show as styled text
+        return (
+          <span key={i} className="text-primary font-medium">@{part.name}</span>
+        );
+      })}
+    </>
+  );
+};
+
+export default function PostCard({ post, onUpvote, onDownvote, onOpenThread, isLeading, fraternities = [] }: PostCardProps) {
+  const navigate = useNavigate();
   const { user } = useAuth();
   const [showReportDialog, setShowReportDialog] = useState(false);
   const [showAllRankings, setShowAllRankings] = useState(false);
@@ -365,9 +439,13 @@ export default function PostCard({ post, onUpvote, onDownvote, onOpenThread, isL
               />
             </div>
           ) : (
-            /* Regular Post text */
+            /* Regular Post text with clickable mentions */
             <p className="text-[15px] leading-relaxed text-foreground line-clamp-4 mb-3">
-              {post.text}
+              <TextWithMentions 
+                text={post.text}
+                fraternities={fraternities}
+                onMentionClick={(fratId) => navigate(`/fraternity/${fratId}`)}
+              />
             </p>
           )}
 
