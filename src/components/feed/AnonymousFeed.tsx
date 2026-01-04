@@ -17,6 +17,8 @@ import { useRateLimit } from '@/hooks/useRateLimit';
 import { postSchema, commentSchema, validateInput } from '@/lib/validationSchemas';
 import { getFratGreek, getFratShorthand } from '@/utils';
 import FratBattleGame from '@/components/activity/FratBattleGame';
+import { awardPoints } from '@/utils/points';
+import { recordUserAction } from '@/utils/streak';
 
 type SortType = 'hot' | 'new' | 'top';
 
@@ -300,6 +302,14 @@ export default function AnonymousFeed({ initialSort }: AnonymousFeedProps) {
     });
     
     if (result) {
+      // Award points based on content type
+      if (composerMode === 'poll') {
+        await awardPoints('create_poll', 'Created a poll');
+      } else {
+        await awardPoints('create_post', 'Created a post');
+      }
+      await recordUserAction();
+      
       resetComposer();
       setShowComposer(false);
       toast.success('Post created!');
@@ -391,6 +401,10 @@ export default function AnonymousFeed({ initialSort }: AnonymousFeedProps) {
         await chatMessageVoteQueries.delete(currentUser.id, postId);
       } else {
         await chatMessageVoteQueries.upsert(currentUser.id, postId, nextVote);
+        // Award points only for new votes (not toggles)
+        if (currentVote === 0) {
+          await awardPoints('vote_on_post', 'Voted on a post');
+        }
       }
 
       // Use database function to recalculate votes (bypasses RLS for accurate counts)

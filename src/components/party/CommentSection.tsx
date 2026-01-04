@@ -9,7 +9,8 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { useAuth } from '@/contexts/AuthContext';
 import { base44, type PartyComment, type PartyCommentVote } from '@/api/base44Client';
 import { formatTimeAgo } from '@/utils';
-import { recordUserAction, addUserPoints } from '@/utils/streak';
+import { recordUserAction } from '@/utils/streak';
+import { awardPoints } from '@/utils/points';
 
 interface CommentSectionProps {
   partyId: string;
@@ -116,7 +117,7 @@ export default function CommentSection({ partyId }: CommentSectionProps) {
       });
 
       // Update user points and streak
-      await addUserPoints(2);
+      await awardPoints('create_comment', 'Posted a comment on a party');
       await recordUserAction();
 
       // Recalculate comment-derived score (kept on Party as unquantifiable_score).
