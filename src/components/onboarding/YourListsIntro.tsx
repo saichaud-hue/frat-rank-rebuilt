@@ -112,9 +112,9 @@ export default function YourListsIntro({
 
             {/* Content - more compact */}
             <div className="text-center space-y-1">
-              <h2 className="text-xl font-bold">Your Rankings</h2>
+              <h2 className="text-xl font-bold">My Lists</h2>
               <p className="text-muted-foreground text-sm">
-                Your personal list of favorites
+                Your personal tier list
               </p>
             </div>
 
@@ -125,7 +125,7 @@ export default function YourListsIntro({
                   <Trophy className="h-3 w-3 text-blue-500" />
                 </div>
                 <span className="text-xs">
-                  <span className="font-semibold">Frats</span> — {fratUnlocked ? `${ratedFratCount}` : `${ratedFratCount}/5`}
+                  <span className="font-semibold">Frats</span> — {fratUnlocked ? 'Unlocked' : `${ratedFratCount}/5`}
                 </span>
               </div>
               <div className="flex items-center gap-2 p-2 rounded-lg bg-muted/50">
@@ -133,20 +133,20 @@ export default function YourListsIntro({
                   <PartyPopper className="h-3 w-3 text-purple-500" />
                 </div>
                 <span className="text-xs">
-                  <span className="font-semibold">Parties</span> — {partyUnlocked ? `${ratedPartyCount}` : `${ratedPartyCount}/3`}
+                  <span className="font-semibold">Parties</span> — {partyUnlocked ? 'Unlocked' : `${ratedPartyCount}/3`}
                 </span>
               </div>
               <div className="flex items-center gap-2 p-2 rounded-lg bg-muted/50">
                 <div className="w-6 h-6 rounded-full bg-pink-500/10 flex items-center justify-center shrink-0">
                   <BarChart3 className="h-3 w-3 text-pink-500" />
                 </div>
-                <span className="text-xs"><span className="font-semibold">Rankings</span> — #1 to last</span>
+                <span className="text-xs"><span className="font-semibold">Ranked</span> — By you</span>
               </div>
               <div className="flex items-center gap-2 p-2 rounded-lg bg-muted/50">
                 <div className="w-6 h-6 rounded-full bg-orange-500/10 flex items-center justify-center shrink-0">
                   <Heart className="h-3 w-3 text-orange-500" />
                 </div>
-                <span className="text-xs"><span className="font-semibold">Favorites</span> — Top picks</span>
+                <span className="text-xs"><span className="font-semibold">Private</span> — Only you</span>
               </div>
             </div>
 
