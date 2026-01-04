@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { ChevronUp, ChevronDown, MessageCircle, Flame, Clock, TrendingUp, Flag, MoreHorizontal, Trophy, Crown, ChevronRight, BarChart3 } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { ChevronUp, ChevronDown, MessageCircle, Flame, Clock, TrendingUp, Flag, MoreHorizontal, Trophy, Crown, ChevronRight } from 'lucide-react';
 import PollCard, { parsePollFromText } from '@/components/activity/PollCard';
 import { cn } from '@/lib/utils';
 import { formatDistanceToNow } from 'date-fns';
@@ -10,6 +10,9 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import ReportContentDialog from '@/components/moderation/ReportContentDialog';
+import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/contexts/AuthContext';
+import { toast } from 'sonner';
 
 export interface Post {
   id: string;
@@ -77,8 +80,11 @@ const parseRankingPost = (text: string): { tier: string; frat: string }[] | null
 };
 
 export default function PostCard({ post, onUpvote, onDownvote, onOpenThread, isLeading }: PostCardProps) {
+  const { user } = useAuth();
   const [showReportDialog, setShowReportDialog] = useState(false);
   const [showAllRankings, setShowAllRankings] = useState(false);
+  const [pollUserVote, setPollUserVote] = useState<number | null>(null);
+  const [pollVoteCounts, setPollVoteCounts] = useState<Record<number, number>>({});
   const netVotes = post.upvotes - post.downvotes;
   const isHot = post.is_hot || netVotes >= 5;
   const colorGradient = getAnonymousColor(post.anonymous_name);
@@ -91,6 +97,88 @@ export default function PostCard({ post, onUpvote, onDownvote, onOpenThread, isL
   // Check if this is a poll post
   const pollData = parsePollFromText(post.text);
   const isPollPost = pollData !== null;
+
+  // Fetch poll votes
+  useEffect(() => {
+    if (!isPollPost) return;
+
+    const fetchPollVotes = async () => {
+      // Fetch all votes for this poll
+      const { data: votes } = await supabase
+        .from('poll_votes')
+        .select('option_index, user_id')
+        .eq('message_id', post.id);
+
+      if (votes) {
+        // Calculate vote counts
+        const counts: Record<number, number> = {};
+        votes.forEach(vote => {
+          counts[vote.option_index] = (counts[vote.option_index] || 0) + 1;
+        });
+        setPollVoteCounts(counts);
+
+        // Check if current user voted
+        if (user) {
+          const userVote = votes.find(v => v.user_id === user.id);
+          setPollUserVote(userVote ? userVote.option_index : null);
+        }
+      }
+    };
+
+    fetchPollVotes();
+
+    // Subscribe to realtime updates
+    const channel = supabase
+      .channel(`poll-votes-${post.id}`)
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'poll_votes',
+          filter: `message_id=eq.${post.id}`
+        },
+        (payload) => {
+          const newVote = payload.new as { option_index: number; user_id: string };
+          setPollVoteCounts(prev => ({
+            ...prev,
+            [newVote.option_index]: (prev[newVote.option_index] || 0) + 1
+          }));
+          if (user && newVote.user_id === user.id) {
+            setPollUserVote(newVote.option_index);
+          }
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [post.id, isPollPost, user]);
+
+  const handlePollVote = async (optionIndex: number) => {
+    if (!user) {
+      toast.error('Sign in to vote');
+      return;
+    }
+    if (pollUserVote !== null) return;
+
+    const { error } = await supabase
+      .from('poll_votes')
+      .insert({
+        message_id: post.id,
+        user_id: user.id,
+        option_index: optionIndex
+      });
+
+    if (error) {
+      if (error.code === '23505') {
+        toast.error('You already voted on this poll');
+      } else {
+        toast.error('Failed to vote');
+      }
+    }
+  };
   
   return (
     <>
@@ -225,8 +313,9 @@ export default function PostCard({ post, onUpvote, onDownvote, onOpenThread, isL
               <PollCard
                 question={pollData.question}
                 options={pollData.options}
-                userVote={null}
-                voteCounts={{}}
+                userVote={pollUserVote}
+                voteCounts={pollVoteCounts}
+                onVote={handlePollVote}
                 compact
               />
             </div>

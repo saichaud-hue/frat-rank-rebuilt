@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { ChevronUp, ChevronDown, MessageCircle, Send, X, CornerDownRight, Clock, MoreHorizontal, Flag } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
@@ -11,8 +11,12 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import ReportContentDialog from '@/components/moderation/ReportContentDialog';
+import PollCard, { parsePollFromText } from '@/components/activity/PollCard';
 import { cn } from '@/lib/utils';
 import { formatDistanceToNow } from 'date-fns';
+import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/contexts/AuthContext';
+import { toast } from 'sonner';
 import type { Post } from './PostCard';
 export interface Comment {
   id: string;
@@ -150,10 +154,96 @@ export default function ThreadView({
   onCommentVote, 
   onAddComment 
 }: ThreadViewProps) {
+  const { user } = useAuth();
   const [commentText, setCommentText] = useState('');
   const [replyingTo, setReplyingTo] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [reportingComment, setReportingComment] = useState<{ id: string; text: string } | null>(null);
+  const [pollUserVote, setPollUserVote] = useState<number | null>(null);
+  const [pollVoteCounts, setPollVoteCounts] = useState<Record<number, number>>({});
+  
+  // Check if this is a poll post
+  const pollData = post ? parsePollFromText(post.text) : null;
+  const isPollPost = pollData !== null;
+
+  // Fetch poll votes
+  useEffect(() => {
+    if (!post || !isPollPost) return;
+
+    const fetchPollVotes = async () => {
+      const { data: votes } = await supabase
+        .from('poll_votes')
+        .select('option_index, user_id')
+        .eq('message_id', post.id);
+
+      if (votes) {
+        const counts: Record<number, number> = {};
+        votes.forEach(vote => {
+          counts[vote.option_index] = (counts[vote.option_index] || 0) + 1;
+        });
+        setPollVoteCounts(counts);
+
+        if (user) {
+          const userVote = votes.find(v => v.user_id === user.id);
+          setPollUserVote(userVote ? userVote.option_index : null);
+        }
+      }
+    };
+
+    fetchPollVotes();
+
+    const channel = supabase
+      .channel(`poll-votes-thread-${post.id}`)
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'poll_votes',
+          filter: `message_id=eq.${post.id}`
+        },
+        (payload) => {
+          const newVote = payload.new as { option_index: number; user_id: string };
+          setPollVoteCounts(prev => ({
+            ...prev,
+            [newVote.option_index]: (prev[newVote.option_index] || 0) + 1
+          }));
+          if (user && newVote.user_id === user.id) {
+            setPollUserVote(newVote.option_index);
+          }
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [post?.id, isPollPost, user]);
+
+  const handlePollVote = async (optionIndex: number) => {
+    if (!user) {
+      toast.error('Sign in to vote');
+      return;
+    }
+    if (!post || pollUserVote !== null) return;
+
+    const { error } = await supabase
+      .from('poll_votes')
+      .insert({
+        message_id: post.id,
+        user_id: user.id,
+        option_index: optionIndex
+      });
+
+    if (error) {
+      if (error.code === '23505') {
+        toast.error('You already voted on this poll');
+      } else {
+        toast.error('Failed to vote');
+      }
+    }
+  };
+
   if (!post) return null;
 
   const netVotes = post.upvotes - post.downvotes;
@@ -247,7 +337,19 @@ export default function ThreadView({
                       {formatDistanceToNow(new Date(post.created_date), { addSuffix: true })}
                     </span>
                   </div>
-                  <p className="text-[15px] leading-relaxed text-foreground">{post.text}</p>
+                  {isPollPost && pollData ? (
+                    <div className="mt-2">
+                      <PollCard
+                        question={pollData.question}
+                        options={pollData.options}
+                        userVote={pollUserVote}
+                        voteCounts={pollVoteCounts}
+                        onVote={handlePollVote}
+                      />
+                    </div>
+                  ) : (
+                    <p className="text-[15px] leading-relaxed text-foreground">{post.text}</p>
+                  )}
                 </div>
               </div>
             </div>
