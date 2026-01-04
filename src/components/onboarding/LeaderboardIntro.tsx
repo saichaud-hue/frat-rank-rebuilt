@@ -61,9 +61,9 @@ export default function LeaderboardIntro({ onComplete, onRate, fraternities }: L
 
             {/* Content - more compact */}
             <div className="text-center space-y-1">
-              <h2 className="text-xl font-bold">Frat Rankings</h2>
+              <h2 className="text-xl font-bold">Frat Leaderboard</h2>
               <p className="text-muted-foreground text-sm">
-                See which houses are on top
+                Who runs campus? You decide.
               </p>
             </div>
 
@@ -73,32 +73,32 @@ export default function LeaderboardIntro({ onComplete, onRate, fraternities }: L
                 <div className="w-6 h-6 rounded-full bg-blue-500/10 flex items-center justify-center shrink-0">
                   <BarChart3 className="h-3 w-3 text-blue-500" />
                 </div>
-                <span className="text-xs"><span className="font-semibold">All</span> — Combined</span>
+                <span className="text-xs"><span className="font-semibold">All</span> — Full rankings</span>
               </div>
               <div className="flex items-center gap-2 p-2 rounded-lg bg-muted/50">
                 <div className="w-6 h-6 rounded-full bg-purple-500/10 flex items-center justify-center shrink-0">
                   <Users className="h-3 w-3 text-purple-500" />
                 </div>
-                <span className="text-xs"><span className="font-semibold">Frats</span> — Rep scores</span>
+                <span className="text-xs"><span className="font-semibold">Frats</span> — Reputation</span>
               </div>
               <div className="flex items-center gap-2 p-2 rounded-lg bg-muted/50">
                 <div className="w-6 h-6 rounded-full bg-pink-500/10 flex items-center justify-center shrink-0">
                   <PartyPopper className="h-3 w-3 text-pink-500" />
                 </div>
-                <span className="text-xs"><span className="font-semibold">Parties</span> — Events</span>
+                <span className="text-xs"><span className="font-semibold">Parties</span> — Best events</span>
               </div>
               <div className="flex items-center gap-2 p-2 rounded-lg bg-muted/50">
                 <div className="w-6 h-6 rounded-full bg-orange-500/10 flex items-center justify-center shrink-0">
                   <Flame className="h-3 w-3 text-orange-500" />
                 </div>
-                <span className="text-xs"><span className="font-semibold">Hot</span> — Trending</span>
+                <span className="text-xs"><span className="font-semibold">Hot</span> — Rising now</span>
               </div>
             </div>
 
             {/* Tip */}
             <p className="text-center text-xs text-muted-foreground">
               <Star className="h-3 w-3 inline mr-1 text-amber-500" />
-              Tap any frat to rate them
+              Rate any house to influence the rankings
             </p>
 
             {/* Checkbox */}

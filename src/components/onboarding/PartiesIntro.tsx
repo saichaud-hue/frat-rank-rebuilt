@@ -41,9 +41,9 @@ export default function PartiesIntro({ onComplete, onSubmitParty }: PartiesIntro
 
           {/* Content - more compact */}
           <div className="text-center space-y-1">
-            <h2 className="text-xl font-bold">Campus Parties</h2>
+            <h2 className="text-xl font-bold">Party Central</h2>
             <p className="text-muted-foreground text-sm">
-              Find what's happening tonight
+              See what is happening on campus
             </p>
           </div>
 
@@ -53,32 +53,32 @@ export default function PartiesIntro({ onComplete, onSubmitParty }: PartiesIntro
               <div className="w-6 h-6 rounded-full bg-blue-500/10 flex items-center justify-center shrink-0">
                 <Clock className="h-3 w-3 text-blue-500" />
               </div>
-              <span className="text-xs"><span className="font-semibold">Live</span> — Happening now</span>
+              <span className="text-xs"><span className="font-semibold">Live</span> — Right now</span>
             </div>
             <div className="flex items-center gap-2 p-2 rounded-lg bg-muted/50">
               <div className="w-6 h-6 rounded-full bg-purple-500/10 flex items-center justify-center shrink-0">
                 <Calendar className="h-3 w-3 text-purple-500" />
               </div>
-              <span className="text-xs"><span className="font-semibold">Upcoming</span> — Soon</span>
+              <span className="text-xs"><span className="font-semibold">Upcoming</span> — This week</span>
             </div>
             <div className="flex items-center gap-2 p-2 rounded-lg bg-muted/50">
               <div className="w-6 h-6 rounded-full bg-pink-500/10 flex items-center justify-center shrink-0">
                 <Star className="h-3 w-3 text-pink-500" />
               </div>
-              <span className="text-xs"><span className="font-semibold">Ratings</span> — Reviews</span>
+              <span className="text-xs"><span className="font-semibold">Ratings</span> — Real reviews</span>
             </div>
             <div className="flex items-center gap-2 p-2 rounded-lg bg-muted/50">
               <div className="w-6 h-6 rounded-full bg-orange-500/10 flex items-center justify-center shrink-0">
                 <MapPin className="h-3 w-3 text-orange-500" />
               </div>
-              <span className="text-xs"><span className="font-semibold">Details</span> — Info</span>
+              <span className="text-xs"><span className="font-semibold">Details</span> — Full info</span>
             </div>
           </div>
 
           {/* Tip */}
           <p className="text-center text-xs text-muted-foreground">
             <Star className="h-3 w-3 inline mr-1 text-amber-500" />
-            Tap any party to rate it after attending
+            Rate parties after you go
           </p>
 
           {/* Checkbox */}
