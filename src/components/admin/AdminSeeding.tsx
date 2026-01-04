@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Loader2, Plus, Sparkles } from "lucide-react";
+import { Loader2, Plus, Sparkles, Trash2 } from "lucide-react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import {
@@ -15,6 +15,17 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 
 type Party = {
   id: string;
@@ -47,6 +58,10 @@ export function AdminSeeding() {
   // Post seeding state
   const [postText, setPostText] = useState("");
   const [postLoading, setPostLoading] = useState(false);
+
+  // Delete state
+  const [deletePartyRatingsLoading, setDeletePartyRatingsLoading] = useState(false);
+  const [deleteRepRatingsLoading, setDeleteRepRatingsLoading] = useState(false);
 
   // Fetch parties and fraternities
   const { data } = useQuery({
@@ -101,20 +116,29 @@ export function AdminSeeding() {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("Not authenticated");
 
-      const ratings = Array.from({ length: count }, () => ({
-        party_id: selectedParty,
-        user_id: user.id,
-        vibe_score: generateRandomScore(min, max),
-        music_score: generateRandomScore(min, max),
-        execution_score: generateRandomScore(min, max),
-        party_quality_score: generateRandomScore(min, max),
-      }));
+      // Insert ratings one by one to avoid any bulk insert issues
+      let successCount = 0;
+      for (let i = 0; i < count; i++) {
+        const rating = {
+          party_id: selectedParty,
+          user_id: user.id,
+          vibe_score: generateRandomScore(min, max),
+          music_score: generateRandomScore(min, max),
+          execution_score: generateRandomScore(min, max),
+          party_quality_score: generateRandomScore(min, max),
+        };
 
-      const { error } = await supabase.from("party_ratings").insert(ratings);
-      if (error) throw error;
+        const { error } = await supabase.from("party_ratings").insert(rating);
+        if (!error) successCount++;
+      }
 
-      toast.success(`Added ${count} party ratings`);
-      await queryClient.invalidateQueries({ queryKey: ["admin"] });
+      if (successCount > 0) {
+        toast.success(`Added ${successCount} party ratings`);
+        await queryClient.invalidateQueries({ queryKey: ["admin"] });
+        await queryClient.invalidateQueries({ queryKey: ["parties"] });
+      } else {
+        toast.error("Failed to add any ratings");
+      }
     } catch (err) {
       console.error(err);
       toast.error("Failed to add ratings");
@@ -148,13 +172,14 @@ export function AdminSeeding() {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("Not authenticated");
 
-      const ratings = Array.from({ length: count }, () => {
+      let successCount = 0;
+      for (let i = 0; i < count; i++) {
         const brotherhood = generateRandomScore(min, max);
         const community = generateRandomScore(min, max);
         const reputation = generateRandomScore(min, max);
         const combined = (brotherhood + community + reputation) / 3;
         
-        return {
+        const rating = {
           fraternity_id: selectedFrat,
           user_id: user.id,
           brotherhood_score: brotherhood,
@@ -162,13 +187,18 @@ export function AdminSeeding() {
           reputation_score: reputation,
           combined_score: Math.round(combined * 10) / 10,
         };
-      });
 
-      const { error } = await supabase.from("reputation_ratings").insert(ratings);
-      if (error) throw error;
+        const { error } = await supabase.from("reputation_ratings").insert(rating);
+        if (!error) successCount++;
+      }
 
-      toast.success(`Added ${count} reputation ratings`);
-      await queryClient.invalidateQueries({ queryKey: ["admin"] });
+      if (successCount > 0) {
+        toast.success(`Added ${successCount} reputation ratings`);
+        await queryClient.invalidateQueries({ queryKey: ["admin"] });
+        await queryClient.invalidateQueries({ queryKey: ["fraternities"] });
+      } else {
+        toast.error("Failed to add any ratings");
+      }
     } catch (err) {
       console.error(err);
       toast.error("Failed to add reputation ratings");
@@ -206,6 +236,64 @@ export function AdminSeeding() {
     }
   };
 
+  const deletePartyRatings = async () => {
+    if (!selectedParty) {
+      toast.error("Please select a party first");
+      return;
+    }
+
+    setDeletePartyRatingsLoading(true);
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error("Not authenticated");
+
+      const { error, count } = await supabase
+        .from("party_ratings")
+        .delete()
+        .eq("party_id", selectedParty)
+        .eq("user_id", user.id);
+
+      if (error) throw error;
+      toast.success(`Deleted ratings for this party`);
+      await queryClient.invalidateQueries({ queryKey: ["admin"] });
+      await queryClient.invalidateQueries({ queryKey: ["parties"] });
+    } catch (err) {
+      console.error(err);
+      toast.error("Failed to delete ratings");
+    } finally {
+      setDeletePartyRatingsLoading(false);
+    }
+  };
+
+  const deleteRepRatings = async () => {
+    if (!selectedFrat) {
+      toast.error("Please select a fraternity first");
+      return;
+    }
+
+    setDeleteRepRatingsLoading(true);
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error("Not authenticated");
+
+      const { error } = await supabase
+        .from("reputation_ratings")
+        .delete()
+        .eq("fraternity_id", selectedFrat)
+        .eq("user_id", user.id);
+
+      if (error) throw error;
+      toast.success(`Deleted reputation ratings for this fraternity`);
+      await queryClient.invalidateQueries({ queryKey: ["admin"] });
+      await queryClient.invalidateQueries({ queryKey: ["fraternities"] });
+    } catch (err) {
+      console.error(err);
+      toast.error("Failed to delete ratings");
+    } finally {
+      setDeleteRepRatingsLoading(false);
+    }
+  };
+
   return (
     <div className="space-y-4">
       {/* Party Ratings */}
@@ -213,7 +301,7 @@ export function AdminSeeding() {
         <CardHeader className="pb-3">
           <CardTitle className="text-sm flex items-center gap-2">
             <Sparkles className="h-4 w-4" />
-            Seed Party Ratings
+            Party Ratings
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-3">
@@ -246,7 +334,7 @@ export function AdminSeeding() {
               />
             </div>
             <div>
-              <Label className="text-xs">Min Score</Label>
+              <Label className="text-xs">Min</Label>
               <Input
                 type="number"
                 value={minScore}
@@ -258,7 +346,7 @@ export function AdminSeeding() {
               />
             </div>
             <div>
-              <Label className="text-xs">Max Score</Label>
+              <Label className="text-xs">Max</Label>
               <Input
                 type="number"
                 value={maxScore}
@@ -271,21 +359,52 @@ export function AdminSeeding() {
             </div>
           </div>
 
-          <Button 
-            onClick={seedPartyRatings} 
-            disabled={ratingLoading}
-            size="sm"
-            className="w-full"
-          >
-            {ratingLoading ? (
-              <Loader2 className="h-4 w-4 animate-spin" />
-            ) : (
-              <>
-                <Plus className="h-4 w-4 mr-1" />
-                Add Ratings
-              </>
-            )}
-          </Button>
+          <div className="flex gap-2">
+            <Button 
+              onClick={seedPartyRatings} 
+              disabled={ratingLoading}
+              size="sm"
+              className="flex-1"
+            >
+              {ratingLoading ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <>
+                  <Plus className="h-4 w-4 mr-1" />
+                  Add
+                </>
+              )}
+            </Button>
+            <AlertDialog>
+              <AlertDialogTrigger asChild>
+                <Button 
+                  variant="destructive" 
+                  size="sm"
+                  disabled={!selectedParty || deletePartyRatingsLoading}
+                >
+                  {deletePartyRatingsLoading ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <Trash2 className="h-4 w-4" />
+                  )}
+                </Button>
+              </AlertDialogTrigger>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>Delete Party Ratings?</AlertDialogTitle>
+                  <AlertDialogDescription>
+                    This will delete all your ratings for this party.
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel>Cancel</AlertDialogCancel>
+                  <AlertDialogAction onClick={deletePartyRatings}>
+                    Delete
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
+          </div>
         </CardContent>
       </Card>
 
@@ -294,7 +413,7 @@ export function AdminSeeding() {
         <CardHeader className="pb-3">
           <CardTitle className="text-sm flex items-center gap-2">
             <Sparkles className="h-4 w-4" />
-            Seed Reputation Ratings
+            Reputation Ratings
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-3">
@@ -327,7 +446,7 @@ export function AdminSeeding() {
               />
             </div>
             <div>
-              <Label className="text-xs">Min Score</Label>
+              <Label className="text-xs">Min</Label>
               <Input
                 type="number"
                 value={repMinScore}
@@ -339,7 +458,7 @@ export function AdminSeeding() {
               />
             </div>
             <div>
-              <Label className="text-xs">Max Score</Label>
+              <Label className="text-xs">Max</Label>
               <Input
                 type="number"
                 value={repMaxScore}
@@ -352,21 +471,52 @@ export function AdminSeeding() {
             </div>
           </div>
 
-          <Button 
-            onClick={seedReputationRatings} 
-            disabled={repRatingLoading}
-            size="sm"
-            className="w-full"
-          >
-            {repRatingLoading ? (
-              <Loader2 className="h-4 w-4 animate-spin" />
-            ) : (
-              <>
-                <Plus className="h-4 w-4 mr-1" />
-                Add Reputation Ratings
-              </>
-            )}
-          </Button>
+          <div className="flex gap-2">
+            <Button 
+              onClick={seedReputationRatings} 
+              disabled={repRatingLoading}
+              size="sm"
+              className="flex-1"
+            >
+              {repRatingLoading ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <>
+                  <Plus className="h-4 w-4 mr-1" />
+                  Add
+                </>
+              )}
+            </Button>
+            <AlertDialog>
+              <AlertDialogTrigger asChild>
+                <Button 
+                  variant="destructive" 
+                  size="sm"
+                  disabled={!selectedFrat || deleteRepRatingsLoading}
+                >
+                  {deleteRepRatingsLoading ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <Trash2 className="h-4 w-4" />
+                  )}
+                </Button>
+              </AlertDialogTrigger>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>Delete Reputation Ratings?</AlertDialogTitle>
+                  <AlertDialogDescription>
+                    This will delete all your ratings for this fraternity.
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel>Cancel</AlertDialogCancel>
+                  <AlertDialogAction onClick={deleteRepRatings}>
+                    Delete
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
+          </div>
         </CardContent>
       </Card>
 
@@ -385,7 +535,7 @@ export function AdminSeeding() {
               value={postText}
               onChange={(e) => setPostText(e.target.value)}
               placeholder="Enter post content..."
-              rows={3}
+              rows={2}
             />
           </div>
 
@@ -400,7 +550,7 @@ export function AdminSeeding() {
             ) : (
               <>
                 <Plus className="h-4 w-4 mr-1" />
-                Create Post
+                Create
               </>
             )}
           </Button>
