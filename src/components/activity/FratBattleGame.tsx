@@ -259,9 +259,9 @@ export default function FratBattleGame({
     };
 
     return (
-      <div className="flex flex-col h-full max-h-[75vh]">
-        {/* Top action bar - Save left, Share right - below the sheet X button */}
-        <div className="flex items-center justify-between py-2 px-1 border-b border-border mb-4">
+      <div className="flex flex-col h-[70vh]">
+        {/* Top action bar - Save left, Share right */}
+        <div className="flex items-center justify-between py-2 px-1 border-b border-border mb-3 shrink-0">
           <Button 
             variant="outline" 
             size="sm"
@@ -283,20 +283,20 @@ export default function FratBattleGame({
         </div>
 
         {/* Scrollable content */}
-        <div className="flex-1 overflow-y-auto space-y-4 pr-2">
+        <div className="flex-1 overflow-y-auto space-y-4 pr-2 min-h-0">
           <div className="text-center">
             <motion.div
               initial={{ scale: 0 }}
               animate={{ scale: 1 }}
-              className="w-16 h-16 mx-auto mb-3 rounded-full gradient-primary flex items-center justify-center"
+              className="w-14 h-14 mx-auto mb-2 rounded-full gradient-primary flex items-center justify-center"
             >
-              <Trophy className="h-8 w-8 text-white" />
+              <Trophy className="h-7 w-7 text-white" />
             </motion.div>
-            <h2 className="text-xl font-bold mb-1">Your Ranking!</h2>
-            <p className="text-sm text-muted-foreground">Based on your {TOTAL_MATCHUPS} head-to-head picks</p>
+            <h2 className="text-lg font-bold mb-0.5">Your Ranking!</h2>
+            <p className="text-xs text-muted-foreground">Based on your {TOTAL_MATCHUPS} head-to-head picks</p>
           </div>
 
-          <div className="space-y-2">
+          <div className="space-y-1.5 pb-2">
             {sortedResults.map((elo, idx) => {
               const frat = fraternities.find(f => f.id === elo.fratId);
               const tier = TIERS[idx];
@@ -307,17 +307,17 @@ export default function FratBattleGame({
                   key={elo.fratId}
                   initial={{ opacity: 0, x: -20 }}
                   animate={{ opacity: 1, x: 0 }}
-                  transition={{ delay: idx * 0.05 }}
+                  transition={{ delay: idx * 0.03 }}
                   className={cn(
-                    "p-3 rounded-xl border flex items-center gap-3",
+                    "p-2.5 rounded-xl border flex items-center gap-2.5",
                     tier.rowBg
                   )}
                 >
                   <div className={cn(
-                    "w-9 h-9 rounded-lg flex items-center justify-center text-white font-bold text-sm bg-gradient-to-br",
+                    "w-8 h-8 rounded-lg flex items-center justify-center text-white font-bold text-xs bg-gradient-to-br",
                     tier.color
                   )}>
-                    {idx === 0 ? <Crown className="h-4 w-4" /> : idx + 1}
+                    {idx === 0 ? <Crown className="h-3.5 w-3.5" /> : idx + 1}
                   </div>
                   <div className="flex-1 min-w-0">
                     <p className="font-semibold text-sm truncate">{frat.chapter}</p>
@@ -335,18 +335,18 @@ export default function FratBattleGame({
         </div>
 
         {/* Fixed bottom buttons */}
-        <div className="flex gap-3 pt-4 mt-4 border-t border-border">
+        <div className="flex gap-3 pt-3 mt-2 border-t border-border shrink-0" style={{ paddingBottom: 'max(env(safe-area-inset-bottom), 8px)' }}>
           <Button 
             variant="ghost" 
             onClick={onClose}
-            className="flex-1 rounded-xl"
+            className="flex-1 rounded-xl h-11"
           >
             <ChevronLeft className="h-4 w-4 mr-2" />
             Cancel
           </Button>
           <Button 
             onClick={handleSubmitRanking}
-            className="flex-1 rounded-xl gradient-primary"
+            className="flex-1 rounded-xl gradient-primary h-11"
           >
             Use This Ranking
           </Button>
