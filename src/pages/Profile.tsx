@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef, useMemo } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { User, PartyPopper, LogIn, Award, ChevronRight, Pencil, Trash2, Trophy, MessageCircle, Image, Lock, X, ListOrdered, Star, Users, Shield, Heart, Sparkles, Music, Zap, CheckCircle2, Loader2, Share2, Swords, ChevronDown, LogOut } from 'lucide-react';
+import { cn } from '@/lib/utils';
 import PollCard, { parsePollFromText } from '@/components/activity/PollCard';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
@@ -699,9 +700,16 @@ export default function Profile() {
             <h1 className="text-xl font-bold truncate">{user.name}</h1>
             <p className="text-sm text-muted-foreground truncate">{user.email}</p>
             <div className="flex items-center gap-3 mt-2">
-              <Badge variant="secondary" className="font-medium">
+              <button
+                onClick={() => {}}
+                className={cn(
+                  "px-3 py-1 rounded-full text-xs font-semibold shadow-md transition-all hover:scale-105",
+                  levelInfo.color,
+                  levelInfo.textColor
+                )}
+              >
                 Lvl {levelInfo.level} · {levelInfo.name}
-              </Badge>
+              </button>
               <StreakDisplay 
                 streak={streak} 
                 hoursRemaining={hoursRemaining} 

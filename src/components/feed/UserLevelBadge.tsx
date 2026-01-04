@@ -25,9 +25,9 @@ export default function UserLevelBadge({ points, compact = false, className }: U
     return (
       <>
         <button
-          onClick={() => setShowLevels(true)}
+          onClick={(e) => { e.stopPropagation(); setShowLevels(true); }}
           className={cn(
-            "px-1.5 py-0.5 rounded text-xs font-medium transition-opacity hover:opacity-80",
+            "px-2.5 py-0.5 rounded-full text-[11px] font-semibold transition-all hover:scale-105 shadow-sm",
             level.color,
             level.textColor,
             className
@@ -43,9 +43,9 @@ export default function UserLevelBadge({ points, compact = false, className }: U
   return (
     <>
       <button
-        onClick={() => setShowLevels(true)}
+        onClick={(e) => { e.stopPropagation(); setShowLevels(true); }}
         className={cn(
-          "px-2.5 py-1 rounded-lg text-xs font-semibold transition-all hover:scale-105 hover:shadow-md",
+          "px-3 py-1 rounded-full text-xs font-semibold transition-all hover:scale-105 shadow-md",
           level.color,
           level.textColor,
           className
