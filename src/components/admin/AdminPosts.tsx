@@ -18,7 +18,7 @@ type Post = {
   user_id: string;
   deleted_at: string | null;
   deleted_by: string | null;
-  is_locked: boolean | null;
+  locked: boolean | null;
 };
 
 type Profile = {
@@ -27,10 +27,10 @@ type Profile = {
 };
 
 async function fetchAdminPosts() {
-  // Note: new columns (deleted_at, deleted_by, is_locked) may not be in types yet
+  // Note: new columns (deleted_at, deleted_by, locked) may not be in types yet
   const { data, error } = await supabase
     .from("chat_messages")
-    .select("id,text,created_at,upvotes,downvotes,user_id,deleted_at,deleted_by,is_locked" as any)
+    .select("id,text,created_at,upvotes,downvotes,user_id,deleted_at,deleted_by,locked" as any)
     .order("created_at", { ascending: false })
     .limit(50);
 
@@ -117,9 +117,14 @@ export function AdminPosts() {
   const toggleLock = async (id: string, isLocked: boolean) => {
     setActionLoading(id);
     try {
+      const { data: userData } = await supabase.auth.getUser();
       // Note: new column may not be in types yet
       const { error } = await (supabase.from("chat_messages") as any)
-        .update({ is_locked: !isLocked })
+        .update({ 
+          locked: !isLocked,
+          locked_by: !isLocked ? userData.user?.id : null,
+          locked_at: !isLocked ? new Date().toISOString() : null,
+        })
         .eq("id", id);
 
       if (error) throw error;
@@ -189,7 +194,7 @@ export function AdminPosts() {
         {items.map((p) => {
           const userEmail = emails[p.user_id];
           const isDeleted = !!p.deleted_at;
-          const isLocked = !!p.is_locked;
+          const isLocked = !!p.locked;
           
           return (
             <div 
