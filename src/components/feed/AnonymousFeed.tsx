@@ -635,6 +635,7 @@ export default function AnonymousFeed({ initialSort }: AnonymousFeedProps) {
                 onUpvote={() => handlePostVote(post.id, 1)}
                 onDownvote={() => handlePostVote(post.id, -1)}
                 onOpenThread={() => setSelectedPost(post)}
+                fraternities={fraternities.map(f => ({ id: f.id, name: f.name }))}
               />
             ))
           )}
