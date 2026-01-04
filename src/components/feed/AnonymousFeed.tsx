@@ -290,7 +290,10 @@ export default function AnonymousFeed({ initialSort }: AnonymousFeedProps) {
       }
       postText = `🏆 My Frat Ranking\n${filledTiers.map(([tier, frat]) => `${tier}: ${frat!.name}`).join('\n')}`;
     } else if (composerMode === 'mention' && selectedMention) {
-      postText = mentionText || `Shoutout to @${selectedMention.name}`;
+      // Always include the frat tag in the post text
+      postText = mentionText.trim() 
+        ? `@${selectedMention.name} ${mentionText.trim()}`
+        : `Shoutout to @${selectedMention.name}`;
       mentionedFratId = selectedMention.id;
     }
 
