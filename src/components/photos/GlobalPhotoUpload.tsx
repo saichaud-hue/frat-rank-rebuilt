@@ -1,4 +1,4 @@
-import { useState, useRef, useCallback } from 'react';
+import { useState, useRef, useCallback, useEffect } from 'react';
 import { X, Upload, Image, Loader2, CheckCircle2, AlertCircle, Lock, Globe, Share2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -15,6 +15,7 @@ import { base44 } from '@/api/base44Client';
 import { recomputePartyCoverPhoto } from './photoUtils';
 import { toast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
+import { validateFile, stripExifData, getAllowedFileTypes, getAcceptString, type AllowedFileType } from '@/lib/fileValidation';
 
 interface GlobalPhotoUploadProps {
   partyId: string;
@@ -39,19 +40,24 @@ export default function GlobalPhotoUpload({ partyId, onClose, onUploadSuccess }:
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isDragOver, setIsDragOver] = useState(false);
+  const [allowedTypes, setAllowedTypes] = useState<AllowedFileType[]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const processFiles = useCallback((selectedFiles: File[]) => {
+  // Fetch allowed file types on mount
+  useEffect(() => {
+    getAllowedFileTypes().then(setAllowedTypes);
+  }, []);
+
+  const processFiles = useCallback(async (selectedFiles: File[]) => {
     setError(null);
     const validFiles: PreviewFile[] = [];
+    const errors: string[] = [];
 
     for (const file of selectedFiles) {
-      if (!file.type.startsWith('image/')) {
-        setError('Please select only image files');
-        continue;
-      }
-      if (file.size > 10 * 1024 * 1024) {
-        setError('Each file must be less than 10MB');
+      // Validate against database rules
+      const validation = await validateFile(file);
+      if (!validation.valid) {
+        errors.push(`${file.name}: ${validation.error}`);
         continue;
       }
       
@@ -61,6 +67,10 @@ export default function GlobalPhotoUpload({ partyId, onClose, onUploadSuccess }:
         preview: URL.createObjectURL(file),
         caption: '',
       });
+    }
+
+    if (errors.length > 0) {
+      setError(errors.join('. '));
     }
 
     if (validFiles.length > 0) {
@@ -154,7 +164,9 @@ export default function GlobalPhotoUpload({ partyId, onClose, onUploadSuccess }:
       
       for (const { file, caption } of files) {
         try {
-          const { url } = await base44.integrations.Core.UploadFile({ file });
+          // Strip EXIF data before upload
+          const cleanedFile = await stripExifData(file);
+          const { url } = await base44.integrations.Core.UploadFile({ file: cleanedFile });
 
           await base44.entities.PartyPhoto.create({
             party_id: partyId,
@@ -344,7 +356,7 @@ export default function GlobalPhotoUpload({ partyId, onClose, onUploadSuccess }:
             <input
               ref={fileInputRef}
               type="file"
-              accept="image/*"
+              accept={allowedTypes.length > 0 ? getAcceptString(allowedTypes) : "image/*"}
               multiple
               onChange={handleFileSelect}
               className="hidden"
