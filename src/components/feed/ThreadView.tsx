@@ -197,20 +197,14 @@ export default function ThreadView({
       .on(
         'postgres_changes',
         {
-          event: 'INSERT',
+          event: '*',
           schema: 'public',
           table: 'poll_votes',
           filter: `message_id=eq.${post.id}`
         },
-        (payload) => {
-          const newVote = payload.new as { option_index: number; user_id: string };
-          setPollVoteCounts(prev => ({
-            ...prev,
-            [newVote.option_index]: (prev[newVote.option_index] || 0) + 1
-          }));
-          if (user && newVote.user_id === user.id) {
-            setPollUserVote(newVote.option_index);
-          }
+        () => {
+          // Refetch votes on any change
+          fetchPollVotes();
         }
       )
       .subscribe();
@@ -225,21 +219,70 @@ export default function ThreadView({
       toast.error('Sign in to vote');
       return;
     }
-    if (!post || pollUserVote !== null) return;
+    if (!post) return;
 
-    const { error } = await supabase
-      .from('poll_votes')
-      .insert({
-        message_id: post.id,
-        user_id: user.id,
-        option_index: optionIndex
-      });
+    // If clicking the same option, remove vote
+    if (pollUserVote === optionIndex) {
+      setPollVoteCounts(prev => ({
+        ...prev,
+        [optionIndex]: Math.max(0, (prev[optionIndex] || 0) - 1)
+      }));
+      setPollUserVote(null);
 
-    if (error) {
-      if (error.code === '23505') {
-        toast.error('You already voted on this poll');
-      } else {
-        toast.error('Failed to vote');
+      const { error } = await supabase
+        .from('poll_votes')
+        .delete()
+        .eq('message_id', post.id)
+        .eq('user_id', user.id);
+
+      if (error) {
+        toast.error('Failed to remove vote');
+      }
+      return;
+    }
+
+    // If changing vote, update counts optimistically
+    if (pollUserVote !== null) {
+      setPollVoteCounts(prev => ({
+        ...prev,
+        [pollUserVote]: Math.max(0, (prev[pollUserVote] || 0) - 1),
+        [optionIndex]: (prev[optionIndex] || 0) + 1
+      }));
+    } else {
+      setPollVoteCounts(prev => ({
+        ...prev,
+        [optionIndex]: (prev[optionIndex] || 0) + 1
+      }));
+    }
+    setPollUserVote(optionIndex);
+
+    if (pollUserVote !== null) {
+      // Update existing vote
+      const { error } = await supabase
+        .from('poll_votes')
+        .update({ option_index: optionIndex })
+        .eq('message_id', post.id)
+        .eq('user_id', user.id);
+
+      if (error) {
+        toast.error('Failed to change vote');
+      }
+    } else {
+      // Insert new vote
+      const { error } = await supabase
+        .from('poll_votes')
+        .insert({
+          message_id: post.id,
+          user_id: user.id,
+          option_index: optionIndex
+        });
+
+      if (error) {
+        if (error.code === '23505') {
+          toast.error('You already voted on this poll');
+        } else {
+          toast.error('Failed to vote');
+        }
       }
     }
   };

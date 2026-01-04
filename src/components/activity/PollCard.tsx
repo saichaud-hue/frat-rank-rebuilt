@@ -50,16 +50,14 @@ export default function PollCard({
           return (
             <button
               key={index}
-              onClick={() => !hasVoted && onVote?.(index)}
-              disabled={hasVoted || !onVote}
+              onClick={() => onVote?.(index)}
+              disabled={!onVote}
               className={cn(
                 "w-full rounded-xl text-left transition-all relative overflow-hidden",
                 compact ? "p-2.5" : "p-3",
-                hasVoted 
-                  ? "cursor-default" 
-                  : onVote 
-                    ? "hover:bg-primary/5 active:scale-[0.99] cursor-pointer" 
-                    : "cursor-default",
+                onVote 
+                  ? "hover:bg-primary/5 active:scale-[0.99] cursor-pointer" 
+                  : "cursor-default",
                 isSelected 
                   ? "border-2 border-primary bg-primary/5" 
                   : "border border-border/50 bg-muted/30"
@@ -119,8 +117,10 @@ export default function PollCard({
         <p className={cn("text-muted-foreground", compact ? "text-xs" : "text-xs")}>
           {totalVotes} {totalVotes === 1 ? 'vote' : 'votes'}
         </p>
-        {!hasVoted && onVote && (
-          <p className="text-xs text-primary font-medium">Tap to vote</p>
+        {onVote && (
+          <p className="text-xs text-primary font-medium">
+            {hasVoted ? 'Tap to change' : 'Tap to vote'}
+          </p>
         )}
       </div>
     </div>
