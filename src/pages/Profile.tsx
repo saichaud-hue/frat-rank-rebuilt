@@ -1356,7 +1356,7 @@ export default function Profile() {
                 <p className="text-muted-foreground">No private photos yet</p>
               </div>
             ) : (
-              <div className="p-4 space-y-4">
+              <div className="p-4 space-y-6">
                 {Object.entries(
                   privatePhotos.reduce((acc, photo) => {
                     const partyId = photo.party_id;
@@ -1367,15 +1367,23 @@ export default function Profile() {
                     return acc;
                   }, {} as Record<string, { party: any; fraternity: any; photos: typeof privatePhotos }>)
                 ).map(([partyId, group]) => (
-                  <div key={partyId} className="space-y-2">
-                    <Link to={`/Party?id=${partyId}`} className="flex items-center gap-3 p-3 rounded-xl bg-background hover:bg-muted/50 transition-colors">
-                      <Image className="h-5 w-5 text-muted-foreground" />
-                      <div className="flex-1 min-w-0">
-                        <p className="font-medium truncate">{group.party?.title || 'Party'}</p>
-                        <p className="text-xs text-muted-foreground">{group.fraternity?.name} · {group.photos.length} photo{group.photos.length !== 1 ? 's' : ''}</p>
-                      </div>
-                      <ChevronRight className="h-5 w-5 text-muted-foreground" />
-                    </Link>
+                  <div key={partyId} className="space-y-3">
+                    <div className="space-y-1">
+                      <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Associated Party</p>
+                      <Link to={`/Party?id=${partyId}`} className="flex items-center gap-3 p-3 rounded-xl bg-background border border-border/50 hover:bg-muted/50 transition-colors">
+                        <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center">
+                          <PartyPopper className="h-5 w-5 text-primary" />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="font-semibold truncate">{group.party?.title || 'Party'}</p>
+                          <p className="text-xs text-muted-foreground">{group.fraternity?.name}</p>
+                        </div>
+                        <div className="text-right">
+                          <p className="text-xs text-muted-foreground">{group.photos.length} photo{group.photos.length !== 1 ? 's' : ''}</p>
+                          <ChevronRight className="h-4 w-4 text-muted-foreground ml-auto" />
+                        </div>
+                      </Link>
+                    </div>
                     <div className="grid grid-cols-3 gap-2">
                       {group.photos.map((photo) => (
                         <div key={photo.id} className="relative aspect-square group">
@@ -1385,6 +1393,7 @@ export default function Profile() {
                             className="w-full h-full object-cover rounded-lg cursor-pointer"
                             onClick={() => setViewingPhoto(photo)}
                           />
+                          <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors rounded-lg pointer-events-none" />
                           <Button
                             variant="ghost"
                             size="icon"
