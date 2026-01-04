@@ -29,17 +29,17 @@ export const POINT_VALUES = {
   mark_attendance: 3,
 } as const;
 
-// 9 levels from Lower Bouse to Upper Touse
+// 9 levels from Lower Bouse to Upper Touse (darker colors at bottom, brighter at top)
 export const LEVELS = [
-  { level: 1, name: 'Lower Bouse', minPoints: 0, maxPoints: 24, color: 'bg-slate-500' },
-  { level: 2, name: 'Bouse', minPoints: 25, maxPoints: 74, color: 'bg-slate-600' },
-  { level: 3, name: 'Upper Bouse', minPoints: 75, maxPoints: 149, color: 'bg-amber-600' },
-  { level: 4, name: 'Lower Mouse', minPoints: 150, maxPoints: 299, color: 'bg-amber-500' },
-  { level: 5, name: 'Mouse', minPoints: 300, maxPoints: 499, color: 'bg-yellow-500' },
-  { level: 6, name: 'Upper Mouse', minPoints: 500, maxPoints: 799, color: 'bg-emerald-500' },
-  { level: 7, name: 'Lower Touse', minPoints: 800, maxPoints: 1199, color: 'bg-blue-500' },
-  { level: 8, name: 'Touse', minPoints: 1200, maxPoints: 1999, color: 'bg-purple-500' },
-  { level: 9, name: 'Upper Touse', minPoints: 2000, maxPoints: Infinity, color: 'bg-gradient-to-r from-purple-500 via-pink-500 to-orange-500' },
+  { level: 1, name: 'Lower Bouse', minPoints: 0, maxPoints: 24, color: 'bg-stone-600', textColor: 'text-stone-100' },
+  { level: 2, name: 'Bouse', minPoints: 25, maxPoints: 74, color: 'bg-stone-500', textColor: 'text-stone-100' },
+  { level: 3, name: 'Upper Bouse', minPoints: 75, maxPoints: 149, color: 'bg-amber-700', textColor: 'text-amber-100' },
+  { level: 4, name: 'Lower Mouse', minPoints: 150, maxPoints: 299, color: 'bg-amber-500', textColor: 'text-amber-950' },
+  { level: 5, name: 'Mouse', minPoints: 300, maxPoints: 499, color: 'bg-yellow-400', textColor: 'text-yellow-950' },
+  { level: 6, name: 'Upper Mouse', minPoints: 500, maxPoints: 799, color: 'bg-emerald-500', textColor: 'text-emerald-950' },
+  { level: 7, name: 'Lower Touse', minPoints: 800, maxPoints: 1199, color: 'bg-sky-500', textColor: 'text-sky-950' },
+  { level: 8, name: 'Touse', minPoints: 1200, maxPoints: 1999, color: 'bg-violet-500', textColor: 'text-violet-100' },
+  { level: 9, name: 'Upper Touse', minPoints: 2000, maxPoints: Infinity, color: 'bg-gradient-to-r from-amber-400 via-rose-500 to-violet-600', textColor: 'text-white' },
 ] as const;
 
 export type ActionType = keyof typeof POINT_VALUES;
