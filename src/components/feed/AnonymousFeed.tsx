@@ -1,10 +1,11 @@
 import { useState, useMemo, useEffect, useCallback, useRef } from 'react';
-import { Plus, Flame, Clock, TrendingUp, Loader2, Send, AtSign, Trophy, BarChart3, X, ChevronLeft } from 'lucide-react';
+import { Plus, Flame, Clock, TrendingUp, Loader2, Send, AtSign, Trophy, BarChart3, X, ChevronLeft, Swords, ListOrdered, Check } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { Input } from '@/components/ui/input';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { cn } from '@/lib/utils';
 import PostCard, { type Post } from './PostCard';
 import ThreadView, { type Comment } from './ThreadView';
@@ -14,6 +15,8 @@ import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { useRateLimit } from '@/hooks/useRateLimit';
 import { postSchema, commentSchema, validateInput } from '@/lib/validationSchemas';
+import { getFratGreek, getFratShorthand } from '@/utils';
+import { useNavigate } from 'react-router-dom';
 
 type SortType = 'hot' | 'new' | 'top';
 
@@ -51,7 +54,7 @@ export default function AnonymousFeed({ initialSort }: AnonymousFeedProps) {
   const [loading, setLoading] = useState(true);
   const [sortBy, setSortBy] = useState<SortType>(initialSort || 'hot');
   const [showComposer, setShowComposer] = useState(false);
-  const [composerMode, setComposerMode] = useState<'text' | 'mention' | 'ranking' | 'poll'>('text');
+  const [composerMode, setComposerMode] = useState<'menu' | 'text' | 'mention' | 'ranking' | 'ranking-manual' | 'poll'>('menu');
   const [newPostText, setNewPostText] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [selectedPost, setSelectedPost] = useState<Post | null>(null);
@@ -60,25 +63,40 @@ export default function AnonymousFeed({ initialSort }: AnonymousFeedProps) {
   const [pollQuestion, setPollQuestion] = useState('');
   const [pollOptions, setPollOptions] = useState(['', '']);
   
-  // Ranking creation state (simplified - user types frat names)
-  const [rankingTiers, setRankingTiers] = useState<Record<string, string>>({
-    'Upper Touse': '',
-    'Touse': '',
-    'Lower Touse': '',
-    'Upper Mouse': '',
-    'Mouse': '',
-    'Lower Mouse': '',
-    'Upper Bouse': '',
-    'Bouse': '',
-    'Lower Bouse': '',
+  // Ranking creation state - map tier to frat id
+  const [rankingTiers, setRankingTiers] = useState<Record<string, { id: string; name: string } | null>>({
+    'Upper Touse': null,
+    'Touse': null,
+    'Lower Touse': null,
+    'Upper Mouse': null,
+    'Mouse': null,
+    'Lower Mouse': null,
+    'Upper Bouse': null,
+    'Bouse': null,
+    'Lower Bouse': null,
   });
+  const [activeTier, setActiveTier] = useState<string | null>(null);
   
   // Mention state
   const [mentionText, setMentionText] = useState('');
-  const [selectedMention, setSelectedMention] = useState<{ type: 'frat' | 'party'; id: string; name: string } | null>(null);
+  const [selectedMention, setSelectedMention] = useState<{ id: string; name: string } | null>(null);
+  
+  // Fraternities list
+  const [fraternities, setFraternities] = useState<Array<{ id: string; name: string; chapter?: string; logo_url?: string }>>([]);
   
   // Lock to prevent rapid clicking from causing duplicate votes
   const votingLock = useRef<Set<string>>(new Set());
+  
+  const navigate = useNavigate();
+  
+  // Load fraternities
+  useEffect(() => {
+    const loadFrats = async () => {
+      const { data } = await supabase.from('fraternities').select('id, name, chapter, logo_url').order('name');
+      if (data) setFraternities(data);
+    };
+    loadFrats();
+  }, []);
 
   const userAnonName = useMemo(() => {
     const seed = user?.id || `anon-${Date.now()}`;
@@ -215,14 +233,15 @@ export default function AnonymousFeed({ initialSort }: AnonymousFeedProps) {
 
   const resetComposer = () => {
     setNewPostText('');
-    setComposerMode('text');
+    setComposerMode('menu');
     setPollQuestion('');
     setPollOptions(['', '']);
     setRankingTiers({
-      'Upper Touse': '', 'Touse': '', 'Lower Touse': '',
-      'Upper Mouse': '', 'Mouse': '', 'Lower Mouse': '',
-      'Upper Bouse': '', 'Bouse': '', 'Lower Bouse': '',
+      'Upper Touse': null, 'Touse': null, 'Lower Touse': null,
+      'Upper Mouse': null, 'Mouse': null, 'Lower Mouse': null,
+      'Upper Bouse': null, 'Bouse': null, 'Lower Bouse': null,
     });
+    setActiveTier(null);
     setMentionText('');
     setSelectedMention(null);
   };
@@ -230,7 +249,6 @@ export default function AnonymousFeed({ initialSort }: AnonymousFeedProps) {
   const handleCreatePost = async () => {
     let postText = newPostText;
     let mentionedFratId: string | null = null;
-    let mentionedPartyId: string | null = null;
 
     // Build text based on mode
     if (composerMode === 'poll') {
@@ -240,20 +258,16 @@ export default function AnonymousFeed({ initialSort }: AnonymousFeedProps) {
       }
       const validOptions = pollOptions.filter(o => o.trim());
       postText = `POLL:${pollQuestion}\n${validOptions.map(o => `OPTION:${o}`).join('\n')}`;
-    } else if (composerMode === 'ranking') {
-      const filledTiers = Object.entries(rankingTiers).filter(([_, frat]) => frat.trim());
+    } else if (composerMode === 'ranking-manual') {
+      const filledTiers = Object.entries(rankingTiers).filter(([_, frat]) => frat !== null);
       if (filledTiers.length < 3) {
         toast.error('Fill in at least 3 tier rankings');
         return;
       }
-      postText = `🏆 My Frat Ranking\n${filledTiers.map(([tier, frat]) => `${tier}: ${frat}`).join('\n')}`;
+      postText = `🏆 My Frat Ranking\n${filledTiers.map(([tier, frat]) => `${tier}: ${frat!.name}`).join('\n')}`;
     } else if (composerMode === 'mention' && selectedMention) {
       postText = mentionText || `Shoutout to @${selectedMention.name}`;
-      if (selectedMention.type === 'frat') {
-        mentionedFratId = selectedMention.id;
-      } else {
-        mentionedPartyId = selectedMention.id;
-      }
+      mentionedFratId = selectedMention.id;
     }
 
     // Validate input
@@ -278,7 +292,7 @@ export default function AnonymousFeed({ initialSort }: AnonymousFeedProps) {
         user_id: currentUser.id,
         parent_message_id: null,
         mentioned_fraternity_id: mentionedFratId,
-        mentioned_party_id: mentionedPartyId,
+        mentioned_party_id: null,
         upvotes: 0,
         downvotes: 0,
       });
@@ -612,8 +626,8 @@ export default function AnonymousFeed({ initialSort }: AnonymousFeedProps) {
           <div className="p-4 pt-6 space-y-4">
             {/* Header */}
             <div className="flex items-center justify-between">
-              {composerMode !== 'text' ? (
-                <button onClick={() => setComposerMode('text')} className="flex items-center gap-1 text-muted-foreground">
+              {composerMode !== 'menu' ? (
+                <button onClick={() => setComposerMode('menu')} className="flex items-center gap-1 text-muted-foreground">
                   <ChevronLeft className="h-4 w-4" />
                   <span className="text-sm">Back</span>
                 </button>
@@ -622,6 +636,40 @@ export default function AnonymousFeed({ initialSort }: AnonymousFeedProps) {
               )}
               <span className="text-sm text-muted-foreground">as {userAnonName}</span>
             </div>
+
+            {/* Mode: Menu (default) */}
+            {composerMode === 'menu' && (
+              <div className="grid grid-cols-2 gap-3">
+                <button
+                  onClick={() => setComposerMode('text')}
+                  className="flex flex-col items-center gap-2 p-4 rounded-xl bg-muted/50 border border-border/50 hover:bg-muted active:scale-[0.98] transition-all"
+                >
+                  <Send className="h-6 w-6 text-primary" />
+                  <span className="font-medium text-sm">Text Post</span>
+                </button>
+                <button
+                  onClick={() => setComposerMode('mention')}
+                  className="flex flex-col items-center gap-2 p-4 rounded-xl bg-muted/50 border border-border/50 hover:bg-muted active:scale-[0.98] transition-all"
+                >
+                  <AtSign className="h-6 w-6 text-primary" />
+                  <span className="font-medium text-sm">Mention</span>
+                </button>
+                <button
+                  onClick={() => setComposerMode('ranking')}
+                  className="flex flex-col items-center gap-2 p-4 rounded-xl bg-muted/50 border border-border/50 hover:bg-muted active:scale-[0.98] transition-all"
+                >
+                  <Trophy className="h-6 w-6 text-amber-500" />
+                  <span className="font-medium text-sm">Frat Ranking</span>
+                </button>
+                <button
+                  onClick={() => setComposerMode('poll')}
+                  className="flex flex-col items-center gap-2 p-4 rounded-xl bg-muted/50 border border-border/50 hover:bg-muted active:scale-[0.98] transition-all"
+                >
+                  <BarChart3 className="h-6 w-6 text-primary" />
+                  <span className="font-medium text-sm">Poll</span>
+                </button>
+              </div>
+            )}
 
             {/* Mode: Text Post */}
             {composerMode === 'text' && (
@@ -632,32 +680,6 @@ export default function AnonymousFeed({ initialSort }: AnonymousFeedProps) {
                   onChange={(e) => setNewPostText(e.target.value)}
                   className="min-h-[100px] resize-none rounded-xl text-base"
                 />
-                
-                {/* Action buttons row */}
-                <div className="flex gap-2">
-                  <button
-                    onClick={() => setComposerMode('mention')}
-                    className="flex-1 flex items-center justify-center gap-2 py-3 rounded-xl bg-muted/50 border border-border/50 hover:bg-muted active:scale-[0.98] transition-all"
-                  >
-                    <AtSign className="h-5 w-5 text-primary" />
-                    <span className="font-medium text-sm">Mention</span>
-                  </button>
-                  <button
-                    onClick={() => setComposerMode('ranking')}
-                    className="flex-1 flex items-center justify-center gap-2 py-3 rounded-xl bg-muted/50 border border-border/50 hover:bg-muted active:scale-[0.98] transition-all"
-                  >
-                    <Trophy className="h-5 w-5 text-amber-500" />
-                    <span className="font-medium text-sm">Ranking</span>
-                  </button>
-                  <button
-                    onClick={() => setComposerMode('poll')}
-                    className="flex-1 flex items-center justify-center gap-2 py-3 rounded-xl bg-muted/50 border border-border/50 hover:bg-muted active:scale-[0.98] transition-all"
-                  >
-                    <BarChart3 className="h-5 w-5 text-primary" />
-                    <span className="font-medium text-sm">Poll</span>
-                  </button>
-                </div>
-
                 <Button
                   onClick={handleCreatePost}
                   disabled={!newPostText.trim() || submitting}
@@ -717,41 +739,141 @@ export default function AnonymousFeed({ initialSort }: AnonymousFeedProps) {
               </>
             )}
 
-            {/* Mode: Ranking */}
+            {/* Mode: Ranking choice (Battle vs Manual) */}
             {composerMode === 'ranking' && (
               <>
                 <div className="flex items-center gap-2 mb-2">
                   <Trophy className="h-5 w-5 text-amber-500" />
                   <h3 className="font-bold">Create Frat Ranking</h3>
                 </div>
-                <p className="text-xs text-muted-foreground">Fill in at least 3 tiers with frat names</p>
-                <ScrollArea className="h-[280px] -mx-2 px-2">
-                  <div className="space-y-2">
-                    {Object.entries(rankingTiers).map(([tier, value]) => (
-                      <div key={tier} className="flex items-center gap-2">
-                        <span className={cn(
-                          "w-24 text-xs font-medium shrink-0",
-                          tier.includes('Touse') && "text-emerald-500",
-                          tier.includes('Mouse') && "text-amber-500",
-                          tier.includes('Bouse') && "text-red-500"
-                        )}>{tier}</span>
-                        <Input
-                          placeholder="Frat name..."
-                          value={value}
-                          onChange={(e) => setRankingTiers(prev => ({ ...prev, [tier]: e.target.value }))}
-                          className="flex-1 rounded-lg h-9 text-sm"
-                        />
+                <p className="text-sm text-muted-foreground">Choose how to rank frats</p>
+                <div className="grid grid-cols-1 gap-3">
+                  <button
+                    onClick={() => navigate('/activity?tab=battle')}
+                    className="flex items-center gap-4 p-4 rounded-xl bg-gradient-to-r from-amber-500/10 to-orange-500/10 border border-amber-500/30 hover:border-amber-500/50 active:scale-[0.98] transition-all text-left"
+                  >
+                    <div className="h-12 w-12 rounded-xl bg-amber-500/20 flex items-center justify-center">
+                      <Swords className="h-6 w-6 text-amber-500" />
+                    </div>
+                    <div>
+                      <p className="font-semibold">Frat Battle</p>
+                      <p className="text-xs text-muted-foreground">Head-to-head matchups to rank frats</p>
+                    </div>
+                  </button>
+                  <button
+                    onClick={() => setComposerMode('ranking-manual')}
+                    className="flex items-center gap-4 p-4 rounded-xl bg-muted/50 border border-border/50 hover:bg-muted active:scale-[0.98] transition-all text-left"
+                  >
+                    <div className="h-12 w-12 rounded-xl bg-primary/10 flex items-center justify-center">
+                      <ListOrdered className="h-6 w-6 text-primary" />
+                    </div>
+                    <div>
+                      <p className="font-semibold">Manual Ranking</p>
+                      <p className="text-xs text-muted-foreground">Pick frats for each tier yourself</p>
+                    </div>
+                  </button>
+                </div>
+              </>
+            )}
+
+            {/* Mode: Manual Ranking */}
+            {composerMode === 'ranking-manual' && (
+              <>
+                <div className="flex items-center gap-2 mb-2">
+                  <Trophy className="h-5 w-5 text-amber-500" />
+                  <h3 className="font-bold">Manual Frat Ranking</h3>
+                </div>
+                <p className="text-xs text-muted-foreground">Tap a tier to assign a frat (at least 3)</p>
+                
+                {activeTier ? (
+                  // Frat picker for active tier
+                  <>
+                    <div className="flex items-center gap-2 mb-2">
+                      <button onClick={() => setActiveTier(null)} className="text-muted-foreground">
+                        <ChevronLeft className="h-4 w-4" />
+                      </button>
+                      <span className="font-semibold">{activeTier}</span>
+                    </div>
+                    <ScrollArea className="h-[300px] -mx-2 px-2">
+                      <div className="space-y-2 pb-4">
+                        {fraternities.map((frat) => {
+                          const isSelected = rankingTiers[activeTier]?.id === frat.id;
+                          const isUsedElsewhere = Object.entries(rankingTiers).some(
+                            ([tier, selected]) => tier !== activeTier && selected?.id === frat.id
+                          );
+                          return (
+                            <button
+                              key={frat.id}
+                              onClick={() => {
+                                setRankingTiers(prev => ({ ...prev, [activeTier]: { id: frat.id, name: frat.name } }));
+                                setActiveTier(null);
+                              }}
+                              disabled={isUsedElsewhere}
+                              className={cn(
+                                "w-full flex items-center gap-3 p-3 rounded-xl transition-all text-left",
+                                isSelected ? "bg-primary/10 border-2 border-primary" : "bg-muted/50 hover:bg-muted",
+                                isUsedElsewhere && "opacity-40"
+                              )}
+                            >
+                              <Avatar className="h-10 w-10 rounded-lg">
+                                <AvatarImage src={frat.logo_url || undefined} alt={frat.name} />
+                                <AvatarFallback className="rounded-lg bg-primary/10 text-primary font-bold text-xs">
+                                  {getFratGreek(frat.name)}
+                                </AvatarFallback>
+                              </Avatar>
+                              <div className="flex-1 min-w-0">
+                                <p className="font-semibold truncate">{frat.chapter || getFratShorthand(frat.name)}</p>
+                                <p className="text-xs text-muted-foreground truncate">{frat.name}</p>
+                              </div>
+                              {isSelected && <Check className="h-5 w-5 text-primary" />}
+                            </button>
+                          );
+                        })}
                       </div>
-                    ))}
-                  </div>
-                </ScrollArea>
-                <Button
-                  onClick={handleCreatePost}
-                  disabled={Object.values(rankingTiers).filter(v => v.trim()).length < 3 || submitting}
-                  className="w-full rounded-xl gradient-primary h-12"
-                >
-                  {submitting ? <Loader2 className="h-4 w-4 animate-spin" /> : <><Send className="h-4 w-4 mr-2" /> Post Ranking</>}
-                </Button>
+                    </ScrollArea>
+                  </>
+                ) : (
+                  // Tier list
+                  <>
+                    <ScrollArea className="h-[280px] -mx-2 px-2">
+                      <div className="space-y-2">
+                        {Object.entries(rankingTiers).map(([tier, selectedFrat]) => (
+                          <button
+                            key={tier}
+                            onClick={() => setActiveTier(tier)}
+                            className="w-full flex items-center gap-3 p-3 rounded-xl bg-muted/50 hover:bg-muted active:scale-[0.98] transition-all text-left"
+                          >
+                            <span className={cn(
+                              "w-24 text-xs font-medium shrink-0",
+                              tier.includes('Touse') && "text-emerald-500",
+                              tier.includes('Mouse') && "text-amber-500",
+                              tier.includes('Bouse') && "text-red-500"
+                            )}>{tier}</span>
+                            {selectedFrat ? (
+                              <div className="flex items-center gap-2 flex-1">
+                                <Avatar className="h-8 w-8 rounded-lg">
+                                  <AvatarFallback className="rounded-lg bg-primary/10 text-primary font-bold text-xs">
+                                    {getFratGreek(selectedFrat.name)}
+                                  </AvatarFallback>
+                                </Avatar>
+                                <span className="text-sm font-medium truncate">{selectedFrat.name}</span>
+                              </div>
+                            ) : (
+                              <span className="text-sm text-muted-foreground">Tap to select...</span>
+                            )}
+                          </button>
+                        ))}
+                      </div>
+                    </ScrollArea>
+                    <Button
+                      onClick={handleCreatePost}
+                      disabled={Object.values(rankingTiers).filter(v => v !== null).length < 3 || submitting}
+                      className="w-full rounded-xl gradient-primary h-12"
+                    >
+                      {submitting ? <Loader2 className="h-4 w-4 animate-spin" /> : <><Send className="h-4 w-4 mr-2" /> Post Ranking</>}
+                    </Button>
+                  </>
+                )}
               </>
             )}
 
@@ -762,25 +884,66 @@ export default function AnonymousFeed({ initialSort }: AnonymousFeedProps) {
                   <AtSign className="h-5 w-5 text-primary" />
                   <h3 className="font-bold">Mention a Frat</h3>
                 </div>
-                <p className="text-xs text-muted-foreground mb-2">Type your message mentioning a fraternity</p>
-                <Textarea
-                  placeholder="What do you want to say about this frat?"
-                  value={mentionText}
-                  onChange={(e) => setMentionText(e.target.value)}
-                  className="min-h-[80px] resize-none rounded-xl text-base"
-                />
-                <Button
-                  onClick={() => {
-                    if (mentionText.trim()) {
-                      setNewPostText(mentionText);
-                      setComposerMode('text');
-                    }
-                  }}
-                  disabled={!mentionText.trim()}
-                  className="w-full rounded-xl gradient-primary h-12"
-                >
-                  <Send className="h-4 w-4 mr-2" /> Add to Post
-                </Button>
+                
+                {selectedMention ? (
+                  // Show selected frat and text input
+                  <>
+                    <div className="flex items-center gap-3 p-3 rounded-xl bg-primary/10 border border-primary/30">
+                      <Avatar className="h-10 w-10 rounded-lg">
+                        <AvatarFallback className="rounded-lg bg-primary/20 text-primary font-bold text-xs">
+                          {getFratGreek(selectedMention.name)}
+                        </AvatarFallback>
+                      </Avatar>
+                      <div className="flex-1">
+                        <p className="font-semibold">@{selectedMention.name}</p>
+                      </div>
+                      <Button variant="ghost" size="icon" onClick={() => setSelectedMention(null)}>
+                        <X className="h-4 w-4" />
+                      </Button>
+                    </div>
+                    <Textarea
+                      placeholder="What do you want to say about this frat?"
+                      value={mentionText}
+                      onChange={(e) => setMentionText(e.target.value)}
+                      className="min-h-[80px] resize-none rounded-xl text-base"
+                    />
+                    <Button
+                      onClick={handleCreatePost}
+                      disabled={!mentionText.trim() || submitting}
+                      className="w-full rounded-xl gradient-primary h-12"
+                    >
+                      {submitting ? <Loader2 className="h-4 w-4 animate-spin" /> : <><Send className="h-4 w-4 mr-2" /> Post</>}
+                    </Button>
+                  </>
+                ) : (
+                  // Frat picker list
+                  <>
+                    <p className="text-xs text-muted-foreground">Select a frat to mention</p>
+                    <ScrollArea className="h-[320px] -mx-2 px-2">
+                      <div className="space-y-2 pb-4">
+                        {fraternities.map((frat) => (
+                          <button
+                            key={frat.id}
+                            onClick={() => setSelectedMention({ id: frat.id, name: frat.name })}
+                            className="w-full flex items-center gap-3 p-3 rounded-xl bg-muted/50 hover:bg-muted active:scale-[0.98] transition-all text-left"
+                          >
+                            <Avatar className="h-10 w-10 rounded-lg">
+                              <AvatarImage src={frat.logo_url || undefined} alt={frat.name} />
+                              <AvatarFallback className="rounded-lg bg-primary/10 text-primary font-bold text-xs">
+                                {getFratGreek(frat.name)}
+                              </AvatarFallback>
+                            </Avatar>
+                            <div className="flex-1 min-w-0">
+                              <p className="font-semibold truncate">{frat.chapter || getFratShorthand(frat.name)}</p>
+                              <p className="text-xs text-muted-foreground truncate">{frat.name}</p>
+                            </div>
+                            <AtSign className="h-4 w-4 text-muted-foreground" />
+                          </button>
+                        ))}
+                      </div>
+                    </ScrollArea>
+                  </>
+                )}
               </>
             )}
           </div>
