@@ -34,7 +34,9 @@ import {
   Coffee,
   Swords,
   BarChart3,
-  ArrowLeft
+  ArrowLeft,
+  MoreHorizontal,
+  Flag
 } from 'lucide-react';
 import { 
   partyQueries, 
@@ -85,7 +87,14 @@ import {
   DialogTitle,
   DialogDescription,
 } from '@/components/ui/dialog';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import ReportContentDialog from '@/components/moderation/ReportContentDialog';
 import { useAuth } from '@/contexts/AuthContext';
 
 type ActivityType = 'party_rating' | 'frat_rating' | 'party_comment' | 'frat_comment';
@@ -166,6 +175,8 @@ export default function Activity() {
   const [showFeedView, setShowFeedView] = useState(false);
   const [commentsSheetItem, setCommentsSheetItem] = useState<ChatItem | null>(null);
 
+  // Report state
+  const [reportingMessage, setReportingMessage] = useState<{ id: string; text: string } | null>(null);
   // Poll and ranking states
   const [chatInputEnabled, setChatInputEnabled] = useState(true);
   const [isPollMode, setIsPollMode] = useState(false);
@@ -2000,9 +2011,27 @@ export default function Activity() {
                         </AvatarFallback>
                       </Avatar>
                       <div className="flex-1 min-w-0">
-                        <p className="text-xs text-muted-foreground mb-1">
-                          {formatDistanceToNow(new Date(reply.created_date), { addSuffix: true })}
-                        </p>
+                        <div className="flex items-center gap-2 mb-1">
+                          <p className="text-xs text-muted-foreground">
+                            {formatDistanceToNow(new Date(reply.created_date), { addSuffix: true })}
+                          </p>
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <button className="ml-auto p-1 rounded-full hover:bg-muted transition-colors text-muted-foreground hover:text-foreground">
+                                <MoreHorizontal className="h-4 w-4" />
+                              </button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end">
+                              <DropdownMenuItem 
+                                onClick={() => setReportingMessage({ id: reply.id, text: reply.text })} 
+                                className="text-destructive focus:text-destructive"
+                              >
+                                <Flag className="h-4 w-4 mr-2" />
+                                Report
+                              </DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        </div>
                         <p className="text-sm">{reply.text}</p>
                       </div>
                     </div>
@@ -2201,11 +2230,27 @@ export default function Activity() {
                             </button>
                             <button
                               onClick={() => { setShowFeedView(false); setCommentsSheetItem(chatItem); }}
-                              className="flex items-center gap-1.5 px-3 py-2 rounded-full text-sm font-medium bg-muted hover:bg-primary/20 text-muted-foreground hover:text-primary transition-all active:scale-95 ml-auto"
+                              className="flex items-center gap-1.5 px-3 py-2 rounded-full text-sm font-medium bg-muted hover:bg-primary/20 text-muted-foreground hover:text-primary transition-all active:scale-95"
                             >
                               <MessageCircle className="h-4 w-4" />
                               {chatItem.replies && chatItem.replies.length > 0 && <span>{chatItem.replies.length}</span>}
                             </button>
+                            <DropdownMenu>
+                              <DropdownMenuTrigger asChild>
+                                <button className="p-2 rounded-full hover:bg-muted transition-colors text-muted-foreground hover:text-foreground ml-auto">
+                                  <MoreHorizontal className="h-4 w-4" />
+                                </button>
+                              </DropdownMenuTrigger>
+                              <DropdownMenuContent align="end">
+                                <DropdownMenuItem 
+                                  onClick={() => setReportingMessage({ id: chatItem.id, text: chatItem.text.substring(0, 100) })} 
+                                  className="text-destructive focus:text-destructive"
+                                >
+                                  <Flag className="h-4 w-4 mr-2" />
+                                  Report
+                                </DropdownMenuItem>
+                              </DropdownMenuContent>
+                            </DropdownMenu>
                           </div>
                         </div>
                       </div>
@@ -2230,6 +2275,15 @@ export default function Activity() {
           )}
         </SheetContent>
       </Sheet>
+
+      {/* Report Dialog */}
+      <ReportContentDialog
+        open={!!reportingMessage}
+        onOpenChange={(open) => !open && setReportingMessage(null)}
+        contentType="chat_message"
+        contentId={reportingMessage?.id || ''}
+        contentPreview={reportingMessage?.text}
+      />
     </div>
   );
 }

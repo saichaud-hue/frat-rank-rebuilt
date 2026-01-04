@@ -1,13 +1,19 @@
 import { useState } from 'react';
-import { ChevronUp, ChevronDown, MessageCircle, Send, X, CornerDownRight, Clock } from 'lucide-react';
+import { ChevronUp, ChevronDown, MessageCircle, Send, X, CornerDownRight, Clock, MoreHorizontal, Flag } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Sheet, SheetContent } from '@/components/ui/sheet';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+import ReportContentDialog from '@/components/moderation/ReportContentDialog';
 import { cn } from '@/lib/utils';
 import { formatDistanceToNow } from 'date-fns';
 import type { Post } from './PostCard';
-
 export interface Comment {
   id: string;
   text: string;
@@ -52,11 +58,13 @@ function CommentCard({
   comment, 
   onVote, 
   onReply, 
+  onReport,
   isReply = false 
 }: { 
   comment: Comment; 
   onVote: (direction: 1 | -1) => void; 
   onReply: () => void;
+  onReport: () => void;
   isReply?: boolean;
 }) {
   const netVotes = comment.upvotes - comment.downvotes;
@@ -75,6 +83,19 @@ function CommentCard({
               <Clock className="h-3 w-3" />
               {formatDistanceToNow(new Date(comment.created_date), { addSuffix: false })}
             </span>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <button className="ml-auto p-1 rounded-full hover:bg-muted transition-colors text-muted-foreground hover:text-foreground">
+                  <MoreHorizontal className="h-4 w-4" />
+                </button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem onClick={onReport} className="text-destructive focus:text-destructive">
+                  <Flag className="h-4 w-4 mr-2" />
+                  Report
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
           <p className="text-sm leading-relaxed text-foreground mb-2">{comment.text}</p>
           
@@ -132,7 +153,7 @@ export default function ThreadView({
   const [commentText, setCommentText] = useState('');
   const [replyingTo, setReplyingTo] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
-
+  const [reportingComment, setReportingComment] = useState<{ id: string; text: string } | null>(null);
   if (!post) return null;
 
   const netVotes = post.upvotes - post.downvotes;
@@ -250,6 +271,7 @@ export default function ThreadView({
                         comment={comment}
                         onVote={(dir) => onCommentVote(comment.id, dir)}
                         onReply={() => setReplyingTo(comment.id)}
+                        onReport={() => setReportingComment({ id: comment.id, text: comment.text })}
                       />
                       {/* Replies */}
                       {repliesMap.get(comment.id)?.map(reply => (
@@ -258,6 +280,7 @@ export default function ThreadView({
                           comment={reply}
                           onVote={(dir) => onCommentVote(reply.id, dir)}
                           onReply={() => {}}
+                          onReport={() => setReportingComment({ id: reply.id, text: reply.text })}
                           isReply
                         />
                       ))}
@@ -299,6 +322,15 @@ export default function ThreadView({
           </div>
         </div>
       </SheetContent>
+
+      {/* Report Dialog */}
+      <ReportContentDialog
+        open={!!reportingComment}
+        onOpenChange={(open) => !open && setReportingComment(null)}
+        contentType="chat_message"
+        contentId={reportingComment?.id || ''}
+        contentPreview={reportingComment?.text}
+      />
     </Sheet>
   );
 }
