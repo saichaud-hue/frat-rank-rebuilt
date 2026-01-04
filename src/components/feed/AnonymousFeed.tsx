@@ -122,6 +122,24 @@ export default function AnonymousFeed({ initialSort }: AnonymousFeedProps) {
       }
       setUserVotes(votesMap);
 
+      // Get unique user ids to fetch their points
+      const userIds = [...new Set(messages.map(m => m.user_id))];
+      
+      // Fetch points for all users in parallel
+      const userPointsMap: Record<string, number> = {};
+      if (userIds.length > 0) {
+        const { data: streakData } = await supabase
+          .from('user_streaks')
+          .select('user_id, total_points')
+          .in('user_id', userIds);
+        
+        if (streakData) {
+          streakData.forEach(s => {
+            userPointsMap[s.user_id] = s.total_points || 0;
+          });
+        }
+      }
+
       // Transform to Post format
       const transformedPosts: Post[] = topLevelPosts.map(msg => {
         const commentCount = allComments.filter(c => c.parent_message_id === msg.id).length;
@@ -130,6 +148,8 @@ export default function AnonymousFeed({ initialSort }: AnonymousFeedProps) {
           id: msg.id,
           text: msg.text,
           anonymous_name: generateAnonymousName(msg.user_id),
+          user_id: msg.user_id,
+          user_points: userPointsMap[msg.user_id] || 0,
           upvotes: msg.upvotes || 0,
           downvotes: msg.downvotes || 0,
           comment_count: commentCount,
@@ -150,6 +170,8 @@ export default function AnonymousFeed({ initialSort }: AnonymousFeedProps) {
           id: msg.id,
           text: msg.text,
           anonymous_name: generateAnonymousName(msg.user_id),
+          user_id: msg.user_id,
+          user_points: userPointsMap[msg.user_id] || 0,
           upvotes: msg.upvotes || 0,
           downvotes: msg.downvotes || 0,
           created_date: msg.created_at || new Date().toISOString(),
