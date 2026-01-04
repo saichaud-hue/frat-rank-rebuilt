@@ -98,9 +98,9 @@ export default function YourListsIntro({
   };
 
   return (
-    <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-end sm:items-center justify-center p-0 sm:p-4">
+    <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
       <Card 
-        className="w-full sm:max-w-md max-h-[85vh] overflow-y-auto rounded-t-3xl sm:rounded-2xl p-4 animate-slide-up sm:animate-scale-in" 
+        className="w-full sm:max-w-md max-h-[80vh] overflow-y-auto rounded-2xl p-4 animate-scale-in" 
         style={{ paddingBottom: 'max(env(safe-area-inset-bottom), 16px)' }}
       >
         {step === 'main' && (
