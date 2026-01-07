@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { Loader2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import touseLogo from '@/assets/touse-logo.png';
 
 export default function AuthCallback() {
   const navigate = useNavigate();
@@ -81,9 +82,19 @@ export default function AuthCallback() {
   }, [navigate, toast]);
 
   return (
-    <div className="min-h-screen gradient-background flex flex-col items-center justify-center">
-      <Loader2 className="h-8 w-8 animate-spin text-primary mb-4" />
-      <p className="text-muted-foreground">Signing you in…</p>
+    <div className="fixed inset-0 z-50 gradient-background flex flex-col items-center justify-center px-6">
+      <div className="flex flex-col items-center animate-fade-in">
+        <img 
+          src={touseLogo} 
+          alt="Touse" 
+          className="w-20 h-20 rounded-2xl shadow-lg mb-6 animate-pulse"
+        />
+        <h2 className="text-xl font-semibold text-foreground mb-2">Finishing sign-in...</h2>
+        <p className="text-muted-foreground text-center text-sm mb-6 max-w-[260px]">
+          Just a moment while we set up your account.
+        </p>
+        <Loader2 className="h-6 w-6 animate-spin text-primary" />
+      </div>
     </div>
   );
 }
