@@ -1,9 +1,10 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate, useLocation } from "react-router-dom";
+import { SplashScreen } from "@/components/SplashScreen";
 import { AuthProvider } from "@/contexts/AuthContext";
 import ProtectedRoute from "@/components/auth/ProtectedRoute";
 import { AdminRoute } from "@/components/admin/AdminRoute";
@@ -86,82 +87,96 @@ const PointerEventsSafety = () => {
   return null;
 };
 
-const App = () => (
-  <QueryClientProvider client={queryClient}>
-    <AuthProvider>
-      <TooltipProvider>
-        <Toaster />
-        <Sonner />
-        <SemesterAnnouncementPopup />
-        <BrowserRouter>
-          <NewPartiesNotification />
-          <ScrollToTop />
-          <PointerEventsSafety />
-          <Routes>
-            {/* Public routes */}
-            <Route path="/auth" element={<Auth />} />
-            <Route path="/auth/callback" element={<AuthCallback />} />
-            <Route path="/UserNotRegisteredError" element={<UserNotRegisteredError />} />
-            
-            {/* Protected routes */}
-            <Route path="/" element={<Navigate to="/Activity" replace />} />
-            <Route path="/Activity" element={
-              <ProtectedRoute>
-                <Layout><Activity /></Layout>
-              </ProtectedRoute>
-            } />
-            <Route path="/Posts" element={
-              <ProtectedRoute>
-                <Layout><Posts /></Layout>
-              </ProtectedRoute>
-            } />
-            <Route path="/Leaderboard" element={
-              <ProtectedRoute>
-                <Layout><Leaderboard /></Layout>
-              </ProtectedRoute>
-            } />
-            <Route path="/Rankings" element={
-              <ProtectedRoute>
-                <Layout><CategoryRankings /></Layout>
-              </ProtectedRoute>
-            } />
-            <Route path="/Parties" element={
-              <ProtectedRoute>
-                <Layout><Parties /></Layout>
-              </ProtectedRoute>
-            } />
-            <Route path="/Party" element={
-              <ProtectedRoute>
-                <Layout><Party /></Layout>
-              </ProtectedRoute>
-            } />
-            <Route path="/Fraternity/:id" element={
-              <ProtectedRoute>
-                <Layout><Fraternity /></Layout>
-              </ProtectedRoute>
-            } />
-            <Route path="/Rate" element={<Navigate to="/Profile" replace />} />
-            <Route path="/Profile" element={
-              <ProtectedRoute>
-                <Layout><Profile /></Layout>
-              </ProtectedRoute>
-            } />
-            <Route path="/CreateParty" element={
-              <ProtectedRoute>
-                <Layout><CreateParty /></Layout>
-              </ProtectedRoute>
-            } />
-            <Route path="/Admin" element={
-              <AdminRoute>
-                <Layout><Admin /></Layout>
-              </AdminRoute>
-            } />
-            <Route path="*" element={<NotFound />} />
-          </Routes>
-        </BrowserRouter>
-      </TooltipProvider>
-    </AuthProvider>
-  </QueryClientProvider>
-);
+const App = () => {
+  const [showSplash, setShowSplash] = useState(() => {
+    // Only show splash once per session
+    const hasSeenSplash = sessionStorage.getItem('hasSeenSplash');
+    return !hasSeenSplash;
+  });
+
+  const handleSplashComplete = () => {
+    sessionStorage.setItem('hasSeenSplash', 'true');
+    setShowSplash(false);
+  };
+
+  return (
+    <QueryClientProvider client={queryClient}>
+      <AuthProvider>
+        <TooltipProvider>
+          {showSplash && <SplashScreen onComplete={handleSplashComplete} />}
+          <Toaster />
+          <Sonner />
+          <SemesterAnnouncementPopup />
+          <BrowserRouter>
+            <NewPartiesNotification />
+            <ScrollToTop />
+            <PointerEventsSafety />
+            <Routes>
+              {/* Public routes */}
+              <Route path="/auth" element={<Auth />} />
+              <Route path="/auth/callback" element={<AuthCallback />} />
+              <Route path="/UserNotRegisteredError" element={<UserNotRegisteredError />} />
+              
+              {/* Protected routes */}
+              <Route path="/" element={<Navigate to="/Activity" replace />} />
+              <Route path="/Activity" element={
+                <ProtectedRoute>
+                  <Layout><Activity /></Layout>
+                </ProtectedRoute>
+              } />
+              <Route path="/Posts" element={
+                <ProtectedRoute>
+                  <Layout><Posts /></Layout>
+                </ProtectedRoute>
+              } />
+              <Route path="/Leaderboard" element={
+                <ProtectedRoute>
+                  <Layout><Leaderboard /></Layout>
+                </ProtectedRoute>
+              } />
+              <Route path="/Rankings" element={
+                <ProtectedRoute>
+                  <Layout><CategoryRankings /></Layout>
+                </ProtectedRoute>
+              } />
+              <Route path="/Parties" element={
+                <ProtectedRoute>
+                  <Layout><Parties /></Layout>
+                </ProtectedRoute>
+              } />
+              <Route path="/Party" element={
+                <ProtectedRoute>
+                  <Layout><Party /></Layout>
+                </ProtectedRoute>
+              } />
+              <Route path="/Fraternity/:id" element={
+                <ProtectedRoute>
+                  <Layout><Fraternity /></Layout>
+                </ProtectedRoute>
+              } />
+              <Route path="/Rate" element={<Navigate to="/Profile" replace />} />
+              <Route path="/Profile" element={
+                <ProtectedRoute>
+                  <Layout><Profile /></Layout>
+                </ProtectedRoute>
+              } />
+              <Route path="/CreateParty" element={
+                <ProtectedRoute>
+                  <Layout><CreateParty /></Layout>
+                </ProtectedRoute>
+              } />
+              <Route path="/Admin" element={
+                <AdminRoute>
+                  <Layout><Admin /></Layout>
+                </AdminRoute>
+              } />
+              <Route path="*" element={<NotFound />} />
+            </Routes>
+          </BrowserRouter>
+        </TooltipProvider>
+      </AuthProvider>
+    </QueryClientProvider>
+  );
+};
 
 export default App;
