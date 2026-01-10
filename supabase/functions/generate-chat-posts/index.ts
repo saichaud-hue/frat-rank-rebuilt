@@ -144,20 +144,29 @@ Return ONLY a JSON array of strings, no other text. Example format:
       });
     }
 
-    // Insert posts into chat_messages
-    const insertData = posts.map((text: string) => ({
-      text: String(text).slice(0, 1000), // Limit length
-      user_id: user.id,
-    }));
+    // Insert posts using the RPC function (creates random user_ids)
+    let successCount = 0;
+    const insertedPosts: string[] = [];
 
-    const { error: insertError, data: insertedData } = await supabase
-      .from("chat_messages")
-      .insert(insertData)
-      .select("id");
+    for (const text of posts) {
+      const postText = String(text).slice(0, 1000);
+      const { error: rpcError } = await supabase.rpc('admin_seed_chat_message', {
+        p_text: postText
+      });
 
-    if (insertError) {
-      console.error("Insert error:", insertError);
-      return new Response(JSON.stringify({ error: "Failed to save posts" }), {
+      if (rpcError) {
+        console.error("RPC insert error:", rpcError);
+        continue;
+      }
+      
+      successCount++;
+      if (insertedPosts.length < 5) {
+        insertedPosts.push(postText);
+      }
+    }
+
+    if (successCount === 0) {
+      return new Response(JSON.stringify({ error: "Failed to save any posts" }), {
         status: 500,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
@@ -166,8 +175,8 @@ Return ONLY a JSON array of strings, no other text. Example format:
     return new Response(
       JSON.stringify({ 
         success: true, 
-        count: insertedData?.length || 0,
-        posts: posts.slice(0, 5) // Return first 5 as preview
+        count: successCount,
+        posts: insertedPosts
       }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
