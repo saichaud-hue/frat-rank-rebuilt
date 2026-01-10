@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Loader2, Plus, Sparkles, Trash2 } from "lucide-react";
+import { Loader2, Plus, Sparkles, Trash2, Wand2 } from "lucide-react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import {
@@ -58,6 +58,11 @@ export function AdminSeeding() {
   // Post seeding state
   const [postText, setPostText] = useState("");
   const [postLoading, setPostLoading] = useState(false);
+
+  // AI Chat seeding state
+  const [aiTopic, setAiTopic] = useState("rush week");
+  const [aiPostCount, setAiPostCount] = useState("15");
+  const [aiLoading, setAiLoading] = useState(false);
 
   // Delete state
   const [deletePartyRatingsLoading, setDeletePartyRatingsLoading] = useState(false);
@@ -249,6 +254,53 @@ export function AdminSeeding() {
       toast.error("Failed to create post");
     } finally {
       setPostLoading(false);
+    }
+  };
+
+  const seedAIPosts = async () => {
+    const count = parseInt(aiPostCount);
+    if (isNaN(count) || count < 1 || count > 50) {
+      toast.error("Count must be between 1 and 50");
+      return;
+    }
+
+    setAiLoading(true);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) throw new Error("Not authenticated");
+
+      const fratNames = fraternities.map(f => f.name);
+
+      const response = await fetch(
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/generate-chat-posts`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${session.access_token}`,
+          },
+          body: JSON.stringify({
+            topic: aiTopic,
+            count,
+            fraternityNames: fratNames,
+          }),
+        }
+      );
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || "Failed to generate posts");
+      }
+
+      toast.success(`Generated ${data.count} posts!`);
+      await queryClient.invalidateQueries({ queryKey: ["chat"] });
+      await queryClient.invalidateQueries({ queryKey: ["activity"] });
+    } catch (err) {
+      console.error(err);
+      toast.error(err instanceof Error ? err.message : "Failed to generate posts");
+    } finally {
+      setAiLoading(false);
     }
   };
 
@@ -536,12 +588,73 @@ export function AdminSeeding() {
         </CardContent>
       </Card>
 
-      {/* Posts */}
+      {/* AI Generated Posts */}
+      <Card>
+        <CardHeader className="pb-3">
+          <CardTitle className="text-sm flex items-center gap-2">
+            <Wand2 className="h-4 w-4" />
+            AI Chat Seeding
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          <div>
+            <Label className="text-xs">Topic</Label>
+            <Select value={aiTopic} onValueChange={setAiTopic}>
+              <SelectTrigger className="h-9">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="rush week">Rush Week</SelectItem>
+                <SelectItem value="best parties this semester">Best Parties</SelectItem>
+                <SelectItem value="fraternity reputations">Frat Reputations</SelectItem>
+                <SelectItem value="pregame and mixer plans">Pregames & Mixers</SelectItem>
+                <SelectItem value="greek life drama and tea">Drama & Tea</SelectItem>
+                <SelectItem value="weekend party predictions">Weekend Predictions</SelectItem>
+                <SelectItem value="brotherhood and chapter events">Brotherhood Events</SelectItem>
+                <SelectItem value="random greek life thoughts">Random Thoughts</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div>
+            <Label className="text-xs">Number of Posts</Label>
+            <Input
+              type="number"
+              value={aiPostCount}
+              onChange={(e) => setAiPostCount(e.target.value)}
+              className="h-9"
+              min={1}
+              max={50}
+            />
+          </div>
+
+          <Button 
+            onClick={seedAIPosts} 
+            disabled={aiLoading}
+            size="sm"
+            className="w-full"
+          >
+            {aiLoading ? (
+              <>
+                <Loader2 className="h-4 w-4 animate-spin mr-1" />
+                Generating...
+              </>
+            ) : (
+              <>
+                <Wand2 className="h-4 w-4 mr-1" />
+                Generate {aiPostCount} Posts
+              </>
+            )}
+          </Button>
+        </CardContent>
+      </Card>
+
+      {/* Manual Post */}
       <Card>
         <CardHeader className="pb-3">
           <CardTitle className="text-sm flex items-center gap-2">
             <Sparkles className="h-4 w-4" />
-            Create Post
+            Manual Post
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-3">
