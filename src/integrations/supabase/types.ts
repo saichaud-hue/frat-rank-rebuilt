@@ -850,13 +850,6 @@ export type Database = {
             referencedRelation: "parties"
             referencedColumns: ["id"]
           },
-          {
-            foreignKeyName: "party_ratings_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
         ]
       }
       poll_votes: {
@@ -992,13 +985,6 @@ export type Database = {
             columns: ["fraternity_id"]
             isOneToOne: false
             referencedRelation: "fraternities"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "reputation_ratings_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: false
-            referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
         ]
