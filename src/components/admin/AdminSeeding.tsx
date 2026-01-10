@@ -113,8 +113,10 @@ export function AdminSeeding() {
     setRatingLoading(true);
 
     try {
-      // Use admin RPC function that generates fake user_ids
+      // Use admin RPC function that generates seeded users
       let successCount = 0;
+      let firstError: unknown = null;
+
       for (let i = 0; i < count; i++) {
         const { error } = await supabase.rpc('admin_seed_party_rating', {
           p_party_id: selectedParty,
@@ -123,7 +125,15 @@ export function AdminSeeding() {
           p_execution: generateRandomScore(min, max),
           p_party_quality: generateRandomScore(min, max),
         });
-        if (!error) successCount++;
+
+        if (error) {
+          firstError ??= error;
+          console.error('Seed party rating RPC error:', error);
+          // Continue loop so we can still seed others if some fail
+          continue;
+        }
+
+        successCount++;
       }
 
       if (successCount > 0) {
@@ -131,10 +141,14 @@ export function AdminSeeding() {
         await queryClient.invalidateQueries({ queryKey: ["admin"] });
         await queryClient.invalidateQueries({ queryKey: ["parties"] });
       } else {
-        toast.error("Failed to add any ratings");
+        const msg =
+          firstError && typeof firstError === 'object' && firstError && 'message' in firstError
+            ? String((firstError as any).message)
+            : 'Failed to add any ratings';
+        toast.error(msg);
       }
     } catch (err) {
-      console.error(err);
+      console.error('Seed party ratings failed:', err);
       toast.error("Failed to add ratings");
     } finally {
       setRatingLoading(false);
@@ -163,8 +177,10 @@ export function AdminSeeding() {
     setRepRatingLoading(true);
 
     try {
-      // Use admin RPC function that generates fake user_ids
+      // Use admin RPC function that generates seeded users
       let successCount = 0;
+      let firstError: unknown = null;
+
       for (let i = 0; i < count; i++) {
         const brotherhood = generateRandomScore(min, max);
         const community = generateRandomScore(min, max);
@@ -178,7 +194,14 @@ export function AdminSeeding() {
           p_reputation: reputation,
           p_combined: combined,
         });
-        if (!error) successCount++;
+
+        if (error) {
+          firstError ??= error;
+          console.error('Seed reputation rating RPC error:', error);
+          continue;
+        }
+
+        successCount++;
       }
 
       if (successCount > 0) {
@@ -186,10 +209,14 @@ export function AdminSeeding() {
         await queryClient.invalidateQueries({ queryKey: ["admin"] });
         await queryClient.invalidateQueries({ queryKey: ["fraternities"] });
       } else {
-        toast.error("Failed to add any ratings");
+        const msg =
+          firstError && typeof firstError === 'object' && firstError && 'message' in firstError
+            ? String((firstError as any).message)
+            : 'Failed to add any ratings';
+        toast.error(msg);
       }
     } catch (err) {
-      console.error(err);
+      console.error('Seed reputation ratings failed:', err);
       toast.error("Failed to add reputation ratings");
     } finally {
       setRepRatingLoading(false);
