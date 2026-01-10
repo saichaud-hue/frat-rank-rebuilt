@@ -232,13 +232,6 @@ export type Database = {
             referencedRelation: "chat_messages"
             referencedColumns: ["id"]
           },
-          {
-            foreignKeyName: "chat_messages_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
         ]
       }
       content_reports: {
@@ -1263,6 +1256,7 @@ export type Database = {
       }
     }
     Functions: {
+      admin_seed_chat_message: { Args: { p_text: string }; Returns: string }
       admin_seed_party_rating: {
         Args: {
           p_execution: number
