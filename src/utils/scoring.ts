@@ -1178,9 +1178,13 @@ export async function computeFullFraternityScores(
   const ratedPartiesCount = partiesWithRatings.filter(pwr => pwr.ratings.length > 0).length;
   
   // Formula D: PartyAdj (used for Overall score - keep legacy behavior)
-  const partyAdj = computePartyAdj(partyIndex, numPartyRatings, campusPartyAvg);
+  // If no party data, use 5.0 as neutral default for partyAdj calculation
+  const partyAdj = hasPartyScoreData 
+    ? computePartyAdj(partyIndex, numPartyRatings, campusPartyAvg)
+    : 5.0; // Default to neutral 5.0 when no party ratings
   
-  // partyScore now uses Element 2 (null if no data)
+  // partyScore now uses Element 2 (null if no data for Parties tab)
+  // But for display/ranking purposes, default to 5.0 when no data
   const partyScore = semesterPartyScore;
   
   // Formula E: RepAdj
@@ -1188,9 +1192,12 @@ export async function computeFullFraternityScores(
   
   // Determine data sufficiency flags
   const hasRepData = numRepRatings >= MIN_REP_RATINGS_FOR_OVERALL;
-  const hasOverallData = hasRepData && (numPartyRatings >= MIN_PARTY_RATINGS_FOR_OVERALL || ratedPartiesCount >= MIN_RATED_PARTIES_FOR_OVERALL);
   
-  // Formula F: Overall (null if insufficient data)
+  // For overall score: require rep data. If no party data, use 5.0 default
+  // This allows frats to appear in "All" leaderboard with just rep ratings
+  const hasOverallData = hasRepData;
+  
+  // Formula F: Overall - use partyAdj (which defaults to 5.0 if no party data)
   const overall = hasOverallData ? computeOverall(repAdj, partyAdj) : null;
   
   // Trending
