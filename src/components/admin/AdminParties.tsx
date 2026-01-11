@@ -206,21 +206,21 @@ export function AdminParties() {
                 />
                 <div className="grid grid-cols-2 gap-2">
                   <div>
-                    <label className="text-xs text-muted-foreground">Start</label>
-                    <Input
+                    <label className="text-xs text-muted-foreground block mb-1">Start</label>
+                    <input
                       type="datetime-local"
                       value={editStartsAt}
                       onChange={(e) => setEditStartsAt(e.target.value)}
-                      className="h-8 text-xs"
+                      className="h-8 text-xs w-full rounded-md border border-input bg-background px-2 py-1"
                     />
                   </div>
                   <div>
-                    <label className="text-xs text-muted-foreground">End</label>
-                    <Input
+                    <label className="text-xs text-muted-foreground block mb-1">End</label>
+                    <input
                       type="datetime-local"
                       value={editEndsAt}
                       onChange={(e) => setEditEndsAt(e.target.value)}
-                      className="h-8 text-xs"
+                      className="h-8 text-xs w-full rounded-md border border-input bg-background px-2 py-1"
                     />
                   </div>
                 </div>
