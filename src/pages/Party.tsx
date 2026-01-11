@@ -292,6 +292,11 @@ export default function PartyPage() {
           <span className="flex items-center gap-1.5 bg-white/15 px-3 py-1.5 rounded-full">
             <Clock className="h-3.5 w-3.5" />
             {format(startDate, 'h:mm a')}
+            {party.ends_at && (
+              <span className="opacity-70">
+                – {format(new Date(party.ends_at), 'h:mm a')}
+              </span>
+            )}
           </span>
           {party.venue && (
             <span className="flex items-center gap-1.5 bg-white/15 px-3 py-1.5 rounded-full">

@@ -22,6 +22,7 @@ type Party = {
   id: string;
   title: string | null;
   starts_at: string | null;
+  ends_at: string | null;
   status: string | null;
   fraternity_id: string | null;
   contact_email: string | null;
@@ -43,7 +44,7 @@ async function fetchAdminParties() {
   const [partiesRes, fratsRes] = await Promise.all([
     supabase
       .from("parties")
-      .select("id,title,starts_at,status,fraternity_id,contact_email,user_id,venue")
+      .select("id,title,starts_at,ends_at,status,fraternity_id,contact_email,user_id,venue")
       .in("status", ["pending", "upcoming", "live", "completed"])
       .order("starts_at", { ascending: false }),
     supabase.from("fraternities").select("id,name"),
@@ -92,6 +93,8 @@ export function AdminParties() {
   const [editingParty, setEditingParty] = useState<string | null>(null);
   const [editTitle, setEditTitle] = useState("");
   const [editVenue, setEditVenue] = useState("");
+  const [editStartsAt, setEditStartsAt] = useState("");
+  const [editEndsAt, setEditEndsAt] = useState("");
   const [deleteConfirm, setDeleteConfirm] = useState<Party | null>(null);
 
   const { data, isLoading, error } = useQuery({
@@ -122,13 +125,23 @@ export function AdminParties() {
     setEditingParty(party.id);
     setEditTitle(party.title || "");
     setEditVenue(party.venue || "");
+    // Format datetime for input (YYYY-MM-DDTHH:mm)
+    setEditStartsAt(party.starts_at ? new Date(party.starts_at).toISOString().slice(0, 16) : "");
+    setEditEndsAt(party.ends_at ? new Date(party.ends_at).toISOString().slice(0, 16) : "");
   };
 
   const saveEdit = async (id: string) => {
     setActionLoading(id);
+    const updateData: Record<string, any> = { 
+      title: editTitle, 
+      venue: editVenue 
+    };
+    if (editStartsAt) updateData.starts_at = new Date(editStartsAt).toISOString();
+    if (editEndsAt) updateData.ends_at = new Date(editEndsAt).toISOString();
+    
     const { error } = await supabase
       .from("parties")
-      .update({ title: editTitle, venue: editVenue })
+      .update(updateData)
       .eq("id", id);
     if (error) console.error(error);
     await queryClient.invalidateQueries({ queryKey: ["admin", "parties"] });
@@ -191,6 +204,26 @@ export function AdminParties() {
                   placeholder="Venue"
                   className="h-8"
                 />
+                <div className="grid grid-cols-2 gap-2">
+                  <div>
+                    <label className="text-xs text-muted-foreground">Start</label>
+                    <Input
+                      type="datetime-local"
+                      value={editStartsAt}
+                      onChange={(e) => setEditStartsAt(e.target.value)}
+                      className="h-8 text-xs"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-xs text-muted-foreground">End</label>
+                    <Input
+                      type="datetime-local"
+                      value={editEndsAt}
+                      onChange={(e) => setEditEndsAt(e.target.value)}
+                      className="h-8 text-xs"
+                    />
+                  </div>
+                </div>
               </div>
             ) : (
               <>
