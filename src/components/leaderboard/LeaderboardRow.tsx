@@ -2,7 +2,7 @@ import { Link } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
 import { type FraternityWithScores } from '@/utils/scoring';
 import { cn } from '@/lib/utils';
-import { ArrowUp, ArrowDown, Minus } from 'lucide-react';
+import { ArrowUp, ArrowDown, Minus, PartyPopper } from 'lucide-react';
 
 type FilterType = 'overall' | 'reputation' | 'party' | 'trending';
 type DisplayMode = 'score' | 'vibes';
@@ -49,6 +49,7 @@ export default function LeaderboardRow({
   };
 
   const score = getDisplayScore();
+  const hasNoPartyData = filter === 'party' && !scores?.hasPartyScoreData;
   
   // Score color based on value
   const getScoreColorClass = (score: number | null): string => {
@@ -86,6 +87,16 @@ export default function LeaderboardRow({
       </div>
     );
   };
+
+  // Render "No parties yet" indicator
+  const renderNoPartiesIndicator = () => (
+    <div className="flex flex-col items-center justify-center w-14 h-14 rounded-full border-2 border-dashed border-muted-foreground/30 bg-muted/20">
+      <PartyPopper className="h-4 w-4 text-muted-foreground/50 mb-0.5" />
+      <span className="text-[8px] font-medium text-muted-foreground/60 leading-tight text-center">
+        No parties
+      </span>
+    </div>
+  );
 
   return (
     <Link 
@@ -126,10 +137,12 @@ export default function LeaderboardRow({
           </p>
         </div>
 
-        {/* Score Badge or Rank Change */}
+        {/* Score Badge, No Parties indicator, or Rank Change */}
         {displayMode === 'score' && (
           filter === 'trending' ? (
             renderRankChange()
+          ) : hasNoPartyData ? (
+            renderNoPartiesIndicator()
           ) : (
             <div className={cn(
               "flex items-center justify-center w-12 h-12 rounded-full border-2 font-bold text-base",
