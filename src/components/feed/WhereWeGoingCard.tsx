@@ -20,8 +20,8 @@ import type { Party, Fraternity } from '@/lib/supabase-data';
 interface WhereWeGoingCardProps {
   todaysParties: Party[];
   fraternities: Fraternity[];
-  allUserVotes: Record<string, string>;
-  userId: string;
+  voteCounts: Record<string, number>;
+  userVote: string | null;
   onVote: (optionId: string) => void;
   onCustomVote: (optionId: string) => void;
   onAddSuggestion: (text: string) => void;
@@ -41,8 +41,8 @@ const defaultMoveOptions = [
 export default function WhereWeGoingCard({
   todaysParties,
   fraternities,
-  allUserVotes,
-  userId,
+  voteCounts,
+  userVote,
   onVote,
   onCustomVote,
   onAddSuggestion,
@@ -51,17 +51,13 @@ export default function WhereWeGoingCard({
   const [showAddMenu, setShowAddMenu] = useState(false);
   const [showAllSheet, setShowAllSheet] = useState(false);
   const [customInput, setCustomInput] = useState('');
-  const userMoveVote = allUserVotes[userId] || null;
+  const userMoveVote = userVote;
   
-  const moveVotes = useMemo(() => {
-    const counts: Record<string, number> = {};
-    Object.values(allUserVotes).forEach(optionId => {
-      counts[optionId] = (counts[optionId] || 0) + 1;
-    });
-    return counts;
-  }, [allUserVotes]);
+  const moveVotes = voteCounts;
 
-  const totalMoveVotes = Object.keys(allUserVotes).length;
+  const totalMoveVotes = useMemo(() => {
+    return Object.values(voteCounts).reduce((sum, count) => sum + count, 0);
+  }, [voteCounts]);
 
   // Build all options
   const allOptions = useMemo(() => {

@@ -781,12 +781,12 @@ export const moveVoteQueries = {
     return voteDate.toISOString().split('T')[0];
   },
 
-  // List all votes for today
-  async listToday(): Promise<MoveVote[]> {
+  // Get aggregated vote counts for today (accessible to all authenticated users)
+  async getAggregatedVotesToday(): Promise<{ option_id: string; option_name: string; vote_count: number }[]> {
     const voteDate = this.getTodayVoteDate();
     const { data, error } = await supabase
-      .from('move_votes')
-      .select('*')
+      .from('move_votes_aggregated')
+      .select('option_id, option_name, vote_count')
       .eq('vote_date', voteDate);
     if (error) throw error;
     return data || [];
