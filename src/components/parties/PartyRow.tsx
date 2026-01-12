@@ -95,9 +95,9 @@ export default function PartyRow({
             </span>
           )}
           
-          {/* Access Type - placeholder since not in Party type */}
+          {/* Access Type - show "Done" for completed parties */}
           <span className="text-[10px] font-medium px-2 py-1 rounded-full bg-muted text-muted-foreground">
-            Open
+            {isCompleted ? 'Done' : 'Open'}
           </span>
 
           {/* Score Badge or Status */}
