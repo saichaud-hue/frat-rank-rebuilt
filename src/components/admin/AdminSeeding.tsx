@@ -75,8 +75,9 @@ export function AdminSeeding() {
       const [partiesRes, fratsRes] = await Promise.all([
         supabase
           .from("parties")
-          .select("id,title,fraternity_id")
-          .in("status", ["upcoming", "live", "completed"])
+          .select("id,title,fraternity_id,starts_at")
+          .eq("status", "completed")
+          .lt("starts_at", new Date().toISOString())
           .order("starts_at", { ascending: false })
           .limit(50),
         supabase.from("fraternities").select("id,name").order("name"),
