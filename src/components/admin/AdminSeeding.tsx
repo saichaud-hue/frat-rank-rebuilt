@@ -76,7 +76,6 @@ export function AdminSeeding() {
         supabase
           .from("parties")
           .select("id,title,fraternity_id,starts_at")
-          .eq("status", "completed")
           .lt("starts_at", new Date().toISOString())
           .order("starts_at", { ascending: false })
           .limit(50),
