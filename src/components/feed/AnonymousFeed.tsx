@@ -141,14 +141,17 @@ export default function AnonymousFeed({ initialSort }: AnonymousFeedProps) {
         }
       }
 
-      // Transform to Post format with simulated engagement
+      // Transform to Post format with simulated engagement as base
       const transformedPosts: Post[] = topLevelPosts.map(msg => {
         const commentCount = allComments.filter(c => c.parent_message_id === msg.id).length;
         
-        // Get simulated votes and add to real votes
+        // Get simulated votes as the BASE (these are the "botted" votes)
         const simulated = getSimulatedPostVotes(msg.id, msg.created_at || new Date().toISOString(), msg.text);
-        const totalUpvotes = (msg.upvotes || 0) + simulated.upvotes;
-        const totalDownvotes = (msg.downvotes || 0) + simulated.downvotes;
+        
+        // User's vote only adds +1 or -1 to the simulated base
+        const userVote = votesMap[msg.id] || 0;
+        const totalUpvotes = simulated.upvotes + (userVote === 1 ? 1 : 0);
+        const totalDownvotes = simulated.downvotes + (userVote === -1 ? 1 : 0);
         const netVotes = totalUpvotes - totalDownvotes;
         
         return {
@@ -388,20 +391,23 @@ export default function AnonymousFeed({ initialSort }: AnonymousFeedProps) {
       nextVote = currentVote === -1 ? 0 : -1;
     }
 
-    // Calculate delta for upvotes and downvotes
-    let upvoteDelta = 0;
-    let downvoteDelta = 0;
-    
-    if (currentVote === 1) upvoteDelta -= 1;
-    if (currentVote === -1) downvoteDelta -= 1;
-    if (nextVote === 1) upvoteDelta += 1;
-    if (nextVote === -1) downvoteDelta += 1;
+    // Get the post to access its simulated base votes
+    const post = posts.find(p => p.id === postId);
+    if (!post) {
+      votingLock.current.delete(postId);
+      return;
+    }
+
+    // Get the simulated base votes for this post
+    const simulated = getSimulatedPostVotes(postId, post.created_date, post.text);
+
+    // Calculate new totals: simulated base + user's vote
+    const newUpvotes = simulated.upvotes + (nextVote === 1 ? 1 : 0);
+    const newDownvotes = simulated.downvotes + (nextVote === -1 ? 1 : 0);
 
     // Optimistic update for posts list
     setPosts(prev => prev.map(p => {
       if (p.id !== postId) return p;
-      const newUpvotes = Math.max(0, p.upvotes + upvoteDelta);
-      const newDownvotes = Math.max(0, p.downvotes + downvoteDelta);
       return { 
         ...p, 
         upvotes: newUpvotes, 
@@ -416,8 +422,6 @@ export default function AnonymousFeed({ initialSort }: AnonymousFeedProps) {
     if (selectedPost?.id === postId) {
       setSelectedPost(prev => {
         if (!prev) return null;
-        const newUpvotes = Math.max(0, prev.upvotes + upvoteDelta);
-        const newDownvotes = Math.max(0, prev.downvotes + downvoteDelta);
         return { 
           ...prev, 
           upvotes: newUpvotes, 
@@ -439,20 +443,8 @@ export default function AnonymousFeed({ initialSort }: AnonymousFeedProps) {
         }
       }
 
-      // Use database function to recalculate votes (bypasses RLS for accurate counts)
-      const { data, error } = await supabase.rpc('recalculate_message_votes', { p_message_id: postId });
-      
-      if (!error && data && data.length > 0) {
-        const { new_upvotes, new_downvotes } = data[0];
-        // Update local state with server truth
-        setPosts(prev => prev.map(p => 
-          p.id === postId ? { ...p, upvotes: new_upvotes, downvotes: new_downvotes } : p
-        ));
-        
-        if (selectedPost?.id === postId) {
-          setSelectedPost(prev => prev ? { ...prev, upvotes: new_upvotes, downvotes: new_downvotes } : null);
-        }
-      }
+      // Note: We don't sync with DB vote counts since we use simulated base votes
+      // The user's vote is already tracked in chat_message_votes table
     } catch (error) {
       console.error('Failed to vote:', error);
       toast.error('Failed to save vote');
