@@ -19,6 +19,7 @@ import { getFratGreek, getFratShorthand } from '@/utils';
 import FratBattleGame from '@/components/activity/FratBattleGame';
 import { awardPoints } from '@/utils/points';
 import { recordUserAction } from '@/utils/streak';
+import { getSimulatedPostVotes } from '@/utils/simulatedEngagement';
 
 type SortType = 'hot' | 'new' | 'top';
 
@@ -140,18 +141,24 @@ export default function AnonymousFeed({ initialSort }: AnonymousFeedProps) {
         }
       }
 
-      // Transform to Post format
+      // Transform to Post format with simulated engagement
       const transformedPosts: Post[] = topLevelPosts.map(msg => {
         const commentCount = allComments.filter(c => c.parent_message_id === msg.id).length;
-        const netVotes = (msg.upvotes || 0) - (msg.downvotes || 0);
+        
+        // Get simulated votes and add to real votes
+        const simulated = getSimulatedPostVotes(msg.id, msg.created_at || new Date().toISOString(), msg.text);
+        const totalUpvotes = (msg.upvotes || 0) + simulated.upvotes;
+        const totalDownvotes = (msg.downvotes || 0) + simulated.downvotes;
+        const netVotes = totalUpvotes - totalDownvotes;
+        
         return {
           id: msg.id,
           text: msg.text,
           anonymous_name: generateAnonymousName(msg.user_id),
           user_id: msg.user_id,
           user_points: userPointsMap[msg.user_id] || 0,
-          upvotes: msg.upvotes || 0,
-          downvotes: msg.downvotes || 0,
+          upvotes: totalUpvotes,
+          downvotes: totalDownvotes,
           comment_count: commentCount,
           created_date: msg.created_at || new Date().toISOString(),
           user_vote: votesMap[msg.id] as 1 | -1 | null | undefined,

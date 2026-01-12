@@ -66,6 +66,7 @@ import WhereWeGoingCard from '@/components/feed/WhereWeGoingCard';
 import PlanningWindow from '@/components/feed/PlanningWindow';
 
 import { recordUserAction } from '@/utils/streak';
+import { getSimulatedMoveVotes, mergeVoteCounts } from '@/utils/simulatedEngagement';
 import { Progress } from '@/components/ui/progress';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -205,12 +206,12 @@ export default function Activity() {
     try {
       // Get aggregated vote counts (visible to all users)
       const aggregatedVotes = await moveVoteQueries.getAggregatedVotesToday();
-      const counts: Record<string, number> = {};
+      const realCounts: Record<string, number> = {};
       const suggestions: { id: string; text: string }[] = [];
       const seenSuggestionIds = new Set<string>();
       
       aggregatedVotes.forEach(vote => {
-        counts[vote.option_id] = vote.vote_count;
+        realCounts[vote.option_id] = vote.vote_count;
         // Track custom suggestions (that aren't default options)
         if (vote.option_id.startsWith('frat-') && !seenSuggestionIds.has(vote.option_id)) {
           suggestions.push({ id: vote.option_id, text: vote.option_name });
@@ -218,7 +219,11 @@ export default function Activity() {
         }
       });
       
-      setMoveVoteCounts(counts);
+      // Merge real votes with simulated engagement
+      const simulatedVotes = getSimulatedMoveVotes();
+      const mergedCounts = mergeVoteCounts(realCounts, simulatedVotes);
+      
+      setMoveVoteCounts(mergedCounts);
       setCustomSuggestions(suggestions);
       
       // Get current user's vote if logged in
