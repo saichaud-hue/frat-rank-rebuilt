@@ -191,7 +191,8 @@ export default function Activity() {
   const [showMentionPicker, setShowMentionPicker] = useState(false);
 
   // What's the move tonight - voting (now uses cloud storage)
-  const [allUserVotes, setAllUserVotes] = useState<Record<string, string>>({});
+  const [moveVoteCounts, setMoveVoteCounts] = useState<Record<string, number>>({});
+  const [userMoveVote, setUserMoveVote] = useState<string | null>(null);
   const [moveVotesLoading, setMoveVotesLoading] = useState(true);
   
   const [showSuggestionInput, setShowSuggestionInput] = useState(false);
@@ -202,22 +203,29 @@ export default function Activity() {
   // Load move votes from database
   const loadMoveVotes = async () => {
     try {
-      const votes = await moveVoteQueries.listToday();
-      const votesMap: Record<string, string> = {};
+      // Get aggregated vote counts (visible to all users)
+      const aggregatedVotes = await moveVoteQueries.getAggregatedVotesToday();
+      const counts: Record<string, number> = {};
       const suggestions: { id: string; text: string }[] = [];
       const seenSuggestionIds = new Set<string>();
       
-      votes.forEach(vote => {
-        votesMap[vote.user_id] = vote.option_id;
-        // Track custom suggestions (frat votes that aren't default options)
+      aggregatedVotes.forEach(vote => {
+        counts[vote.option_id] = vote.vote_count;
+        // Track custom suggestions (that aren't default options)
         if (vote.option_id.startsWith('frat-') && !seenSuggestionIds.has(vote.option_id)) {
           suggestions.push({ id: vote.option_id, text: vote.option_name });
           seenSuggestionIds.add(vote.option_id);
         }
       });
       
-      setAllUserVotes(votesMap);
+      setMoveVoteCounts(counts);
       setCustomSuggestions(suggestions);
+      
+      // Get current user's vote if logged in
+      if (user?.id) {
+        const userVote = await moveVoteQueries.getUserVoteToday(user.id);
+        setUserMoveVote(userVote?.option_id || null);
+      }
     } catch (error) {
       console.error('Failed to load move votes:', error);
     } finally {
@@ -225,17 +233,10 @@ export default function Activity() {
     }
   };
   
-  // Derive current user's vote from allUserVotes
-  const userMoveVote = user?.id ? allUserVotes[user.id] : null;
-  
-  // Calculate vote counts from all user votes
-  const moveVotes = useMemo(() => {
-    const counts: Record<string, number> = {};
-    Object.values(allUserVotes).forEach(optionId => {
-      counts[optionId] = (counts[optionId] || 0) + 1;
-    });
-    return counts;
-  }, [allUserVotes]);
+  // Calculate total votes from vote counts
+  const totalMoveVotes = useMemo(() => {
+    return Object.values(moveVoteCounts).reduce((sum, count) => sum + count, 0);
+  }, [moveVoteCounts]);
   
   // Countdown timer
   const [countdownTime, setCountdownTime] = useState<{ days: number; hours: number; minutes: number; seconds: number } | null>(null);
@@ -724,17 +725,31 @@ export default function Activity() {
     }
 
     try {
+      const previousVote = userMoveVote;
+      
       if (userMoveVote === optionId) {
         // Unvote
         await moveVoteQueries.removeVote(currentUser.id);
-        const newVotes = { ...allUserVotes };
-        delete newVotes[currentUser.id];
-        setAllUserVotes(newVotes);
+        setUserMoveVote(null);
+        setMoveVoteCounts(prev => ({
+          ...prev,
+          [optionId]: Math.max(0, (prev[optionId] || 0) - 1)
+        }));
       } else {
         // Vote for this option
         const name = optionName || optionId;
         await moveVoteQueries.vote(currentUser.id, optionId, name);
-        setAllUserVotes(prev => ({ ...prev, [currentUser.id]: optionId }));
+        setUserMoveVote(optionId);
+        setMoveVoteCounts(prev => {
+          const updated = { ...prev };
+          // Remove previous vote count if user was voting for something else
+          if (previousVote && previousVote !== optionId) {
+            updated[previousVote] = Math.max(0, (updated[previousVote] || 0) - 1);
+          }
+          // Add new vote count
+          updated[optionId] = (updated[optionId] || 0) + 1;
+          return updated;
+        });
       }
     } catch (error) {
       console.error('Failed to vote:', error);
@@ -750,17 +765,29 @@ export default function Activity() {
     }
 
     try {
+      const previousVote = userMoveVote;
+      
       if (userMoveVote === suggestionId) {
         // Unvote
         await moveVoteQueries.removeVote(currentUser.id);
-        const newVotes = { ...allUserVotes };
-        delete newVotes[currentUser.id];
-        setAllUserVotes(newVotes);
+        setUserMoveVote(null);
+        setMoveVoteCounts(prev => ({
+          ...prev,
+          [suggestionId]: Math.max(0, (prev[suggestionId] || 0) - 1)
+        }));
       } else {
         // Vote for this suggestion
         const name = suggestionName || customSuggestions.find(s => s.id === suggestionId)?.text || suggestionId;
         await moveVoteQueries.vote(currentUser.id, suggestionId, name);
-        setAllUserVotes(prev => ({ ...prev, [currentUser.id]: suggestionId }));
+        setUserMoveVote(suggestionId);
+        setMoveVoteCounts(prev => {
+          const updated = { ...prev };
+          if (previousVote && previousVote !== suggestionId) {
+            updated[previousVote] = Math.max(0, (updated[previousVote] || 0) - 1);
+          }
+          updated[suggestionId] = (updated[suggestionId] || 0) + 1;
+          return updated;
+        });
         
         // Add to local suggestions if not already there
         if (!customSuggestions.find(s => s.id === suggestionId)) {
@@ -814,17 +841,23 @@ export default function Activity() {
     
     // Vote for it
     try {
+      const previousVote = userMoveVote;
       await moveVoteQueries.vote(currentUser.id, suggestionId, suggestionName);
-      setAllUserVotes(prev => ({ ...prev, [currentUser.id]: suggestionId }));
+      setUserMoveVote(suggestionId);
+      setMoveVoteCounts(prev => {
+        const updated = { ...prev };
+        if (previousVote && previousVote !== suggestionId) {
+          updated[previousVote] = Math.max(0, (updated[previousVote] || 0) - 1);
+        }
+        updated[suggestionId] = (updated[suggestionId] || 0) + 1;
+        return updated;
+      });
     } catch (error) {
       console.error('Failed to vote:', error);
       toast({ title: 'Failed to vote', variant: 'destructive' });
     }
   };
 
-  const totalMoveVotes = useMemo(() => {
-    return Object.keys(allUserVotes).length;
-  }, [allUserVotes]);
 
   // Combine all feed items (chat + activities) sorted by date
   const feedItems = useMemo(() => {
@@ -948,8 +981,8 @@ export default function Activity() {
       <WhereWeGoingCard
         todaysParties={todaysParties}
         fraternities={fraternities}
-        allUserVotes={allUserVotes}
-        userId={user?.id || ''}
+        voteCounts={moveVoteCounts}
+        userVote={userMoveVote}
         onVote={(optionId) => handleMoveVote(optionId, optionId)}
         onCustomVote={(suggestionId) => handleCustomSuggestionVote(suggestionId)}
         onAddSuggestion={handleAddSuggestion}
@@ -1069,7 +1102,7 @@ export default function Activity() {
               {/* Today's parties */}
               {todaysParties.map((party) => {
                 const frat = fraternities.find(f => f.id === party.fraternity_id);
-                const votes = moveVotes[party.id] || 0;
+                const votes = moveVoteCounts[party.id] || 0;
                 const percentage = totalMoveVotes > 0 ? (votes / totalMoveVotes) * 100 : 0;
                 const isSelected = userMoveVote === party.id;
                 
@@ -1116,7 +1149,7 @@ export default function Activity() {
               
               {/* Default options */}
               {defaultMoveOptions.map((option) => {
-                const votes = moveVotes[option.id] || 0;
+                const votes = moveVoteCounts[option.id] || 0;
                 const percentage = totalMoveVotes > 0 ? (votes / totalMoveVotes) * 100 : 0;
                 const isSelected = userMoveVote === option.id;
                 const Icon = option.icon;
@@ -1161,7 +1194,7 @@ export default function Activity() {
               
               {/* Custom suggestions */}
               {customSuggestions.map((suggestion) => {
-                const votes = moveVotes[suggestion.id] || 0;
+                const votes = moveVoteCounts[suggestion.id] || 0;
                 const percentage = totalMoveVotes > 0 ? (votes / totalMoveVotes) * 100 : 0;
                 const isSelected = userMoveVote === suggestion.id;
                 
