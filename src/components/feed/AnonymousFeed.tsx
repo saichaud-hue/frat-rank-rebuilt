@@ -148,10 +148,13 @@ export default function AnonymousFeed({ initialSort }: AnonymousFeedProps) {
         // Get simulated votes as the BASE (these are the "botted" votes)
         const simulated = getSimulatedPostVotes(msg.id, msg.created_at || new Date().toISOString(), msg.text);
         
-        // User's vote only adds +1 or -1 to the simulated base
-        const userVote = votesMap[msg.id] || 0;
-        const totalUpvotes = simulated.upvotes + (userVote === 1 ? 1 : 0);
-        const totalDownvotes = simulated.downvotes + (userVote === -1 ? 1 : 0);
+        // Real votes from ALL users in the database
+        const realUpvotes = msg.upvotes || 0;
+        const realDownvotes = msg.downvotes || 0;
+        
+        // Total = simulated base + real votes from all users
+        const totalUpvotes = simulated.upvotes + realUpvotes;
+        const totalDownvotes = simulated.downvotes + realDownvotes;
         const netVotes = totalUpvotes - totalDownvotes;
         
         return {
@@ -401,17 +404,24 @@ export default function AnonymousFeed({ initialSort }: AnonymousFeedProps) {
     // Get the simulated base votes for this post
     const simulated = getSimulatedPostVotes(postId, post.created_date, post.text);
 
-    // Calculate new totals: simulated base + user's vote
-    const newUpvotes = simulated.upvotes + (nextVote === 1 ? 1 : 0);
-    const newDownvotes = simulated.downvotes + (nextVote === -1 ? 1 : 0);
+    // Calculate delta for real votes
+    let upvoteDelta = 0;
+    let downvoteDelta = 0;
+    if (currentVote === 1) upvoteDelta -= 1;
+    if (currentVote === -1) downvoteDelta -= 1;
+    if (nextVote === 1) upvoteDelta += 1;
+    if (nextVote === -1) downvoteDelta += 1;
 
     // Optimistic update for posts list
     setPosts(prev => prev.map(p => {
       if (p.id !== postId) return p;
+      // Update the real vote portion, simulated stays constant
+      const newRealUpvotes = Math.max(0, (p.upvotes - simulated.upvotes) + upvoteDelta);
+      const newRealDownvotes = Math.max(0, (p.downvotes - simulated.downvotes) + downvoteDelta);
       return { 
         ...p, 
-        upvotes: newUpvotes, 
-        downvotes: newDownvotes, 
+        upvotes: simulated.upvotes + newRealUpvotes, 
+        downvotes: simulated.downvotes + newRealDownvotes, 
         user_vote: nextVote === 0 ? null : nextVote as 1 | -1 
       };
     }));
@@ -422,17 +432,19 @@ export default function AnonymousFeed({ initialSort }: AnonymousFeedProps) {
     if (selectedPost?.id === postId) {
       setSelectedPost(prev => {
         if (!prev) return null;
+        const newRealUpvotes = Math.max(0, (prev.upvotes - simulated.upvotes) + upvoteDelta);
+        const newRealDownvotes = Math.max(0, (prev.downvotes - simulated.downvotes) + downvoteDelta);
         return { 
           ...prev, 
-          upvotes: newUpvotes, 
-          downvotes: newDownvotes, 
+          upvotes: simulated.upvotes + newRealUpvotes, 
+          downvotes: simulated.downvotes + newRealDownvotes, 
           user_vote: nextVote === 0 ? null : nextVote as 1 | -1 
         };
       });
     }
 
     try {
-      // First, save the user's vote (or delete if nextVote is 0)
+      // Save the user's vote (or delete if nextVote is 0)
       if (nextVote === 0) {
         await chatMessageVoteQueries.delete(currentUser.id, postId);
       } else {
@@ -443,8 +455,20 @@ export default function AnonymousFeed({ initialSort }: AnonymousFeedProps) {
         }
       }
 
-      // Note: We don't sync with DB vote counts since we use simulated base votes
-      // The user's vote is already tracked in chat_message_votes table
+      // Sync vote counts in database using RPC
+      const { data, error } = await supabase.rpc('recalculate_message_votes', { p_message_id: postId });
+      
+      if (!error && data && data.length > 0) {
+        const { new_upvotes, new_downvotes } = data[0];
+        // Update with server truth: simulated + real DB votes
+        setPosts(prev => prev.map(p => 
+          p.id === postId ? { ...p, upvotes: simulated.upvotes + new_upvotes, downvotes: simulated.downvotes + new_downvotes } : p
+        ));
+        
+        if (selectedPost?.id === postId) {
+          setSelectedPost(prev => prev ? { ...prev, upvotes: simulated.upvotes + new_upvotes, downvotes: simulated.downvotes + new_downvotes } : null);
+        }
+      }
     } catch (error) {
       console.error('Failed to vote:', error);
       toast.error('Failed to save vote');
