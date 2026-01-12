@@ -404,40 +404,25 @@ export default function AnonymousFeed({ initialSort }: AnonymousFeedProps) {
     // Get the simulated base votes for this post
     const simulated = getSimulatedPostVotes(postId, post.created_date, post.text);
 
-    // Calculate delta for real votes
-    let upvoteDelta = 0;
-    let downvoteDelta = 0;
-    if (currentVote === 1) upvoteDelta -= 1;
-    if (currentVote === -1) downvoteDelta -= 1;
-    if (nextVote === 1) upvoteDelta += 1;
-    if (nextVote === -1) downvoteDelta += 1;
 
-    // Optimistic update for posts list
+    // Optimistic update for posts list - just update user_vote, don't change counts
+    // The server will give us the truth via RPC
     setPosts(prev => prev.map(p => {
       if (p.id !== postId) return p;
-      // Update the real vote portion, simulated stays constant
-      const newRealUpvotes = Math.max(0, (p.upvotes - simulated.upvotes) + upvoteDelta);
-      const newRealDownvotes = Math.max(0, (p.downvotes - simulated.downvotes) + downvoteDelta);
       return { 
         ...p, 
-        upvotes: simulated.upvotes + newRealUpvotes, 
-        downvotes: simulated.downvotes + newRealDownvotes, 
         user_vote: nextVote === 0 ? null : nextVote as 1 | -1 
       };
     }));
     
     setUserVotes(prev => ({ ...prev, [postId]: nextVote }));
 
-    // Update selected post if viewing thread
+    // Update selected post if viewing thread - just update user_vote
     if (selectedPost?.id === postId) {
       setSelectedPost(prev => {
         if (!prev) return null;
-        const newRealUpvotes = Math.max(0, (prev.upvotes - simulated.upvotes) + upvoteDelta);
-        const newRealDownvotes = Math.max(0, (prev.downvotes - simulated.downvotes) + downvoteDelta);
         return { 
           ...prev, 
-          upvotes: simulated.upvotes + newRealUpvotes, 
-          downvotes: simulated.downvotes + newRealDownvotes, 
           user_vote: nextVote === 0 ? null : nextVote as 1 | -1 
         };
       });
