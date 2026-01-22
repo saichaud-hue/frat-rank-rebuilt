@@ -1257,6 +1257,15 @@ export type Database = {
     }
     Functions: {
       admin_seed_chat_message: { Args: { p_text: string }; Returns: string }
+      admin_seed_chat_message_with_username: {
+        Args: {
+          p_downvotes?: number
+          p_text: string
+          p_upvotes?: number
+          p_username: string
+        }
+        Returns: string
+      }
       admin_seed_party_rating: {
         Args: {
           p_execution: number
