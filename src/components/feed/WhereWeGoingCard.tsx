@@ -195,12 +195,14 @@ export default function WhereWeGoingCard({
                     </span>
                   </div>
                   
-                  <span className={cn(
-                    "text-xs font-medium tabular-nums shrink-0",
-                    isSelected ? "text-primary-foreground" : isLeader ? "text-primary" : "text-muted-foreground"
-                  )}>
-                    {percentage.toFixed(0)}%
-                  </span>
+                  {userMoveVote && (
+                    <span className={cn(
+                      "text-xs font-medium tabular-nums shrink-0",
+                      isSelected ? "text-primary-foreground" : isLeader ? "text-primary" : "text-muted-foreground"
+                    )}>
+                      {percentage.toFixed(0)}%
+                    </span>
+                  )}
                 </button>
               );
             })}
@@ -322,20 +324,22 @@ export default function WhereWeGoingCard({
                     )}
                   </div>
                   
-                  <div className="flex items-center gap-2 shrink-0">
-                    <span className={cn(
-                      "text-xs font-medium",
-                      isSelected ? "text-primary-foreground" : "text-muted-foreground"
-                    )}>
-                      {option.votes} {option.votes === 1 ? 'vote' : 'votes'}
-                    </span>
-                    <span className={cn(
-                      "text-sm font-bold tabular-nums w-12 text-right",
-                      isSelected ? "text-primary-foreground" : isLeader ? "text-primary" : "text-muted-foreground"
-                    )}>
-                      {percentage.toFixed(0)}%
-                    </span>
-                  </div>
+                  {userMoveVote && (
+                    <div className="flex items-center gap-2 shrink-0">
+                      <span className={cn(
+                        "text-xs font-medium",
+                        isSelected ? "text-primary-foreground" : "text-muted-foreground"
+                      )}>
+                        {option.votes} {option.votes === 1 ? 'vote' : 'votes'}
+                      </span>
+                      <span className={cn(
+                        "text-sm font-bold tabular-nums w-12 text-right",
+                        isSelected ? "text-primary-foreground" : isLeader ? "text-primary" : "text-muted-foreground"
+                      )}>
+                        {percentage.toFixed(0)}%
+                      </span>
+                    </div>
+                  )}
                 </button>
               );
             })}
