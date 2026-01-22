@@ -5,15 +5,21 @@
  * Generate simulated upvotes/downvotes for a post based on its age and content
  */
 export function getSimulatedPostVotes(postId: string, createdAt: string, text: string): { upvotes: number; downvotes: number } {
+  // Calculate post age in hours
+  const ageHours = Math.max(0, (Date.now() - new Date(createdAt).getTime()) / (1000 * 60 * 60));
+  
+  // NEW POSTS: No simulated votes for posts less than 2 hours old
+  // This ensures user-created posts start at 0
+  if (ageHours < 2) {
+    return { upvotes: 0, downvotes: 0 };
+  }
+  
   // Create a deterministic seed from the post ID
   let seed = 0;
   for (let i = 0; i < postId.length; i++) {
     seed = ((seed << 5) - seed) + postId.charCodeAt(i);
     seed = seed & seed; // Convert to 32bit integer
   }
-  
-  // Calculate post age in hours
-  const ageHours = Math.max(0, (Date.now() - new Date(createdAt).getTime()) / (1000 * 60 * 60));
   
   // Base engagement scales with age (older posts have more votes)
   const ageFactor = Math.min(1, ageHours / 24); // Max out at 24 hours
