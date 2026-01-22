@@ -8,7 +8,8 @@ import { AdminSemesterReset } from "@/components/admin/AdminSemesterReset";
 import { AdminSeeding } from "@/components/admin/AdminSeeding";
 import { AdminReports } from "@/components/admin/AdminReports";
 import { AdminAuditLogs } from "@/components/admin/AdminAuditLogs";
-import { ChevronLeft, Shield, RefreshCw, AlertTriangle, RotateCcw, Sparkles, MessageSquare, Calendar, FileText, Flag, History } from "lucide-react";
+import { AdminUsers } from "@/components/admin/AdminUsers";
+import { ChevronLeft, Shield, RefreshCw, AlertTriangle, RotateCcw, Sparkles, MessageSquare, Calendar, FileText, Flag, History, Users } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { useQueryClient } from "@tanstack/react-query";
@@ -93,10 +94,14 @@ export default function Admin() {
                     Posts
                   </TabsTrigger>
                 </TabsList>
-                <TabsList className="w-full grid grid-cols-4">
+                <TabsList className="w-full grid grid-cols-5">
                   <TabsTrigger value="offenders" className="text-xs gap-1">
                     <AlertTriangle className="h-3 w-3" />
                     Offenders
+                  </TabsTrigger>
+                  <TabsTrigger value="users" className="text-xs gap-1">
+                    <Users className="h-3 w-3" />
+                    Users
                   </TabsTrigger>
                   <TabsTrigger value="logs" className="text-xs gap-1">
                     <History className="h-3 w-3" />
@@ -131,6 +136,10 @@ export default function Admin() {
 
               <TabsContent value="offenders" className="mt-4">
                 <AdminOffenders />
+              </TabsContent>
+
+              <TabsContent value="users" className="mt-4">
+                <AdminUsers />
               </TabsContent>
 
               <TabsContent value="logs" className="mt-4">
