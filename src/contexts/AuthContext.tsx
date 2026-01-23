@@ -19,6 +19,8 @@ interface AuthContextType {
   loading: boolean;
   signIn: (email: string, password: string) => Promise<{ error: string | null }>;
   signUp: (email: string, password: string) => Promise<{ error: string | null }>;
+  resetPassword: (email: string) => Promise<{ error: string | null }>;
+  updatePassword: (newPassword: string) => Promise<{ error: string | null }>;
   signOut: () => Promise<void>;
   refreshProfile: () => Promise<void>;
 }
@@ -171,6 +173,24 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return { error: null };
   };
 
+  const resetPassword = async (email: string): Promise<{ error: string | null }> => {
+    const { error } = await supabase.auth.resetPasswordForEmail(email, {
+      redirectTo: `${window.location.origin}/auth?reset=true`,
+    });
+    if (error) {
+      return { error: error.message };
+    }
+    return { error: null };
+  };
+
+  const updatePassword = async (newPassword: string): Promise<{ error: string | null }> => {
+    const { error } = await supabase.auth.updateUser({ password: newPassword });
+    if (error) {
+      return { error: error.message };
+    }
+    return { error: null };
+  };
+
   const signOut = async () => {
     setProfile(null);
     localStorage.removeItem('fratrank_user');
@@ -178,7 +198,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   return (
-    <AuthContext.Provider value={{ user, session, profile, loading, signIn, signUp, signOut, refreshProfile }}>
+    <AuthContext.Provider value={{ user, session, profile, loading, signIn, signUp, resetPassword, updatePassword, signOut, refreshProfile }}>
       {children}
     </AuthContext.Provider>
   );
