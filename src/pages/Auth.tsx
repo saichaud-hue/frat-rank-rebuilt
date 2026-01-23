@@ -7,7 +7,7 @@ import { Loader2 } from 'lucide-react';
 import touseLogo from '@/assets/touse-logo.png';
 import { toast } from '@/hooks/use-toast';
 
-type AuthMode = 'signin' | 'signup' | 'forgot' | 'reset';
+type AuthMode = 'landing' | 'signin' | 'signup' | 'forgot' | 'reset';
 
 export default function Auth() {
   const { user, loading, signIn, signUp, resetPassword, updatePassword } = useAuth();
@@ -16,14 +16,13 @@ export default function Auth() {
   
   const isResetMode = searchParams.get('reset') === 'true';
   
-  const [mode, setMode] = useState<AuthMode>(isResetMode ? 'reset' : 'signin');
+  const [mode, setMode] = useState<AuthMode>(isResetMode ? 'reset' : 'landing');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   useEffect(() => {
-    // If user is logged in and in reset mode, stay on page to set new password
     if (!loading && user && !isResetMode) {
       navigate('/Activity', { replace: true });
     }
@@ -113,6 +112,46 @@ export default function Auth() {
     );
   }
 
+  // Landing page with two options
+  if (mode === 'landing') {
+    return (
+      <div className="min-h-screen gradient-background flex flex-col items-center justify-center px-6 pt-safe pb-safe">
+        <div className="flex flex-col items-center mb-10">
+          <img 
+            src={touseLogo} 
+            alt="Touse" 
+            className="w-28 h-28 rounded-3xl shadow-xl mb-6"
+          />
+          <h1 className="text-4xl font-bold text-foreground mb-3">Touse</h1>
+          <p className="text-muted-foreground text-center text-lg max-w-[280px]">
+            Rate parties. Rank frats. Stay anonymous.
+          </p>
+        </div>
+
+        <div className="w-full max-w-[320px] space-y-4">
+          <Button
+            onClick={() => setMode('signup')}
+            className="w-full h-14 text-lg font-semibold rounded-xl gradient-primary text-white shadow-lg active:scale-[0.98] transition-transform"
+          >
+            Create Account
+          </Button>
+          
+          <Button
+            onClick={() => setMode('signin')}
+            variant="outline"
+            className="w-full h-12 text-base font-medium rounded-xl border-2 border-border hover:bg-muted/50 transition-colors"
+          >
+            Sign in to existing account
+          </Button>
+        </div>
+
+        <p className="mt-10 text-xs text-muted-foreground text-center max-w-[280px]">
+          Your ratings stay anonymous. We'll remember your device so you stay signed in.
+        </p>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen gradient-background flex flex-col items-center justify-center px-6 pt-safe pb-safe">
       {/* Logo and branding */}
@@ -120,25 +159,31 @@ export default function Auth() {
         <img 
           src={touseLogo} 
           alt="Touse" 
-          className="w-24 h-24 rounded-3xl shadow-lg mb-6"
+          className="w-20 h-20 rounded-2xl shadow-lg mb-4"
         />
-        <h1 className="text-3xl font-bold text-foreground mb-2">Touse</h1>
-        <p className="text-muted-foreground text-center text-base">
-          {mode === 'reset' ? 'Set your new password' : 
-           mode === 'forgot' ? 'Reset your password' :
-           'Rate parties. Rank frats. Stay anonymous.'}
+        <h1 className="text-2xl font-bold text-foreground mb-1">
+          {mode === 'signup' ? 'Create Account' : 
+           mode === 'signin' ? 'Welcome Back' :
+           mode === 'forgot' ? 'Reset Password' :
+           'Set New Password'}
+        </h1>
+        <p className="text-muted-foreground text-center text-sm">
+          {mode === 'signup' ? 'Join Touse and start rating' : 
+           mode === 'signin' ? 'Sign in to continue' :
+           mode === 'forgot' ? 'Enter your email to get a reset link' :
+           'Choose a new password for your account'}
         </p>
       </div>
 
       {/* Auth form */}
-      <form onSubmit={handleSubmit} className="w-full max-w-[320px] space-y-4">
+      <form onSubmit={handleSubmit} className="w-full max-w-[320px] space-y-3">
         {mode !== 'reset' && (
           <Input
             type="email"
             placeholder="Email"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
-            className="h-12 text-base"
+            className="h-12 text-base rounded-xl border-2 focus:border-primary"
             autoComplete="email"
           />
         )}
@@ -149,7 +194,7 @@ export default function Auth() {
             placeholder={mode === 'reset' ? 'New password' : 'Password'}
             value={password}
             onChange={(e) => setPassword(e.target.value)}
-            className="h-12 text-base"
+            className="h-12 text-base rounded-xl border-2 focus:border-primary"
             autoComplete={mode === 'signup' || mode === 'reset' ? 'new-password' : 'current-password'}
           />
         )}
@@ -160,7 +205,7 @@ export default function Auth() {
             placeholder="Confirm new password"
             value={confirmPassword}
             onChange={(e) => setConfirmPassword(e.target.value)}
-            className="h-12 text-base"
+            className="h-12 text-base rounded-xl border-2 focus:border-primary"
             autoComplete="new-password"
           />
         )}
@@ -168,7 +213,7 @@ export default function Auth() {
         <Button
           type="submit"
           disabled={isSubmitting}
-          className="w-full h-14 text-base font-semibold rounded-xl gradient-primary text-white shadow-lg active:scale-[0.98] transition-transform disabled:opacity-70"
+          className="w-full h-13 text-base font-semibold rounded-xl gradient-primary text-white shadow-lg active:scale-[0.98] transition-transform disabled:opacity-70 mt-2"
         >
           {isSubmitting ? (
             <Loader2 className="h-5 w-5 animate-spin" />
@@ -184,50 +229,26 @@ export default function Auth() {
         </Button>
       </form>
 
-      {/* Mode toggles */}
-      <div className="flex flex-col items-center gap-2 mt-6">
+      {/* Secondary actions */}
+      <div className="flex flex-col items-center gap-3 mt-6">
         {mode === 'signin' && (
-          <>
-            <button
-              type="button"
-              onClick={() => setMode('forgot')}
-              className="text-sm text-primary hover:underline"
-            >
-              Forgot password?
-            </button>
-            <button
-              type="button"
-              onClick={() => setMode('signup')}
-              className="text-sm text-muted-foreground hover:text-foreground transition-colors"
-            >
-              Don't have an account? Sign up
-            </button>
-          </>
-        )}
-        {mode === 'signup' && (
           <button
             type="button"
-            onClick={() => setMode('signin')}
-            className="text-sm text-muted-foreground hover:text-foreground transition-colors"
+            onClick={() => setMode('forgot')}
+            className="text-sm text-primary hover:underline"
           >
-            Already have an account? Sign in
+            Forgot password?
           </button>
         )}
-        {(mode === 'forgot' || mode === 'reset') && (
-          <button
-            type="button"
-            onClick={() => setMode('signin')}
-            className="text-sm text-muted-foreground hover:text-foreground transition-colors"
-          >
-            Back to sign in
-          </button>
-        )}
+        
+        <button
+          type="button"
+          onClick={() => setMode('landing')}
+          className="text-sm text-muted-foreground hover:text-foreground transition-colors"
+        >
+          ← Back
+        </button>
       </div>
-
-      {/* Footer info */}
-      <p className="mt-6 text-xs text-muted-foreground text-center max-w-[280px]">
-        Your ratings stay anonymous. We'll remember your device so you stay signed in.
-      </p>
     </div>
   );
 }
