@@ -20,7 +20,6 @@ import Profile from "./pages/Profile";
 import CreateParty from "./pages/CreateParty";
 import Admin from "./pages/Admin";
 import Auth from "./pages/Auth";
-import AuthCallback from "./pages/AuthCallback";
 import UserNotRegisteredError from "./components/errors/UserNotRegisteredError";
 import NotFound from "./pages/NotFound";
 import { checkStreakStatus } from "./utils/streak";
@@ -114,7 +113,7 @@ const App = () => {
             <Routes>
               {/* Public routes */}
               <Route path="/auth" element={<Auth />} />
-              <Route path="/auth/callback" element={<AuthCallback />} />
+              <Route path="/auth/callback" element={<Navigate to="/Activity" replace />} />
               <Route path="/UserNotRegisteredError" element={<UserNotRegisteredError />} />
               
               {/* Protected routes */}

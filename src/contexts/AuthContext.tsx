@@ -3,7 +3,6 @@ import { User, Session } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
 
-const ALLOWED_AUTH_HOSTS = ['tousefrat.com', 'www.tousefrat.com'];
 interface Profile {
   id: string;
   email: string | null;
@@ -18,7 +17,8 @@ interface AuthContextType {
   session: Session | null;
   profile: Profile | null;
   loading: boolean;
-  signInWithGoogle: () => Promise<void>;
+  signIn: (email: string, password: string) => Promise<{ error: string | null }>;
+  signUp: (email: string, password: string) => Promise<{ error: string | null }>;
   signOut: () => Promise<void>;
   refreshProfile: () => Promise<void>;
 }
@@ -53,8 +53,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const newProfile = {
       id: authUser.id,
       email: authUser.email ?? null,
-      full_name: authUser.user_metadata?.full_name ?? authUser.user_metadata?.name ?? null,
-      avatar_url: authUser.user_metadata?.avatar_url ?? authUser.user_metadata?.picture ?? null,
+      full_name: null,
+      avatar_url: null,
     };
 
     const { data: upsertedProfile, error: upsertError } = await supabase
@@ -89,8 +89,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
         const id = authUser.id;
         const email = authUser.email ?? '';
-        const name = authUser.user_metadata?.full_name ?? authUser.user_metadata?.name ?? 'User';
-        const avatar_url = authUser.user_metadata?.avatar_url ?? authUser.user_metadata?.picture;
+        const name = 'User';
 
         const perUserKey = `fratrank_user_${id}`;
         const existingPerUser = localStorage.getItem(perUserKey);
@@ -100,14 +99,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         const streak = typeof existingMeta?.streak === 'number' ? existingMeta.streak : 0;
         const last_action_at = typeof existingMeta?.last_action_at === 'string' ? existingMeta.last_action_at : null;
 
-        // Legacy (base44) user object used across the app
         localStorage.setItem(
           'fratrank_user',
           JSON.stringify({
             id,
             email,
             name,
-            avatar_url,
             points,
             streak,
             last_action_at,
@@ -115,14 +112,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           })
         );
 
-        // Also keep the per-user streak/points record in sync
         localStorage.setItem(perUserKey, JSON.stringify({ id, points, streak, last_action_at }));
       } catch {
-        // no-op: don't block auth flow on localStorage issues
+        // no-op
       }
     };
 
-    // Set up auth state listener FIRST
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, currentSession) => {
       setSession(currentSession);
       setUser(currentSession?.user ?? null);
@@ -130,7 +125,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
       syncLegacyLocalUser(currentSession?.user ?? null);
 
-      // Fetch/create profile when user changes (deferred to avoid deadlock)
       if (currentSession?.user) {
         setTimeout(() => {
           fetchOrCreateProfile(currentSession.user);
@@ -140,7 +134,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
     });
 
-    // THEN check for existing session
     supabase.auth.getSession().then(({ data: { session: existingSession } }) => {
       setSession(existingSession);
       setUser(existingSession?.user ?? null);
@@ -156,26 +149,26 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return () => subscription.unsubscribe();
   }, [fetchOrCreateProfile]);
 
-  const signInWithGoogle = async () => {
-    const currentHost = window.location.hostname;
-    
-    // Block OAuth on non-production domains
-    if (!ALLOWED_AUTH_HOSTS.includes(currentHost)) {
-      toast({
-        title: 'Sign-in unavailable',
-        description: 'Google sign-in is only available on tousefrat.com. Sessions don\'t carry over to preview links.',
-        variant: 'destructive',
-      });
-      return;
+  const signIn = async (email: string, password: string): Promise<{ error: string | null }> => {
+    const { error } = await supabase.auth.signInWithPassword({ email, password });
+    if (error) {
+      return { error: error.message };
     }
+    return { error: null };
+  };
 
-    await supabase.auth.signInWithOAuth({
-      provider: 'google',
+  const signUp = async (email: string, password: string): Promise<{ error: string | null }> => {
+    const { error } = await supabase.auth.signUp({
+      email,
+      password,
       options: {
-        redirectTo: `${window.location.origin}/auth/callback`,
-        queryParams: { prompt: 'select_account' }
-      }
+        emailRedirectTo: window.location.origin,
+      },
     });
+    if (error) {
+      return { error: error.message };
+    }
+    return { error: null };
   };
 
   const signOut = async () => {
@@ -185,7 +178,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   return (
-    <AuthContext.Provider value={{ user, session, profile, loading, signInWithGoogle, signOut, refreshProfile }}>
+    <AuthContext.Provider value={{ user, session, profile, loading, signIn, signUp, signOut, refreshProfile }}>
       {children}
     </AuthContext.Provider>
   );
