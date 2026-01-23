@@ -21,43 +21,52 @@ export default function PlanningWindow({ parties, fraternities }: PlanningWindow
     const now = new Date();
     const windows: TimeWindow[] = [];
     
-    // Filter to upcoming parties only
+    // Filter to upcoming parties only (exclude deleted/cancelled)
     const upcomingParties = parties
-      .filter(p => new Date(p.starts_at) > now && p.status !== 'cancelled')
-      .sort((a, b) => new Date(a.starts_at).getTime() - new Date(b.starts_at).getTime());
+      .filter(p => p.starts_at && new Date(p.starts_at) > now && p.status !== 'cancelled')
+      .sort((a, b) => new Date(a.starts_at!).getTime() - new Date(b.starts_at!).getTime());
 
-    // Tonight (today after 5pm)
-    const tonight = upcomingParties.filter(p => isToday(new Date(p.starts_at)));
+    if (upcomingParties.length === 0) {
+      return windows;
+    }
+
+    // Tonight (today after now)
+    const tonight = upcomingParties.filter(p => isToday(new Date(p.starts_at!)));
     if (tonight.length > 0) {
-      windows.push({ label: 'Tonight', parties: tonight.slice(0, 2) });
+      windows.push({ label: 'Tonight', parties: tonight.slice(0, 3) });
     }
 
     // Tomorrow
-    const tomorrow = upcomingParties.filter(p => isTomorrow(new Date(p.starts_at)));
+    const tomorrow = upcomingParties.filter(p => isTomorrow(new Date(p.starts_at!)));
     if (tomorrow.length > 0) {
-      windows.push({ label: 'Tomorrow', parties: tomorrow.slice(0, 2) });
+      windows.push({ label: 'Tomorrow', parties: tomorrow.slice(0, 3) });
     }
 
     // This Weekend (Fri-Sun, if not already covered)
     const friday = addDays(startOfDay(now), (5 - now.getDay() + 7) % 7 || 7);
     const sunday = endOfDay(addDays(friday, 2));
     const weekend = upcomingParties.filter(p => {
-      const partyDate = new Date(p.starts_at);
+      const partyDate = new Date(p.starts_at!);
       return partyDate >= friday && partyDate <= sunday && !isToday(partyDate) && !isTomorrow(partyDate);
     });
     if (weekend.length > 0) {
-      windows.push({ label: 'This Weekend', parties: weekend.slice(0, 2) });
+      windows.push({ label: 'This Weekend', parties: weekend.slice(0, 3) });
     }
 
-    // Next Week (if we have few options above)
+    // Next Week (7-14 days out)
     if (windows.length < 2) {
       const nextWeek = upcomingParties.filter(p => {
-        const partyDate = new Date(p.starts_at);
+        const partyDate = new Date(p.starts_at!);
         return partyDate > sunday && partyDate <= addDays(now, 14);
       });
       if (nextWeek.length > 0) {
-        windows.push({ label: 'Next Week', parties: nextWeek.slice(0, 2) });
+        windows.push({ label: 'Next Week', parties: nextWeek.slice(0, 3) });
       }
+    }
+
+    // Coming Up (if still no windows, show next 3 upcoming regardless of date)
+    if (windows.length === 0 && upcomingParties.length > 0) {
+      windows.push({ label: 'Coming Up', parties: upcomingParties.slice(0, 3) });
     }
 
     return windows;
@@ -112,7 +121,8 @@ export default function PlanningWindow({ parties, fraternities }: PlanningWindow
               {window.parties.map((party) => {
                 const frat = fraternities.find(f => f.id === party.fraternity_id);
                 const hasMomentum = frat?.momentum && frat.momentum > 0.1;
-                const partyDate = new Date(party.starts_at);
+                const partyDate = new Date(party.starts_at!);
+                const showFullDate = window.label === 'Coming Up' || window.label === 'Next Week';
 
                 return (
                   <Link
@@ -149,7 +159,7 @@ export default function PlanningWindow({ parties, fraternities }: PlanningWindow
                           <span className="text-xs text-muted-foreground">·</span>
                           <span className="text-xs text-muted-foreground flex items-center gap-1">
                             <Clock className="h-3 w-3" />
-                            {format(partyDate, 'h:mm a')}
+                            {showFullDate ? format(partyDate, 'MMM d, h:mm a') : format(partyDate, 'h:mm a')}
                           </span>
                         </div>
                       </div>
