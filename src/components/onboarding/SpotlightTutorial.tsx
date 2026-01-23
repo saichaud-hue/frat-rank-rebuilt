@@ -38,9 +38,17 @@ interface TutorialStep {
 
 const tutorialSteps: TutorialStep[] = [
   {
-    id: 'welcome',
+    id: 'choice',
     title: 'Welcome to Touse!',
-    description: 'Your campus nightlife companion. Let\'s show you around — it\'ll only take a minute!',
+    description: 'Your campus nightlife companion. Ready to get started?',
+    icon: Sparkles,
+    route: '/Activity',
+    position: 'center',
+  },
+  {
+    id: 'welcome',
+    title: 'Let\'s Show You Around',
+    description: 'This quick tour will only take about a minute. Let\'s go!',
     icon: Sparkles,
     route: '/Activity',
     position: 'center',
@@ -186,6 +194,7 @@ export default function SpotlightTutorial({ onComplete }: SpotlightTutorialProps
   }, []);
 
   const step = tutorialSteps[currentStep];
+  const isChoiceStep = step.id === 'choice';
   const isFirstStep = currentStep === 0;
   const isLastStep = currentStep === tutorialSteps.length - 1;
   const isCenteredStep = step.position === 'center';
@@ -518,21 +527,23 @@ export default function SpotlightTutorial({ onComplete }: SpotlightTutorialProps
               <X className="h-4 w-4 text-muted-foreground" />
             </button>
 
-            <div className="flex gap-1 mb-4">
-              {tutorialSteps.map((_, index) => (
-                <button
-                  key={index}
-                  onClick={() => handleDotClick(index)}
-                  className={`h-1 flex-1 rounded-full transition-all ${
-                    index === currentStep 
-                      ? 'bg-primary' 
-                      : index < currentStep 
-                        ? 'bg-primary/50' 
-                        : 'bg-muted'
-                  }`}
-                />
-              ))}
-            </div>
+            {!isChoiceStep && (
+              <div className="flex gap-1 mb-4">
+                {tutorialSteps.slice(1).map((_, index) => (
+                  <button
+                    key={index}
+                    onClick={() => handleDotClick(index + 1)}
+                    className={`h-1 flex-1 rounded-full transition-all ${
+                      index + 1 === currentStep 
+                        ? 'bg-primary' 
+                        : index + 1 < currentStep 
+                          ? 'bg-primary/50' 
+                          : 'bg-muted'
+                    }`}
+                  />
+                ))}
+              </div>
+            )}
 
             <div className="w-14 h-14 rounded-2xl gradient-primary flex items-center justify-center mb-4 mx-auto">
               <Icon className="h-7 w-7 text-white" />
@@ -566,52 +577,98 @@ export default function SpotlightTutorial({ onComplete }: SpotlightTutorialProps
               </div>
             )}
 
-            <div className="flex items-center gap-3">
-              {!isFirstStep && (
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={handlePrev}
-                  className="flex-1"
-                >
-                  <ChevronLeft className="h-4 w-4 mr-1" />
-                  Back
-                </Button>
-              )}
-              
-              {isInteractiveStep ? (
-                <>
-                  <Button
-                    onClick={(e) => handleStartInteraction(e)}
-                    size="sm"
-                    className="flex-1"
-                  >
-                    Try It
-                    <ChevronRight className="h-4 w-4 ml-1" />
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={handleNext}
-                  >
-                    Skip
-                  </Button>
-                </>
-              ) : (
+            {isChoiceStep ? (
+              <div className="flex flex-col gap-3">
                 <Button
                   onClick={handleNext}
-                  size="sm"
-                  className={`flex-1 ${isFirstStep ? 'w-full' : ''}`}
+                  size="lg"
+                  className="w-full"
                 >
-                  {isLastStep ? 'Get Started' : isFirstStep ? 'Let\'s Go' : 'Next'}
-                  {!isLastStep && <ChevronRight className="h-4 w-4 ml-1" />}
+                  Start Tutorial
+                  <ChevronRight className="h-4 w-4 ml-1" />
                 </Button>
-              )}
-            </div>
+                <Button
+                  variant="outline"
+                  size="lg"
+                  onClick={() => onComplete(false)}
+                  className="w-full"
+                >
+                  Skip for Now
+                </Button>
+                <div className="flex items-center justify-center gap-2 mt-2">
+                  <Checkbox
+                    id="never-show-choice"
+                    checked={neverShowAgain}
+                    onCheckedChange={(checked) => setNeverShowAgain(checked as boolean)}
+                  />
+                  <label 
+                    htmlFor="never-show-choice" 
+                    className="text-sm text-muted-foreground cursor-pointer"
+                  >
+                    Don't show this again
+                  </label>
+                </div>
+                {neverShowAgain && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => onComplete(true)}
+                    className="text-muted-foreground"
+                  >
+                    Skip Permanently
+                  </Button>
+                )}
+              </div>
+            ) : (
+              <>
+                <div className="flex items-center gap-3">
+                  {currentStep > 1 && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={handlePrev}
+                      className="flex-1"
+                    >
+                      <ChevronLeft className="h-4 w-4 mr-1" />
+                      Back
+                    </Button>
+                  )}
+                  
+                  {isInteractiveStep ? (
+                    <>
+                      <Button
+                        onClick={(e) => handleStartInteraction(e)}
+                        size="sm"
+                        className="flex-1"
+                      >
+                        Try It
+                        <ChevronRight className="h-4 w-4 ml-1" />
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={handleNext}
+                      >
+                        Skip
+                      </Button>
+                    </>
+                  ) : (
+                    <Button
+                      onClick={handleNext}
+                      size="sm"
+                      className={`flex-1 ${currentStep === 1 ? 'w-full' : ''}`}
+                    >
+                      {isLastStep ? 'Get Started' : currentStep === 1 ? 'Let\'s Go' : 'Next'}
+                      {!isLastStep && <ChevronRight className="h-4 w-4 ml-1" />}
+                    </Button>
+                  )}
+                </div>
 
-            <p className="text-center text-xs text-muted-foreground mt-3">
-              {currentStep + 1} of {tutorialSteps.length}
-            </p>
+                <p className="text-center text-xs text-muted-foreground mt-3">
+                  {currentStep} of {tutorialSteps.length - 1}
+                </p>
+              </>
+            )}
           </div>
         </motion.div>
       </AnimatePresence>
