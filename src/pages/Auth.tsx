@@ -193,7 +193,7 @@ export default function Auth() {
               onClick={() => setMode('forgot')}
               className="text-sm text-primary hover:underline"
             >
-              Forgot password? (Google users: set one here)
+              Forgot password?
             </button>
             <button
               type="button"
